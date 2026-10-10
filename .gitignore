@@ -1,0 +1,33 @@
+# Private configuration and signing material
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+*.p12
+
+# Machine-local reports and tools
+/diagnostics/
+.venv/
+__pycache__/
+*.pyc
+.gradle/
+local.properties
+
+# Generated builds and binary artifacts
+/build/
+/build-*/
+.sconsign*
+.scons-option-cache
+*.o
+*.obj
+*.a
+*.so
+*.dll
+*.exe
+*.apk
+*.obb
+*.zip
+*.rar
+*.7z
+*.log
