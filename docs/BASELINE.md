@@ -1,6 +1,6 @@
 # Offline Wesnoth initial baseline
 
-Audit date: 2026-10-11, user timezone Europe/Berlin. **The initial supplied client/server copies cannot build or run because their implementation files are empty.** Recover the intact Windows originals and collect environment versions before selecting a toolchain or reconstructing custom code. This audit covers source/build entry points, artifact integrity, repository state, dependency metadata and upstream integration; gameplay remains untested.
+Audit date: 2026-10-11, user timezone Europe/Berlin. **The initial supplied client/server copies cannot build or run because their implementation files are empty.** Inspect the Windows originals and recover them if intact; collect environment versions before selecting a toolchain or reconstructing custom code. This audit covers source/build entry points, artifact integrity, repository state, dependency metadata and upstream integration; gameplay remains untested.
 
 ## Supplied files before audit additions
 
@@ -46,9 +46,11 @@ Initial Git remote URLs contain an embedded access token. Never print raw remote
 
 Status: **environment/source recovery pending**. No game build, server launch, APK installation, MongoDB connection or first play is verified.
 
+User clarification on 2026-10-11: Windows will temporarily connect to GitHub to pull updates. GitHub clone/pull is the confirmed normal delivery route; gameplay and offline builds still must work disconnected. The user has not confirmed that intact source exists on Windows. Current GitHub contents provide documentation and diagnostics, not a recovered game implementation.
+
 1. Run `tools/Collect-WindowsEnvironment.ps1` from a separate diagnostics checkout as described in `WORKFLOW.md`, with the real workspace/MSYS2 paths and LDPlayer running.
-2. Return the report; confirm whether Windows originals have real content and how updates reach Windows. Preserve those originals before any pull that might collide with untracked files.
-3. Recover complete custom client/server source if available, excluding secrets/generated artifacts. Compare key sizes/hashes; commit the actual implementation only after review. If originals are also empty, agree on reconstruction from a matching upstream revision because custom behavior cannot be inferred from empty files.
+2. Return the report to establish whether Windows originals have real content and identify installed tools. Preserve any originals before a pull that might collide with untracked files. The update transfer method is already confirmed.
+3. Recover complete custom client/server source if available, excluding secrets/generated artifacts. Compare key sizes/hashes; commit the actual implementation only after review. If originals are unavailable or also empty, reconstruct from a matching upstream revision within the user's authorized project scope and document new behavior explicitly because custom behavior cannot be inferred from empty files.
 4. Record/pin the actual Windows build inputs and prepare matching VPS checks and offline dependency packages.
 5. Produce a real server executable and APK; verify asset import, local single-player and LAN gameplay using the acceptance checks in `WORKFLOW.md`. Add and test MongoDB persistence.
 

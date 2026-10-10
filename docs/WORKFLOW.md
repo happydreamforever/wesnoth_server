@@ -32,17 +32,22 @@ Do not infer an installed version from a directory or archive filename alone. Te
 
 Offline builds need the pinned dependencies and Gradle artifacts already cached locally. Prepare missing installers, archives, checksums, Gradle dependencies and package metadata on a connected computer before moving them to Windows. Never run package upgrades or download-dependent commands as part of offline testing. Use Gradle `--offline` when the build is ready and verify that native dependency scripts also avoid downloads.
 
-GitHub pull requires connectivity. If Windows is permanently disconnected, transfer Git bundles or source archives using USB or an approved LAN computer. Confirm which route the user uses. For a Git bundle, record the source commit, transfer the bundle, verify it, and import with Git; do not treat a copied folder as a verified revision. Subsequent clean worktrees can use `git pull --ff-only` against their accessible remote. Never erase uncommitted Windows source to make a pull succeed.
+The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to pull updates, then returns to offline use. GitHub is the normal delivery route; do not ask the user to choose a transfer method again. Use `git pull --ff-only origin main` in the appropriate clean checkout. Never erase uncommitted Windows source to make a pull succeed. Git bundles remain an optional fallback if connectivity changes.
 
 ## First environment check
 
 The initial source copies are incomplete. Preserve the Windows originals. Obtain the diagnostics tools using a **new checkout in a separate directory**, or copy the tools from this repository; do not pull over the original client/server folders yet. Newly tracked files could collide with the user's untracked files.
 
-If Windows can access GitHub, run in PowerShell, replacing `D:\Test` if needed:
+Temporarily connect Windows to GitHub and run in PowerShell, replacing `D:\Test` if needed:
 
 ```powershell
 Set-Location D:\Test
-git clone https://github.com/happydreamforever/wesnoth_server.git wesnoth-setup
+if (Test-Path .\wesnoth-setup\.git) {
+    git -C .\wesnoth-setup pull --ff-only origin main
+} else {
+    git clone https://github.com/happydreamforever/wesnoth_server.git wesnoth-setup
+}
+if ($LASTEXITCODE -ne 0) { throw 'Git update failed. Keep the error output for diagnosis.' }
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\wesnoth-setup\tools\Collect-WindowsEnvironment.ps1 -WorkspaceRoot D:\Test -MsysRoot D:\Test\msys64
 ```
 
@@ -61,7 +66,7 @@ Choose one of the two clone routes; do not clone twice into the same directory. 
 
 The report is written under `wesnoth-setup\diagnostics` when using the checkout above. It reports missing tools as unknown/blocked, checks source file sizes, and collects installed version information without installing packages, starting the game/server/database, or reading `.env` values. ADB inspection may start its normal local background daemon. Start LDPlayer before the report to include its Android API and ABI. If SDK, emulator or ADB are outside standard locations, pass the optional path parameters documented in the script.
 
-Return the report and explain whether the Windows source is intact and how updates reach Windows. Local filesystem paths and device serials appear in the report; remove those if desired. Do not send `.env`, access tokens, keystores or full environment-variable dumps.
+Return the report so source integrity and installed versions can be checked. The user's statement that they need to pull from GitHub does not establish whether intact source already exists on Windows. Local filesystem paths and device serials appear in the report; remove those if desired. Do not send `.env`, access tokens, keystores or full environment-variable dumps.
 
 ## First play acceptance
 
