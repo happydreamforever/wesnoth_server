@@ -36,7 +36,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current blocker:** `svchost.exe` PID 15800 held Git temporary files without delete sharing; tasklist returned `Services=N/A`. Continue the targeted process lookup and try the temporary packed update below. The earlier diagnostics are retained for reference; their results are recorded in `BASELINE.md`.
+**Current blocker:** normal-user process details were incomplete, and the packed update attempt failed at a `.rev` rename. Use "Elevated process identification" below; another pull is not the next step. Earlier diagnostic commands are retained as history, with actual results in `BASELINE.md`.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -201,6 +201,8 @@ If the process has exited or Windows restarted, the PID may be absent or reused.
 
 ## Temporary packed update
 
+**Windows result: failed.** Objects downloaded, but Git could not rename the temporary `.rev` pack index. The client was not attempted. The command below records the tested attempt; do not repeat it or change more Git options before identifying the process. Proceed to the elevated read-only lookup below.
+
 This command-only workaround can be tried while process identification continues. It asks Git to retain received objects in a pack instead of writing individual loose objects, using [`fetch.unpackLimit`](https://github.com/git-for-windows/git/blob/v2.53.0.windows.2/Documentation/config/fetch.adoc#L29-L38). It has passed isolated Linux verification described in `BASELINE.md`; Windows interference may still affect other writes. The underlying process problem remains open even if the update succeeds.
 
 Temporarily connect to GitHub. In normal PowerShell, paste this entire block and press Enter:
@@ -232,6 +234,50 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 ```
 
 Let it finish. Expected: collector version `2026-10-11.2`, then `Collection COMPLETE: 10/10 sections finished`. Return the report from `wesnoth_server\diagnostics`, including BLOCKED/UNKNOWN or incomplete results. Game build/run is still pending source recovery and this environment inventory.
+
+## Elevated process identification
+
+The normal-user lookup returned blank executable path and command line for PID 15800, parent PID 4152, and no service mapping. Microsoft marks the [ExecutablePath property](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-process) as requiring additional privileges. An elevated read may provide the missing details; it is not guaranteed for every process.
+
+Open Start, type **Windows PowerShell**, right-click that result and choose **Run as administrator**, then accept the Windows prompt. Paste this entire block into the new window and press Enter. It validates elevation and only reads process, service and file-signature information. It does not run Git or stop/change anything.
+
+```powershell
+& {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $admin = [Security.Principal.WindowsPrincipal]::new($identity)
+    if (-not $admin.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        'STOP: Open Windows PowerShell using Run as administrator.'; return
+    }
+    'ADMIN: True'
+    $target = Get-CimInstance Win32_Process -Filter 'ProcessId = 15800' -ErrorAction Stop
+    if (-not $target) { 'PID 15800 is no longer running.'; return }
+    $parent = $null
+    if ($target.ParentProcessId -gt 0) {
+        $parent = Get-CimInstance Win32_Process -Filter ('ProcessId = ' + $target.ParentProcessId) -ErrorAction Stop
+    }
+    foreach ($entry in @(@{Role='TARGET';Data=$target},@{Role='CURRENT PARENT';Data=$parent})) {
+        'Inspecting: ' + $entry.Role
+        $process = $entry.Data
+        if (-not $process) { 'Process no longer running.'; continue }
+        $process | Format-List ProcessId,Name,ExecutablePath,ParentProcessId,CreationDate
+        if ($entry.Role -eq 'TARGET') { 'CommandLine: ' + $process.CommandLine }
+        if ($process.ExecutablePath) {
+            try {
+                $file = Get-Item -LiteralPath $process.ExecutablePath -ErrorAction Stop
+                $signature = Get-AuthenticodeSignature -LiteralPath $file.FullName -ErrorAction Stop
+                $file.VersionInfo | Format-List CompanyName,FileDescription,FileVersion
+                $signer = if ($signature.SignerCertificate) { $signature.SignerCertificate.Subject } else { '(none)' }
+                'SIGNATURE: {0}; SIGNER: {1}' -f $signature.Status,$signer
+            } catch { 'FILE INSPECTION: ' + $_.Exception.Message }
+        } else { 'Executable path remains unavailable in this elevated session.' }
+        $services = @(Get-CimInstance Win32_Service -Filter ('ProcessId = ' + $process.ProcessId) -ErrorAction Stop)
+        if ($services.Count) { $services | Format-Table ProcessId,Name,DisplayName,State -AutoSize }
+        else { 'No matching service.' }
+    }
+}
+```
+
+Return the complete output. Expected first line: `ADMIN: True`, followed by target/parent details, signature information where the path is available, and service mappings or explicit absence messages. The parent PID is queried at the time of inspection and may have been reused; compare its creation time with the target before treating it as the original parent. File version strings and signature status are evidence to review, not standalone proof of process behavior. [Get-AuthenticodeSignature](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/get-authenticodesignature?view=powershell-5.1) reads signature information; it does not execute the inspected file. No definitive process repair or new pull should be prescribed from blank fields alone.
 
 ## First play acceptance
 
