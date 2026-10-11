@@ -4,59 +4,43 @@ This delivery restores Wesnoth 1.19.26 source into new `engine/` directories. Th
 
 Use normal Windows PowerShell. No new installation or administrator shell is required. Open LDPlayer and wait until Android is ready before collecting the environment report.
 
-## 1. Pull both repositories while connected
+## 1. Correct the Windows server Git setting and pull both repositories
 
-**Current exception:** the stash did not clear the helper conflict. Run the read-only diagnostic in the next subsection first; the ordinary pull block below is for use after that conflict is resolved.
+The latest diagnostic confirms the cause: `core.filemode=true`, helper index mode `100644`, working-tree mode `100755`, zero added/deleted lines, LF in both copies, and no staged helper change. The comparison with `core.filemode=false` is clean. Stash `f0c22d3` also records only a mode change for this helper; its content hash matches HEAD. Do not repeat the diagnostic or create/apply another stash.
+
+Temporarily connect to GitHub and run this block in normal Windows PowerShell. It saves `core.filemode=false` only in the existing Windows server repository, verifies the effective value and the helper comparison, then updates both repositories using MSYS2 Git.
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
     $bash = 'D:\Test\msys64\usr\bin\bash.exe'
+    $serverGit = 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server '
+
+    & $bash --noprofile --norc -c ($serverGit + 'config --local core.filemode false')
+    if ($LASTEXITCODE -ne 0) { throw 'Could not save the server Git setting. Send the output.' }
+
+    $mode = & $bash --noprofile --norc -c ($serverGit + 'config --get core.filemode')
+    if ($LASTEXITCODE -ne 0 -or $mode -ne 'false') { throw 'Server core.filemode is not false. Stop here.' }
+    Write-Host "Server core.filemode=$mode"
+
+    & $bash --noprofile --norc -c ($serverGit + 'diff --no-ext-diff --no-textconv --quiet HEAD -- tools/build-windows-server.sh')
+    if ($LASTEXITCODE -ne 0) { throw 'The helper still differs. Stop and send all output.' }
+
     foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
-        Write-Host "Updating $name with MSYS2 Git"
         $repo = '/d/Test/wesnoth-setup/' + $name
+        Write-Host "Updating $name"
         & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
-        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Send all output." }
-        & $bash --noprofile --norc -c ('/usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
-        if ($LASTEXITCODE -ne 0) { throw "Cannot read commit for $name." }
+        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Stop and send the output." }
+        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
+        if ($LASTEXITCODE -ne 0) { throw "Cannot read the $name commit." }
     }
-    'Both updates completed successfully using MSYS2 Git.'
+    'Both updates completed successfully. Keep the existing stash saved.'
 }
 ```
 
-Keep the existing README changes. If Git reports a conflict, return the error without resetting or deleting files. Use the MSYS2 route that already succeeded; native Git for Windows still has an unresolved local file-locking problem.
+Expected: `Server core.filemode=false`, both fast-forward pulls (or already up-to-date), both commit IDs, and `Both updates completed successfully`. Keep the stash saved. If a step fails, stop and send its output; do not reset/restore/clean or force the update.
 
-### Stash succeeded but the helper still blocks the pull
-
-**Active Windows step:** do not repeat the pull or stash yet. The latest report confirms that Git saved `wesnoth-build-helper-before-update`, then the same helper still blocked the server update. The client pull was not reached. Keep the stash and existing files. Run this read-only diagnostic in normal Windows PowerShell; it requires no pull, new tool or internet connection.
-
-```powershell
-& {
-    $bash = 'D:\Test\msys64\usr\bin\bash.exe'
-    $prefix = 'PATH=/usr/bin:$PATH /usr/bin/git --no-optional-locks --no-pager -C /d/Test/wesnoth-setup/wesnoth_server '
-    $file = ' -- tools/build-windows-server.sh'
-    $checks = @(
-        'rev-parse --short HEAD'
-        'rev-parse --short refs/stash'
-        'config --get core.filemode'
-        ('ls-files --stage --eol' + $file)
-        ('diff --no-ext-diff --no-textconv --raw --numstat' + $file)
-        ('diff --no-ext-diff --no-textconv --cached --raw --numstat' + $file)
-        ('-c core.filemode=false diff --no-ext-diff --no-textconv --raw --numstat HEAD' + $file)
-        ('diff --no-ext-diff --no-textconv --raw --numstat HEAD refs/stash' + $file)
-        ('check-attr text eol filter working-tree-encoding' + $file)
-    )
-    foreach ($check in $checks) {
-        Write-Host "CHECK: $check"
-        & $bash --noprofile --norc -c ($prefix + $check)
-        Write-Host "EXIT: $LASTEXITCODE"
-    }
-}
-```
-
-Return the complete CHECK/EXIT output. `config --get core.filemode` may exit 1 when that setting is absent; the other probes still run. An empty diff section with exit 0 means that comparison found no difference. Raw/numstat output shows modes and change counts without printing source contents; the separate working-tree and staged comparisons keep staged edits visible. The `core.filemode=false` override applies only to one read-only comparison; it does not change configuration or attempt a pull. No source, stash, branch, index or saved configuration is intentionally modified. `--no-optional-locks` prevents optional index refresh writes. Only the named helper, its attributes and the filemode setting are inspected; no .env values or Git remote URLs are requested.
-
-Git tracks executable-bit differences as well as file contents; see [core.fileMode](https://git-scm.com/docs/git-config#Documentation/git-config.txt-corefileMode) and [diff raw output](https://git-scm.com/docs/git-diff#_raw_output_format). A mode-only difference is one possible explanation, not yet established on Windows. Both committed helper versions already have LF endings and the repository already requires `*.sh text eol=lf`; do not prescribe global newline settings or normalize the repository without evidence. If content differs, inspect and preserve the current and stashed versions before selecting a repair. Do not automatically pop/apply the stash. Build/test/run below remain pending until the updated helper is successfully checked out.
+[Git's core.fileMode setting](https://git-scm.com/docs/git-config#Documentation/git-config.txt-corefileMode) controls whether working-tree executable bits count as changes. This repository-local setting persists for future server pulls. It does not alter the helper's contents, tracked mode, Windows access permissions, global Git configuration or the client/VPS Git configuration. Real content changes remain protected by Git. The server wrapper explicitly invokes the helper through Bash, so it does not require Git to track local execute-bit changes. Keep the existing README edits and other local work; no new stash or source rewrite is needed for the reported mode-only difference. The corrected helper and this setting have not yet been validated by a successful Windows build.
 
 ## 2. Build and test the server offline
 
