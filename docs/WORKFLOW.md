@@ -36,6 +36,8 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
+**Current blocker:** both existing Windows checkouts fail during Git object writes with `Permission denied`. Run the access check below before retrying this environment-check sequence. The diagnostic can be pasted directly into PowerShell; it does not depend on pulling a new script.
+
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
 | Windows path | Purpose |
@@ -65,6 +67,61 @@ The report is saved under `D:\Test\wesnoth-setup\wesnoth_server\diagnostics`, wh
 Preserve uncommitted changes if a pull reports a conflict; send its error rather than resetting or deleting files. Never clone into `D:\Test\wesnoth-setup` itself. If SDK, emulator or ADB are outside standard locations, pass the optional path parameters documented in the script. The MSYS2 scan has a 240-second timeout and prints a progress message before it starts.
 
 Return the complete report, including UNKNOWN/BLOCKED entries. Copies downloaded from this VPS are not evidence of an independent intact source backup. Local filesystem paths and device serials appear in the report; remove those if desired. Do not send `.env`, access tokens, keystores or full environment-variable dumps.
+
+## Windows Git object access check
+
+Use a normal PowerShell window under the same Windows account that ran the failed pulls. Close Git GUI clients and editors using these repositories before checking. Keep the existing clones and files. This command displays attributes and [Windows access rules](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/icacls), then creates, writes, renames and deletes a uniquely named temporary file in each affected directory. It does not change permissions or existing Git objects, and does not read remotes or `.env`.
+
+```powershell
+$log = Join-Path $env:TEMP ('wesnoth-git-access-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.txt')
+& {
+    $base = 'D:\Test\wesnoth-setup'
+    'USER SID: ' + [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+    $cases = @(
+        @{ Repo='wesnoth_server'; Files=@('3c\5b8ba048292a2d0c653a82b63a1200954960a4','55\f35e7bc6a52888fb99d49961e547b7eafc661e') }
+        @{ Repo='wesnoth_client'; Files=@('1a\38d17a9f4e05ee1e2a9b38a23c6bc0bc448308') }
+    )
+    function Test-GitFolderWrite([string]$folder) {
+        if (-not (Test-Path -LiteralPath $folder -PathType Container)) { "MISSING FOLDER: $folder"; return }
+        $p = Join-Path $folder ('tmp_obj_wesnoth_probe_' + [guid]::NewGuid().ToString('N'))
+        $created = $false; $stream = $null; $step = 'create'
+        try {
+            $stream = [IO.File]::Open($p, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+            $created = $true; $step = 'write'
+            $stream.WriteByte(87); $stream.Dispose(); $stream = $null
+            $step = 'rename'; [IO.File]::Move($p, ($p + '.renamed')); $p += '.renamed'
+            $step = 'delete'; [IO.File]::Delete($p); $created = $false
+            "PROBE PASS: $folder (create/write/rename/delete)"
+        } catch { "PROBE FAIL: $folder; step=$step; $($_.Exception.Message)" }
+        finally {
+            if ($null -ne $stream) { $stream.Dispose() }
+            if ($created) {
+                try { [IO.File]::Delete($p) }
+                catch { "PROBE CLEANUP FAILED: $p; $($_.Exception.Message)" }
+            }
+        }
+    }
+    foreach ($case in $cases) {
+        $objects = Join-Path (Join-Path $base $case.Repo) '.git\objects'
+        $folders = @($objects) + @($case.Files | ForEach-Object { Join-Path $objects (Split-Path $_ -Parent) })
+        $files = @($case.Files | ForEach-Object { Join-Path $objects $_ })
+        foreach ($p in ($folders + $files)) {
+            try {
+                $item = Get-Item -LiteralPath $p -Force -ErrorAction Stop
+                'ATTR: {0}; {1}; length={2}' -f $p, $item.Attributes, $item.Length
+                'OWNER: ' + (Get-Acl -LiteralPath $p -ErrorAction Stop).Owner
+                & "$env:SystemRoot\System32\icacls.exe" $p
+            } catch { "INSPECT: $p; $($_.Exception.Message)" }
+        }
+        foreach ($folder in $folders) { Test-GitFolderWrite $folder }
+    }
+} 2>&1 | Tee-Object -FilePath $log
+"Report saved to: $log"
+```
+
+Expected: five `PROBE PASS` lines if the object root directories and the three affected hash directories all allow these operations. A missing final hash file is possible after a failed fetch; the report records it without creating a replacement. Send the complete output, including `PROBE FAIL`, missing-path and cleanup messages. Account identifiers and paths appear in the report. A passing probe does not establish that Git can finalize those exact objects; investigate their metadata or Git-specific file locking if all probes pass. The helper's syntax and temporary-file operations are verified using Linux PowerShell 7.4.6; actual Windows ACL behavior awaits this report.
+
+If access rules show a permission problem, back up the affected directory ACLs with `icacls /save` before adding current-user Modify access. Preserve other users' grants and explicit denies; do not use `Everyone`, ACL resets, ownership takeover or blanket attribute clearing. Request elevation only if the specific repair needs it, retaining the normal user's identity. Resume `git pull --ff-only origin main` and the environment collector after resolving the failure. Game build/run remains blocked by the incomplete environment/source inventory.
 
 ## First play acceptance
 

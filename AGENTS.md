@@ -10,6 +10,8 @@ Windows temporarily connects to GitHub to pull updates, then runs offline; the u
 
 The user now confirms existing Windows clones at `D:\Test\wesnoth-setup\wesnoth_client` and `D:\Test\wesnoth-setup\wesnoth_server`; MSYS2 is `D:\Test\msys64`. Pull the existing server with `--ff-only origin main` and run its collector using `-WorkspaceRoot D:\Test\wesnoth-setup`. Reports are in that server's `diagnostics` directory. Do not require another diagnostics checkout. This supersedes the earlier copied-folder/separate-checkout instructions. The first inventory was stopped with Ctrl+C and still needs a complete rerun.
 
+Both subsequent Windows pulls failed with `Permission denied` writing `.git/objects`. Resolve this before retrying the collector. `WORKFLOW.md` contains a pasteable access/temporary-file probe that does not require a pull. Windows results and the cause remain pending; do not assume corruption or apply blanket permission resets.
+
 Initial audit on 2026-10-11 found nearly all actual source/build files empty, and only README tracked in each repository. Recover intact originals before replacing custom code. Read the current baseline for updated status.
 
 Never expose or commit `.env`, database credentials, tokens, signing keys, or raw Git remote URLs with embedded credentials. Stage only reviewed paths. Existing untracked source/build artifacts are not automatically safe to commit. After each cycle, update baseline status, verified checks, remaining limitations, and next steps.
