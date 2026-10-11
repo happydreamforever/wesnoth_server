@@ -36,7 +36,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current blocker:** `NetActvity` is running in the blocking process's parent, but CIM reports blank configuration/Unknown start mode and both service registry paths are absent. Use "Native service state and installation history" below to obtain direct SCM results and any retained installation record. A stop/start test is not reliably reversible with the registration unresolved. The packed update workaround also failed; another pull is not the next step. Earlier commands are retained as history, with actual results in `BASELINE.md`.
+**Current next step:** LastBootUpTime is October 1, so a full Windows restart has not occurred during this troubleshooting. Follow "Full Windows restart and guarded update" below: save work, use Start → Power → Restart, then verify boot time/service state and retry ordinary pulls in normal PowerShell. Run the collector with LDPlayer open only after both updates succeed. NetActvity's registration remains unexplained; do not stop/delete/recreate it manually or use old PIDs after restarting. Earlier commands are history, with actual results in `BASELINE.md`.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -359,7 +359,57 @@ Expected: native service configuration/status output or explicit SC errors, up t
 
 The observed mismatch does not prove malware, legitimacy or a specific deletion mechanism. Microsoft's [DeleteService lifecycle](https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-deleteservice) distinguishes a running service marked for deletion from final removal after it stops and all service handles close; absent registry keys alone do not establish that lifecycle. Do not promise Stop-Service followed by Start-Service is reversible when configuration cannot be read. Do not recreate a guessed service key, stop/delete this unidentified service, terminate generic svchost processes, suspend the captured process while it may hold a handle, or add speculative Git flags. Preserve the current process state for these focused reads. Query boot time because the service process still reports an October 1 creation date and an actual full restart has not been established.
 
-Verification: the block's syntax parses with Linux PowerShell 7.4.6. Native Windows SCM/event/boot queries, successful updates and the complete environment inventory remain pending; no game build/run is verified.
+Verification: the block's syntax parses with Linux PowerShell 7.4.6. The user ran it on Windows: qc failed with error 2 querying delayed autostart, queryex returned Running PID 4152, no installation record was found, and boot time was October 1. Successful updates and the complete environment inventory remain pending; no game build/run is verified.
+
+## Full Windows restart and guarded update
+
+The native check now establishes LastBootUpTime `10/1/2026 9:09:03 PM`. No full Windows restart has occurred since that boot; the earlier suggested restart was not verified and is not a failed recovery test. `sc.exe qc NetActvity` failed specifically while querying the delayed-autostart flag with error 2, while queryex still reported Running PID 4152. No matching installation event was found in the retained System log.
+
+Save open work and close the emulator/development applications, then use **Start → Power → Restart** on Windows. Restart performs a full boot cycle; ordinary shutdown may retain system state through Fast Startup. See Microsoft's [power-state documentation](https://learn.microsoft.com/en-us/windows/win32/power/system-power-states). Do not force power off or change Fast Startup settings. This restarts the Windows session and tests Git afterward; it does not guarantee restoration of the unidentified service. Its registration may remain absent or be recreated by other software, and its role is still unknown.
+
+After signing back in, temporarily connect to GitHub and open a **normal Windows PowerShell** window. Run the following before reopening LDPlayer or the development applications:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    'WINDOWS BOOT TIME'
+    Get-CimInstance Win32_OperatingSystem | Format-List LastBootUpTime
+
+    'NETACTVITY AFTER RESTART'
+    sc.exe queryex NetActvity
+    "SC_QUERYEX_EXIT: $LASTEXITCODE"
+
+    $git = 'C:\Program Files\Git\cmd\git.exe'
+    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
+        $repo = Join-Path 'D:\Test\wesnoth-setup' $name
+        Write-Host "Updating $name"
+        & $git -C $repo pull --ff-only origin main
+        if ($LASTEXITCODE -ne 0) {
+            throw "Pull failed for $name. Stop here and send all output."
+        }
+        & $git -C $repo rev-parse --short HEAD
+    }
+    'Both updates completed successfully.'
+}
+```
+
+Expected: boot time reflects the restart just performed, followed by service status or a native error, then both successful pulls and their commit IDs. Error 1060 (service does not exist) is one possible service-query result and does not prevent attempting Git; it is not required for a successful update. The service query's exit code is informational. If the boot time still shows the old boot, a new full boot has not been demonstrated. Do not reuse old PIDs 4152/15800 to control processes after restarting; PIDs may be assigned to unrelated processes.
+
+If either pull fails, the block stops. Return its full output, including boot/service information and the Git failure. Preserve local files; do not reset, reclone, alter permissions, delete objects, or repeat the packed-fetch workaround. A fresh failure after a confirmed restart is new evidence, and the earlier trace does not establish which new process caused it.
+
+Only after **Both updates completed successfully.**, start LDPlayer, wait for Android to finish booting, and run in normal PowerShell:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Collect-WindowsEnvironment.ps1' `
+  -WorkspaceRoot 'D:\Test\wesnoth-setup' `
+  -MsysRoot 'D:\Test\msys64'
+"COLLECTOR_EXIT: $LASTEXITCODE"
+```
+
+Expected: collector version `2026-10-11.2`, a script SHA256, all ten inventory sections, footer `Collection COMPLETE: 10/10 sections finished`, and exit 0. Let the scan finish; MSYS2 probes may take several minutes. Return the latest report under `D:\Test\wesnoth-setup\wesnoth_server\diagnostics`, including any BLOCKED/UNKNOWN entries. If the report is INCOMPLETE or the collector exits nonzero, return that report/output too. Inventory completion does not establish a working build, server, APK or gameplay.
+
+Verification: both pasted blocks parse with the Linux PowerShell 7.4.6 verifier. Actual restart, updated boot time, successful Windows pulls and the full Windows inventory await the user's results. This delivery changes documentation/memory only; game build/run remains blocked on source recovery and environment confirmation.
 
 ## First play acceptance
 
