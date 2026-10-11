@@ -36,37 +36,41 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-The initial source copies are incomplete. Preserve the Windows originals. Obtain the diagnostics tools using a **new checkout in a separate directory**, or copy the tools from this repository; do not pull over the original client/server folders yet. Newly tracked files could collide with the user's untracked files.
+The user downloaded/copied the initial client and server folders from the VPS to Windows, rather than cloning them. Their confirmed layout is:
 
-Temporarily connect Windows to GitHub and run in PowerShell, replacing `D:\Test` if needed:
+| Windows path | Purpose |
+| --- | --- |
+| `D:\Test\wesnoth-setup` | Workspace parent |
+| `D:\Test\wesnoth-setup\wesnoth_client` | Copied client folder |
+| `D:\Test\wesnoth-setup\wesnoth_server` | Copied server folder |
+| `D:\Test\msys64` | Installed MSYS2 folder |
 
-```powershell
-Set-Location D:\Test
-if (Test-Path .\wesnoth-setup\.git) {
-    git -C .\wesnoth-setup pull --ff-only origin main
-} else {
-    git clone https://github.com/happydreamforever/wesnoth_server.git wesnoth-setup
-}
-if ($LASTEXITCODE -ne 0) { throw 'Git update failed. Keep the error output for diagnosis.' }
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\wesnoth-setup\tools\Collect-WindowsEnvironment.ps1 -WorkspaceRoot D:\Test -MsysRoot D:\Test\msys64
-```
-
-`WorkspaceRoot` must contain the existing `wesnoth_client` and `wesnoth_server` folders. If GitHub is unavailable on Windows, transfer the new checkout or its `tools` directory from a connected computer, then run the same script with its actual path. `ExecutionPolicy Bypass` applies only to this PowerShell process.
-
-This handoff also includes a self-contained `wesnoth_server.bundle` for offline transfer. After placing it on a USB drive (for example `E:\transfer`), use a fresh destination:
+Keep LDPlayer running. Run the existing diagnostic in Windows PowerShell; no clone or pull is needed for this check:
 
 ```powershell
-Set-Location D:\Test
-git clone E:\transfer\wesnoth_server.bundle wesnoth-setup
-git -C .\wesnoth-setup bundle verify E:\transfer\wesnoth_server.bundle
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\wesnoth-setup\tools\Collect-WindowsEnvironment.ps1 -WorkspaceRoot D:\Test -MsysRoot D:\Test\msys64
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File "D:\Test\wesnoth-setup\wesnoth_server\tools\Collect-WindowsEnvironment.ps1" `
+  -WorkspaceRoot "D:\Test\wesnoth-setup" `
+  -MsysRoot "D:\Test\msys64"
 ```
 
-Choose one of the two clone routes; do not clone twice into the same directory. A bundle clone's `origin` points to that bundle, so subsequent updates must use newly transferred bundles or an explicitly configured accessible GitHub remote.
+The report is written to `D:\Test\wesnoth-setup\wesnoth_server\diagnostics\windows-environment-<timestamp>.txt`. `ExecutionPolicy Bypass` applies only to this PowerShell process. A `.git` directory is not required for diagnostics; Git metadata availability will be reported. The companion `collect-msys2-environment.sh` should be present beside the PowerShell script.
 
-The report is written under `wesnoth-setup\diagnostics` when using the checkout above. It reports missing tools as unknown/blocked, checks source file sizes, and collects installed version information without installing packages, starting the game/server/database, or reading `.env` values. ADB inspection may start its normal local background daemon. Start LDPlayer before the report to include its Android API and ABI. If SDK, emulator or ADB are outside standard locations, pass the optional path parameters documented in the script.
+If the copied server folder predates the diagnostic tools, temporarily connect to GitHub and obtain a separate diagnostics checkout at `D:\Test\wesnoth-diagnostics`. This destination is outside the existing workspace:
 
-Return the report so source integrity and installed versions can be checked. The user's statement that they need to pull from GitHub does not establish whether intact source already exists on Windows. Local filesystem paths and device serials appear in the report; remove those if desired. Do not send `.env`, access tokens, keystores or full environment-variable dumps.
+```powershell
+git clone --branch main https://github.com/happydreamforever/wesnoth_server.git D:\Test\wesnoth-diagnostics
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File "D:\Test\wesnoth-diagnostics\tools\Collect-WindowsEnvironment.ps1" `
+  -WorkspaceRoot "D:\Test\wesnoth-setup" `
+  -MsysRoot "D:\Test\msys64"
+```
+
+If that separate GitHub checkout already exists, update it with `git -C D:\Test\wesnoth-diagnostics pull --ff-only origin main` instead of cloning again. A report from this fallback checkout is saved under `D:\Test\wesnoth-diagnostics\diagnostics`. Preserve the existing project copies and verify their Git metadata before setting up future pulls; do not clone into `D:\Test\wesnoth-setup` itself.
+
+The report collects installed versions and file sizes without installing packages, starting the game/server/database, or reading `.env` values. ADB inspection may start its normal local background daemon. Missing tools, Git metadata, upstream source or game data are recorded without preventing the remaining inventory. If SDK, emulator or ADB are outside standard locations, pass the optional path parameters documented in the script.
+
+Return the report, including UNKNOWN/BLOCKED entries, so source integrity and installed versions can be checked. Copies downloaded from this VPS are not evidence of an independent intact source backup. Local filesystem paths and device serials appear in the report; remove those if desired. Do not send `.env`, access tokens, keystores or full environment-variable dumps.
 
 ## First play acceptance
 

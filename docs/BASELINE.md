@@ -22,7 +22,7 @@ The archive can be listed by VPS 7-Zip 23.01, but its test exits 2 with unsuppor
 
 The VPS runs Ubuntu 24.04.5 LTS, kernel 6.8.0-146-generic, x86_64; Git 2.43.0 and Python 3.12.3 are available. At the initial audit, C/C++ compilers, CMake, Ninja, Java, SCons, ADB and MongoDB binaries were absent from PATH. The copied Windows `.venv` is not a working Linux build environment. No Android runtime test is available on this VPS.
 
-Windows 11, MSYS2 location, LDPlayer version/API/ABI, MongoDB version and active compiler/JDK/SDK/NDK versions are **awaiting the Windows report**. Do not upgrade or install a proposed toolchain before reviewing that report.
+The user reports Windows 11, MSYS2 at `D:\Test\msys64`, and LDPlayer running. The workspace parent is `D:\Test\wesnoth-setup`, containing `wesnoth_client` and `wesnoth_server`. Windows build number, MSYS2 package versions, LDPlayer version/API/ABI, MongoDB version and active compiler/JDK/SDK/NDK versions are **awaiting the Windows report**. Do not upgrade or install a proposed toolchain before reviewing that report.
 
 Archived MSYS2 package metadata lists MINGW64/UCRT64 GCC 16.2.0-3, MINGW64 Boost 1.91.0-3, MSYS GCC 15.3.0-1, MSYS Python 3.12.13-1, UCRT64 Python 3.14.7-1, Git 2.55.0-1, OpenSSL 3.6.3-1, make 4.4.1-3, Ninja 1.13.2-1, Meson 1.12.0-1 and MSYS runtime 3.6.10-3. These are archive labels, not verified active tool versions. SCons/CMake/JDK/Android tools were not found in that archive inventory and may be installed separately.
 
@@ -48,7 +48,9 @@ Status: **environment/source recovery pending**. No game build, server launch, A
 
 User clarification on 2026-10-11: Windows will temporarily connect to GitHub to pull updates. GitHub clone/pull is the confirmed normal delivery route; gameplay and offline builds still must work disconnected. The user has not confirmed that intact source exists on Windows. Current GitHub contents provide documentation and diagnostics, not a recovered game implementation.
 
-1. Run `tools/Collect-WindowsEnvironment.ps1` from a separate diagnostics checkout as described in `WORKFLOW.md`, with the real workspace/MSYS2 paths and LDPlayer running.
+Further clarification: the initial Windows client/server folders were downloaded/copied from the VPS, not cloned from GitHub. They reside under `D:\Test\wesnoth-setup`, and whether `.git` was retained is unknown. These copies are not an independent source-recovery backup. LDPlayer is already running. No pull is needed for the initial diagnostic when the copied server contains its `tools` directory.
+
+1. Run `D:\Test\wesnoth-setup\wesnoth_server\tools\Collect-WindowsEnvironment.ps1` with `-WorkspaceRoot D:\Test\wesnoth-setup -MsysRoot D:\Test\msys64`, as described in `WORKFLOW.md`. Use the separate fallback checkout only if those diagnostic tools are missing.
 2. Return the report to establish whether Windows originals have real content and identify installed tools. Preserve any originals before a pull that might collide with untracked files. The update transfer method is already confirmed.
 3. Recover complete custom client/server source if available, excluding secrets/generated artifacts. Compare key sizes/hashes; commit the actual implementation only after review. If originals are unavailable or also empty, reconstruct from a matching upstream revision within the user's authorized project scope and document new behavior explicitly because custom behavior cannot be inferred from empty files.
 4. Record/pin the actual Windows build inputs and prepare matching VPS checks and offline dependency packages.
