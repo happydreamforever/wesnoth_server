@@ -36,7 +36,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current blocker:** the elevated lookup identified the blocking process's parent as the host of service `NetActvity`. Both executable files have valid Microsoft signatures, but the service's implementation and purpose remain unknown. Use "NetActvity service configuration" below; another pull is not the next step. The packed update workaround also failed. Earlier diagnostic commands are retained as history, with actual results in `BASELINE.md`.
+**Current blocker:** `NetActvity` is running in the blocking process's parent, but CIM reports blank configuration/Unknown start mode and both service registry paths are absent. Use "Native service state and installation history" below to obtain direct SCM results and any retained installation record. A stop/start test is not reliably reversible with the registration unresolved. The packed update workaround also failed; another pull is not the next step. Earlier commands are retained as history, with actual results in `BASELINE.md`.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -320,7 +320,46 @@ Expected: SERVICE CONFIGURATION, SERVICE PROCESS, the two REGISTRY sections, and
 
 Use the [service configuration properties](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-service) and [dependency information](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/get-service?view=powershell-5.1) to identify the component and choose the next repair. A signature check on a host executable alone does not establish the identity of hosted code. No service is stopped, disabled or deleted by this block. Do not terminate generic svchost processes, add antivirus exclusions, reset permissions or repeat the failed packed-update flags. A temporary service stop/test/start may be considered once the component and its impact are understood; explicitly verify the blocking child afterward because stopping a parent does not establish that the child exited. Git should continue to run in the normal-user session.
 
-Verification: the pasted block parses using the VPS PowerShell 7.4.6 verifier and uses Windows PowerShell 5.1 syntax. Windows service/registry execution and any Git repair await the user's report. Game builds and runtime tests remain blocked.
+Verification: the pasted block parses using the VPS PowerShell 7.4.6 verifier and uses Windows PowerShell 5.1 syntax. The user has now run it on Windows and returned the blank configuration/missing-key results recorded below. Git repair, game builds and runtime tests remain blocked.
+
+## Native service state and installation history
+
+The latest Windows check completed. NetActvity is Running with PID 4152 and AcceptStop/CanStop True, but Description, StartName and PathName are blank, StartMode is Unknown, and both the service key and Parameters key are reported absent. Its current host command line is `C:\Windows\SysWOW64\svchost.exe -k netsvcs -p`. No dependency entries were returned. This is insufficient to identify the component or guarantee it can restart.
+
+Use the same **Administrator: Windows PowerShell** window. Paste the entire block and press Enter; no Git pull is needed. If that window is closed, open Start, type Windows PowerShell, right-click it, select Run as administrator, and accept the Windows prompt.
+
+```powershell
+& {
+    'NATIVE SERVICE CONFIGURATION'
+    sc.exe qc NetActvity
+    "SC_QC_EXIT: $LASTEXITCODE"
+
+    'NATIVE SERVICE STATUS'
+    sc.exe queryex NetActvity
+    "SC_QUERYEX_EXIT: $LASTEXITCODE"
+
+    'SERVICE INSTALLATION RECORD'
+    $query = "*[System[Provider[@Name='Service Control Manager'] and EventID=7045] and EventData[Data[@Name='ServiceName']='NetActvity']]"
+    try {
+        Get-WinEvent -LogName System -FilterXPath $query -MaxEvents 5 -ErrorAction Stop |
+            Format-List TimeCreated,Id,Message
+    } catch {
+        if ($_.FullyQualifiedErrorId -like 'NoMatchingEventsFound*') {
+            'No matching installation event found in the retained System log.'
+        } else { 'EVENT LOOKUP ERROR: ' + $_.Exception.Message }
+    }
+
+    'LAST WINDOWS BOOT'
+    Get-CimInstance Win32_OperatingSystem |
+        Format-List LastBootUpTime
+}
+```
+
+Expected: native service configuration/status output or explicit SC errors, up to five matching service-installation events, and the last Windows boot time. Return all output, including exit codes and errors. `sc.exe` is intentional; `sc` alone is a different PowerShell alias. The [SC commands](https://learn.microsoft.com/en-us/windows/win32/services/configuring-a-service-using-sc) query the Service Control Manager directly. The [event query](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.diagnostics/get-winevent?view=powershell-5.1) filters the System log to installation event 7045 for exactly NetActvity; it does not dump unrelated events. The record may preserve an original binary path/account even when current configuration is unavailable. Missing retained events do not establish that installation never occurred. Review service command lines for private data before sharing.
+
+The observed mismatch does not prove malware, legitimacy or a specific deletion mechanism. Microsoft's [DeleteService lifecycle](https://learn.microsoft.com/en-us/windows/win32/api/winsvc/nf-winsvc-deleteservice) distinguishes a running service marked for deletion from final removal after it stops and all service handles close; absent registry keys alone do not establish that lifecycle. Do not promise Stop-Service followed by Start-Service is reversible when configuration cannot be read. Do not recreate a guessed service key, stop/delete this unidentified service, terminate generic svchost processes, suspend the captured process while it may hold a handle, or add speculative Git flags. Preserve the current process state for these focused reads. Query boot time because the service process still reports an October 1 creation date and an actual full restart has not been established.
+
+Verification: the block's syntax parses with Linux PowerShell 7.4.6. Native Windows SCM/event/boot queries, successful updates and the complete environment inventory remain pending; no game build/run is verified.
 
 ## First play acceptance
 
