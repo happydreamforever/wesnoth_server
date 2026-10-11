@@ -22,7 +22,16 @@ The archive can be listed by VPS 7-Zip 23.01, but its test exits 2 with unsuppor
 
 The VPS runs Ubuntu 24.04.5 LTS, kernel 6.8.0-146-generic, x86_64; Git 2.43.0 and Python 3.12.3 are available. At the initial audit, C/C++ compilers, CMake, Ninja, Java, SCons, ADB and MongoDB binaries were absent from PATH. The copied Windows `.venv` is not a working Linux build environment. No Android runtime test is available on this VPS.
 
-The user reports Windows 11, MSYS2 at `D:\Test\msys64`, and LDPlayer running. The workspace parent is `D:\Test\wesnoth-setup`, containing `wesnoth_client` and `wesnoth_server`. Windows build number, MSYS2 package versions, LDPlayer version/API/ABI, MongoDB version and active compiler/JDK/SDK/NDK versions are **awaiting the Windows report**. Do not upgrade or install a proposed toolchain before reviewing that report.
+The user reports Windows 11, MSYS2 at `D:\Test\msys64`, and LDPlayer running. The workspace parent is `D:\Test\wesnoth-setup`, containing `wesnoth_client` and `wesnoth_server`. Their first actual Windows report confirms:
+
+| Windows component | Reported value |
+| --- | --- |
+| Operating system | Microsoft Windows 11 Pro, 10.0.22000, build 22000, 64-bit |
+| Windows PowerShell | 5.1.22000.2538, 64-bit process |
+| Git for Windows | 2.53.0.windows.2 at `C:\Program Files\Git\cmd\git.exe` |
+| MSYS2 Git | 2.55.0 at `D:\Test\msys64\usr\bin\git.exe` |
+
+The report jumped from Git results to the final summary without Java, source, MSYS2 package, Android, emulator or MongoDB results. The user subsequently confirmed that they pressed Ctrl+C or stopped it. Its zero BLOCKED/UNKNOWN counts do **not** establish a complete inventory. Those remaining versions and source integrity still await an uninterrupted report. Do not upgrade or install a proposed toolchain based on this partial run.
 
 Archived MSYS2 package metadata lists MINGW64/UCRT64 GCC 16.2.0-3, MINGW64 Boost 1.91.0-3, MSYS GCC 15.3.0-1, MSYS Python 3.12.13-1, UCRT64 Python 3.14.7-1, Git 2.55.0-1, OpenSSL 3.6.3-1, make 4.4.1-3, Ninja 1.13.2-1, Meson 1.12.0-1 and MSYS runtime 3.6.10-3. These are archive labels, not verified active tool versions. SCons/CMake/JDK/Android tools were not found in that archive inventory and may be installed separately.
 
@@ -50,7 +59,7 @@ User clarification on 2026-10-11: Windows will temporarily connect to GitHub to 
 
 Further clarification: the initial Windows client/server folders were downloaded/copied from the VPS, not cloned from GitHub. They reside under `D:\Test\wesnoth-setup`, and whether `.git` was retained is unknown. These copies are not an independent source-recovery backup. LDPlayer is already running. No pull is needed for the initial diagnostic when the copied server contains its `tools` directory.
 
-1. Run `D:\Test\wesnoth-setup\wesnoth_server\tools\Collect-WindowsEnvironment.ps1` with `-WorkspaceRoot D:\Test\wesnoth-setup -MsysRoot D:\Test\msys64`, as described in `WORKFLOW.md`. Use the separate fallback checkout only if those diagnostic tools are missing.
+1. Obtain the corrected collector in a separate `D:\Test\wesnoth-diagnostics` GitHub checkout and rerun with `-WorkspaceRoot D:\Test\wesnoth-setup -MsysRoot D:\Test\msys64`, using the commands in `WORKFLOW.md`. Confirm collector version `2026-10-11.2` and return its report even if it is incomplete.
 2. Return the report to establish whether Windows originals have real content and identify installed tools. Preserve any originals before a pull that might collide with untracked files. The update transfer method is already confirmed.
 3. Recover complete custom client/server source if available, excluding secrets/generated artifacts. Compare key sizes/hashes; commit the actual implementation only after review. If originals are unavailable or also empty, reconstruct from a matching upstream revision within the user's authorized project scope and document new behavior explicitly because custom behavior cannot be inferred from empty files.
 4. Record/pin the actual Windows build inputs and prepare matching VPS checks and offline dependency packages.
@@ -58,4 +67,12 @@ Further clarification: the initial Windows client/server folders were downloaded
 
 Initial checks completed: file-size inventories, Git local/remote baseline comparison, upstream version/config/protocol review, game-data manifest review and MSYS2 archive listing.
 
-Diagnostics validation: PowerShell 7.4.6 parser passed using a temporary portable Linux verification tool; Bash syntax and missing-tool behavior passed. The report completed against the real VPS files and correctly identified empty build/source artifacts. Controlled Linux fixtures verified paths with spaces, SDK/NDK metadata, Gradle versions/cache discovery, ready versus offline/unauthorized ADB devices, API/ABI output, report saving and exclusion of credential sentinels. The scripts are ASCII/LF-compatible and Git attributes preserve LF for the shell helper. **Windows PowerShell 5.1, MSYS2 tool execution and real LDPlayer/phone behavior remain unverified.** This verification tool is not a selected project build dependency.
+Initial diagnostics validation: PowerShell 7.4.6 parser passed using a temporary portable Linux verification tool; Bash syntax and missing-tool behavior passed. The report completed against the real VPS files and correctly identified empty build/source artifacts. Controlled Linux fixtures verified paths with spaces, SDK/NDK metadata, Gradle versions/cache discovery, ready versus offline/unauthorized ADB devices, API/ABI output, report saving and exclusion of credential sentinels. The scripts are ASCII/LF-compatible and Git attributes preserve LF for the shell helper. This verification tool is not a selected project build dependency.
+
+## First Windows report correction
+
+The first real Windows PowerShell 5.1 run reached both Git version probes and saved a partial report. The user confirmed that they pressed Ctrl+C or stopped the run. This explains the early exit; it is not evidence of a Java or Windows installation failure. Controlled Linux PowerShell tests reproduced the reporting flaw: pipeline cancellation can run `finally`, skip `catch`, save a report, and exit zero in the original collector.
+
+Collector version `2026-10-11.2` records its own SHA256, prints the current probe before potentially slow work, guards each inventory section, narrows Java registry discovery to known product/version keys, and tracks all ten sections independently of error counts. A full inventory ends with `Collection COMPLETE: 10/10 sections finished`; a failed or interrupted inventory ends with `Collection INCOMPLETE`, identifies unfinished sections and the last probe, and exits 2. COMPLETE describes inventory coverage only; missing tools or empty source can still be reported as BLOCKED.
+
+The corrected collector completed all ten sections against the real VPS files. `tests/Test-CollectWindowsEnvironment.ps1` passed 116 assertions across helper checks and six isolated process scenarios, including early return, failed sections, injected pipeline interruption and report-save failure. A separate real Ctrl+C test saved INCOMPLETE 2/10 and exited 2. Environment fixtures confirmed Git/SDK discovery still reaches later sections and a Java failure produces INCOMPLETE 9/10 while the remaining sections run. All these checks used Linux PowerShell 7.4.6. **The corrected collector still needs the user's Windows PowerShell 5.1 rerun; full MSYS2, Java, Android, LDPlayer and MongoDB inventory remains pending.**
