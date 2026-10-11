@@ -36,7 +36,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current blocker:** Windows Git updates failed, and the completed access check captured a sharing violation during the server `objects\55` rename. See "Windows file lock retry" below for the next step. The original access check is retained for reference; its output is already recorded in `BASELINE.md`.
+**Current blocker:** the server retry failed again, and Resource Monitor returned no matching handles. See "Capture the recurring Git failure" below for the next step. The original access probe and retry instructions are retained for reference; their results are recorded in `BASELINE.md`.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -125,6 +125,8 @@ If access rules show a permission problem, back up the affected directory ACLs w
 
 ## Windows file lock retry
 
+This retry has already been attempted: the server failed before the client was reached. Proceed to the capture below rather than repeating the restart or unobserved pulls.
+
 The returned report shows Modify access and a sharing violation while renaming a newly written temporary file. The locking program is not yet identified. Additional ACL grants or administrator-mode Git are not justified by this result.
 
 Save open work and restart Windows once. Temporarily connect to GitHub, open a normal PowerShell window and retry before reopening editors or Git GUI applications. This is an attempt to release existing handles, not a confirmed fix; a background application may recreate the lock.
@@ -154,6 +156,24 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 Expected: both pulls exit successfully, followed by collector version `2026-10-11.2` and `Collection COMPLETE: 10/10 sections finished`. Return the latest report from `wesnoth_server\diagnostics`, including missing-tool or incomplete-section results. This does not establish a game build or successful play.
 
 If a pull fails again, send the error and run `resmon.exe`. Open **CPU > Associated Handles**, search for `wesnoth-setup`, and report the **Image**, **PID**, and **Handle Name** columns. This is Microsoft's [built-in method for finding processes with open files](https://techcommunity.microsoft.com/blog/itopstalkblog/identify-which-process-is-blocking-a-file-in-windows/4432635). A matching open handle is a lead, not proof that the process blocked rename. Do not force-close handles or terminate an unidentified process. If the search is empty, report that too: the observed lock may be brief. A repeat failure with no visible handle calls for a [Process Monitor](https://learn.microsoft.com/en-us/sysinternals/downloads/procmon) capture filtered to the repository paths during reproduction, preserving events from all processes. Do not replace tracing with repeated reboots, permission resets or antivirus exclusions.
+
+## Capture the recurring Git failure
+
+Resource Monitor found no matching handles. Use [Microsoft Process Monitor](https://learn.microsoft.com/en-us/sysinternals/downloads/procmon) to record file operations while the error occurs; a snapshot of current handles can miss brief interference. This diagnostic requires no repository update first.
+
+1. Download the [official Process Monitor ZIP](https://download.sysinternals.com/files/ProcessMonitor.zip), extract it, and run `Procmon64.exe` as administrator. Elevation is for the tracing tool only; keep Git in the normal user's PowerShell window.
+2. Stop capture with **Ctrl+E**, then clear existing events with **Ctrl+X**. Use **Ctrl+L** to open filters, reset previous filters, and add **Path / begins with / `D:\Test\wesnoth-setup\wesnoth_server\.git\objects` / Include**. Click **Add**, then **OK**. Keep filesystem events enabled. Do not restrict Process Name or Result; successful opens by another process can explain Git's later failure.
+3. Start capture with **Ctrl+E**, then run the following command once in normal PowerShell:
+
+```powershell
+& 'C:\Program Files\Git\cmd\git.exe' `
+  -C 'D:\Test\wesnoth-setup\wesnoth_server' pull --ff-only origin main
+```
+
+4. Immediately stop capture with **Ctrl+E** after Git finishes or fails. Save with **File > Save > Events displayed using current filter**, choose **CSV**, and use `D:\Test\git-objects.csv`.
+5. Return that filtered CSV and Git's terminal output. Keep the event columns **Time of Day, Process Name, PID, Operation, Path, Result, Detail**. Do not send an unfiltered capture or PML file, which can include unrelated process metadata. If Git unexpectedly succeeds, send that result and the capture too.
+
+Expected: filesystem events under the server's `.git\objects` directory during this one retry. They may show `SHARING VIOLATION` or `ACCESS DENIED`; neither a specific result nor the responsible program is guaranteed in advance. An empty CSV means the capture/filter needs checking. Review preceding opens and their sharing modes before assigning blame to a process; the process reporting an error can be the victim. Resume the collector only after the needed update succeeds. This trace has not yet been run on Windows.
 
 ## First play acceptance
 
