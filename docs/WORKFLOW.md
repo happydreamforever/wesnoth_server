@@ -36,7 +36,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current blocker:** normal-user process details were incomplete, and the packed update attempt failed at a `.rev` rename. Use "Elevated process identification" below; another pull is not the next step. Earlier diagnostic commands are retained as history, with actual results in `BASELINE.md`.
+**Current blocker:** the elevated lookup identified the blocking process's parent as the host of service `NetActvity`. Both executable files have valid Microsoft signatures, but the service's implementation and purpose remain unknown. Use "NetActvity service configuration" below; another pull is not the next step. The packed update workaround also failed. Earlier diagnostic commands are retained as history, with actual results in `BASELINE.md`.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -278,6 +278,49 @@ Open Start, type **Windows PowerShell**, right-click that result and choose **Ru
 ```
 
 Return the complete output. Expected first line: `ADMIN: True`, followed by target/parent details, signature information where the path is available, and service mappings or explicit absence messages. The parent PID is queried at the time of inspection and may have been reused; compare its creation time with the target before treating it as the original parent. File version strings and signature status are evidence to review, not standalone proof of process behavior. [Get-AuthenticodeSignature](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/get-authenticodesignature?view=powershell-5.1) reads signature information; it does not execute the inspected file. No definitive process repair or new pull should be prescribed from blank fields alone.
+
+## NetActvity service configuration
+
+The elevated result associates current parent PID 4152 with the running service named exactly `NetActvity`. The direct Git-blocking process remains PID 15800, which has no service mapping. Both paths are `C:\Windows\SysWOW64\svchost.exe`, with valid Microsoft signatures; this identifies the host files, not the service's code or publisher. The parent's reported creation time precedes the child's. The trace establishes the child's conflicting file opens, but does not yet establish that stopping the parent service would stop that child or restore Git.
+
+In the existing **Administrator: Windows PowerShell** window, paste this entire block and press Enter. If that window is closed, use Start, type Windows PowerShell, right-click it, choose Run as administrator, and accept the Windows prompt. No Git pull or downloaded helper is needed for this check.
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $name = 'NetActvity'
+    $service = Get-CimInstance Win32_Service -Filter "Name='$name'"
+    if (-not $service) { 'Service no longer found.'; return }
+
+    'SERVICE CONFIGURATION'
+    $service | Format-List Name,DisplayName,Description,State,StartMode,StartName,PathName,ProcessId,AcceptStop
+
+    'SERVICE PROCESS'
+    if ($service.ProcessId -gt 0) {
+        Get-CimInstance Win32_Process -Filter ('ProcessId = ' + $service.ProcessId) |
+            Format-List ProcessId,ExecutablePath,CommandLine,CreationDate
+    } else { 'Service has no running process.' }
+
+    $key = 'HKLM:\SYSTEM\CurrentControlSet\Services\NetActvity'
+    foreach ($path in @($key, "$key\Parameters")) {
+        'REGISTRY: ' + $path
+        if (Test-Path -LiteralPath $path) {
+            Get-ItemProperty -LiteralPath $path |
+                Format-List ImagePath,Description,ServiceDll,ServiceMain,DependOnService
+        } else { 'Key not present.' }
+    }
+
+    'SERVICE DEPENDENCIES'
+    Get-Service -Name $name |
+        Format-List Name,Status,CanStop,ServicesDependedOn,DependentServices
+}
+```
+
+Expected: SERVICE CONFIGURATION, SERVICE PROCESS, the two REGISTRY sections, and SERVICE DEPENDENCIES. Return all output, including empty fields, `Key not present.` messages or errors. The block reads only the named service's configuration and current process metadata. It also reads any configured `ServiceDll` and `ServiceMain` values; those values are not guaranteed to exist or identify all loaded code. It does not read `.env` or the full registry/environment. Review command-line/path output for private information before sharing.
+
+Use the [service configuration properties](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-service) and [dependency information](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/get-service?view=powershell-5.1) to identify the component and choose the next repair. A signature check on a host executable alone does not establish the identity of hosted code. No service is stopped, disabled or deleted by this block. Do not terminate generic svchost processes, add antivirus exclusions, reset permissions or repeat the failed packed-update flags. A temporary service stop/test/start may be considered once the component and its impact are understood; explicitly verify the blocking child afterward because stopping a parent does not establish that the child exited. Git should continue to run in the normal-user session.
+
+Verification: the pasted block parses using the VPS PowerShell 7.4.6 verifier and uses Windows PowerShell 5.1 syntax. Windows service/registry execution and any Git repair await the user's report. Game builds and runtime tests remain blocked.
 
 ## First play acceptance
 
