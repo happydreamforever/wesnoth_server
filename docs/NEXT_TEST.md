@@ -6,6 +6,8 @@ Use normal Windows PowerShell. No new installation or administrator shell is req
 
 ## 1. Pull both repositories while connected
 
+**Current exception:** the stash did not clear the helper conflict. Run the read-only diagnostic in the next subsection first; the ordinary pull block below is for use after that conflict is resolved.
+
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
@@ -24,30 +26,37 @@ Use normal Windows PowerShell. No new installation or administrator shell is req
 
 Keep the existing README changes. If Git reports a conflict, return the error without resetting or deleting files. Use the MSYS2 route that already succeeded; native Git for Windows still has an unresolved local file-locking problem.
 
-### Local helper edit blocks the server pull
+### Stash succeeded but the helper still blocks the pull
 
-The latest Windows retry downloaded the fix but stopped because a local edit to `tools/build-windows-server.sh` would be overwritten. For that specific error, run the following recovery block instead of the ordinary pull block above. It saves the helper's local edits in a Git stash, then retries both pulls. Only that path is cleared from the working tree/index; unrelated edits remain in place. The stash stays local and is not pushed.
+**Active Windows step:** do not repeat the pull or stash yet. The latest report confirms that Git saved `wesnoth-build-helper-before-update`, then the same helper still blocked the server update. The client pull was not reached. Keep the stash and existing files. Run this read-only diagnostic in normal Windows PowerShell; it requires no pull, new tool or internet connection.
 
 ```powershell
 & {
-    $ErrorActionPreference = 'Stop'
     $bash = 'D:\Test\msys64\usr\bin\bash.exe'
-
-    & $bash --noprofile --norc -c 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server stash push -m wesnoth-build-helper-before-update -- tools/build-windows-server.sh'
-    if ($LASTEXITCODE -ne 0) { throw 'Saving the local helper edit failed. Stop and send the output.' }
-
-    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
-        $repo = '/d/Test/wesnoth-setup/' + $name
-        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
-        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Stop and send the output." }
-        & $bash --noprofile --norc -c ('/usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
-        if ($LASTEXITCODE -ne 0) { throw "Could not read $name commit. Send the output." }
+    $prefix = 'PATH=/usr/bin:$PATH /usr/bin/git --no-optional-locks --no-pager -C /d/Test/wesnoth-setup/wesnoth_server '
+    $file = ' -- tools/build-windows-server.sh'
+    $checks = @(
+        'rev-parse --short HEAD'
+        'rev-parse --short refs/stash'
+        'config --get core.filemode'
+        ('ls-files --stage --eol' + $file)
+        ('diff --no-ext-diff --no-textconv --raw --numstat' + $file)
+        ('diff --no-ext-diff --no-textconv --cached --raw --numstat' + $file)
+        ('-c core.filemode=false diff --no-ext-diff --no-textconv --raw --numstat HEAD' + $file)
+        ('diff --no-ext-diff --no-textconv --raw --numstat HEAD refs/stash' + $file)
+        ('check-attr text eol filter working-tree-encoding' + $file)
+    )
+    foreach ($check in $checks) {
+        Write-Host "CHECK: $check"
+        & $bash --noprofile --norc -c ($prefix + $check)
+        Write-Host "EXIT: $LASTEXITCODE"
     }
-    'Both updates completed successfully. Keep the local helper stash saved.'
 }
 ```
 
-Keep this stash as the backup while testing the updated helper; do not automatically run stash pop/apply, which could reintroduce the old code or cause conflicts. Git's stash index snapshot can also retain unrelated staged entries, so later recovery should inspect the saved helper and selectively incorporate any wanted edits. No untracked/ignored files are included by this command; it does not sweep up .env. If any step fails, stop and return its output. Do not reset, clean or force the repository. After successful pulls, use the same build/test commands below.
+Return the complete CHECK/EXIT output. `config --get core.filemode` may exit 1 when that setting is absent; the other probes still run. An empty diff section with exit 0 means that comparison found no difference. Raw/numstat output shows modes and change counts without printing source contents; the separate working-tree and staged comparisons keep staged edits visible. The `core.filemode=false` override applies only to one read-only comparison; it does not change configuration or attempt a pull. No source, stash, branch, index or saved configuration is intentionally modified. `--no-optional-locks` prevents optional index refresh writes. Only the named helper, its attributes and the filemode setting are inspected; no .env values or Git remote URLs are requested.
+
+Git tracks executable-bit differences as well as file contents; see [core.fileMode](https://git-scm.com/docs/git-config#Documentation/git-config.txt-corefileMode) and [diff raw output](https://git-scm.com/docs/git-diff#_raw_output_format). A mode-only difference is one possible explanation, not yet established on Windows. Both committed helper versions already have LF endings and the repository already requires `*.sh text eol=lf`; do not prescribe global newline settings or normalize the repository without evidence. If content differs, inspect and preserve the current and stashed versions before selecting a repair. Do not automatically pop/apply the stash. Build/test/run below remain pending until the updated helper is successfully checked out.
 
 ## 2. Build and test the server offline
 
