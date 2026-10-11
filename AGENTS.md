@@ -15,3 +15,5 @@ Windows delivery now works with the existing MSYS2 /usr/bin/git 2.55.0 and runti
 Initial audit on 2026-10-11 found nearly all actual source/build files empty, and only README tracked in each repository. Recover intact originals before replacing custom code. Read the current baseline for updated status.
 
 Never expose or commit `.env`, database credentials, tokens, signing keys, or raw Git remote URLs with embedded credentials. Stage only reviewed paths. Existing untracked source/build artifacts are not automatically safe to commit. After each cycle, update baseline status, verified checks, remaining limitations, and next steps.
+
+Latest Windows checkpoint: the first server build failed before configuration because build-windows-server.sh used dirname before initializing its MSYS2 PATH. Source incorrectly became the MSYS root. The helper now initializes PATH first, resolves the script directory without dirname, and checks source inputs before native tools. Retry the same guarded build/test commands after an MSYS2 pull; no version upgrade or global PATH change is needed. See the latest BASELINE.md entry for the returned log and verification status.

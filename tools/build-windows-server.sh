@@ -7,17 +7,32 @@ if [[ $# != 4 ]]; then
     printf 'Usage: %s WINDOWS_CMAKE WINDOWS_NINJA BUILD_TYPE JOBS\n' "$0" >&2
     exit 2
 fi
+
+# PowerShell starts Bash without login profiles, so its inherited PATH may not
+# include MSYS2 utilities. Establish the build environment before resolving any
+# paths. The native Ninja tool supplies no compiler headers or libraries.
+export MSYSTEM=MINGW64 MINGW_PREFIX=/mingw64
+export PATH="/mingw64/bin:/usr/bin${PATH:+:$PATH}"
+
 cmake_bin=$(/usr/bin/cygpath -u "$1")
 ninja_bin=$(/usr/bin/cygpath -u "$2")
 build_type=$3
 jobs=$4
-repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+script_path=$(/usr/bin/cygpath -u "${BASH_SOURCE[0]}")
+script_dir=${script_path%/*}
+if [[ "$script_dir" == "$script_path" ]]; then script_dir=.; fi
+repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd -P)
 build_root="$repo_root/build/windows-mingw64"
 
-# Git and shell utilities use MSYS2. Compiler, headers and linked libraries use
-# MINGW64 only. Ninja is a separate native build tool and supplies no libraries.
-export MSYSTEM=MINGW64 MINGW_PREFIX=/mingw64
-export PATH="/mingw64/bin:/usr/bin:$PATH"
+# Fail here if source discovery is wrong or the checkout is incomplete, before
+# running any native build tool against an unintended source/build directory.
+for source_file in CMakeLists.txt engine/UPSTREAM.json engine/src/server/wesnothd/server.cpp; do
+    if [[ ! -s "$repo_root/$source_file" ]]; then
+        printf 'Missing or empty server build input: %s/%s\n' "$repo_root" "$source_file" >&2
+        exit 2
+    fi
+done
+
 for binary in "$cmake_bin" "$ninja_bin" /mingw64/bin/gcc.exe /mingw64/bin/g++.exe /mingw64/bin/windres.exe; do
     if [[ ! -s "$binary" || ! -x "$binary" ]]; then
         printf 'Missing or empty required tool: %s\n' "$binary" >&2
@@ -56,4 +71,4 @@ export MSYS2_ARG_CONV_EXCL='*'
 "$cmake_bin" --build "$build_win" --parallel "$jobs"
 "$build_root/bin/wesnothd.exe" --version
 printf '\nBUILD COMPLETE: %s/bin/wesnothd.exe\n' "$build_root"
-printf 'Next: run tools/Run-WindowsServer.ps1, then test the local protocol.\n'
+printf 'Next: run tools/Test-WindowsServer.ps1, then tools/Run-WindowsServer.ps1.\n'

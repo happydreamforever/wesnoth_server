@@ -26,6 +26,8 @@ Keep the existing README changes. If Git reports a conflict, return the error wi
 
 ## 2. Build and test the server offline
 
+The first Windows attempt failed with `dirname: command not found` and `Source: /`. Pull the corrected helper before retrying. It initializes its own MSYS2 PATH and validates the source location. Expected: `Source: /d/Test/wesnoth-setup/wesnoth_server` and `Build: /d/Test/wesnoth-setup/wesnoth_server/build/windows-mingw64`. No tool upgrade or global PATH edit is needed.
+
 Disconnect the internet after the pulls. In PowerShell:
 
 ```powershell
@@ -83,5 +85,7 @@ docker run --rm --network none --user "$(id -u):$(id -g)" \
   -v "$PWD:/work" -w /work wesnoth-server-verify:1.19.26 \
   sh -c 'cmake -S . -B build/linux-verification -G Ninja && cmake --build build/linux-verification --parallel 2 && python3 tests/test_server_protocol.py --server build/linux-verification/bin/wesnothd --log-path diagnostics/server-protocol-linux.txt'
 ```
+
+For changes to the Windows build helper, run `python3 tests/test_windows_build_bootstrap.py` on the VPS with the existing verification image. This executes the unchanged helper with restricted PATH and mocked native tools in a network-disabled container; it also verifies that missing/empty source files and configuration failures stop the build. It does not compile a Windows executable.
 
 Do not translate a passing Linux result into a claimed Windows, Android, database or gameplay result. Record the user's returned evidence in `BASELINE.md` before selecting the following test.

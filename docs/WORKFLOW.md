@@ -36,7 +36,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current status:** the user has requested the next development step. Matching source is restored into new engine/ directories. Use **NEXT_TEST.md** for the active Windows pull/build/protocol-test/run/LDPlayer inventory commands. Collector is now 2026-10-11.3. The earlier environment/Git sections below are diagnostic history; do not rerun old native-Git or service commands. MSYS2 Git remains the verified Windows delivery route. APK/OBB, MongoDB integration and gameplay remain pending.
+**Current status:** matching source is restored into new engine/ directories. The first Windows server build failed because the helper resolved its source directory before initializing the MSYS2 PATH; the startup fix and source checks are ready for retry. Use the same installed tools and guarded build/test commands after pulling the update. Use **NEXT_TEST.md** for the active Windows pull/build/protocol-test/run/LDPlayer inventory commands. Collector is now 2026-10-11.3. The earlier environment/Git sections below are diagnostic history; do not rerun old native-Git or service commands. MSYS2 Git remains the verified Windows delivery route. APK/OBB, MongoDB integration and gameplay remain pending.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
