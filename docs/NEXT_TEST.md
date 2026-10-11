@@ -24,6 +24,31 @@ Use normal Windows PowerShell. No new installation or administrator shell is req
 
 Keep the existing README changes. If Git reports a conflict, return the error without resetting or deleting files. Use the MSYS2 route that already succeeded; native Git for Windows still has an unresolved local file-locking problem.
 
+### Local helper edit blocks the server pull
+
+The latest Windows retry downloaded the fix but stopped because a local edit to `tools/build-windows-server.sh` would be overwritten. For that specific error, run the following recovery block instead of the ordinary pull block above. It saves the helper's local edits in a Git stash, then retries both pulls. Only that path is cleared from the working tree/index; unrelated edits remain in place. The stash stays local and is not pushed.
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $bash = 'D:\Test\msys64\usr\bin\bash.exe'
+
+    & $bash --noprofile --norc -c 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server stash push -m wesnoth-build-helper-before-update -- tools/build-windows-server.sh'
+    if ($LASTEXITCODE -ne 0) { throw 'Saving the local helper edit failed. Stop and send the output.' }
+
+    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
+        $repo = '/d/Test/wesnoth-setup/' + $name
+        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
+        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Stop and send the output." }
+        & $bash --noprofile --norc -c ('/usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
+        if ($LASTEXITCODE -ne 0) { throw "Could not read $name commit. Send the output." }
+    }
+    'Both updates completed successfully. Keep the local helper stash saved.'
+}
+```
+
+Keep this stash as the backup while testing the updated helper; do not automatically run stash pop/apply, which could reintroduce the old code or cause conflicts. Git's stash index snapshot can also retain unrelated staged entries, so later recovery should inspect the saved helper and selectively incorporate any wanted edits. No untracked/ignored files are included by this command; it does not sweep up .env. If any step fails, stop and return its output. Do not reset, clean or force the repository. After successful pulls, use the same build/test commands below.
+
 ## 2. Build and test the server offline
 
 The first Windows attempt failed with `dirname: command not found` and `Source: /`. Pull the corrected helper before retrying. It initializes its own MSYS2 PATH and validates the source location. Expected: `Source: /d/Test/wesnoth-setup/wesnoth_server` and `Build: /d/Test/wesnoth-setup/wesnoth_server/build/windows-mingw64`. No tool upgrade or global PATH edit is needed.
