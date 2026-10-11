@@ -36,7 +36,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current next step:** LastBootUpTime is October 1, so a full Windows restart has not occurred during this troubleshooting. Follow "Full Windows restart and guarded update" below: save work, use Start → Power → Restart, then verify boot time/service state and retry ordinary pulls in normal PowerShell. Run the collector with LDPlayer open only after both updates succeed. NetActvity's registration remains unexplained; do not stop/delete/recreate it manually or use old PIDs after restarting. Earlier commands are history, with actual results in `BASELINE.md`.
+**Current next step:** the full restart is confirmed and the server pull still fails. NetActvity returned Running under PID 4172; the direct locker after reboot is unverified. Follow "Use the already installed MSYS2 Git" below for a guarded attempt with its different runtime rename handling. Do not repeat the restart, manually alter the unidentified service or reuse old PIDs. Run the collector with LDPlayer open only after both pulls succeed. Earlier commands are history, with actual results in `BASELINE.md`.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -409,7 +409,46 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 
 Expected: collector version `2026-10-11.2`, a script SHA256, all ten inventory sections, footer `Collection COMPLETE: 10/10 sections finished`, and exit 0. Let the scan finish; MSYS2 probes may take several minutes. Return the latest report under `D:\Test\wesnoth-setup\wesnoth_server\diagnostics`, including any BLOCKED/UNKNOWN entries. If the report is INCOMPLETE or the collector exits nonzero, return that report/output too. Inventory completion does not establish a working build, server, APK or gameplay.
 
-Verification: both pasted blocks parse with the Linux PowerShell 7.4.6 verifier. Actual restart, updated boot time, successful Windows pulls and the full Windows inventory await the user's results. This delivery changes documentation/memory only; game build/run remains blocked on source recovery and environment confirmation.
+Verification: both pasted blocks parse with the Linux PowerShell 7.4.6 verifier. The user confirmed the restart and new boot time, but the server pull failed again; client update and collector were not reached. The next test uses the existing MSYS2 Git below. Game build/run remains blocked on source recovery and environment confirmation.
+
+## Use the already installed MSYS2 Git
+
+**The full restart test failed to restore Git.** Windows now reports LastBootUpTime October 11, 2026, 09:28:14; NetActvity returned Running under PID 4172; the server pull still failed at object `55/eb0340cb3a6018aee02ed2e87cecf41a08bc0b`. Client update and collector were not reached. Do not repeat a reboot or assume the old PID 15800 identifies the current locker.
+
+The next test uses the user's existing `D:\Test\msys64\usr\bin\git.exe` (previously reported version 2.55.0) through its MSYS2 Bash. [MSYS2 distinguishes its runtime-based Git from native Windows Git](https://www.msys2.org/docs/git/). In the installed Git for Windows version, [opening the rename source with DELETE access returns immediately on failure](https://github.com/git-for-windows/git/blob/v2.53.0.windows.2/compat/mingw.c#L2970-L2978). The [MSYS2 runtime implementation](https://github.com/msys2/msys2-runtime/blob/cf8cb2aaf2102d0e8ca382790970b2b2ded0680b/winsup/cygwin/syscalls.cc#L2632-L2650) waits and retries source opens on sharing violations. This difference supports a targeted workaround for the brief conflicts captured before reboot; success on this Windows installation is still unverified, and the active runtime version will be printed.
+
+Connect to GitHub and open **Windows PowerShell normally**: click the Start-menu result without choosing Run as administrator. Close any other Git commands. Paste the entire block and press Enter:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $bash = 'D:\Test\msys64\usr\bin\bash.exe'
+
+    & $bash --noprofile --norc -c '/usr/bin/git --version && /usr/bin/uname -r'
+    if ($LASTEXITCODE -ne 0) { throw 'MSYS2 check failed. Send all output.' }
+
+    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
+        $repo = '/d/Test/wesnoth-setup/' + $name
+        Write-Host "Updating $name with MSYS2 Git"
+        $command = 'PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main'
+        & $bash --noprofile --norc -c $command
+        if ($LASTEXITCODE -ne 0) {
+            throw "MSYS2 pull failed for $name. Stop here and send all output."
+        }
+        & $bash --noprofile --norc -c ('/usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
+        if ($LASTEXITCODE -ne 0) { throw "Could not read $name commit. Send all output." }
+    }
+    'Both updates completed successfully using MSYS2 Git.'
+}
+```
+
+This selects /usr/bin/git explicitly so a MINGW/native Git elsewhere on PATH is not chosen. The /usr/bin PATH prefix exists only for each child command; it does not change saved Windows variables, Git configuration, installed versions or service settings. The existing /d/Test/wesnoth-setup/... paths are the same Windows checkouts. Bash startup profiles are skipped. No package install/update, clone, reset or packed-fetch option is involved.
+
+Expected: MSYS2 Git version (previously 2.55.0), active runtime version, both successful pulls and commit IDs, then `Both updates completed successfully using MSYS2 Git.` The guard stops on the first error. If authentication, credential-helper, certificate, ownership, conflict or file-write errors occur, return that output rather than falling back to native Git or changing security/configuration. Never paste a token or credential-bearing remote URL into the conversation.
+
+After both pulls succeed, start LDPlayer and wait for Android, then run the existing Windows environment-collector command from the preceding section in normal PowerShell. Expected collector version remains `2026-10-11.2`; return the complete report from the server diagnostics directory, even if inventory is INCOMPLETE or contains BLOCKED/UNKNOWN entries. Inventory completion and a successful Git workaround do not establish gameplay or explain the service's purpose.
+
+Verification: the pasted PowerShell block and its generated Bash commands pass syntax checks on the VPS. Primary-source review establishes why this alternative is worth testing; there is no Windows runtime success claim. If this attempt also fails, assess its exact error and obtain current locking-process evidence before changing the unidentified service.
 
 ## First play acceptance
 
