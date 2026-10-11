@@ -67,6 +67,9 @@ add_executable(wesnothd ${server_sources})
 target_link_libraries(wesnothd PRIVATE wesnoth-core)
 if(WIN32)
     target_include_directories(wesnothd PRIVATE "${ENGINE}/packaging/windows")
+    # server_base uses TransmitFile; Boost.Asio also needs AcceptEx and
+    # GetAcceptExSockaddrs. MinGW needs this Winsock extension library explicitly.
+    target_link_libraries(wesnothd PRIVATE mswsock)
 endif()
 set_target_properties(wesnothd PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 

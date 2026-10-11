@@ -4,28 +4,16 @@ This delivery restores Wesnoth 1.19.26 source into new `engine/` directories. Th
 
 Use normal Windows PowerShell. No new installation or administrator shell is required. Open LDPlayer and wait until Android is ready before collecting the environment report.
 
-## 1. Correct the Windows server Git setting and pull both repositories
+## 1. Pull both repositories while connected
 
-The latest diagnostic confirms the cause: `core.filemode=true`, helper index mode `100644`, working-tree mode `100755`, zero added/deleted lines, LF in both copies, and no staged helper change. The comparison with `core.filemode=false` is clean. Stash `f0c22d3` also records only a mode change for this helper; its content hash matches HEAD. Do not repeat the diagnostic or create/apply another stash.
+The server-local `core.filemode=false` setting and both MSYS2 pulls succeeded on Windows (server `13e3b3d`, client `7248b26`). Keep that setting and stash `f0c22d3`; no additional Git repair is needed. The next update adds the missing Windows `mswsock` library to the server link. The client update mirrors the project record.
 
-Temporarily connect to GitHub and run this block in normal Windows PowerShell. It saves `core.filemode=false` only in the existing Windows server repository, verifies the effective value and the helper comparison, then updates both repositories using MSYS2 Git.
+Temporarily connect to GitHub and run this in normal Windows PowerShell:
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
     $bash = 'D:\Test\msys64\usr\bin\bash.exe'
-    $serverGit = 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server '
-
-    & $bash --noprofile --norc -c ($serverGit + 'config --local core.filemode false')
-    if ($LASTEXITCODE -ne 0) { throw 'Could not save the server Git setting. Send the output.' }
-
-    $mode = & $bash --noprofile --norc -c ($serverGit + 'config --get core.filemode')
-    if ($LASTEXITCODE -ne 0 -or $mode -ne 'false') { throw 'Server core.filemode is not false. Stop here.' }
-    Write-Host "Server core.filemode=$mode"
-
-    & $bash --noprofile --norc -c ($serverGit + 'diff --no-ext-diff --no-textconv --quiet HEAD -- tools/build-windows-server.sh')
-    if ($LASTEXITCODE -ne 0) { throw 'The helper still differs. Stop and send all output.' }
-
     foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
         $repo = '/d/Test/wesnoth-setup/' + $name
         Write-Host "Updating $name"
@@ -34,17 +22,15 @@ Temporarily connect to GitHub and run this block in normal Windows PowerShell. I
         & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
         if ($LASTEXITCODE -ne 0) { throw "Cannot read the $name commit." }
     }
-    'Both updates completed successfully. Keep the existing stash saved.'
+    'Both updates completed successfully.'
 }
 ```
 
-Expected: `Server core.filemode=false`, both fast-forward pulls (or already up-to-date), both commit IDs, and `Both updates completed successfully`. Keep the stash saved. If a step fails, stop and send its output; do not reset/restore/clean or force the update.
-
-[Git's core.fileMode setting](https://git-scm.com/docs/git-config#Documentation/git-config.txt-corefileMode) controls whether working-tree executable bits count as changes. This repository-local setting persists for future server pulls. It does not alter the helper's contents, tracked mode, Windows access permissions, global Git configuration or the client/VPS Git configuration. Real content changes remain protected by Git. The server wrapper explicitly invokes the helper through Bash, so it does not require Git to track local execute-bit changes. Keep the existing README edits and other local work; no new stash or source rewrite is needed for the reported mode-only difference. The corrected helper and this setting have not yet been validated by a successful Windows build.
+Expected: both updates succeed and print commit IDs. Preserve local README edits and other work. If a pull fails, stop and send the output without resetting, cleaning, force-pulling or applying the saved stash. Continue using MSYS2 Git.
 
 ## 2. Build and test the server offline
 
-The first Windows attempt failed with `dirname: command not found` and `Source: /`. Pull the corrected helper before retrying. It initializes its own MSYS2 PATH and validates the source location. Expected: `Source: /d/Test/wesnoth-setup/wesnoth_server` and `Build: /d/Test/wesnoth-setup/wesnoth_server/build/windows-mingw64`. No tool upgrade or global PATH edit is needed.
+The helper PATH/source fix now works on Windows. The latest build configured and compiled, then failed at final link with undefined `TransmitFile`, `AcceptEx` and `GetAcceptExSockaddrs`. CMake now explicitly links `mswsock` into the Windows server. Keep `build/windows-mingw64` and rerun the same commands; CMake regenerates and Ninja can reuse existing objects. Expected source remains `/d/Test/wesnoth-setup/wesnoth_server`. No tool upgrade, new dependency download or clean rebuild is required for this link fix.
 
 Disconnect the internet after the pulls. In PowerShell:
 
