@@ -1,50 +1,71 @@
-# Windows server running; query the confirmed LDPlayer instance
+# Windows server verified; connect LDPlayer ADB directly
 
-Windows build and all guest protocol checks passed. The normal launcher also stayed running for at least30 minutes on TCP15000; zero users/games is normal before a client connects. Keep the working server open. The latest focused probe confirms LDPlayer instance **0**, named LDPlayer, with Android started=1. SDK ADB lists no devices despite exit0, so Android API/ABI and the cause of the missing ADB connection remain unknown.
+Windows server build, guest protocol and normal launcher remain verified. LDPlayer instance 0 reports Android started=1, but SDK ADB lists no device. The last ldconsole probe targeted emulator-5554 and every command failed with device-not-found, despite wrapper exit0. No Android property was read. Keep the working server available; Android API/ABI, APK build and gameplay remain pending.
 
-This handoff updates project records only. Use the installed tools below; no new pull, rebuild, installation or full inventory rerun is needed. Keep the server-local core.filemode=false setting and saved stash. Preserve all local client engine-script changes until their diffs are inspected.
+This handoff updates project records only. No pull, rebuild, new installation or full inventory rerun is needed for the inline command. Preserve all local changes and the server Git setting/stash.
 
-## 1. Keep instance 0 running
+## 1. Confirm LDPlayer local ADB access
 
-Keep the LDPlayer window at Android's home screen. The intended setting remains Settings (gear) > Other settings > ADB debugging > **Open local connection**. If you already selected it, leave it unchanged. Root permission does not need to change. The returned output confirms Android started, but does not independently confirm this setting.
+In LDPlayer Settings (gear) > Other settings > ADB debugging, select **Open local connection** if it is not already selected. Save and restart only LDPlayer if the setting changes; wait for Android's home screen. If it is already selected, leave it unchanged. Tell us which option was selected. The user has been asked this focused question; until answered the setting is unknown. Root permission does not need to change. See the vendor's [local ADB explanation](https://www.ldplayer.net/blog/introduction-to-version-4.0.37-and-3.102-features.html).
 
-The vendor documents [local ADB access](https://www.ldplayer.net/blog/introduction-to-version-4.0.37-and-3.102-features.html) and [settings/save/restart](https://www.ldplayer.net/support/how-to-solve-locked-screen.html). The latter article's root/unlock procedure is unrelated; only the ADB setting applies here. An empty device list by itself does not prove which setting is currently selected.
+## 2. Test the default local endpoint and read actual ready-device properties
 
-## 2. Query instance 0 through LDPlayer's command interface
+The observed emulator-5554 name makes 127.0.0.1:5555 a documented default candidate: [Android's port-pair explanation](https://developer.android.com/tools/adb#howadbworks) distinguishes console5554 from ADB5555, and section X of [LDPlayer's ADB guide](https://www.ldplayer.net/support/ldplayer-ldconsole-command-line-developer-usage-guide.html) describes the matching instance0 default. It is a connection attempt, not proof that this installation currently exposes that endpoint. A missing/failed connection does not prove a firewall or settings cause.
 
-In a second normal Windows PowerShell window, paste the whole block. No internet connection is needed. The index comes from the actual returned list2 row. LDPlayer handles selection of this instance; no port is derived from an index formula.
+Paste this in a normal PowerShell window. The listener check reads only ports5037/5554/5555, is diagnostic rather than a prerequisite, and does not prove process ownership. All ADB operations use the confirmed SDK executable and local daemon. No ldconsole/bundled ADB calls are mixed into this block. ADB may start or replace its own incompatible host daemon normally.
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
-    $ld = 'C:\LDPlayer\LDPlayer9\ldconsole.exe'
-    foreach ($command in @(
-        'get-serialno'
-        'shell getprop sys.boot_completed'
-        'shell getprop ro.product.model'
-        'shell getprop ro.build.version.release'
-        'shell getprop ro.build.version.sdk'
-        'shell getprop ro.product.cpu.abi'
-        'shell getprop ro.product.cpu.abilist'
-        'shell getprop ro.dalvik.vm.native.bridge'
-    )) {
-        "COMMAND: $command"
-        & $ld adb --index 0 --command $command
-        $queryExit = $LASTEXITCODE
-        "LDCONSOLE_EXIT: $queryExit"
-        if ($queryExit -ne 0) {
-            'Command failed. Send all output above.'
-            break
+    $adb = 'C:\Users\Uni\AppData\Local\Android\Sdk\platform-tools\adb.exe'
+    $endpoint = '127.0.0.1:5555'
+
+    'LOCAL ADB LISTENERS'
+    try {
+        Get-NetTCPConnection -State Listen -ErrorAction Stop |
+            Where-Object { $_.LocalPort -in @(5037, 5554, 5555) } |
+            Format-Table LocalAddress,LocalPort,OwningProcess -AutoSize
+    } catch { 'Listener check: ' + $_.Exception.Message }
+
+    "CONNECTING: $endpoint"
+    & $adb -H localhost -P 5037 connect $endpoint
+    "CONNECT_EXIT: $LASTEXITCODE"
+
+    $lines = @(& $adb -H localhost -P 5037 devices -l)
+    $listExit = $LASTEXITCODE
+    $lines
+    "DEVICES_EXIT: $listExit"
+    if ($listExit -ne 0) { throw 'Device listing failed. Send all output.' }
+
+    $serials = @($lines | ForEach-Object {
+        if ($_ -match '^(127\.0\.0\.1:5555|emulator-5554)\s+device(?:\s|$)') {
+            $Matches[1]
         }
+    })
+    if ($serials.Count -eq 0) {
+        'LDPlayer is not ready in ADB. Send all output and the selected ADB setting.'
+        return
+    }
+    $serial = $serials[0]
+    if ($serials -contains $endpoint) { $serial = $endpoint }
+
+    foreach ($property in @(
+        'sys.boot_completed', 'ro.product.model', 'ro.build.version.release',
+        'ro.build.version.sdk', 'ro.product.cpu.abi', 'ro.product.cpu.abilist',
+        'ro.dalvik.vm.native.bridge'
+    )) {
+        "PROPERTY: $serial $property"
+        & $adb -H localhost -P 5037 -s $serial shell getprop $property
+        $propertyExit = $LASTEXITCODE
+        "PROPERTY_EXIT: $propertyExit"
+        if ($propertyExit -ne 0) { break }
     }
 }
 ```
 
-Expected: a serial from get-serialno, sys.boot_completed=1, and actual Android model/release/API/ABI properties. A blank native-bridge property can be valid. The script stops if ldconsole reports a nonzero exit; exit0 alone is not sufficient evidence if its output is empty or contains an ADB error. Return every COMMAND/LDCONSOLE_EXIT line and any daemon, connection or version-mismatch messages. A serial is not necessarily a TCP endpoint; do not automatically pass an emulator serial to adb connect.
+Expected: connected/already connected to127.0.0.1:5555, a ready device row, boot completion1, and Android model/release/API/ABI values. A blank native bridge can be valid. Return all output including listener rows (or no rows), CONNECT_EXIT, DEVICES_EXIT, PROPERTY/PROPERTY_EXIT and any daemon/error messages. If it fails, return the selected LDPlayer ADB setting too. Do not interpret CONNECT_EXIT0 alone as success: some ADB connection failures are printed with zero exit. Only a successful devices command and a ready row for the specific candidate serial or the observed emulator-5554 alias permit property queries; unrelated devices are ignored. The TCP serial is preferred if both aliases appear. A failed property query stops further properties.
 
-This uses the vendor's [instance-targeted ADB command](https://www.ldplayer.net/support/introduction-to-ldplayer-command-line-interface.html) and ADB's [serial query](https://android.googlesource.com/platform/packages/modules/adb/+/refs/heads/main/docs/user/adb.1.md). It requests device information only, but LDPlayer may invoke its bundled ADB, which can start or replace an incompatible host ADB daemon. Do not alternate SDK/bundled clients during this probe. SDK ADB registration is not considered fixed merely because the LDPlayer command succeeds.
-
-Send the complete output. This step does not need another server build, protocol test or full collector report. Android build preparation follows the actual API/ABI results; we will address SDK connectivity from the observed serial and output. The Windows game-data folder is missing at its expected path; asset delivery, OBB support and MongoDB remain pending. The exact block parses in the VPS PowerShell7.4.6 verifier and uses PowerShell5.1 syntax; Windows/LDPlayer execution is still pending.
+This diagnostic block parses with the available Linux PowerShell7.4.6 verifier and uses Windows PowerShell5.1 syntax. Windows listener/connection execution remains pending. If it still finds no target, investigate the reported setting, listener state and actual instance configuration before changing tools or trying more ports. API/ABI selection, offline Android dependencies, local game data/OBB, LAN play and MongoDB remain pending.
 
 ## Reference: restart the verified server if it has stopped
 
