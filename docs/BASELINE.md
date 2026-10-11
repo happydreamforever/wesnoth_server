@@ -59,7 +59,7 @@ User clarification on 2026-10-11: Windows will temporarily connect to GitHub to 
 
 Latest clarification: the user confirms both repositories are already cloned under `D:\Test\wesnoth-setup` and can see `wesnoth_server\diagnostics`. Use the existing server checkout for its update and diagnostic rerun. This supersedes earlier uncertainty about the copied folders' Git metadata and the proposed separate diagnostics checkout. The existence of the report directory does not establish inventory completion or source integrity.
 
-1. Capture the recurring Windows Git failure with Process Monitor using the path filter and CSV export in `WORKFLOW.md`. The retry failed on the server before reaching the client, and Resource Monitor returned no matching handles. The earlier temporary-file rename sharing violation remains the strongest evidence; the locking process is unknown. After resolving the failure and successfully updating both clones, start LDPlayer and run the server collector with `-WorkspaceRoot D:\Test\wesnoth-setup -MsysRoot D:\Test\msys64`. Confirm collector version `2026-10-11.2` and return the latest report, even if incomplete.
+1. Identify the service hosted by the captured blocking process using `tasklist.exe /svc /fi "PID eq 15800"` in the same Windows session as the trace. Process Monitor analysis below identifies `svchost.exe` PID 15800 opening Git temporary files without delete sharing; the service name is still unknown. Do not stop the process or change security settings based on its generic executable name. After resolving the failure and successfully updating both clones, start LDPlayer and run the server collector with `-WorkspaceRoot D:\Test\wesnoth-setup -MsysRoot D:\Test\msys64`. Confirm collector version `2026-10-11.2` and return the latest report, even if incomplete.
 2. Return the report to establish whether Windows originals have real content and identify installed tools. Preserve any originals before a pull that might collide with untracked files. The update transfer method is already confirmed.
 3. Recover complete custom client/server source if available, excluding secrets/generated artifacts. Compare key sizes/hashes; commit the actual implementation only after review. If originals are unavailable or also empty, reconstruct from a matching upstream revision within the user's authorized project scope and document new behavior explicitly because custom behavior cannot be inferred from empty files.
 4. Record/pin the actual Windows build inputs and prepare matching VPS checks and offline dependency packages.
@@ -96,3 +96,22 @@ A file-sharing conflict is now observed independently of Git; the locking proces
 The next returned retry log fails at server object `.git/objects/c6/c5d903ddb2331e8ce69b20b3be9a5d2c397913` with `Permission denied` and `unpack-objects failed`. The script throws before attempting the client, so this run provides no new client result. The user explicitly reports no matching handles in Resource Monitor when searching for `wesnoth-setup`. The reboot itself was not explicitly confirmed; that does not change the next diagnostic step. A missing live handle does not contradict the earlier sharing violation, since interference may be brief. Next: record one server retry with Process Monitor filtered to its `.git\objects` path, retaining events from all processes and all results; return the displayed events as CSV. Process Monitor needs elevation for tracing, while Git remains in the normal user's PowerShell window. No locking process, repair or successful collector rerun is established yet.
 
 The IDE's open `diagnostics/windows-environment-20261011-011856-959.txt` is an older Linux/VPS collector test using PowerShell 7.4.6 and a deliberately missing MSYS2 path. It is not new Windows inventory evidence; do not substitute its missing-tool results for the user's actual Windows report.
+
+## Process Monitor finding
+
+The user supplied workspace-root `git-objects.CSV`: UTF-8 BOM, 604 events, SHA256 `ffd0435cf7528a8b098cdcfdc697009a3da8c986a169bdf1195e472d22ee67bf`. The raw trace remains a local diagnostic and is not committed. CSV line references below count the header as line 1.
+
+The direct conflicting handle owner is **svchost.exe, PID 15800**. Two sequences show it opening a newly created Git temporary file with **ShareMode: Read, Write**, omitting Delete. Windows requires compatible [delete sharing for rename/delete access](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea).
+
+| CSV line | Time in capture | Event |
+| --- | --- | --- |
+| 228 | 08:26:50.6595596 | svchost 15800 opens `25\tmp_obj_t7Q84k` without delete sharing. |
+| 234, 236 | 08:26:50.6632212 / .6640069 | Git 25144 closes its own write handle, then requests Delete access and receives SHARING VIOLATION. |
+| 257, 266, 270 | 08:26:50.6659062 onward | svchost closes the handle; Git obtains Delete access and deletes its failed temporary object. This is cleanup, not a successful fetch. |
+| 554, 562 | 08:27:12.3194636 / .3220562 | Same conflict on `f6\tmp_obj_pfWOR9`, with Git 5804. |
+| 591, 600, 604 | 08:27:12.3259551 onward | svchost closes; Git can open for Delete and clean up. |
+| 530, 534, 537 | 08:27:12.3069810 onward | In a successful comparison, svchost closes `c6\tmp_obj_iKJZwc` before Git requests Delete; Git renames it to the final `c6c5d903...` object. |
+
+The conflicting handles last approximately 6.35 and 6.49 milliseconds, consistent with Resource Monitor missing them. The trace contains nine SHARING VIOLATION events and no ACCESS DENIED result. Git's displayed `Permission denied` therefore obscures the captured sharing conflict. Normal file-mapping statuses such as FILE LOCKED WITH ONLY READERS are not counted as these failures.
+
+`MsMpEng.exe` PID 4176 also maps/queries the files, including in successful sequences, but this CSV does not establish it as the conflicting handle owner. Do not attribute the failure to Defender or add antivirus exclusions from this evidence. `svchost.exe` hosts services; its name alone does not identify the specific service. The next read-only command is recorded in `WORKFLOW.md`. PIDs can change or be reused after exit/restart, so a later PID lookup must correspond to the captured process. No service has been stopped and Windows recovery is not yet verified.

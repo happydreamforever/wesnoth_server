@@ -36,7 +36,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current blocker:** the server retry failed again, and Resource Monitor returned no matching handles. See "Capture the recurring Git failure" below for the next step. The original access probe and retry instructions are retained for reference; their results are recorded in `BASELINE.md`.
+**Current blocker:** the returned Process Monitor trace identifies `svchost.exe` PID 15800 holding Git temporary files without delete sharing. Identify its hosted service using the command under "Identify the captured service" below. The earlier diagnostics are retained for reference; their results are recorded in `BASELINE.md`.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -159,6 +159,8 @@ If a pull fails again, send the error and run `resmon.exe`. Open **CPU > Associa
 
 ## Capture the recurring Git failure
 
+This capture is complete and analyzed: the conflicting handle owner is `svchost.exe` PID 15800. Continue with service identification below; another general capture is unnecessary while the same process remains available.
+
 Resource Monitor found no matching handles. Use [Microsoft Process Monitor](https://learn.microsoft.com/en-us/sysinternals/downloads/procmon) to record file operations while the error occurs; a snapshot of current handles can miss brief interference. This diagnostic requires no repository update first.
 
 1. Download the [official Process Monitor ZIP](https://download.sysinternals.com/files/ProcessMonitor.zip), extract it, and run `Procmon64.exe` as administrator. Elevation is for the tracing tool only; keep Git in the normal user's PowerShell window.
@@ -173,7 +175,24 @@ Resource Monitor found no matching handles. Use [Microsoft Process Monitor](http
 4. Immediately stop capture with **Ctrl+E** after Git finishes or fails. Save with **File > Save > Events displayed using current filter**, choose **CSV**, and use `D:\Test\git-objects.csv`.
 5. Return that filtered CSV and Git's terminal output. Keep the event columns **Time of Day, Process Name, PID, Operation, Path, Result, Detail**. Do not send an unfiltered capture or PML file, which can include unrelated process metadata. If Git unexpectedly succeeds, send that result and the capture too.
 
-Expected: filesystem events under the server's `.git\objects` directory during this one retry. They may show `SHARING VIOLATION` or `ACCESS DENIED`; neither a specific result nor the responsible program is guaranteed in advance. An empty CSV means the capture/filter needs checking. Review preceding opens and their sharing modes before assigning blame to a process; the process reporting an error can be the victim. Resume the collector only after the needed update succeeds. This trace has not yet been run on Windows.
+Expected: filesystem events under the server's `.git\objects` directory during this one retry. An empty CSV means the capture/filter needs checking. The actual Windows capture returned 604 events, including nine Git SHARING VIOLATION events while svchost PID 15800 held conflicting handles. See `BASELINE.md` for the event sequence. Resume the collector only after the needed update succeeds.
+
+## Identify the captured service
+
+The CSV identifies `svchost.exe` PID 15800 as the direct conflicting handle owner; it does not name the hosted service. In the same Windows session as the capture, run in normal PowerShell:
+
+```powershell
+tasklist.exe /svc /fi "PID eq 15800"
+```
+
+Expected: the process row and its service name(s). Return the complete output. Microsoft's [`tasklist /svc` documentation](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/tasklist) describes this read-only mapping. If needed, the equivalent service details are:
+
+```powershell
+Get-CimInstance Win32_Service -Filter 'ProcessId = 15800' |
+  Select-Object Name, DisplayName, State, StartMode
+```
+
+If the process has exited or Windows restarted, the PID may be absent or reused. Report that rather than stopping another process with the same number. If the saved Process Monitor session is still available, its process properties can help identify the original hosted service. Do not kill the whole svchost process, disable an unidentified service or change antivirus exclusions. Choose a scoped repair only after identifying what was holding the files.
 
 ## First play acceptance
 
