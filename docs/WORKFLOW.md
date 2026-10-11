@@ -36,7 +36,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current blocker:** both existing Windows checkouts fail during Git object writes with `Permission denied`. Run the access check below before retrying this environment-check sequence. The diagnostic can be pasted directly into PowerShell; it does not depend on pulling a new script.
+**Current blocker:** Windows Git updates failed, and the completed access check captured a sharing violation during the server `objects\55` rename. See "Windows file lock retry" below for the next step. The original access check is retained for reference; its output is already recorded in `BASELINE.md`.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -119,9 +119,41 @@ $log = Join-Path $env:TEMP ('wesnoth-git-access-' + (Get-Date -Format 'yyyyMMdd-
 "Report saved to: $log"
 ```
 
-Expected: five `PROBE PASS` lines if the object root directories and the three affected hash directories all allow these operations. A missing final hash file is possible after a failed fetch; the report records it without creating a replacement. Send the complete output, including `PROBE FAIL`, missing-path and cleanup messages. Account identifiers and paths appear in the report. A passing probe does not establish that Git can finalize those exact objects; investigate their metadata or Git-specific file locking if all probes pass. The helper's syntax and temporary-file operations are verified using Linux PowerShell 7.4.6; actual Windows ACL behavior awaits this report.
+Expected: five `PROBE PASS` lines if the object root directories and the three affected hash directories all allow these operations. A missing final hash file is possible after a failed fetch; the report records it without creating a replacement. Send the complete output, including `PROBE FAIL`, missing-path and cleanup messages. Account identifiers and paths appear in the report. A passing probe does not establish that Git can finalize those exact objects. The helper's syntax and temporary-file operations were checked using Linux PowerShell 7.4.6. The user's actual Windows run returned four passes and one rename sharing violation; this check is complete and the next step is below.
 
 If access rules show a permission problem, back up the affected directory ACLs with `icacls /save` before adding current-user Modify access. Preserve other users' grants and explicit denies; do not use `Everyone`, ACL resets, ownership takeover or blanket attribute clearing. Request elevation only if the specific repair needs it, retaining the normal user's identity. Resume `git pull --ff-only origin main` and the environment collector after resolving the failure. Game build/run remains blocked by the incomplete environment/source inventory.
+
+## Windows file lock retry
+
+The returned report shows Modify access and a sharing violation while renaming a newly written temporary file. The locking program is not yet identified. Additional ACL grants or administrator-mode Git are not justified by this result.
+
+Save open work and restart Windows once. Temporarily connect to GitHub, open a normal PowerShell window and retry before reopening editors or Git GUI applications. This is an attempt to release existing handles, not a confirmed fix; a background application may recreate the lock.
+
+```powershell
+& {
+    $git = 'C:\Program Files\Git\cmd\git.exe'
+    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
+        $repo = Join-Path 'D:\Test\wesnoth-setup' $name
+        Write-Host "Updating $name"
+        & $git -C $repo pull --ff-only origin main
+        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Stop here and send the error output." }
+    }
+    Write-Host 'Both pulls completed successfully.'
+}
+```
+
+After both pulls succeed, start LDPlayer and run the inventory in normal PowerShell:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Collect-WindowsEnvironment.ps1' `
+  -WorkspaceRoot 'D:\Test\wesnoth-setup' `
+  -MsysRoot 'D:\Test\msys64'
+```
+
+Expected: both pulls exit successfully, followed by collector version `2026-10-11.2` and `Collection COMPLETE: 10/10 sections finished`. Return the latest report from `wesnoth_server\diagnostics`, including missing-tool or incomplete-section results. This does not establish a game build or successful play.
+
+If a pull fails again, send the error and run `resmon.exe`. Open **CPU > Associated Handles**, search for `wesnoth-setup`, and report the **Image**, **PID**, and **Handle Name** columns. This is Microsoft's [built-in method for finding processes with open files](https://techcommunity.microsoft.com/blog/itopstalkblog/identify-which-process-is-blocking-a-file-in-windows/4432635). A matching open handle is a lead, not proof that the process blocked rename. Do not force-close handles or terminate an unidentified process. If the search is empty, report that too: the observed lock may be brief. A repeat failure with no visible handle calls for a [Process Monitor](https://learn.microsoft.com/en-us/sysinternals/downloads/procmon) capture filtered to the repository paths during reproduction, preserving events from all processes. Do not replace tracing with repeated reboots, permission resets or antivirus exclusions.
 
 ## First play acceptance
 
