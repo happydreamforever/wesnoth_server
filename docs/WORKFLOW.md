@@ -36,7 +36,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current blocker:** the returned Process Monitor trace identifies `svchost.exe` PID 15800 holding Git temporary files without delete sharing. Identify its hosted service using the command under "Identify the captured service" below. The earlier diagnostics are retained for reference; their results are recorded in `BASELINE.md`.
+**Current blocker:** `svchost.exe` PID 15800 held Git temporary files without delete sharing; tasklist returned `Services=N/A`. Continue the targeted process lookup and try the temporary packed update below. The earlier diagnostics are retained for reference; their results are recorded in `BASELINE.md`.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -185,14 +185,53 @@ The CSV identifies `svchost.exe` PID 15800 as the direct conflicting handle owne
 tasklist.exe /svc /fi "PID eq 15800"
 ```
 
-Expected: the process row and its service name(s). Return the complete output. Microsoft's [`tasklist /svc` documentation](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/tasklist) describes this read-only mapping. If needed, the equivalent service details are:
+Actual result: `svchost.exe 15800 N/A`. Microsoft's [`tasklist /svc` documentation](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/tasklist) describes this read-only mapping, but this result did not identify a service. In the same normal PowerShell window, collect the targeted process and service details:
 
 ```powershell
+Get-CimInstance Win32_Process -Filter 'ProcessId = 15800' |
+  Format-List ProcessId,Name,ExecutablePath,CommandLine,ParentProcessId,CreationDate
+
 Get-CimInstance Win32_Service -Filter 'ProcessId = 15800' |
-  Select-Object Name, DisplayName, State, StartMode
+  Format-List Name,DisplayName,State,StartMode
 ```
 
+Return the output including blank fields or errors; no output from the second command means that query returned no service mapping. Windows documents [executable path, command line and creation time](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-process) as process properties. Some executable details require additional privileges; empty fields alone are not suspicious. If they are unavailable, an elevated read-only query or the original Process Monitor process properties may be needed. Keep Git operations in the normal user's PowerShell window.
+
 If the process has exited or Windows restarted, the PID may be absent or reused. Report that rather than stopping another process with the same number. If the saved Process Monitor session is still available, its process properties can help identify the original hosted service. Do not kill the whole svchost process, disable an unidentified service or change antivirus exclusions. Choose a scoped repair only after identifying what was holding the files.
+
+## Temporary packed update
+
+This command-only workaround can be tried while process identification continues. It asks Git to retain received objects in a pack instead of writing individual loose objects, using [`fetch.unpackLimit`](https://github.com/git-for-windows/git/blob/v2.53.0.windows.2/Documentation/config/fetch.adoc#L29-L38). It has passed isolated Linux verification described in `BASELINE.md`; Windows interference may still affect other writes. The underlying process problem remains open even if the update succeeds.
+
+Temporarily connect to GitHub. In normal PowerShell, paste this entire block and press Enter:
+
+```powershell
+& {
+    $git = 'C:\Program Files\Git\cmd\git.exe'
+    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
+        $repo = Join-Path 'D:\Test\wesnoth-setup' $name
+        Write-Host "Updating $name using packed objects"
+        & $git -c fetch.unpackLimit=1 -C $repo pull --ff-only origin main
+        if ($LASTEXITCODE -ne 0) {
+            throw "Update failed for $name. Stop here and send the complete output."
+        }
+    }
+    Write-Host 'Both updates completed successfully.'
+}
+```
+
+Expected: `Both updates completed successfully.` The setting is not saved in Git configuration. If either update fails, return the full output; a failure at a different path is useful evidence. Do not reset or delete local files to bypass a conflict. Stop after this one attempt if it fails.
+
+After both updates succeed, start LDPlayer, then run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Collect-WindowsEnvironment.ps1' `
+  -WorkspaceRoot 'D:\Test\wesnoth-setup' `
+  -MsysRoot 'D:\Test\msys64'
+```
+
+Let it finish. Expected: collector version `2026-10-11.2`, then `Collection COMPLETE: 10/10 sections finished`. Return the report from `wesnoth_server\diagnostics`, including BLOCKED/UNKNOWN or incomplete results. Game build/run is still pending source recovery and this environment inventory.
 
 ## First play acceptance
 
