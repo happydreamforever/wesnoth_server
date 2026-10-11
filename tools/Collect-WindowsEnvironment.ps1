@@ -28,7 +28,7 @@ $ErrorActionPreference = 'Continue'
 $script:Report = New-Object 'System.Collections.Generic.List[string]'
 $script:Blocked = 0
 $script:Unknown = 0
-$script:CollectorVersion = '2026-10-11.2'
+$script:CollectorVersion = '2026-10-11.3'
 $script:ExpectedSections = @(
     'Windows and PowerShell', 'Git', 'Java', 'Python and native build tools',
     'Repositories and source integrity', 'MSYS2 package database and native tools',
@@ -169,18 +169,51 @@ function Report-Versions {
     if (@($Files).Count -eq 0) { Write-Report 'UNKNOWN' ($Label + ': executable not located.'); return }
     foreach ($file in $Files) {
         Write-Probe ($Label + ' version: ' + $file)
-        $item = Get-Item -LiteralPath $file
-        if ($item.Length -eq 0) { Write-Report 'BLOCKED' ($Label + ': zero-byte executable ' + $file); continue }
-        # Windows Store aliases can open an installer instead of reporting a version.
-        if ($file -match '\\Microsoft\\WindowsApps\\') {
-            Write-Report 'UNKNOWN' ($Label + ': skipped Windows Store alias ' + $file)
+        # App execution aliases can legitimately have zero length and can open
+        # an installer. Classify them before checking ordinary executable size.
+        if ($file -match '[\\/]Microsoft[\\/]WindowsApps[\\/]') {
+            Write-Report 'UNKNOWN' ($Label + ': skipped Windows app execution alias ' + $file)
             continue
         }
+        $item = Get-Item -LiteralPath $file
+        if ($item.Length -eq 0) { Write-Report 'BLOCKED' ($Label + ': zero-byte executable ' + $file); continue }
         $result = Invoke-LocalCommand $file $Arguments
         $status = 'UNKNOWN'
         if ($result.Success -and $result.Output) { $status = 'PASS' }
         Write-Report $status ('{0}: {1}; exit={2}' -f $Label, $file, $result.ExitCode)
         if ($result.Output) { Write-Report 'INFO' $result.Output }
+    }
+}
+
+function Report-LocalAdbDevices {
+    param([string]$Adb)
+    Report-Versions 'Selected ADB' @($Adb) @('version')
+    # ADB recognizes literal localhost as local for daemon startup, but treats
+    # 127.0.0.1 as a remote host. Explicit host and port also override inherited
+    # ADB server routing variables without modifying the caller's environment.
+    $serverArguments = @('-H', 'localhost', '-P', '5037')
+    Write-Probe 'Local ADB device list (timeout 20 seconds; may start the local bridge)'
+    $result = Invoke-LocalCommand $Adb ($serverArguments + @('devices', '-l')) 20
+    $status = 'UNKNOWN'
+    if ($result.Success) { $status = 'PASS' }
+    Write-Report $status ('Local ADB devices: ' + $result.Output)
+    if (-not $result.Success) {
+        Write-Report 'UNKNOWN' 'Local ADB device list failed; emulator/device readiness was not checked.'
+        return
+    }
+    $serials = @()
+    foreach ($line in @($result.Output -split '\r?\n')) {
+        if ($line -match '^([^\s]+)\s+device(?:\s|$)') { $serials += $Matches[1] }
+    }
+    if ($serials.Count -eq 0) { Write-Report 'UNKNOWN' 'No ready local ADB device; start LDPlayer and rerun this report.' }
+    foreach ($serial in $serials) {
+        foreach ($property in @('ro.product.model', 'ro.build.version.release', 'ro.build.version.sdk', 'ro.product.cpu.abi', 'ro.product.cpu.abilist', 'ro.dalvik.vm.native.bridge')) {
+            Write-Probe ('ADB property ' + $serial + ' ' + $property)
+            $result = Invoke-LocalCommand $Adb ($serverArguments + @('-s', $serial, 'shell', 'getprop', $property)) 10
+            $status = 'UNKNOWN'
+            if ($result.Success -and $result.Output) { $status = 'PASS' }
+            Write-Report $status ($serial + ' ' + $property + '=' + $result.Output)
+        }
     }
 }
 
@@ -214,6 +247,22 @@ function Report-File {
         catch { $detail += '; SHA256 unavailable' }
     }
     Write-Report 'PASS' $detail
+}
+
+function Report-SourceDirectory {
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path -PathType Container)) {
+        Write-Report 'BLOCKED' ('Missing source directory: ' + $Path)
+        return
+    }
+    $sourceFiles = @(Get-ChildItem -LiteralPath $Path -File -Recurse -ErrorAction SilentlyContinue |
+        Where-Object { $_.Extension -in @('.c', '.cpp', '.h', '.hpp', '.java', '.py') })
+    $emptyCount = @($sourceFiles | Where-Object { $_.Length -eq 0 }).Count
+    $status = 'PASS'
+    # Some projects intentionally have empty source/module marker files.
+    if ($emptyCount -gt 0) { $status = 'UNKNOWN' }
+    if ($sourceFiles.Count -eq 0 -or $emptyCount -eq $sourceFiles.Count) { $status = 'BLOCKED' }
+    Write-Report $status ('{0}: source files={1}; nonempty={2}; empty={3}' -f $Path, $sourceFiles.Count, ($sourceFiles.Count - $emptyCount), $emptyCount)
 }
 
 try {
@@ -320,19 +369,26 @@ try {
                     Write-Report $status ($project + ' ' + $arguments.Label + ': ' + $detail)
                 }
             } else { Write-Report 'UNKNOWN' ($project + ': Git state unavailable.') }
+            if ($project -ne 'wesnoth') {
+                $engineRoot = Join-Path $root 'engine'
+                if (Test-Path -LiteralPath $engineRoot -PathType Container) {
+                    Write-Report 'INFO' ($project + ' restored engine: presence and source counts only; manifest entries/integrity are not verified.')
+                    Report-SourceDirectory (Join-Path $engineRoot 'src')
+                    if ($project -eq 'wesnoth_server') {
+                        Report-File (Join-Path $root 'CMakeLists.txt') -Hash
+                        Report-File (Join-Path $engineRoot 'UPSTREAM.json')
+                    } else {
+                        Report-File (Join-Path $engineRoot 'CMakeLists.txt') -Hash
+                        Report-File (Join-Path $engineRoot 'SConstruct') -Hash
+                        Report-File (Join-Path $engineRoot 'source-manifest.json')
+                    }
+                    Write-Report 'INFO' ($project + ' legacy original layout follows: preserved files below are not the restored engine build inputs.')
+                } else { Write-Report 'UNKNOWN' ($project + ': restored engine directory not present.') }
+            }
             Report-File (Join-Path $root 'SConstruct') -Hash
-            $sourceRoot = Join-Path $root 'src'
-            if (Test-Path -LiteralPath $sourceRoot -PathType Container) {
-                $sourceFiles = @(Get-ChildItem -LiteralPath $sourceRoot -File -Recurse -ErrorAction SilentlyContinue |
-                    Where-Object { $_.Extension -in @('.c', '.cpp', '.h', '.hpp', '.java', '.py') })
-                $emptyCount = @($sourceFiles | Where-Object { $_.Length -eq 0 }).Count
-                $status = 'PASS'
-                # Some projects intentionally have empty source/module marker files.
-                if ($emptyCount -gt 0) { $status = 'UNKNOWN' }
-                if ($sourceFiles.Count -eq 0 -or $emptyCount -eq $sourceFiles.Count) { $status = 'BLOCKED' }
-                Write-Report $status ('{0}: source files={1}; nonempty={2}; empty={3}' -f $sourceRoot, $sourceFiles.Count, ($sourceFiles.Count - $emptyCount), $emptyCount)
-            } else { Write-Report 'BLOCKED' ('Missing source directory: ' + $sourceRoot) }
-            # Count artifacts without listing every dependency or output file.
+            Report-SourceDirectory (Join-Path $root 'src')
+            # Count artifacts across all layouts, including legacy placeholders.
+            Write-Report 'INFO' ($project + ': artifact counts include legacy placeholders and any current build outputs.')
             $artifacts = @(Get-ChildItem -LiteralPath $root -File -Recurse -ErrorAction SilentlyContinue |
                 Where-Object { $_.Extension -in @('.exe', '.apk', '.so', '.obb') })
             foreach ($extension in @('.exe', '.apk', '.so', '.obb')) {
@@ -345,27 +401,36 @@ try {
             }
         }
         $clientRoot = Join-Path $WorkspaceRoot 'wesnoth_client'
+        Write-Report 'INFO' 'Legacy original client scripts/source and server executable follow; restored builds use engine/ and build/.'
         foreach ($relative in @('build-sources.ps1', 'build-android-deps.ps1', 'AndroidBuildCommon.ps1', 'app\src\main\java\org\wesnoth\Wesnoth\InitActivity.java')) {
             Report-File (Join-Path $androidRoot $relative) -Hash
         }
         Report-File (Join-Path $clientRoot 'src\wesnoth.cpp') -Hash
         Report-File (Join-Path $WorkspaceRoot 'wesnoth_server\wesnothd.exe')
         Write-Report 'INFO' ('Server .env exists=' + (Test-Path -LiteralPath (Join-Path $WorkspaceRoot 'wesnoth_server\.env') -PathType Leaf) + '; contents not read.')
-        foreach ($relative in @('gradle\wrapper\gradle-wrapper.properties', 'build.gradle', 'app\build.gradle', 'settings.gradle', 'build.gradle.kts', 'app\build.gradle.kts', 'gradle\libs.versions.toml')) {
-            $file = Join-Path $androidRoot $relative
-            if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {
-                Write-Report 'UNKNOWN' ('Build declaration file not present: ' + $file)
-                continue
-            }
-            Report-File $file -Hash
-            if ((Get-Item -LiteralPath $file).Length -eq 0) { continue }
-            # Report declarations only, never a full Gradle file or URL credentials.
-            foreach ($line in @(Get-Content -LiteralPath $file)) {
-                if ($line -match '^\s*distributionUrl\s*=.*?(gradle-[0-9][A-Za-z0-9.\-]*\.zip)') {
-                    Write-Report 'PASS' ('Gradle distribution archive: ' + $Matches[1])
-                } elseif ($line -match '(com\.android\.tools\.build:gradle:|com\.android\.(application|library)|\b(agp|compileSdk|compileSdkVersion|minSdk|minSdkVersion|targetSdk|targetSdkVersion|ndkVersion|abiFilters)\b|armeabi-v7a|arm64-v8a|x86_64)') {
-                    $safeLine = $line.Trim() -replace '(?i)https?://\S+', '<URL omitted>'
-                    Write-Report 'INFO' ($relative + ': ' + $safeLine)
+        $androidBuildRoots = @($androidRoot)
+        $restoredAndroidRoot = Join-Path $clientRoot 'engine\packaging\android'
+        if (Test-Path -LiteralPath $restoredAndroidRoot -PathType Container) { $androidBuildRoots += $restoredAndroidRoot }
+        foreach ($buildRoot in $androidBuildRoots) {
+            $layout = 'Legacy original'
+            if ($buildRoot -eq $restoredAndroidRoot) { $layout = 'Restored engine' }
+            Write-Report 'INFO' ($layout + ' Android build declarations: ' + $buildRoot)
+            foreach ($relative in @('gradle\wrapper\gradle-wrapper.properties', 'build.gradle', 'app\build.gradle', 'settings.gradle', 'build.gradle.kts', 'app\build.gradle.kts', 'gradle\libs.versions.toml')) {
+                $file = Join-Path $buildRoot $relative
+                if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {
+                    Write-Report 'UNKNOWN' ('Build declaration file not present: ' + $file)
+                    continue
+                }
+                Report-File $file -Hash
+                if ((Get-Item -LiteralPath $file).Length -eq 0) { continue }
+                # Report declarations only, never a full Gradle file or URL credentials.
+                foreach ($line in @(Get-Content -LiteralPath $file)) {
+                    if ($line -match '^\s*distributionUrl\s*=.*?(gradle-[0-9][A-Za-z0-9.\-]*\.zip)') {
+                        Write-Report 'PASS' ('Gradle distribution archive: ' + $Matches[1])
+                    } elseif ($line -match '(com\.android\.tools\.build:gradle:|com\.android\.(application|library)|\b(agp|compileSdk|compileSdkVersion|minSdk|minSdkVersion|targetSdk|targetSdkVersion|ndkVersion|abiFilters)\b|armeabi-v7a|arm64-v8a|x86_64)') {
+                        $safeLine = $line.Trim() -replace '(?i)https?://\S+', '<URL omitted>'
+                        Write-Report 'INFO' ($relative + ': ' + $safeLine)
+                    }
                 }
             }
         }
@@ -493,31 +558,7 @@ try {
         $adbFiles = @($adbCandidates | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) })
         $adbFiles = @($adbFiles | Where-Object { (Get-Item -LiteralPath $_).Length -gt 0 } | Select-Object -Unique)
         if ($adbFiles.Count -eq 0) { Write-Report 'UNKNOWN' 'ADB executable not located.' }
-        else {
-            $adb = $adbFiles[0]
-            Report-Versions 'Selected ADB' @($adb) @('version')
-            Write-Probe 'Local ADB device list (timeout 20 seconds)'
-            $result = Invoke-LocalCommand $adb @('-H', '127.0.0.1', '-P', '5037', 'devices', '-l') 20
-            $status = 'UNKNOWN'
-            if ($result.Success) { $status = 'PASS' }
-            Write-Report $status ('Local ADB devices: ' + $result.Output)
-            $serials = @()
-            if ($result.Success) {
-                foreach ($line in @($result.Output -split '\r?\n')) {
-                    if ($line -match '^([^\s]+)\s+device(?:\s|$)') { $serials += $Matches[1] }
-                }
-            }
-            if ($serials.Count -eq 0) { Write-Report 'UNKNOWN' 'No ready local ADB device; start LDPlayer and rerun this report.' }
-            foreach ($serial in $serials) {
-                foreach ($property in @('ro.product.model', 'ro.build.version.release', 'ro.build.version.sdk', 'ro.product.cpu.abi', 'ro.product.cpu.abilist', 'ro.dalvik.vm.native.bridge')) {
-                    Write-Probe ('ADB property ' + $serial + ' ' + $property)
-                    $result = Invoke-LocalCommand $adb @('-H', '127.0.0.1', '-P', '5037', '-s', $serial, 'shell', 'getprop', $property) 10
-                    $status = 'UNKNOWN'
-                    if ($result.Success -and $result.Output) { $status = 'PASS' }
-                    Write-Report $status ($serial + ' ' + $property + '=' + $result.Output)
-                }
-            }
-        }
+        else { Report-LocalAdbDevices $adbFiles[0] }
     }
 
     Invoke-ReportSection 'MongoDB local installation and services (no database connection)' {

@@ -1,0 +1,2 @@
+# Preserve the exact upstream bytes recorded by UPSTREAM.json on every host.
+* -text

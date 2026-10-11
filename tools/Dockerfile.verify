@@ -1,0 +1,24 @@
+# Linux verification only. Windows uses the existing MSYS2 installation.
+# Prepare this image online once; compilation and protocol tests run offline.
+FROM gcc:16.2@sha256:17043c23ec2ad97fc3beca18da77275d26be5db5cd70ea0a5d73200e21a8e999
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl python3 python3-venv libssl-dev libicu-dev zlib1g-dev libbz2-dev \
+    && rm -rf /var/lib/apt/lists/*
+RUN python3 -m venv /opt/build-tools \
+    && /opt/build-tools/bin/pip install --no-cache-dir cmake==4.3.0 ninja==1.13.2
+ENV PATH="/opt/build-tools/bin:${PATH}"
+
+# Matches the Windows inventory's Boost release; Windows uses MSYS2 DLLs.
+RUN curl --fail --location --output /tmp/boost.tar.bz2 \
+    https://archives.boost.io/release/1.91.0/source/boost_1_91_0.tar.bz2 \
+    && echo 'de5e6b0e4913395c6bdfa90537febd9028ea4c0735d2cdb0cd9b45d5f51264f5  /tmp/boost.tar.bz2' | sha256sum -c - \
+    && tar -xjf /tmp/boost.tar.bz2 -C /tmp \
+    && cd /tmp/boost_1_91_0 \
+    && ./bootstrap.sh --prefix=/opt/boost \
+        --with-libraries=iostreams,program_options,regex,thread,random,coroutine,locale,filesystem,graph,charconv,process \
+    && ./b2 -j2 variant=release link=static threading=multi install > /tmp/boost-build.log 2>&1 \
+    || { cat /tmp/boost-build.log 2>/dev/null; exit 1; }
+RUN rm -rf /tmp/boost_1_91_0 /tmp/boost.tar.bz2 /tmp/boost-build.log
+ENV CMAKE_PREFIX_PATH="/opt/boost"
+WORKDIR /work

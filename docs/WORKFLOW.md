@@ -36,7 +36,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current status:** both Windows pulls succeeded using MSYS2 Git 2.55.0/runtime 3.6.10, and collector version 2026-10-11.2 completed all ten sections with exit 0. Use "Use the already installed MSYS2 Git" for future Windows updates. The user's immediate request is to understand the earlier Git failure before moving to the next step; record these results and explain them without beginning source/toolchain changes. The full report confirms empty inspected source/build files and remaining environment blockers; see the latest `BASELINE.md` entry. Earlier commands are diagnostic history.
+**Current status:** the user has requested the next development step. Matching source is restored into new engine/ directories. Use **NEXT_TEST.md** for the active Windows pull/build/protocol-test/run/LDPlayer inventory commands. Collector is now 2026-10-11.3. The earlier environment/Git sections below are diagnostic history; do not rerun old native-Git or service commands. MSYS2 Git remains the verified Windows delivery route. APK/OBB, MongoDB integration and gameplay remain pending.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -448,7 +448,7 @@ Expected: MSYS2 Git version (previously 2.55.0), active runtime version, both su
 
 After both pulls succeed, start LDPlayer and wait for Android, then run the existing Windows environment-collector command from the preceding section in normal PowerShell. Expected collector version remains `2026-10-11.2`; return the complete report from the server diagnostics directory, even if inventory is INCOMPLETE or contains BLOCKED/UNKNOWN entries. Inventory completion and a successful Git workaround do not establish gameplay or explain the service's purpose.
 
-Verification: the pasted PowerShell block and its generated Bash commands passed syntax checks on the VPS, and the user has now completed both fast-forward pulls on Windows. The following inventory finished 10/10 sections with exit 0; its BLOCKED/UNKNOWN entries still require interpretation. No new service configuration, global Git setting or installation was required by the successful commands. If a future MSYS2 update fails, assess that exact error and current locking-process evidence rather than reusing old PIDs or blindly changing services. No new pull is needed solely to answer the user's explanation question.
+Verification: the pasted PowerShell block and its generated Bash commands passed syntax checks on the VPS, and the user has now completed both fast-forward pulls on Windows. The following inventory finished 10/10 sections with exit 0; its BLOCKED/UNKNOWN entries still require interpretation. No new service configuration, global Git setting or installation was required by the successful commands. If a future MSYS2 update fails, assess that exact error and current locking-process evidence rather than reusing old PIDs or blindly changing services. That explanation did not need another pull; the current source/build delivery does require the new pulls in NEXT_TEST.md.
 
 ## First play acceptance
 

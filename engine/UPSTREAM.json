@@ -1,0 +1,690 @@
+{
+  "project": "The Battle for Wesnoth",
+  "repository": "https://github.com/wesnoth/wesnoth",
+  "tag": "1.19.26",
+  "commit": "75c84d2ed344b954d1fd308e588dfe13aef53b20",
+  "purpose": "Native multiplayer server and common code; guest LAN baseline. Original custom placeholders are preserved outside engine/.",
+  "source_modifications": [],
+  "files": [
+    {
+      "path": "COPYING",
+      "sha256": "e6d6a009505e345fe949e1310334fcb0747f28dae2856759de102ab66b722cb4",
+      "bytes": 18011
+    },
+    {
+      "path": "config.h.cmake",
+      "sha256": "d932a9883dd3b556f905ebb67a4a03ac86dca5ec3287b6c936967b065db7aa11",
+      "bytes": 152
+    },
+    {
+      "path": "copyright",
+      "sha256": "ca7c927b2c42d1d764c169de128457696f121077284d4481a1f574e489d8d3de",
+      "bytes": 456
+    },
+    {
+      "path": "copyrights.csv",
+      "sha256": "7d8dde0a207fbb8fb4d0fe323ff7a447a9d19b0d7f01d3b5d06afeaa0aeeddfc",
+      "bytes": 46883
+    },
+    {
+      "path": "doc/man/wesnothd.6",
+      "sha256": "89bd9bfc5b2135b8637c85a61f76d344126b8eef09be23fafee768b6757f1eae",
+      "bytes": 9310
+    },
+    {
+      "path": "packaging/windows/wesnoth-icon.ico",
+      "sha256": "10de51135dbe18d7fca92c79efb4b682b198f438fa0fd4287abad98fbde2b616",
+      "bytes": 120761
+    },
+    {
+      "path": "packaging/windows/wesnothd.rc",
+      "sha256": "48023a48e7061320d469f5a4b022522c6b6d003cef650ff0563f72fe09e2ca05",
+      "bytes": 988
+    },
+    {
+      "path": "source_lists/libwesnoth_core",
+      "sha256": "f87da5594f56f9b61fd5624a3ba42686b9a5a3d2a355f09c4f1cd2d6552b83f5",
+      "bytes": 703
+    },
+    {
+      "path": "source_lists/wesnothd",
+      "sha256": "c348a9efecda6cf09f2a312ef6c8adcc66c91c478f74b54825d0c23627acd428",
+      "bytes": 296
+    },
+    {
+      "path": "src/buffered_istream.hpp",
+      "sha256": "85f3611bbf9f45a7b57479ef5a9cca6eea120e0f4f2d7ea084453310a89be874",
+      "bytes": 4410
+    },
+    {
+      "path": "src/commandline_argv.cpp",
+      "sha256": "6ec4ce520fa7b226fd4b1eb060e47006a18bac187f6a8596270794c010cc0636",
+      "bytes": 2130
+    },
+    {
+      "path": "src/commandline_argv.hpp",
+      "sha256": "71e7324a455d237599228ea646a4946c973a2f9f5ec3a015083b5557a5d32ea9",
+      "bytes": 855
+    },
+    {
+      "path": "src/config.cpp",
+      "sha256": "0ef111e69b0098eb4622a74b050fecc09888a9b924bc8d60a0f8250b4d64c30d",
+      "bytes": 33683
+    },
+    {
+      "path": "src/config.hpp",
+      "sha256": "84db07aace756a5d2d5274ddfaaf96fa052432f6b0bc90699bc6418c892e9228",
+      "bytes": 32595
+    },
+    {
+      "path": "src/config_attribute_value.cpp",
+      "sha256": "5b798cabb5c54181b4a978d622a0189a2337432573875d63217af46595faaf7d",
+      "bytes": 11285
+    },
+    {
+      "path": "src/config_attribute_value.hpp",
+      "sha256": "9c3b65c6d87f597edc3447c07bbc9e7ebfe777f07e2519b9ee6d543bc4c99811",
+      "bytes": 8141
+    },
+    {
+      "path": "src/config_cache.cpp",
+      "sha256": "f8f5c40ebcba2bf87123c56a475dd6c43a7a25b32a10947987cacaf7b4be3e58",
+      "bytes": 13215
+    },
+    {
+      "path": "src/config_cache.hpp",
+      "sha256": "31709bba66f8dff54e15a3cfcc27601c8a8a1ebc6e250f726e1f5a008b355114",
+      "bytes": 6276
+    },
+    {
+      "path": "src/configr_assign.hpp",
+      "sha256": "3a8a238c8f784176131878ab2f9037991f4b8d31b80ed16cb1a03c656571fcac",
+      "bytes": 1223
+    },
+    {
+      "path": "src/crypt_blowfish/crypt_blowfish.c",
+      "sha256": "0a6a394be01c0676317c8d26db56e084cad49d9fba04125364816123a3eb124c",
+      "bytes": 32440
+    },
+    {
+      "path": "src/crypt_blowfish/crypt_blowfish.h",
+      "sha256": "a7d6996aa46d6d78c521d9ade0ad768cd4808b1edb9306f7891e3ccd0da117db",
+      "bytes": 1048
+    },
+    {
+      "path": "src/crypt_blowfish/crypt_blowfish.md",
+      "sha256": "837b627f8b5df6a3aec998b44a499c31b5ccb94b429833b293380ad32d190e38",
+      "bytes": 1857
+    },
+    {
+      "path": "src/deprecation.hpp",
+      "sha256": "509fd550f343a866e2ea79296066212bc0bb8a52a361398226b7793be279ed7f",
+      "bytes": 1960
+    },
+    {
+      "path": "src/enum_base.hpp",
+      "sha256": "904460fbe569024b211f4b85c4870569613bc993f58b8e15a76d3846b087720f",
+      "bytes": 3362
+    },
+    {
+      "path": "src/exceptions.hpp",
+      "sha256": "5b5ce20314d686f350a004e0445ef5d5ab12a332bcf450285d3bb568afd7438c",
+      "bytes": 980
+    },
+    {
+      "path": "src/filesystem.cpp",
+      "sha256": "2532b5bf6026adf0f55072b3baa2f9bd3a7fe5deb821bfa3039a8476264e6921",
+      "bytes": 51338
+    },
+    {
+      "path": "src/filesystem.hpp",
+      "sha256": "0d38e92064277115409600a12610b2b91bf191219f97e00f469f8ad253d2a349",
+      "bytes": 17744
+    },
+    {
+      "path": "src/filesystem_common.cpp",
+      "sha256": "29ccd15ad7e8f23464d41f318a0129b4410e2068b192a99341146a8232c87b63",
+      "bytes": 9388
+    },
+    {
+      "path": "src/font/constants.cpp",
+      "sha256": "e0261eb29d1646a7a9b7123eea56873614fb28762067fd56dda88a9bb6dbdd53",
+      "bytes": 1457
+    },
+    {
+      "path": "src/font/constants.hpp",
+      "sha256": "a169a109444f04ab478e1233008965fe1fcc6eb5e3f43b6906b711c0fcaec89d",
+      "bytes": 1388
+    },
+    {
+      "path": "src/formatter.hpp",
+      "sha256": "bd0039a6de4d8b25eb7ad98b5fa295af506ccb3bfb61a9942ea086ff4e9378c2",
+      "bytes": 2190
+    },
+    {
+      "path": "src/game_config_view.cpp",
+      "sha256": "0d946662a713a7418729eef64767597fdd1bda89288f0ddc8f64230743ee0fa0",
+      "bytes": 3184
+    },
+    {
+      "path": "src/game_config_view.hpp",
+      "sha256": "f4aa98b190e63ff7c0a81dafe4e54446a30309803cf77d2488a5b2f52ad61cd7",
+      "bytes": 1830
+    },
+    {
+      "path": "src/game_version.cpp",
+      "sha256": "5742b368318b0a5577801eab949f0cf6e41b8b25bdb3312e418e00cef8fe2cd3",
+      "bytes": 6289
+    },
+    {
+      "path": "src/game_version.hpp",
+      "sha256": "17cc2a251fd055d5c1e5ea6b5c601b455265f7a659d9a57bd842624c43dc38ab",
+      "bytes": 6519
+    },
+    {
+      "path": "src/gettext.cpp",
+      "sha256": "2187b260d88eed68f08b0e9d4e5fb0872e9345612e300d63a8045ab13df981ef",
+      "bytes": 18223
+    },
+    {
+      "path": "src/gettext.hpp",
+      "sha256": "aeb743b4ed10749fb54ba814b74a38fc9abbb10ab1adc3b7a75d985169869c18",
+      "bytes": 4191
+    },
+    {
+      "path": "src/global.hpp",
+      "sha256": "dfcd627835eb006865fa8b3fbc791498210f48136d5e08a243b807db76677856",
+      "bytes": 2387
+    },
+    {
+      "path": "src/hash.cpp",
+      "sha256": "4773bbdc69f5e1eaafecc3335b2564cc2c9514ff2dcb09a9085294d81a0b3fa2",
+      "bytes": 4502
+    },
+    {
+      "path": "src/hash.hpp",
+      "sha256": "144fa62f6fd289d63e0ecbe552455acde9dc35c961a53406eb86a537acf55a7b",
+      "bytes": 2322
+    },
+    {
+      "path": "src/lexical_cast.hpp",
+      "sha256": "b956410716f5995fd7509cff04dc3796849bc2526e6e85a96e80d26ebb965586",
+      "bytes": 7051
+    },
+    {
+      "path": "src/log.cpp",
+      "sha256": "67b4de26e77f5da2974f324e0d15b3e0f7c30c1d39faf3dddceb13fea5b2d922",
+      "bytes": 14989
+    },
+    {
+      "path": "src/log.hpp",
+      "sha256": "c4d77b60cadf3313b1e83ff48a04986235c7587640f50e70f1f0bf729f2d6569",
+      "bytes": 9541
+    },
+    {
+      "path": "src/log_windows.cpp",
+      "sha256": "998ea56c7e79ebc071ced249b85bccc7fecf33aa9acf10c88fd1f02a9e00812f",
+      "bytes": 3540
+    },
+    {
+      "path": "src/log_windows.hpp",
+      "sha256": "6566e673348df80e705d6659cc04b382fcf74d1d470af42f739f158bfb25013d",
+      "bytes": 856
+    },
+    {
+      "path": "src/lua_jailbreak_exception.cpp",
+      "sha256": "51a10e5d72eabbe91ef7cecbd62641f3d158798ecb46f3ae52d5ca9fde15c74c",
+      "bytes": 1677
+    },
+    {
+      "path": "src/lua_jailbreak_exception.hpp",
+      "sha256": "25b89e1aef84bca6b7fa38d34f0f0e90e673cd761f6d562355af712b91c393ed",
+      "bytes": 3224
+    },
+    {
+      "path": "src/mt_rng.cpp",
+      "sha256": "1706018e95af9c2f1a9596cebffdf8e669c1266b0bdee7ea4d27fc790c5e5eab",
+      "bytes": 2838
+    },
+    {
+      "path": "src/mt_rng.hpp",
+      "sha256": "535e11019b657118395d1d5529bdea96b7fa2df23d2ada8535baaf25d43c52ba",
+      "bytes": 2507
+    },
+    {
+      "path": "src/multiplayer_error_codes.hpp",
+      "sha256": "19f76cf99b8bd5171d9abd53c4d82213c3174c524dff46aa889d448eeee926b2",
+      "bytes": 1399
+    },
+    {
+      "path": "src/queue_type.hpp",
+      "sha256": "0537bf5e576c2556738d9319e8b1e6347af484676fae58131cae4718ae128c40",
+      "bytes": 776
+    },
+    {
+      "path": "src/random.cpp",
+      "sha256": "0d00c149123d554f97bb82774e18d011d6a085f420bb01a4fa936e3456241886",
+      "bytes": 4007
+    },
+    {
+      "path": "src/random.hpp",
+      "sha256": "864d784d8124523ff3a08ca5dc04f04613eab050e80de678293d0658656718d2",
+      "bytes": 3836
+    },
+    {
+      "path": "src/seed_rng.cpp",
+      "sha256": "f1c5f88a865219f3f46b55c60426f957fc33d475f5be02db80dc0fb56600e5fc",
+      "bytes": 1296
+    },
+    {
+      "path": "src/seed_rng.hpp",
+      "sha256": "5530d9dacec3976841dba97003cb5766454750bfddc949877e5b569f4d248f48",
+      "bytes": 1053
+    },
+    {
+      "path": "src/serialization/base64.cpp",
+      "sha256": "73135e316eee6b6e25d1b01f3ac6051463387a248a3cf806ccc3cf4653450c29",
+      "bytes": 5751
+    },
+    {
+      "path": "src/serialization/base64.hpp",
+      "sha256": "36381ad0e0f77fdc9554729ab54464b3b70fc1869f1c1dfbd4e34d7a40ee2f86",
+      "bytes": 1133
+    },
+    {
+      "path": "src/serialization/binary_or_text.cpp",
+      "sha256": "19216de590c24032702ddf969fac9f74c9f737b72bb59ce86e54c91a6e5f59ea",
+      "bytes": 3118
+    },
+    {
+      "path": "src/serialization/binary_or_text.hpp",
+      "sha256": "32fd0cb28c73f4925bd36ce09ce0285c8c7567ba9c611020f16fc47b195f40a9",
+      "bytes": 1804
+    },
+    {
+      "path": "src/serialization/chrono.hpp",
+      "sha256": "68c4faabec0c5f4fd301e4fa7c9f5aaf69fbca0ea6c5b117818fb4c6e81f570a",
+      "bytes": 3064
+    },
+    {
+      "path": "src/serialization/compression.hpp",
+      "sha256": "e0b0f1ad85e0e1026f4701cdccc21b642c9e84295a137b760a122818240d1e1a",
+      "bytes": 859
+    },
+    {
+      "path": "src/serialization/parser.cpp",
+      "sha256": "ae1c06de2a28180a37c7f122e0e4ad734ae12d2ee0ef1c1bd11c704aa0a5abb4",
+      "bytes": 19173
+    },
+    {
+      "path": "src/serialization/parser.hpp",
+      "sha256": "483d3a3b90c47c4710b54ac9a004527564ec33975666b590fb34eb9d0fcda26e",
+      "bytes": 1740
+    },
+    {
+      "path": "src/serialization/preprocessor.cpp",
+      "sha256": "8ea0304e2cc4cc58f95a89ca3efc2399f508962836c73d16a6f2d13c915bf134",
+      "bytes": 51610
+    },
+    {
+      "path": "src/serialization/preprocessor.hpp",
+      "sha256": "fba2439c4d00948530a9b8ddc584b4b9145a835038dfa4f3666f2fe31205c3ec",
+      "bytes": 4083
+    },
+    {
+      "path": "src/serialization/schema/key.cpp",
+      "sha256": "95643654b9bbaabe4f68229b6301a854d950e0209d64c067ba4d8843a4eeeba4",
+      "bytes": 1463
+    },
+    {
+      "path": "src/serialization/schema/key.hpp",
+      "sha256": "b12287f1182816a3f0b4cd02974cad7b8d9a68c18d4c80184112093da112a669",
+      "bytes": 2538
+    },
+    {
+      "path": "src/serialization/schema/tag.cpp",
+      "sha256": "e73f27ad2881481eddf07abb1e5e886de8f72619355e4cca50ddc780f7e0477d",
+      "bytes": 14823
+    },
+    {
+      "path": "src/serialization/schema/tag.hpp",
+      "sha256": "3946dca387672188aa7a00f9d88be48956071c76052e343f971047c338b4f764",
+      "bytes": 9606
+    },
+    {
+      "path": "src/serialization/schema/type.cpp",
+      "sha256": "acc1ae45e9a61e2662b7c6f3ef8fe67bf128b0b16fcfb5f662c87ec23ff77b2a",
+      "bytes": 4361
+    },
+    {
+      "path": "src/serialization/schema/type.hpp",
+      "sha256": "a6abde7424b9d09bd5d143ce0f4982e7a36f486fc3ac4c65f0c9375518f44620",
+      "bytes": 4077
+    },
+    {
+      "path": "src/serialization/schema_validator.cpp",
+      "sha256": "04c30da37522248867899145c0098bbd9a9e45b9687810f4d546fa579acd228b",
+      "bytes": 31047
+    },
+    {
+      "path": "src/serialization/schema_validator.hpp",
+      "sha256": "0c6a70f6d29c99f4e0dfcb23bc00d00f01f0cdd090a649f49fca1d247af94ae7",
+      "bytes": 8626
+    },
+    {
+      "path": "src/serialization/string_utils.cpp",
+      "sha256": "b8274c3e34dba3239cb48be2b7e0c481465d72cfa3ba98a6ac6756a530620860",
+      "bytes": 26607
+    },
+    {
+      "path": "src/serialization/string_utils.hpp",
+      "sha256": "6c63b3f4847b311212824555b1db56be8039380ef60e94cfc989f4e9dec898c7",
+      "bytes": 14177
+    },
+    {
+      "path": "src/serialization/tokenizer.cpp",
+      "sha256": "f08e16979b390b4d193a6d93c09ab757da1f127ed1f68651993a2b4de128979c",
+      "bytes": 7412
+    },
+    {
+      "path": "src/serialization/tokenizer.hpp",
+      "sha256": "1196d2f3a6c4e326b4064d7c3793e58c5a628f930c9eb4e8babe8a3d62491c2e",
+      "bytes": 5249
+    },
+    {
+      "path": "src/serialization/ucs4_convert_impl.hpp",
+      "sha256": "310463bb3ba76f0aec6466553e44dce5945a81b8dee0f66d0da58480a5c519b9",
+      "bytes": 6201
+    },
+    {
+      "path": "src/serialization/ucs4_iterator_base.hpp",
+      "sha256": "8aa6556e5d059f3ac2a9678dd76058bda615ce3815abd25e216b16c5a23a2147",
+      "bytes": 2597
+    },
+    {
+      "path": "src/serialization/unicode.cpp",
+      "sha256": "13d59db738bcd948f05892a245f15cc0aa35b476a34724e4e2d8e18ff4269a53",
+      "bytes": 3565
+    },
+    {
+      "path": "src/serialization/unicode.hpp",
+      "sha256": "4f2b8e1f2afe12d55413a7b1796acc1a9af8ba27c3f830022a7594cc064ae940",
+      "bytes": 3665
+    },
+    {
+      "path": "src/serialization/unicode_cast.hpp",
+      "sha256": "9136b413af7c22c034b42988d89d810db06421c75507ad17b33587327e9cbf2d",
+      "bytes": 2828
+    },
+    {
+      "path": "src/serialization/utf8_exception.hpp",
+      "sha256": "403129909968d15763b47d14b529ccaf24038057f2448f43279ed51386bcf594",
+      "bytes": 819
+    },
+    {
+      "path": "src/serialization/validator.cpp",
+      "sha256": "fd3729f90751b72a6608dbff97202c067583c19cb691faf98d7f1de0cff911f0",
+      "bytes": 622
+    },
+    {
+      "path": "src/serialization/validator.hpp",
+      "sha256": "8c418275b3d3a3d8b9887f80b022ed1137a1516dd68b4e486cbcbdade1a73fd8",
+      "bytes": 2952
+    },
+    {
+      "path": "src/server/common/dbconn.cpp",
+      "sha256": "1c240f6e6102da726042f63422b554ec2f609355f74a5853676939d372377bde",
+      "bytes": 30733
+    },
+    {
+      "path": "src/server/common/dbconn.hpp",
+      "sha256": "e478ab93117feaa1766b01ee8f7425e315198e57953af81ae9544b34e02f3789",
+      "bytes": 13824
+    },
+    {
+      "path": "src/server/common/forum_user_handler.cpp",
+      "sha256": "1ece7838cc7d8a8a728218bfab912535ec0523454b50194c1622b8fc63939cd6",
+      "bytes": 12216
+    },
+    {
+      "path": "src/server/common/forum_user_handler.hpp",
+      "sha256": "8f5770a5d864aef8f64db5168b63b6fc412c38b50062e080037ec247b381bbe7",
+      "bytes": 16196
+    },
+    {
+      "path": "src/server/common/server_base.cpp",
+      "sha256": "891a70e0ba4f8bc006c47592f1bf50d0ffa84194385bf1f302ac34fccff07e39",
+      "bytes": 23047
+    },
+    {
+      "path": "src/server/common/server_base.hpp",
+      "sha256": "b4f89fc6d94deee94a1361c08ef1e2b54678baf2bf0fcacee6c6a1bb160b7228",
+      "bytes": 7513
+    },
+    {
+      "path": "src/server/common/simple_wml.cpp",
+      "sha256": "0e7c4d8e2d972273397cd57a44f2e371e2f97fe44f9cdf22b5d7ba99c4bdeade",
+      "bytes": 29033
+    },
+    {
+      "path": "src/server/common/simple_wml.hpp",
+      "sha256": "fc20513f891ba61d35643f4637ec02968db7dece09bfd05d18f8ec428dd540d0",
+      "bytes": 8573
+    },
+    {
+      "path": "src/server/common/user_handler.hpp",
+      "sha256": "4fd756f95d8f9530fd222db4bb26adec60935f5ecfded9ff5cd6dd953b2714ce",
+      "bytes": 6559
+    },
+    {
+      "path": "src/server/wesnothd/ban.cpp",
+      "sha256": "3b2cb24de9e92827b59c0c22460fab016e48d4a1354bf4119da7d7763266c4b7",
+      "bytes": 18920
+    },
+    {
+      "path": "src/server/wesnothd/ban.hpp",
+      "sha256": "927339d4bb4c94551e9a9fc307da0b2b78320e1600a5bc598a0e0d8676fb107b",
+      "bytes": 5121
+    },
+    {
+      "path": "src/server/wesnothd/game.cpp",
+      "sha256": "6e2fcbdefc3dac5400c88edae7004d2870684cc2633c459a57fb5b244ec9ccad",
+      "bytes": 59666
+    },
+    {
+      "path": "src/server/wesnothd/game.hpp",
+      "sha256": "58c69e1ed9cff73786bd13a894fed3902a6113a2458df93ef20cacf34b22a6b5",
+      "bytes": 29303
+    },
+    {
+      "path": "src/server/wesnothd/metrics.cpp",
+      "sha256": "14dfcf5dc1c8bed47debaf04b1238aee49fca1faa565f5e3cc6cecac05d98d8e",
+      "bytes": 4822
+    },
+    {
+      "path": "src/server/wesnothd/metrics.hpp",
+      "sha256": "9514d4dea9b3f9527ffc6d8f2b66e34751b022aad5c83f232ee96a577ff6a36c",
+      "bytes": 1867
+    },
+    {
+      "path": "src/server/wesnothd/player.cpp",
+      "sha256": "00d0ebc80dafcc9661dd143da568c4ac88e87c7b85e515a04a6b588587bb5e89",
+      "bytes": 2761
+    },
+    {
+      "path": "src/server/wesnothd/player.hpp",
+      "sha256": "71b262031e24495600038c23648ce9f5918377953d766fba4efc3eb9d4049625",
+      "bytes": 2449
+    },
+    {
+      "path": "src/server/wesnothd/player_connection.cpp",
+      "sha256": "ea18b716044669485f381fe753627cd440476ec9b0ce555b937df1888c8ad60a",
+      "bytes": 1021
+    },
+    {
+      "path": "src/server/wesnothd/player_connection.hpp",
+      "sha256": "9edac2f3434304ba92222b711feb076b7601739b77ada5922e066a502fd5b4f3",
+      "bytes": 2461
+    },
+    {
+      "path": "src/server/wesnothd/player_network.cpp",
+      "sha256": "020562eb5dd504eb9c048ad7b943768ffc01705249e3fde28e2054845ca741de",
+      "bytes": 1486
+    },
+    {
+      "path": "src/server/wesnothd/player_network.hpp",
+      "sha256": "1532d9b92c70270a918ea35d3c4a8d69b994d3ce074f2447c58e2022e59c272c",
+      "bytes": 939
+    },
+    {
+      "path": "src/server/wesnothd/server.cpp",
+      "sha256": "346fab03ec792d311317fe8768e8d1933fff8fb2700a37df052b439951649131",
+      "bytes": 112619
+    },
+    {
+      "path": "src/server/wesnothd/server.hpp",
+      "sha256": "c1cd2a8078df9743cbf9e057e1add0b97f3e7f3274e98583bd9028739c9737fb",
+      "bytes": 12135
+    },
+    {
+      "path": "src/side_controller.hpp",
+      "sha256": "cd9801d9a35712eb094596184b3af67f34594e694441b9dc609d09695480e3e1",
+      "bytes": 881
+    },
+    {
+      "path": "src/spirit_po/catalog.hpp",
+      "sha256": "2081dacecaac8677087c465f352fca953edd76bea91d2ad22ac0e393206d60ac",
+      "bytes": 18005
+    },
+    {
+      "path": "src/spirit_po/catalog_metadata.hpp",
+      "sha256": "18165db108839965cdd59491844fcb65a417e35d7bc5077b9e0aba9f4f7b536d",
+      "bytes": 5186
+    },
+    {
+      "path": "src/spirit_po/default_plural_forms_compiler.hpp",
+      "sha256": "bda53999a205f77f78a6d6adc82c1751ea586caf441a5c3944a61fb2efdfce2f",
+      "bytes": 4537
+    },
+    {
+      "path": "src/spirit_po/default_plural_forms_expressions.hpp",
+      "sha256": "f6c7c845c95910c7e1d15ca0200205937c81c11658e7b98e7cd56732d0211251",
+      "bytes": 19093
+    },
+    {
+      "path": "src/spirit_po/exceptions.hpp",
+      "sha256": "09217e4c7ebbf7cbbea3df4e1ff21d14cf9bccdcc5d0e1e5268eb48dfcb42016",
+      "bytes": 2270
+    },
+    {
+      "path": "src/spirit_po/po_grammar.hpp",
+      "sha256": "da32fcc18168a4b93f51705d815992f4ddc6b795a5b034d2d97c719529057c5f",
+      "bytes": 6164
+    },
+    {
+      "path": "src/spirit_po/po_message.hpp",
+      "sha256": "931a2feab9eeb26afc0957c8b79f55d312c8790e916b9dc357efa8c2ae0d218b",
+      "bytes": 1941
+    },
+    {
+      "path": "src/spirit_po/po_message_adapted.hpp",
+      "sha256": "24153bf536a79e0691f3d3ddd494c2e429de4e634b7278a361d86e570e310e8e",
+      "bytes": 807
+    },
+    {
+      "path": "src/spirit_po/spirit_po.hpp",
+      "sha256": "af1183d31ed50aafeb860cd1adfb4bb41fb34fefc806adb1d0be84200aa9bceb",
+      "bytes": 359
+    },
+    {
+      "path": "src/spirit_po/version.hpp",
+      "sha256": "53aff4bc70568dbc765540e59dcbda31147067ace3efcd030313e69ea235471f",
+      "bytes": 419
+    },
+    {
+      "path": "src/tstring.cpp",
+      "sha256": "467856f0e1e97171f6295cc8bf99d9ce43a05d1ab30b13ad08709c3ca19f4ef2",
+      "bytes": 14191
+    },
+    {
+      "path": "src/tstring.hpp",
+      "sha256": "18a40bca5f9e4acef39724435cb037b3bebbd63c5de9e5dec20e7e60d15cd455",
+      "bytes": 8791
+    },
+    {
+      "path": "src/utils/back_edge_detector.hpp",
+      "sha256": "2b1c902ba4fd3bf8e0f4976cdfaaec8f2877412bb98c9f246d9d122ddd0f52a8",
+      "bytes": 1173
+    },
+    {
+      "path": "src/utils/charconv.hpp",
+      "sha256": "f290fd01ac03f7d5143519bdae5e8446b95ffaa7c09720cf38f23abab15a8805",
+      "bytes": 6465
+    },
+    {
+      "path": "src/utils/const_clone.hpp",
+      "sha256": "d6a37bce2ac1b8e8a5036aa251eb74198e06389c5ddc282efcf31cbc7956e48a",
+      "bytes": 2139
+    },
+    {
+      "path": "src/utils/general.cpp",
+      "sha256": "3f2ef0e084fdee6eecbaf2b47e5030ebf8fdf8a36ce82bb4519d98b30069cfea",
+      "bytes": 1027
+    },
+    {
+      "path": "src/utils/general.hpp",
+      "sha256": "16754d08140859fea7b5548e055775f42eea284bd0687947a9de4f875d1bae77",
+      "bytes": 5993
+    },
+    {
+      "path": "src/utils/iterable_pair.hpp",
+      "sha256": "b24599f06de210e540d3ea4db441a21b082c3f98218605fb9f25373cfcd86e77",
+      "bytes": 1734
+    },
+    {
+      "path": "src/utils/math.hpp",
+      "sha256": "05507db1837f970a573845e14d7230e8260b40c036644a4c0d59a542d3e95e05",
+      "bytes": 6627
+    },
+    {
+      "path": "src/utils/optional_fwd.hpp",
+      "sha256": "c49e0fd3dd604431b5e975e55705d0009df3d2b52a82a2ab9950dccb81bcbe0d",
+      "bytes": 1039
+    },
+    {
+      "path": "src/utils/optional_reference.hpp",
+      "sha256": "66b4d0e60d66a670f8fb50f1f06f1997aca4e14c8dd3cf45b89ae51f7db4de08",
+      "bytes": 2415
+    },
+    {
+      "path": "src/utils/ranges.hpp",
+      "sha256": "712105a5f26ad9f4889eacb7a51a9992305a0cbec6f081ea10c6fc36d7ff9632",
+      "bytes": 1464
+    },
+    {
+      "path": "src/utils/scope_exit.hpp",
+      "sha256": "cb48ef20790de2d788bf950adca9ae1217717379d7fbb272a742c0bb7778d6f3",
+      "bytes": 1207
+    },
+    {
+      "path": "src/utils/span.hpp",
+      "sha256": "736efcbe4fa245b67ffd95e06f84ffc566411486eb4fba19df814c2a90b9362a",
+      "bytes": 12802
+    },
+    {
+      "path": "src/utils/variant.hpp",
+      "sha256": "0b5e0f1bd3b0fa4bd7756accd329e5fd55be6e54995de1dd3467193939410575",
+      "bytes": 1900
+    },
+    {
+      "path": "src/wesconfig.h",
+      "sha256": "759b7bf89f528b20677fa88330ac1a05bb21752a43cabb325fb74c3d1fdc56fd",
+      "bytes": 1163
+    },
+    {
+      "path": "src/wml_exception.hpp",
+      "sha256": "a6dd9203176b939073cfc4dd37f09eef93573831dc19a4e34d3c1310ed13e82a",
+      "bytes": 6602
+    }
+  ]
+}
