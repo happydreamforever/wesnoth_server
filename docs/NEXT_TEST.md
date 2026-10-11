@@ -1,35 +1,69 @@
-# Windows server passed; prepare the Android client checkpoint
+# Windows server running; connect LDPlayer for the Android build
 
-The user has now built the native 1.19.26 server on Windows and passed all guest protocol checks. Keep server-build-20261011-143549-682.txt and server-protocol-20261011-143830-505.txt. The latest handoff updates project records only: the commands below use helpers already installed, so no immediate pull, rebuild or repeated protocol test is required.
+Windows build and all guest protocol checks passed. The normal launcher also stayed running for at least30 minutes on TCP15000; zero users/games is normal before a client connects. Keep the working server open. Collector2026-10-11.3 completed10/10 with exit0, but ADB listed no devices, so Android API/ABI is still unknown.
 
-Use normal Windows PowerShell. These next checks need no internet connection or new installation. Guest protocol success does not establish an Android client, assets/OBB, MongoDB, LAN connectivity or a playable turn. Preserve the existing build directory, server-local core.filemode=false setting and stash f0c22d3.
+This handoff updates project records only. Use the installed tools below; no new pull, rebuild, installation or full inventory rerun is needed. Keep the server-local core.filemode=false setting and saved stash. Preserve all local client engine-script changes until their diffs are inspected.
 
-## 1. Start the normal server launcher
+## 1. Check LDPlayer local ADB access
 
-The build and protocol test have passed. Run this in a normal PowerShell window; the test server has already stopped:
+In the running LDPlayer window, open Settings (gear) > Other settings > ADB debugging. If needed, select **Open local connection**, save settings and restart only LDPlayer when requested. Wait until Android's home screen appears. Root permission does not need to change. If Open local connection is already selected, keep it and continue.
+
+The vendor documents [local ADB access](https://www.ldplayer.net/blog/introduction-to-version-4.0.37-and-3.102-features.html) and [settings/save/restart](https://www.ldplayer.net/support/how-to-solve-locked-screen.html). The latter article's root/unlock procedure is unrelated; only the ADB setting applies here. An empty device list by itself does not prove which setting is currently selected.
+
+## 2. Query instances and ready devices
+
+In a second normal Windows PowerShell window, paste the whole block. No internet connection is needed.
+
+```powershell
+& {
+    $adb = 'C:\Users\Uni\AppData\Local\Android\Sdk\platform-tools\adb.exe'
+
+    'LDPLAYER INSTANCES'
+    & 'C:\LDPlayer\LDPlayer9\ldconsole.exe' list2
+    "LDCONSOLE_EXIT: $LASTEXITCODE"
+
+    'LOCAL ADB DEVICES'
+    $lines = @(& $adb -H localhost -P 5037 devices -l)
+    $listExit = $LASTEXITCODE
+    $lines
+    "ADB_DEVICES_EXIT: $listExit"
+    if ($listExit -ne 0) { throw 'ADB device list failed. Send the output.' }
+
+    $serials = @($lines | ForEach-Object {
+        if ($_ -match '^([^\s]+)\s+device(?:\s|$)') { $Matches[1] }
+    })
+    if ($serials.Count -eq 0) {
+        'No ready device. Send this complete output.'
+        return
+    }
+
+    foreach ($serial in $serials) {
+        foreach ($property in @(
+            'sys.boot_completed', 'ro.product.model', 'ro.build.version.release',
+            'ro.build.version.sdk', 'ro.product.cpu.abi', 'ro.product.cpu.abilist', 'ro.dalvik.vm.native.bridge'
+        )) {
+            "PROPERTY: $serial $property"
+            & $adb -H localhost -P 5037 -s $serial shell getprop $property
+            "EXIT: $LASTEXITCODE"
+        }
+    }
+}
+```
+
+Expected: LDPlayer instance rows, at least one ADB row with state device, sys.boot_completed=1 and Android release/API/ABI properties. API and ABI values must come from the device, not assumptions. The script queries only ready serials returned by SDK ADB on localhost:5037; it does not guess an instance index or device port. A blank native-bridge property can be valid. If listing fails or there is no ready device, it stops property queries and preserves the diagnostic output.
+
+Send the complete output including LDCONSOLE_EXIT, ADB_DEVICES_EXIT and every PROPERTY/EXIT line, even if the device list remains empty. This step does not need another server build, protocol test or full collector report. It will determine the Android build target and next dependency/cache preparation. The Windows game-data folder is missing at its expected path; asset delivery, OBB support and MongoDB remain pending.
+
+## Reference: restart the verified server if it has stopped
+
+The server is already running in the latest report; no restart is needed for the device probe. If you stop it later, start it again in a separate normal PowerShell window:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsServer.ps1'
 ```
 
-Expected: version 1.19.26, configuration loaded and the process stays running on TCP port 15000. Keep that window open; Ctrl+C stops it. Logs are `diagnostics\server-run-*.txt`. Runtime state goes under `build\windows-mingw64\run`. The upstream server listens on available IPv4/IPv6 interfaces and allows guest clients with version 1.19.26. This helper supplies the installed MINGW64 DLL directory through its process PATH; the EXE is not a self-contained portable distribution. LAN routing/firewall and Android connection tests come after the APK is ready.
-
-## 2. Identify LDPlayer for the Android build
-
-Open LDPlayer and wait until the Android home screen appears. Keep the server window open. In a second normal PowerShell window, run:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Collect-WindowsEnvironment.ps1' `
-  -WorkspaceRoot 'D:\Test\wesnoth-setup' `
-  -MsysRoot 'D:\Test\msys64'
-"COLLECTOR_EXIT: $LASTEXITCODE"
-```
-
-Expected: collector `2026-10-11.3`, `Collection COMPLETE: 10/10 sections finished`, exit 0, plus Android API/ABI lines if ADB can see a ready LDPlayer device. The ADB probe now allows its local daemon to start. Send the report even if no device appears. Legacy empty artifacts and missing MongoDB may still be reported; inventory completion does not mean all components are ready.
-
-Return the server startup output (or `server-run-*.txt`) and the newest `windows-environment-*.txt` from `D:\Test\wesnoth-setup\wesnoth_server\diagnostics`. The collector records current Git HEADs. Keep the successful build/protocol logs; no need to repeat those tests for this documentation update. Let collection finish without Ctrl+C. If no Android device appears, send that report too. Do not send `.env` or credentials. These results determine the next Android toolchain/ABI and offline dependency work.
+Keep that window open; Ctrl+C stops the server. The printed transcript path is diagnostics/server-run-*.txt.
 
 ## Reference: update and rebuild after future implementation changes
 
