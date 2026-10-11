@@ -8,7 +8,7 @@ Preserve user changes and the supplied build tools/data. Confirm the Windows too
 
 Windows temporarily connects to GitHub to pull updates, then runs offline; the user confirmed this delivery route. Use GitHub clone/pull commands by default and do not ask the transfer-method question again. Windows source integrity still awaits the diagnostic report.
 
-Initial Windows folders were downloaded/copied from the VPS, not cloned. The workspace is `D:\Test\wesnoth-setup`, containing `wesnoth_client` and `wesnoth_server`; MSYS2 is `D:\Test\msys64`. The user stopped the first inventory with Ctrl+C. Obtain the corrected collector in a separate `D:\Test\wesnoth-diagnostics` GitHub checkout for the rerun, with the original workspace root. Verify the copied projects' Git metadata before configuring their future pulls. Never clone into the existing workspace parent.
+The user now confirms existing Windows clones at `D:\Test\wesnoth-setup\wesnoth_client` and `D:\Test\wesnoth-setup\wesnoth_server`; MSYS2 is `D:\Test\msys64`. Pull the existing server with `--ff-only origin main` and run its collector using `-WorkspaceRoot D:\Test\wesnoth-setup`. Reports are in that server's `diagnostics` directory. Do not require another diagnostics checkout. This supersedes the earlier copied-folder/separate-checkout instructions. The first inventory was stopped with Ctrl+C and still needs a complete rerun.
 
 Initial audit on 2026-10-11 found nearly all actual source/build files empty, and only README tracked in each repository. Recover intact originals before replacing custom code. Read the current baseline for updated status.
 

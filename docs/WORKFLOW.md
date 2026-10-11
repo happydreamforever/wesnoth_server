@@ -36,39 +36,33 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-The user downloaded/copied the initial client and server folders from the VPS to Windows, rather than cloning them. Their confirmed layout is:
+The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
 | Windows path | Purpose |
 | --- | --- |
 | `D:\Test\wesnoth-setup` | Workspace parent |
-| `D:\Test\wesnoth-setup\wesnoth_client` | Copied client folder |
-| `D:\Test\wesnoth-setup\wesnoth_server` | Copied server folder |
+| `D:\Test\wesnoth-setup\wesnoth_client` | Existing client clone |
+| `D:\Test\wesnoth-setup\wesnoth_server` | Existing server clone |
 | `D:\Test\msys64` | Installed MSYS2 folder |
 
-The first copied collector was interrupted with Ctrl+C and saved a partial report after Git version results. Keep LDPlayer running and temporarily connect to GitHub to obtain the corrected tools in a separate checkout. The installed Git for Windows path below is confirmed by the user's report. These commands preserve the copied client/server folders:
+The first collector run was interrupted with Ctrl+C and saved a partial report after Git version results. Keep LDPlayer running and temporarily connect to GitHub to update the existing server. The installed Git for Windows path below is confirmed by the user's report. The client does not need updating for this diagnostic step.
 
 ```powershell
-$diagnosticsRoot = 'D:\Test\wesnoth-diagnostics'
-$gitExe = 'C:\Program Files\Git\cmd\git.exe'
-
-if (Test-Path "$diagnosticsRoot\.git") {
-    & $gitExe -C $diagnosticsRoot pull --ff-only origin main
-} else {
-    & $gitExe clone --branch main https://github.com/happydreamforever/wesnoth_server.git $diagnosticsRoot
-}
-if ($LASTEXITCODE -ne 0) { throw 'Git update failed. Send the error output.' }
+Set-Location 'D:\Test\wesnoth-setup\wesnoth_server' -ErrorAction Stop
+& 'C:\Program Files\Git\cmd\git.exe' pull --ff-only origin main
+if ($LASTEXITCODE -ne 0) { throw 'Git pull failed. Send the error output.' }
 
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File "$diagnosticsRoot\tools\Collect-WindowsEnvironment.ps1" `
+  -File '.\tools\Collect-WindowsEnvironment.ps1' `
   -WorkspaceRoot 'D:\Test\wesnoth-setup' `
   -MsysRoot 'D:\Test\msys64'
 ```
 
-The report is saved under `D:\Test\wesnoth-diagnostics\diagnostics`. The header must show collector version `2026-10-11.2` and the script's SHA256. Let the process finish; file scans and MSYS2 probes may take several minutes. The expected footer is `Collection COMPLETE: 10/10 sections finished`. This means inventory finished, not that the game builds or runs. Missing dependencies or empty source files may still be BLOCKED. If the report is INCOMPLETE, it names the last check reached and unfinished sections and the command exits 2; send that report too.
+The report is saved under `D:\Test\wesnoth-setup\wesnoth_server\diagnostics`, which the user has confirmed exists. The header must show collector version `2026-10-11.2` and the script's SHA256. Let the process finish; file scans and MSYS2 probes may take several minutes. The expected footer is `Collection COMPLETE: 10/10 sections finished`. This means inventory finished, not that the game builds or runs. Missing dependencies or empty source files may still be BLOCKED. If the report is INCOMPLETE, it names the last check reached and unfinished sections and the command exits 2; send that report too.
 
-`ExecutionPolicy Bypass` applies only to this PowerShell process. No new PowerShell or toolchain installation is needed for this rerun. The script checks local versions and file sizes without installing packages, starting the game/server/database, or reading `.env` values. ADB inspection may start its normal local background daemon. The initial report in the copied server's `diagnostics` directory remains a record of the earlier attempt.
+`ExecutionPolicy Bypass` applies only to this PowerShell process. No new PowerShell or toolchain installation is needed for this rerun. The script checks local versions and file sizes without installing packages, starting the game/server/database, or reading `.env` values. ADB inspection may start its normal local background daemon. The initial report in the server's `diagnostics` directory remains a record of the earlier attempt.
 
-The copied project directories do not need `.git` for diagnostics. Their Git metadata availability is reported; verify it before setting up future pulls. Never clone into `D:\Test\wesnoth-setup` itself. If SDK, emulator or ADB are outside standard locations, pass the optional path parameters documented in the script. The MSYS2 scan has a 240-second timeout and prints a progress message before it starts.
+Preserve uncommitted changes if a pull reports a conflict; send its error rather than resetting or deleting files. Never clone into `D:\Test\wesnoth-setup` itself. If SDK, emulator or ADB are outside standard locations, pass the optional path parameters documented in the script. The MSYS2 scan has a 240-second timeout and prints a progress message before it starts.
 
 Return the complete report, including UNKNOWN/BLOCKED entries. Copies downloaded from this VPS are not evidence of an independent intact source backup. Local filesystem paths and device serials appear in the report; remove those if desired. Do not send `.env`, access tokens, keystores or full environment-variable dumps.
 
