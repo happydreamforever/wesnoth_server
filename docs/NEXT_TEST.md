@@ -1,14 +1,39 @@
-# First native server checkpoint
+# Windows server passed; prepare the Android client checkpoint
 
-This delivery restores Wesnoth 1.19.26 source into new `engine/` directories. The server builds a native guest multiplayer server; the client snapshot still needs its Windows Android build port and offline dependencies. Existing empty custom files are preserved. No Android APK, OBB loading, MongoDB persistence or playable turn is claimed by this checkpoint.
+The user has now built the native 1.19.26 server on Windows and passed all guest protocol checks. Keep server-build-20261011-143549-682.txt and server-protocol-20261011-143830-505.txt. The latest handoff updates project records only: the commands below use helpers already installed, so no immediate pull, rebuild or repeated protocol test is required.
 
-Use normal Windows PowerShell. No new installation or administrator shell is required. Open LDPlayer and wait until Android is ready before collecting the environment report.
+Use normal Windows PowerShell. These next checks need no internet connection or new installation. Guest protocol success does not establish an Android client, assets/OBB, MongoDB, LAN connectivity or a playable turn. Preserve the existing build directory, server-local core.filemode=false setting and stash f0c22d3.
 
-## 1. Pull both repositories while connected
+## 1. Start the normal server launcher
 
-The server-local `core.filemode=false` setting and both MSYS2 pulls succeeded on Windows (server `13e3b3d`, client `7248b26`). Keep that setting and stash `f0c22d3`; no additional Git repair is needed. The next update adds the missing Windows `mswsock` library to the server link. The client update mirrors the project record.
+The build and protocol test have passed. Run this in a normal PowerShell window; the test server has already stopped:
 
-Temporarily connect to GitHub and run this in normal Windows PowerShell:
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsServer.ps1'
+```
+
+Expected: version 1.19.26, configuration loaded and the process stays running on TCP port 15000. Keep that window open; Ctrl+C stops it. Logs are `diagnostics\server-run-*.txt`. Runtime state goes under `build\windows-mingw64\run`. The upstream server listens on available IPv4/IPv6 interfaces and allows guest clients with version 1.19.26. This helper supplies the installed MINGW64 DLL directory through its process PATH; the EXE is not a self-contained portable distribution. LAN routing/firewall and Android connection tests come after the APK is ready.
+
+## 2. Identify LDPlayer for the Android build
+
+Open LDPlayer and wait until the Android home screen appears. Keep the server window open. In a second normal PowerShell window, run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Collect-WindowsEnvironment.ps1' `
+  -WorkspaceRoot 'D:\Test\wesnoth-setup' `
+  -MsysRoot 'D:\Test\msys64'
+"COLLECTOR_EXIT: $LASTEXITCODE"
+```
+
+Expected: collector `2026-10-11.3`, `Collection COMPLETE: 10/10 sections finished`, exit 0, plus Android API/ABI lines if ADB can see a ready LDPlayer device. The ADB probe now allows its local daemon to start. Send the report even if no device appears. Legacy empty artifacts and missing MongoDB may still be reported; inventory completion does not mean all components are ready.
+
+Return the server startup output (or `server-run-*.txt`) and the newest `windows-environment-*.txt` from `D:\Test\wesnoth-setup\wesnoth_server\diagnostics`. The collector records current Git HEADs. Keep the successful build/protocol logs; no need to repeat those tests for this documentation update. Let collection finish without Ctrl+C. If no Android device appears, send that report too. Do not send `.env` or credentials. These results determine the next Android toolchain/ABI and offline dependency work.
+
+## Reference: update and rebuild after future implementation changes
+
+These commands are retained for later code changes, not required for the current startup/inventory step. Temporarily connect to GitHub and pull using the established MSYS2 route:
 
 ```powershell
 & {
@@ -26,13 +51,7 @@ Temporarily connect to GitHub and run this in normal Windows PowerShell:
 }
 ```
 
-Expected: both updates succeed and print commit IDs. Preserve local README edits and other work. If a pull fails, stop and send the output without resetting, cleaning, force-pulling or applying the saved stash. Continue using MSYS2 Git.
-
-## 2. Build and test the server offline
-
-The helper PATH/source fix now works on Windows. The latest build configured and compiled, then failed at final link with undefined `TransmitFile`, `AcceptEx` and `GetAcceptExSockaddrs`. CMake now explicitly links `mswsock` into the Windows server. Keep `build/windows-mingw64` and rerun the same commands; CMake regenerates and Ninja can reuse existing objects. Expected source remains `/d/Test/wesnoth-setup/wesnoth_server`. No tool upgrade, new dependency download or clean rebuild is required for this link fix.
-
-Disconnect the internet after the pulls. In PowerShell:
+Preserve local README edits and other work. Stop on a pull error without resetting, cleaning, force-pulling or applying the saved stash. After successful pulls for an implementation change, disconnect and run:
 
 ```powershell
 & {
@@ -46,36 +65,7 @@ Disconnect the internet after the pulls. In PowerShell:
 }
 ```
 
-Expected executable: `build\windows-mingw64\bin\wesnothd.exe`, with version 1.19.26. The test starts and stops a temporary server, checks malformed-WML and version rejection, two guest logins, lobby listing, message relay and lobby refresh. It should end with `PASS protocol smoke test`. The log intentionally includes a rejected malformed message from the negative test. It does not test a game turn. Logs are `diagnostics\server-build-*.txt` and `diagnostics\server-protocol-*.txt`.
-
-Build selection matches the confirmed Windows inventory: MINGW64 GCC 16.2.0 and Boost 1.91.0, Windows CMake 4.3.0, native UCRT64 Ninja 1.13.2. Ninja is used only as a build tool; compiler, headers, libraries and runtime DLLs all come from MINGW64. The wrapper also reports OpenSSL, ICU, zlib and bzip2 package versions. It does not invoke package installs, downloads, SCons, MongoDB or the empty original `src/` files. The test uses the confirmed Windows Python 3.14 installation and its standard library. Optional helper parameters support alternate existing tool locations.
-
-## 3. Run the server
-
-After build and protocol test pass, run this in a separate normal PowerShell window:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsServer.ps1'
-```
-
-Expected: version 1.19.26, configuration loaded and the process stays running on TCP port 15000. Keep that window open; Ctrl+C stops it. Logs are `diagnostics\server-run-*.txt`. Runtime state goes under `build\windows-mingw64\run`. The upstream server listens on available IPv4/IPv6 interfaces and allows guest clients with version 1.19.26. This helper supplies the installed MINGW64 DLL directory through its process PATH; the EXE is not a self-contained portable distribution. LAN routing/firewall and Android connection tests come after the APK is ready.
-
-## 4. Identify LDPlayer for the Android build
-
-With LDPlayer booted, run:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Collect-WindowsEnvironment.ps1' `
-  -WorkspaceRoot 'D:\Test\wesnoth-setup' `
-  -MsysRoot 'D:\Test\msys64'
-"COLLECTOR_EXIT: $LASTEXITCODE"
-```
-
-Expected: collector `2026-10-11.3`, `Collection COMPLETE: 10/10 sections finished`, exit 0, plus Android API/ABI lines if ADB can see a ready LDPlayer device. The ADB probe now allows its local daemon to start. Send the report even if no device appears. Legacy empty artifacts and missing MongoDB may still be reported; inventory completion does not mean all components are ready.
-
-Return both commit IDs, the server build/protocol/run logs, and the newest `windows-environment-*.txt` from `D:\Test\wesnoth-setup\wesnoth_server\diagnostics`. Stop a failed build/test sequence and send its complete log. Do not send `.env` or credentials. The next client task is to select the observed Android ABI, pin the Android toolchain/dependencies, build a real APK and load local game data.
+Expected: BUILD COMPLETE for build/windows-mingw64/bin/wesnothd.exe version1.19.26, followed by PASS protocol smoke test. Logs go to diagnostics/server-build-*.txt and server-protocol-*.txt. The test starts/stops a temporary server and deliberately sends malformed WML as a rejection check; it does not play a game turn. The build uses the confirmed MINGW64 compiler/dependencies, native CMake/Ninja and Windows Python3.14 for testing. Do not delete the build directory between incremental fixes unless a concrete failure requires it.
 
 ## VPS verification
 
