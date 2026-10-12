@@ -1,8 +1,8 @@
-# Build and test font selection and Cairo rendering
+# Retry Cairo configuration, then test font rendering
 
-Your GLib2.82.1 Windows build and every LDPlayer probe check passed. Preserve that completed stage and all earlier successful prefixes.
+Your new log confirms Expat and Fontconfig built, then Cairo configuration stopped on a Bash temporary-file error. The Android test was not reached. Keep the current build/android-text-render directory and all earlier successful stages.
 
-The next independent stage builds cached Expat2.5.0, Fontconfig2.17.1 and Cairo1.16.0 using the existing tools. It consumes the completed fonts/text-base prefixes read-only. No source download or package installation is needed.
+The updated helper gives Cairo configuration a fresh private temporary directory and records each attempt. It retries at most twice after the exact reported busy-file failure; other failures stop immediately. The existing sources, compiler and dependencies are reused. No source download, package installation or manual file edit is needed.
 
 ## Pull the prepared update
 
@@ -41,7 +41,7 @@ Return to offline use and keep LDPlayer open with Android booted. Paste this ent
 }
 ```
 
-The build uses D:\Test\msys64, existing MSYS Python/Meson/Make/Ninja and NDK26.3.11579264 with two jobs. Its separate output is D:\Test\wesnoth-setup\wesnoth_client\build\android-text-render. Let configuration and compilation finish. No repeated backup or rebuilding of earlier stages is required.
+The build uses D:\Test\msys64, existing MSYS Python/Meson/Make/Ninja and NDK26.3.11579264 with two jobs. Its separate output is D:\Test\wesnoth-setup\wesnoth_client\build\android-text-render. Let configuration and compilation finish. No backup or deletion is required. Keep all files in the existing stage. The helper reruns configuration and reuses available object files; earlier prerequisite stages are not rebuilt.
 
 The device helper first uses native Windows Python3.14.3 to verify the completed fonts/text-base and new text-rendering prefixes and receipts. It then verifies exactly these existing files under D:\Test\wesnoth-setup\gamedata-1.19.26 against their pinned sizes and hashes: fonts/Lato-Regular.ttf, fonts/DejaVuSans.ttf and fonts/COPYING. Before ADB starts, it stops if any required input differs.
 
@@ -65,4 +65,4 @@ PASS wesnoth-android-text-render
 ANDROID TEXT RENDER TEST PASSED
 ```
 
-The probe also reports Expat2.5.0, Fontconfig21701 (2.17.1), Cairo1.16.0 and FreeType2.13.0. Send the complete console output on success or failure. These helpers stream output without creating a transcript; package configure logs and Meson's log remain under build/android-text-render/build. The device helper prints the retained test directory. Actual Windows compilation and LDPlayer execution of this new batch remain pending until your result. The game APK, asset import/OBB, gameplay and MongoDB remain later required work.
+The probe also reports Expat2.5.0, Fontconfig21701 (2.17.1), Cairo1.16.0 and FreeType2.13.0. Send the complete console output on success or failure. Cairo attempt logs and failed config.log/config.status snapshots are retained under the attempt paths printed by the builder. Other package configure logs and Meson's log remain under build/android-text-render/build. The device helper prints the retained test directory. Actual Windows compilation and LDPlayer execution of this new batch remain pending until your result. The game APK, asset import/OBB, gameplay and MongoDB remain later required work.
