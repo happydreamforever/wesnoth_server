@@ -1,14 +1,12 @@
-# Retry the gettext archive check with the pipe correction
+# Build and test GLib on Android
 
-The Windows build stopped during gettext configuration with repeated `LLVM ERROR: IO failure on output stream: Invalid argument`. The log ends with the helper terminating its owned build processes. Wait for the PowerShell prompt before updating or moving the stage.
+Your Windows gettext/PCRE2/libffi build and all LDPlayer probe checks passed. The repeated LLVM output-stream error is resolved. Keep the successful `build/android-text-base` and `build/android-glib-deps` directories and the backup already saved.
 
-The next configure operation feeds llvm-ar output into an ELF reader that originally closed after five bytes. This matches the [LLVM Windows closed-pipe bug report](https://www.mail-archive.com/llvm-bugs@lists.llvm.org/msg49040.html). The corrected reader drains the remaining stream while keeping the ELF-class check. The exact Windows behavior still needs your rerun.
-
-Keep all installed versions, cached archives and completed build/android-text-base output. The correction changes the privately extracted gettext configure source, so preserve the failed GLib dependency stage under a unique name and create a fresh one. The commands below perform that preservation without deleting its logs or files.
+The next stage builds GLib 2.82.1, GObject, GIO, GModule and the GThread compatibility archive from the existing cached source. It consumes both verified prerequisite prefixes read-only and uses the selected NDK's system zlib interface for GIO compression. No tool installation or cache download is needed.
 
 ## Pull the prepared update
 
-Temporarily connect Windows to GitHub. Run in normal PowerShell:
+Temporarily connect Windows to GitHub. Paste this block into normal PowerShell:
 
 ```powershell
 & {
@@ -22,37 +20,11 @@ Temporarily connect Windows to GitHub. Run in normal PowerShell:
 }
 ```
 
-Only the pulls need internet. Preserve repository-local Git settings and the old saved helper stash. If Git reports a local conflict, stop and return the output; do not reset or overwrite files.
-
-## Preserve the failed stage once
-
-After both pulls succeed and the previous build has stopped, run this block once. It renames only build/android-glib-deps to a sibling backup with a UTC timestamp and GUID. The verified text-base prefix and earlier stages remain available.
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $stage = 'D:\Test\wesnoth-setup\wesnoth_client\build\android-glib-deps'
-    if (Test-Path -LiteralPath $stage) {
-        $item = Get-Item -LiteralPath $stage -Force
-        if (-not $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-            throw 'The GLib dependency stage is not a normal directory. Stop and send the output.'
-        }
-        $backupName = 'android-glib-deps-before-pipe-fix-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N')
-        $backup = Join-Path $item.Parent.FullName $backupName
-        if (Test-Path -LiteralPath $backup) { throw "Backup already exists; nothing was moved: $backup" }
-        Rename-Item -LiteralPath $stage -NewName $backupName -ErrorAction Stop
-        Write-Host "BUILD BACKUP SAVED: $backup"
-    } else {
-        Write-Host 'No active GLib dependency stage to preserve. Existing backups are unchanged.'
-    }
-}
-```
-
-Expected: `BUILD BACKUP SAVED: ...android-glib-deps-before-pipe-fix-...`, or a message that no active stage exists. Keep this backup until the retry succeeds. If a later retry is needed, follow the next diagnosis rather than repeating this preservation step automatically.
+Only the pulls need internet. Keep repository-local Git settings and saved stashes. If a pull reports a conflict, stop and return its output; preserve local files.
 
 ## Build, then run the native LDPlayer test
 
-After the backup succeeds, return to offline use and keep LDPlayer open with Android booted. Paste this entire block into normal PowerShell:
+Return to offline use and keep LDPlayer open with Android booted. Paste this entire block into normal PowerShell:
 
 ```powershell
 & {
@@ -60,33 +32,38 @@ After the backup succeeds, return to offline use and keep LDPlayer open with And
     Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Build-WindowsAndroidGlibDeps.ps1'
-    if ($LASTEXITCODE -ne 0) { throw 'GLib prerequisite build failed. Send the complete output.' }
+        -File '.\tools\Build-WindowsAndroidGlib.ps1'
+    if ($LASTEXITCODE -ne 0) { throw 'GLib build failed. Send the complete output.' }
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Test-AndroidGlibDeps.ps1' -Serial '127.0.0.1:5555'
-    if ($LASTEXITCODE -ne 0) { throw 'GLib prerequisite device test failed. Send the complete output.' }
+        -File '.\tools\Test-AndroidGlib.ps1' -Serial '127.0.0.1:5555'
+    if ($LASTEXITCODE -ne 0) { throw 'GLib device test failed. Send the complete output.' }
 }
 ```
 
-The build uses D:\Test\msys64, existing MSYS Python 3.12.13/Make 4.4.1 and NDK 26.3.11579264 with two jobs. Release configure checks and compilation can take several minutes; let the helper finish. The owned output directory is D:\Test\wesnoth-setup\wesnoth_client\build\android-glib-deps. No package installation or completed-stage rebuild is required. Configure warnings and unsupported-feature checks alone are not failures; use the final markers and exit status.
+The build uses D:\Test\msys64, existing MSYS Python/Meson/Ninja and NDK 26.3.11579264 with two jobs. Its separate output is D:\Test\wesnoth-setup\wesnoth_client\build\android-glib. Configuration and compilation can take several minutes; let the helper finish. No repeated backup or rebuilding of successful prerequisite stages is required. Feature checks reporting unsupported facilities are not by themselves build failures; use the exit status and final markers.
 
-The test verifies both prefixes and their receipts with native Windows Python 3.14.3, then uses SDK ADB at 127.0.0.1:5555 to send one executable and one small synthetic translation catalog. It checks catalog conversion and plurals, Unicode regular expressions, mixed integer/double and structure calls, and a native callback. No APK install, new app screen, game-data transfer or running server is needed.
+The test uses native Windows Python 3.14.3 to verify all three prefixes and receipts before SDK ADB transfers one executable to 127.0.0.1:5555. It checks Unicode conversion and errors, regular expressions, serialized values, object signals/lifetime, gzip memory streams, threads/main-loop delivery and process-symbol lookup. No APK installation, new app screen, game-data transfer or running server is needed.
 
 Expected completion lines:
 
 ```text
-ANDROID GLIB DEPS BUILD PASS
-ANDROID GLIB DEPS BUILD COMPLETE: ...\build\android-glib-deps\receipt.json
+ANDROID GLIB BUILD PASS
+ANDROID GLIB BUILD COMPLETE: ...\build\android-glib\receipt.json
 ANDROID TEXT BASE ARTIFACTS VERIFIED
 ANDROID GLIB DEPS ARTIFACTS VERIFIED
-WESNOTH_ANDROID_GLIB_DEPS version=1.19.26 abi=x86_64 min_api=23
-PASS gettext catalog
-PASS PCRE2 Unicode
-PASS libffi calls
-PASS libffi closure
-PASS wesnoth-android-glib-deps
-ANDROID GLIB DEPS TEST PASSED
+ANDROID GLIB ARTIFACTS VERIFIED
+WESNOTH_ANDROID_GLIB version=1.19.26 abi=x86_64 min_api=23
+PASS GLib Unicode and regex
+PASS GLib variants
+PASS GObject signals and lifetime
+PASS GIO streams and compression
+PASS GLib threads and main context
+PASS GModule process symbols
+PASS wesnoth-android-glib
+ANDROID GLIB TEST PASSED
 ```
 
-Send the complete console output on success or failure. These helpers stream to the console and do not create a transcript. Package logs remain in the owned build directory; the device helper prints the retained executable/catalog directory. The Windows correction, completed package compilation and LDPlayer execution of this batch remain unverified until your result. The library-suffix check should now continue through iconv checks instead of repeating LLVM errors. GLib itself, full text layout, the game APK/OBB and gameplay are later steps.
+The probe also prints GLib and zlib versions. GLib must be 2.82.1; the NDK zlib header version and Android system zlib runtime version can differ. The compression round trip tests the selected interface on the actual device.
+
+Send the complete console output on success or failure. The helpers stream to the console without creating a transcript; Meson configuration details remain in build/android-glib/build/glib/meson-logs/meson-log.txt. The device helper prints its retained executable directory. The VPS build and host checks cannot establish Windows compilation or Android execution of this new stage; those results await this test. Full text layout, the game APK/OBB and gameplay remain later steps.
