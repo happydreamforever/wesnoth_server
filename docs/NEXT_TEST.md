@@ -1,6 +1,8 @@
-# Build and test libiconv/Pixman on Windows
+# Resume the Windows text-library build
 
-The actual Windows MSYS/NDK compiler check passed. Both Python aliases have identical bytes and the same Meson runtime; the real Make/pkg-config/NDK compile/archive check also passed with a native include path containing spaces. Keep all installed versions and completed server/bootstrap/SDL/media/font/data results. The new stage uses your existing source cache to build reusable libiconv1.17, bundled libcharset1.5 and Pixman0.42.2 for Android x86_64/API23.
+The build configured libiconv/libcharset and compiled both libcharset objects, then failed while linking the archive: `../libtool: line 3280: 0: Bad file descriptor`. Libtool needs valid standard input even when it has no interactive prompts. The corrected runner supplies an empty readable input stream for every tool.
+
+Keep the current build/android-text-base directory and all installed versions. The generated sources/toolchain and compile options are unchanged, so the same build command can resume the owned stage after pulling. Pixman and the Android probe have not run on Windows yet.
 
 ## Pull the prepared update
 
