@@ -1,5 +1,7 @@
 # Android build checkpoint
 
+Current checkpoint (2026-10-12): Windows font compilation and actual LDPlayer shaping/rasterization now pass; see the latest BASELINE.md evidence. The next command is Test-WindowsAndroidTextToolchain.ps1 from NEXT_TEST.md, which checks the MSYS tool/interpreter selections and Make/pkg-config/native-NDK path handling before the remaining text library builds. Completed stages below are retained as reproduction history.
+
 The first emulator target is x86_64 on the user's verified LDPlayer Android9/API28. The native minimum API remains23. Compile/target SDK35 is a build setting and does not require the emulator to run Android35. The ARM entries in the reported ABI list and libnb.so identify advertised translation support; ARM APK execution has not been tested. A physical-phone ABI will be selected from that phone's actual report later.
 
 ## Selected inputs
@@ -190,3 +192,29 @@ docker run --rm --network none --user "$(id -u):$(id -g)" \
 ```
 
 The image build and initial dependency preparation need connectivity. The final command alone tests reuse with network disabled. No Docker installation is requested on Windows. For focused helper regressions on the VPS, run tests/test_prepare_scons.py, tests/test_prepare_windows_android_tools.py and tests/test_windows_android_prerequisites.py (the latter two take --pwsh pointing to the available Linux PowerShell). Their mocked Windows processes test arguments and failure handling; they do not replace the user's Windows run.
+
+## Remaining text library build path
+
+The cached sources require mixed build systems: libiconv1.17, gettext-runtime0.21.1, libffi3.4.4 and Cairo1.16.0 use Autotools; Pixman0.42.2, GLib2.82.1, Fontconfig2.17.1 and Pango1.50.14 offer Meson. Fontconfig requires Meson>=1.6.1 and host gperf. The earlier complete Windows collector records installed Meson1.12.0/gperf3.3, and actual MSYS Make4.4.1/pkg-config3.0.5/Python3.12.13/Ninja1.13.2 executions. Active wrapper-selected Autotools versions and the native Windows NDK bridge need the focused check. Release-generated configure scripts avoid treating every regeneration utility as mandatory now.
+
+Test-WindowsAndroidTextToolchain.ps1 runs check_android_text_toolchain.sh with a fresh temporary scratch directory. It reports core tools and optional generators, checks that selected MSYS Python imports the same Meson version, then compiles an Android x86_64/API23 object using an isolated temporary .pc header path containing spaces, archives it and verifies ELF metadata. There are no downloads, installs, persistent environment changes, ADB calls or changes to completed output stages. This proves that narrow bridge only; it does not prove a whole Autoconf or Meson package builds on Windows.
+
+The proposed next reusable package stage is libiconv/Pixman. GLib also needs PCRE2, libffi and real libintl even with NLS disabled; Cairo/Pango need Fontconfig/Expat, existing FreeType/HarfBuzz/media outputs, and a pinned FriBidi source not present in the current 23-archive cache. ICU is a separate missing source/backend decision for Boost.Locale. Provision future inputs separately without changing the completed stages' manifests/receipts unnecessarily. All dependency downloads must happen during explicit preparation, never during offline build/run.
+
+The bridge uses the [NDK documented direct clang --target invocation](https://developer.android.com/ndk/guides/other_build_systems#overview) and the future recipes must isolate host/target discovery through [Meson's cross-build configuration](https://mesonbuild.com/Cross-compilation.html). The NDK documentation cautions that Autoconf projects are generally not buildable on Windows; a successful small bridge cannot override that limitation for untested packages. Keep the existing Windows tools until actual package evidence supports the next implementation choice.
+
+### Verification of the diagnostic
+
+Eighteen shell fixtures (real Make/pkg-config, controlled NDK) and ten PowerShell wrapper fixtures pass. A separate real NDK r26d compile/archive run passes with Docker networking disabled and a path containing spaces. These are Linux checks; the Windows MSYS/native boundary remains the user's next test. Host package differences are listed in BASELINE.md.
+
+On the prepared VPS, run the shell fixtures from the client checkout:
+
+```sh
+docker run --rm --network none --user "$(id -u):$(id -g)" \
+  -v "$PWD:/workspace" -w /workspace wesnoth-text-toolchain-verify:meson1.12 \
+  python3 -B tests/test_android_text_toolchain.py
+python3 tests/test_android_text_toolchain_windows.py \
+  --pwsh /tmp/wesnoth-audit-pwsh/pwsh
+```
+
+The VPS-only verification image extends wesnoth-server-verify:1.19.26 with host gperf3.2.1 and Meson1.12.0 prepared online before these offline checks. Its temporary recipe and preparation log remain under ignored build/Dockerfile.text-toolchain-verify and build/text-toolchain-image.log. Windows uses its existing MSYS installation and needs no Docker/Linux tools.

@@ -1,10 +1,10 @@
-# Build and test the Android font libraries
+# Check the build tools for the remaining text libraries
 
-The Windows game-data verification passed: 26,748 files / 726,207,542 bytes and the complete tree hash match the VPS reference. Keep the verified folder at `D:\Test\wesnoth-setup\gamedata-1.19.26`. No recopy, full data recheck, SDK setup, server rebuild or unchanged media/SDL retest is needed.
+The Windows FreeType/HarfBuzz build and real LDPlayer font test passed, including Latin ligatures, Arabic shaping and glyph rasterization. Their pixel counts match the Linux check. Keep the completed builds and verified `D:\Test\wesnoth-setup\gamedata-1.19.26` folder.
 
-The next step builds reusable FreeType 2.13.0 and HarfBuzz 7.1.0 libraries from the existing source cache. A native Android test loads the actual Lato and DejaVu Sans fonts from the verified data, checks Latin ligatures and Arabic shaping, and rasterizes glyphs into memory. This prepares text rendering for the game. It does not open a new app window or implement the complete text-layout/game engine.
+The remaining text libraries use MSYS Make and Meson. This focused diagnostic checks the selected tools and compiles/archives a small Android object through Make and isolated pkg-config, using temporary paths containing spaces. It installs nothing, does not build the game and does not need LDPlayer or the server running. Actual Autotools/Meson package builds remain the following checkpoint.
 
-## 1. Pull the new tools
+## Pull and check
 
 Temporarily connect to GitHub and run in normal PowerShell:
 
@@ -20,52 +20,24 @@ Temporarily connect to GitHub and run in normal PowerShell:
         & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
         if ($LASTEXITCODE -ne 0) { throw "Could not read the $name commit." }
     }
-}
-```
 
-Preserve local work, server-local core.filemode=false and stash f0c22d3. Stop on a pull conflict without reset, clean or stash application.
-
-## 2. Build offline and run the real-font test
-
-Keep LDPlayer open at its Android home screen. After pulling, internet access is unnecessary. The build uses the existing native Windows Python 3.14.3, CMake 4.3.0, Ninja 1.13.2 and NDK 26.3.11579264, targeting x86_64/API23.
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
     Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
-
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Build-WindowsAndroidFonts.ps1'
+        -File '.\tools\Test-WindowsAndroidTextToolchain.ps1'
     if ($LASTEXITCODE -ne 0) {
-        throw 'Android font build failed. Send the complete console output.'
-    }
-
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Test-AndroidFonts.ps1' `
-        -DataRoot 'D:\Test\wesnoth-setup\gamedata-1.19.26' `
-        -Serial '127.0.0.1:5555'
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Android font test failed. Send the complete console output.'
+        throw 'Text toolchain check failed. Send the complete console output.'
     }
 }
 ```
 
-Let the first compilation finish; configuration and compilation can take several minutes. Subsequent unchanged builds reuse the output. If a source archive is missing or any build step fails, send its exact error before changing tool versions or packages. This build never downloads dependencies.
+Only the pulls need internet. Preserve local work, server-local core.filemode=false and stash f0c22d3. Stop on a conflict without resetting, cleaning or applying the saved stash.
 
-The independent output is `wesnoth_client\build\android-fonts\prefix`, containing static FreeType/HarfBuzz libraries, headers, package metadata, license notices and the native test/runtime. A successful build writes its input/output hashes to `build/android-fonts/receipt.json`. The original engine, prepared source, bootstrap, SDL APK, media prefix and verified data folder remain separate.
+The helper uses MSYS2 at `D:\Test\msys64` and NDK26.3.11579264 under the existing `%LOCALAPPDATA%\Android\Sdk`. Its environment is scoped to the child process. Unlike the CMake stages, this build family selects MSYS Python/Meson/Ninja together; existing native CMake/Ninja outputs are unchanged. Autoconf/Automake regeneration tools are reported separately because release archives already contain generated configure scripts.
 
-Before ADB, the device helper verifies the current source hashes, complete installed prefix, runtime artifacts and three selected asset hashes. It pushes only the native test, libc++ runtime, Lato-Regular.ttf, DejaVuSans.ttf and fonts/COPYING into a unique project directory under `/data/local/tmp` on the explicit device. The test uses fixed original font names. Existing apps and data are preserved. No diagnostics transcript is created; send the console output.
-
-Expected build marker: `ANDROID FONTS BUILD COMPLETE`. The device output must include:
+Expected final marker:
 
 ```text
-WESNOTH_ANDROID_FONTS version=1.19.26 abi=x86_64 min_api=23
-PASS FreeType font loading
-PASS HarfBuzz Latin ligatures
-PASS HarfBuzz Arabic shaping
-PASS FreeType glyph rasterization
-PASS wesnoth-android-fonts
-ANDROID FONTS TEST PASSED
+ANDROID TEXT TOOLCHAIN CHECK PASSED
 ```
 
-Send the full build/test output, including pulled commit IDs and any error. Success verifies the selected font decoding, shaping and in-memory rasterization on Android. It does not establish full paragraph layout, visible game UI, general Android asset import/OBB, gameplay or MongoDB. Those remain subsequent milestones alongside the remaining native dependencies and game engine.
+The helper removes its own temporary directory after success and preserves it with a printed path after failure. No diagnostics transcript or app window is created. Send the complete console output, including pulled commit IDs and any missing tool/error; no package installation or version upgrade is requested before reviewing that result.
