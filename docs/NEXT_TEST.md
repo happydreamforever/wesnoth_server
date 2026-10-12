@@ -1,10 +1,14 @@
-# Prepare the missing Android tools and Java dependency cache
+# Retry NDK preparation with detailed SDK output
+
+The latest Windows pulls succeeded (server bff6eba, client 47d2954), and setup reverified the existing source stage without changes. SDK manager then reported `Connection reset` while preparing NDK 26.3.11579264 and exited 1. The helper stopped before SCons, Gradle or the final prerequisite check. The log does not identify the connection-reset cause.
+
+Next: make one connected retry with setup version `2026-10-12.2` and the new `-SdkVerbose` option. It forwards the documented [SDK manager --verbose option](https://developer.android.com/tools/sdkmanager#options) so a repeated failure provides more information. This is an observability change, not a confirmed network repair. Keep existing SDK caches and installations. If this attempt fails, return its complete output rather than looping or deleting files.
 
 The Windows prerequisite report completed and saved normally. All 1,591 source hashes, all 23 native source archive hashes, Java/javac 21.0.9 and the 15 named MSYS host tools passed. MSYS Python is 3.12.13. The twelve BLOCKED entries represent missing NDK 26.3 inputs (eight entries), SCons, the selected Gradle 8.9 distribution, and two AndroidX artifact files. They are dependency results, not another logging failure.
 
 The next step temporarily needs internet access to prepare these tools. Existing NDK 30beta and server tools remain installed. Native Android compilation is still being ported; **this setup does not build an APK**.
 
-## 1. Pull the preparation helper
+## 1. Pull the detailed-output option
 
 Run in normal PowerShell while temporarily connected:
 
@@ -23,7 +27,7 @@ Run in normal PowerShell while temporarily connected:
 
 Preserve README/source work, server-local core.filemode=false and stash f0c22d3. Stop on a pull conflict without reset, clean or stash application.
 
-## 2. Prepare tools while connected, then check the results
+## 2. Retry once while connected, then check the results
 
 Keep internet access available for SDK, Python package and Gradle/Maven downloads. NDK installation can take several minutes. If the Android SDK manager displays license terms, review them and answer its prompt yourself. The helper requests only NDK 26.3.11579264; it does not update all SDK/MSYS packages or auto-accept licenses. This uses the already-installed [SDK manager's specific-package installation](https://developer.android.com/tools/sdkmanager#install_packages).
 
@@ -33,7 +37,7 @@ Keep internet access available for SDK, Python package and Gradle/Maven download
     Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Prepare-WindowsAndroidTools.ps1' -Download
+        -File '.\tools\Prepare-WindowsAndroidTools.ps1' -Download -SdkVerbose
     if ($LASTEXITCODE -ne 0) {
         throw 'Android tools setup stopped. Send the complete console output.'
     }
@@ -49,7 +53,7 @@ The setup verifies and reuses the existing `build/android-source`; it does not r
 
 The staged upstream source has no gradlew.bat, so setup launches its preserved wrapper JAR through the selected Java executable. The wrapper downloads pinned Gradle 8.9 with its recorded distribution checksum. A dedicated Gradle task resolves actual debug compile/runtime JAR/AAR files and the AGP-matching Windows AAPT2 artifact. It repeats the same task with `--offline`; it cannot invoke native, compile or package tasks. Gradle's project cache is outside the preserved source stage, and selected Java/SDK environment variables apply only inside setup.
 
-Expected output:
+Expected: setup header `2026-10-12.2` and detailed SDK output. A successful retry continues with:
 
 - NDK 26.3 installation succeeds, or SDK manager reports it is already installed.
 - Private SCons preparation succeeds; the subsequent check reports `Project-private SCons 4.11.0 verified and runnable with MSYS2 Python`.
