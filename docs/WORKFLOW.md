@@ -36,7 +36,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current status (2026-10-12):** Windows server build/protocol/runtime, native Android compression/C++ execution and the SDL APK build/install/graphics/input automation now pass. Attachment75f03ca5 confirms SDK35 revision2/build-tools34.0.0 parity and actual SDL3.4.2 OpenGL ES2 rendering plus tap response on LDPlayer API28/x86_64. The user also confirmed manual clicks, counter/color changes and moving animation. Keep the existing toolchain and successful outputs; do not repeat setup, inventory or completed runtime checks. The next checkpoint builds reusable image/audio libraries and runs their codec probe. NEXT_TEST.md supplies current commands. The actual game engine, remaining text/network libraries, game data/OBB, playable LAN turn and MongoDB remain pending. Older diagnostic sections below are history.
+**Current status (2026-10-12):** Windows server build/protocol/runtime, native Android compression/C++ execution, the SDL APK graphics/input checks and reusable media build/LDPlayer codec execution now pass. Attachment 98ca3099 confirms all image/audio codec markers and in-memory mixer rendering. The user copied the data to `D:\Test\wesnoth-setup\gamedata-1.19.26`; use this as the Windows asset source. Next, verify its exact file names and bytes with the read-only `Test-WindowsGameData.ps1` check in NEXT_TEST.md. Keep the existing tools and successful outputs; no repeated setup, inventory, media/SDL/server rebuild or unchanged runtime retest is needed. The actual game engine, remaining text/network libraries, Android asset import/OBB, audible playback, playable LAN turn and MongoDB remain pending. Older diagnostic sections below are history.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -45,6 +45,7 @@ The user now confirms that both repositories are already cloned at the following
 | `D:\Test\wesnoth-setup` | Workspace parent |
 | `D:\Test\wesnoth-setup\wesnoth_client` | Existing client clone |
 | `D:\Test\wesnoth-setup\wesnoth_server` | Existing server clone |
+| `D:\Test\wesnoth-setup\gamedata-1.19.26` | User-copied offline asset source; Windows hash check pending |
 | `D:\Test\msys64` | Installed MSYS2 folder |
 
 The first collector run was interrupted with Ctrl+C and saved a partial report after Git version results. Keep LDPlayer running and temporarily connect to GitHub to update the existing server. The installed Git for Windows path below is confirmed by the user's report. The client does not need updating for this diagnostic step.
