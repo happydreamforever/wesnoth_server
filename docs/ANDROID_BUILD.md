@@ -74,13 +74,13 @@ The new tools/build_android_sdl_check.py uses the verified cached SDL3-3.4.2 arc
 
 The isolated Gradle project uses the existing 8.9/AGP 8.7.3, SDK35/build-tools34 and Java21. It needs no AndroidX artifacts. Gradle runs with --offline; the exact completed wrapper cache must exist before invoking Java, and SDK auto-downloads are disabled. The builder preserves the old managed source before regenerating its own project files, validates native ELF/API/dependencies, compares the packaged three-library payload, checks package/SDK/ABI metadata with AAPT2 and verifies the debug signature with apksigner. Failed builds do not leave a successful APK receipt. Project and artifact hashes gate installation.
 
-Build-WindowsSdlCheck.ps1 uses the confirmed Windows paths and reports the selected SDK package revisions. Test-AndroidSdlCheck.ps1 installs only org.wesnoth.offlinecheck, launches with a unique run identifier, reads process-specific logs and requires both first-frame and input-response markers. It leaves the app open for the user's visual click/counter/color/animation confirmation. See NEXT_TEST.md for exact commands. No actual SDL display/input success on Windows/LDPlayer is claimed until that result returns.
+Build-WindowsSdlCheck.ps1 uses the confirmed Windows paths and reports the selected SDK package revisions. Test-AndroidSdlCheck.ps1 installs only org.wesnoth.offlinecheck, launches with a unique run identifier, reads process-specific logs and requires both first-frame and input-response markers. It leaves the app open for the user's visual click/counter/color/animation confirmation. The Windows build and actual LDPlayer READY/INPUT automation now passed in attachment75f03ca5. Manual clicks, changing counter/color and moving animation are also confirmed; the latest NEXT_TEST.md advances to the media libraries.
 
 The native/Java arrangement follows the [SDL Android port](https://github.com/libsdl-org/SDL/blob/release-3.4.2/docs/README-android.md); native source comes from the existing pinned archive. The latest SDL wiki may describe newer NDK defaults, so it does not silently change this project's proven r26d profile.
 
 ## Reproduce the SDL APK build on the VPS
 
-The complete SDL APK build passed with Docker networking disabled. Fifteen builder tests, seventeen wrapper fixtures and a real-APK/receipt integration with mocked ADB passed. The resulting signed debug APK is 3,483,756 bytes. These checks establish compilation, packaging, signature and helper control flow; the user's LDPlayer graphics/input result remains pending.
+The complete SDL APK build passed with Docker networking disabled. Fifteen builder tests, seventeen wrapper fixtures and a real-APK/receipt integration with mocked ADB passed. The resulting signed debug APK is 3,483,756 bytes. Those VPS checks establish compilation, packaging, signature and helper control flow. The subsequent Windows log separately establishes real APK installation and LDPlayer graphics/input automation; it also confirms SDK35 revision2/build-tools34.0.0 parity.
 
 The combined tools/Dockerfile.android-sdl-verify reuses the existing server verification image and Java/Gradle image. For the current prepared VPS, run from the client repository:
 
@@ -102,14 +102,42 @@ This command assumes the recorded Linux NDK/SDK35/build-tools34 and completed Gr
 
 For relevant helper changes, run `python3 tests/test_android_sdl_check.py` and `python3 tests/test_android_sdl_check_windows.py --pwsh /tmp/wesnoth-audit-pwsh/pwsh`. The PowerShell fixtures simulate Windows/ADB and cannot establish graphics on a device. Keep the original game-stage guards intact until the actual game native build is ready.
 
+## Reusable media dependency build
+
+The next separate stage, build/android-media, builds the seven already pinned source archives for libpng1.6.39, libwebp1.4.0, libogg1.3.5, libvorbis1.3.7, SDL3.4.2, SDL3_image3.4.0 and SDL3_mixer3.2.0. Headers, library files and package metadata are installed under prefix for the future game build. The codec libraries use PIC static archives, while SDL and its image/mixer extensions are shared. SDL_image's bundled stb implementation handles JPEG, so no uncached libjpeg package is added. PNG/WebP and Ogg Vorbis support use the explicitly built libraries. Optional codecs without prepared sources are disabled.
+
+The build uses the existing native CMake/Ninja and NDK r26d toolchain, explicit x86_64/API23 and shared libc++. Older package CMake files use a policy compatibility floor of3.5 with the installed CMake4.3.0; the compiler and selected tool versions are unchanged. Packages are configured, built and installed sequentially so dependency discovery uses the completed Android prefix. The recipe follows the supported [NDK CMake toolchain](https://developer.android.com/ndk/guides/cmake), with options reviewed against the pinned [SDL_image3.4.0 build](https://github.com/libsdl-org/SDL_image/blob/release-3.4.0/CMakeLists.txt) and [SDL_mixer3.2.0 build](https://github.com/libsdl-org/SDL_mixer/blob/release-3.2.0/CMakeLists.txt).
+
+The native probe generates its own small image/audio samples, decodes them and checks the results. Its mixer renders into memory without opening an audio device. It does not use game assets, launch an APK or establish audible playback. A successful Linux cross-build establishes compilation and linkage; the user's LDPlayer run is required for codec runtime evidence. The new prefix does not replace engine/, build/android-source, build/android-native-bootstrap or build/android-sdl-apk.
+
+### Reproduce the media cross-build on the prepared VPS
+
+From the client checkout, use the existing compiler image and ignored Linux NDK. This is a reproduction command for the already prepared VPS, not a Windows prerequisite:
+
+```sh
+docker run --rm --network none --user "$(id -u):$(id -g)" \
+  -v "$PWD:/workspace" -w /workspace \
+  wesnoth-server-verify:1.19.26 \
+  python3 -I tools/build_android_media.py \
+    --ndk /workspace/build/toolchains/android-ndk-r26d \
+    --cmake /opt/build-tools/bin/cmake \
+    --ninja /opt/build-tools/bin/ninja --jobs 2
+```
+
+The builder verifies seven archive hashes, safely stages their regular source files and retains their license inputs. Only the inspected unused Xcode subtree in the SDL image/mixer archives is excluded. Known Unix libpng aliases become regular files; host-only libpng shell helpers are omitted. Package metadata uses a relative install prefix and Android system link names, with no absolute path into the selected source/build/NDK tree. The prefix is independently recorded and protected against changed, missing or extra files on subsequent runs. An interrupted installation is reported for review instead of overwriting unknown work.
+
+A success receipt requires nine static libraries containing x86_64 ELF objects, the selected public headers, four shared libraries, and the Android API23 codec executable. It inventories every installed file and records the seven current build inputs. Device execution is explicitly false in this build receipt. Test-AndroidMedia.ps1 validates the receipt and full prefix before sending its five-file runtime payload to the selected device.
+
+The final Android cross-build passed with networking disabled:188 installed files,12 static archives with245 validated x86_64 objects, and the five-file runtime payload. Eighteen builder tests and21 Windows-helper fixtures passed. A separate offline Linux execution of the same codec algorithms also passed all six markers; Windows compilation and LDPlayer execution remain pending. For relevant changes, use `python3 tests/test_android_media.py` and `python3 tests/test_android_media_windows.py --pwsh /tmp/wesnoth-audit-pwsh/pwsh` on the VPS. The latter uses mocked Windows processes/ADB.
+
 ## Remaining implementation and verification
 
-1. Run the offline SDL APK build/install/graphics/input test in NEXT_TEST.md. The native bootstrap has already passed on Windows and LDPlayer; preserve the existing installations, source stage and caches.
+1. The native bootstrap and SDL APK graphics/input automation have passed on Windows/LDPlayer. Build the reusable media dependency prefix and run its codec probe using NEXT_TEST.md; preserve the successful prior checkpoints.
 2. Port the remaining native dependencies and SCons Android tool selection to the Windows NDK host. Pango 1.50.14 requires FriBidi >=1.0.6, absent from the current 23-archive cache; its wrap points to Git master. Pin and provision that source before an offline text-stack build, rather than allowing a Meson download. GLib's gvdb sources are already bundled.  Separate native API23 from Java SDK35; ensure all paths/quoting work and prohibit network downloads during offline builds. Google's [NDK guidance](https://developer.android.com/ndk/guides/other_build_systems) cautions about Autoconf on Windows, so this requires actual cross-build validation.
 3. Build the x86_64 dependency libraries and libmain.so, supply matching SDL Java sources, validate ABI/nonempty outputs, then permit Gradle packaging with the complete offline cache. Windows build and matching VPS verification remain required; current source-stage tests are not compilation tests.
 4. Deliver game data and implement/test asset import/OBB behavior. Install a nonempty debug APK to the known device serial, test local single-player and a LAN turn against the verified server, then implement local MongoDB persistence. Neither successful ADB nor the server smoke test establishes those milestones.
 
-Current user commands and expected outputs are in NEXT_TEST.md. No APK or OBB is ready in this checkpoint.
+Current user commands and expected outputs are in NEXT_TEST.md. The SDL diagnostic APK is verified; the actual Wesnoth game APK and OBB integration remain pending.
 
 
 ## VPS cache verification
