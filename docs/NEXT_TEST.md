@@ -1,12 +1,12 @@
-# Windows source prepared; complete the Android prerequisite report
+# Prepare the missing Android tools and Java dependency cache
 
-Windows source preparation passed with all 1,591 preserved file hashes matching, created `build/android-source`, and exited 0. The server build/protocol/runtime and LDPlayer connection are already verified. Use `127.0.0.1:5555` for future ADB commands; the emulator is Android 9/API 28 with primary ABI x86_64.
+The Windows prerequisite report completed and saved normally. All 1,591 source hashes, all 23 native source archive hashes, Java/javac 21.0.9 and the 15 named MSYS host tools passed. MSYS Python is 3.12.13. The twelve BLOCKED entries represent missing NDK 26.3 inputs (eight entries), SCons, the selected Gradle 8.9 distribution, and two AndroidX artifact files. They are dependency results, not another logging failure.
 
-Prerequisite helper 2026-10-12.1 stopped because writing its report hit a file-sharing error. The JDK/MSYS2 section failures named the report file, not those tools. NDK 26.3.11579264 is genuinely missing; Gradle and native archive checks were not reached. Version 2026-10-12.2 keeps console results in memory and saves the complete report separately, with bounded retries and a temporary-directory fallback. The current step reruns this check. **It does not build an APK.** The Windows native build port is still pending; see ANDROID_BUILD.md.
+The next step temporarily needs internet access to prepare these tools. Existing NDK 30beta and server tools remain installed. Native Android compilation is still being ported; **this setup does not build an APK**.
 
-## 1. Pull the logging fix and updated project records
+## 1. Pull the preparation helper
 
-Temporarily connect to GitHub. Run in a normal PowerShell window using the verified MSYS2 Git route:
+Run in normal PowerShell while temporarily connected:
 
 ```powershell
 & {
@@ -17,21 +17,27 @@ Temporarily connect to GitHub. Run in a normal PowerShell window using the verif
         Write-Host "Updating $name"
         & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
         if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Stop and send the output." }
-        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
-        if ($LASTEXITCODE -ne 0) { throw "Cannot read the $name commit." }
     }
 }
 ```
 
-Preserve README/engine edits, server-local core.filemode=false and the saved stash. This delivery changes the prerequisite helper and project records. Stop on a pull conflict without reset, clean or stash application.
+Preserve README/source work, server-local core.filemode=false and stash f0c22d3. Stop on a pull conflict without reset, clean or stash application.
 
-## 2. Rerun only the prerequisite check
+## 2. Prepare tools while connected, then check the results
 
-This command can run offline and does not install or download anything. Source preparation already passed and is unchanged, so keep the existing stage.
+Keep internet access available for SDK, Python package and Gradle/Maven downloads. NDK installation can take several minutes. If the Android SDK manager displays license terms, review them and answer its prompt yourself. The helper requests only NDK 26.3.11579264; it does not update all SDK/MSYS packages or auto-accept licenses. This uses the already-installed [SDK manager's specific-package installation](https://developer.android.com/tools/sdkmanager#install_packages).
 
 ```powershell
 & {
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client' -ErrorAction Stop
+    $ErrorActionPreference = 'Stop'
+    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File '.\tools\Prepare-WindowsAndroidTools.ps1' -Download
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Android tools setup stopped. Send the complete console output.'
+    }
+
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
         -File '.\tools\Test-WindowsAndroidPrerequisites.ps1' `
         -MsysRoot 'D:\Test\msys64'
@@ -39,11 +45,22 @@ This command can run offline and does not install or download anything. Source p
 }
 ```
 
-Expected: header version `2026-10-12.2`, followed by all checks including Gradle cache and native archive integrity, then `Check complete=True`. NDK-related BLOCKED entries and exit 2 are expected while that selected package is missing. Other missing inputs will be listed. Exit 0 means these prerequisite checks passed; it does not establish complete offline resolution, native compilation or an APK.
+The setup verifies and reuses the existing `build/android-source`; it does not replace it. It prepares the published SCons 4.11.0 wheel with a pinned SHA256 in `build/downloads`, installs its pure Python files privately under `build/tools/scons-4.11.0`, and checks integrity before use. No global pip or MSYS package installation is required. The prerequisite helper uses MSYS `/usr/bin/python3 -I` to run this exact private SCons package.
 
-The helper prints `Report saved to:` only after a successful save. The normal destination is client `diagnostics/android-prerequisites-*.txt`. If that destination remains unavailable, it tries a unique report under `%TEMP%\wesnoth-diagnostics`; use the actual printed path. If both destinations fail, the full results remain on screen and exit 3 identifies a report-save failure independently of dependency results. Send the complete console output and the report at the printed path if saved. Do not send `.env` or credentials.
+The staged upstream source has no gradlew.bat, so setup launches its preserved wrapper JAR through the selected Java executable. The wrapper downloads pinned Gradle 8.9 with its recorded distribution checksum. A dedicated Gradle task resolves actual debug compile/runtime JAR/AAR files and the AGP-matching Windows AAPT2 artifact. It repeats the same task with `--offline`; it cannot invoke native, compile or package tasks. Gradle's project cache is outside the preserved source stage, and selected Java/SDK environment variables apply only inside setup.
 
-Let the check finish; no server rebuild, repeated ADB setup, Windows service change or tool installation is requested for this rerun. The complete report will guide targeted preparation of NDK/SCons/caches and the native Windows port. Android build/install/run commands follow when that pipeline is ready.
+Expected output:
+
+- NDK 26.3 installation succeeds, or SDK manager reports it is already installed.
+- Private SCons preparation succeeds; the subsequent check reports `Project-private SCons 4.11.0 verified and runnable with MSYS2 Python`.
+- Gradle reports `CACHE RESOLUTION PASSED: offline=false`, then `offline=true`, followed by `SETUP COMPLETE`.
+- Prerequisite header is `2026-10-12.3`, its final line reports `Check complete=True; BLOCKED entries=0`, and `PREREQUISITE_CHECK_EXIT: 0`.
+
+A successful offline resolution only proves the selected Java/plugin/AAPT2 files can resolve from that cache. Native dependencies, Android compilation and a complete offline APK build remain unverified. No server rebuild or ADB setup is needed. Send full console output and the prerequisite file named by `Report saved to:`. If setup fails, send that output without deleting caches or rerunning broad installers. If report saving fails, the prerequisite helper tries `%TEMP%\wesnoth-diagnostics`; exit 3 means no complete report was saved.
+
+## Reuse the private SCons package offline
+
+Windows setup uses native Python to extract the universal wheel and MSYS Python to run it. Once cached, `prepare_scons.py prepare` uses no network; `version` and `run -- <SCons arguments>` always verify the retained wheel and installed files first. Future native build helpers must use this runner with the selected interpreter, not assume a global scons command exists. Both the wheel and private tool directory live under ignored build/ and must be retained for offline use.
 
 ## Reference: restart the verified server if it has stopped
 
