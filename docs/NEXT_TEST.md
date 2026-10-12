@@ -1,16 +1,12 @@
-# Retry NDK preparation with detailed SDK output
+# Build and run the first native Android dependency test
 
-The latest Windows pulls succeeded (server bff6eba, client 47d2954), and setup reverified the existing source stage without changes. SDK manager then reported `Connection reset` while preparing NDK 26.3.11579264 and exited 1. The helper stopped before SCons, Gradle or the final prerequisite check. The log does not identify the connection-reset cause.
+Windows dependency preparation passed: NDK 26.3.11579264/clang 17.0.2, private SCons 4.11.0, Gradle 8.9/AGP 8.7.3 and selected Java/Windows AAPT2 caches. Online and offline resolution produced the same 24 artifact hashes. Prerequisite .3 completed with zero blockers and exit 0. The earlier connection reset did not recur; no additional online setup or inventory is needed now.
 
-Next: make one connected retry with setup version `2026-10-12.2` and the new `-SdkVerbose` option. It forwards the documented [SDK manager --verbose option](https://developer.android.com/tools/sdkmanager#options) so a repeated failure provides more information. This is an observability change, not a confirmed network repair. Keep existing SDK caches and installations. If this attempt fails, return its complete output rather than looping or deleting files.
+Next, compile the real bzip2 1.0.8 library and a small C++ test program for Android x86_64/API23, then run the program on the verified LDPlayer Android 9/API28 device. It tests bzip2/zlib compression, C++ runtime support and exceptions. This creates the first target library and verifies native compile/link/device execution before porting the remaining dependencies. **It is a command-line native test, not a game APK or playable client.** No game window is expected.
 
-The Windows prerequisite report completed and saved normally. All 1,591 source hashes, all 23 native source archive hashes, Java/javac 21.0.9 and the 15 named MSYS host tools passed. MSYS Python is 3.12.13. The twelve BLOCKED entries represent missing NDK 26.3 inputs (eight entries), SCons, the selected Gradle 8.9 distribution, and two AndroidX artifact files. They are dependency results, not another logging failure.
+## 1. Pull the native bootstrap tools
 
-The next step temporarily needs internet access to prepare these tools. Existing NDK 30beta and server tools remain installed. Native Android compilation is still being ported; **this setup does not build an APK**.
-
-## 1. Pull the detailed-output option
-
-Run in normal PowerShell while temporarily connected:
+Temporarily connect to GitHub and run in normal PowerShell:
 
 ```powershell
 & {
@@ -25,11 +21,11 @@ Run in normal PowerShell while temporarily connected:
 }
 ```
 
-Preserve README/source work, server-local core.filemode=false and stash f0c22d3. Stop on a pull conflict without reset, clean or stash application.
+Preserve local work, server-local core.filemode=false and stash f0c22d3. Stop on a pull conflict without reset, clean or stash application.
 
-## 2. Retry once while connected, then check the results
+## 2. Build offline and run in LDPlayer
 
-Keep internet access available for SDK, Python package and Gradle/Maven downloads. NDK installation can take several minutes. If the Android SDK manager displays license terms, review them and answer its prompt yourself. The helper requests only NDK 26.3.11579264; it does not update all SDK/MSYS packages or auto-accept licenses. This uses the already-installed [SDK manager's specific-package installation](https://developer.android.com/tools/sdkmanager#install_packages).
+Internet access is no longer needed for these commands. Keep LDPlayer running and wait for its Android home screen. The test uses its already verified local ADB endpoint; no settings change or server restart is needed.
 
 ```powershell
 & {
@@ -37,38 +33,31 @@ Keep internet access available for SDK, Python package and Gradle/Maven download
     Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Prepare-WindowsAndroidTools.ps1' -Download -SdkVerbose
+        -File '.\tools\Build-WindowsAndroidBootstrap.ps1'
     if ($LASTEXITCODE -ne 0) {
-        throw 'Android tools setup stopped. Send the complete console output.'
+        throw 'Android native build failed. Send the complete console output.'
     }
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Test-WindowsAndroidPrerequisites.ps1' `
-        -MsysRoot 'D:\Test\msys64'
-    "PREREQUISITE_CHECK_EXIT: $LASTEXITCODE"
+        -File '.\tools\Test-AndroidBootstrap.ps1' `
+        -Serial '127.0.0.1:5555'
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Android native runtime test failed. Send the complete console output.'
+    }
 }
 ```
 
-The setup verifies and reuses the existing `build/android-source`; it does not replace it. It prepares the published SCons 4.11.0 wheel with a pinned SHA256 in `build/downloads`, installs its pure Python files privately under `build/tools/scons-4.11.0`, and checks integrity before use. No global pip or MSYS package installation is required. The prerequisite helper uses MSYS `/usr/bin/python3 -I` to run this exact private SCons package.
+The build uses existing Windows Python 3.14, native CMake 4.3.0, native Ninja 1.13.2 and NDK 26.3.11579264. It verifies the cached bzip2 source archive before using it and downloads nothing. It builds in a separate ignored `build/android-native-bootstrap` directory, preserving engine/ and build/android-source. The executable links the newly built bzip2 library, Android system zlib and the matching NDK C++ runtime. This checkpoint uses the native Windows CMake toolchain; it does not establish that the eventual SCons/MSYS2 game build is ported.
 
-The staged upstream source has no gradlew.bat, so setup launches its preserved wrapper JAR through the selected Java executable. The wrapper downloads pinned Gradle 8.9 with its recorded distribution checksum. A dedicated Gradle task resolves actual debug compile/runtime JAR/AAR files and the AGP-matching Windows AAPT2 artifact. It repeats the same task with `--offline`; it cannot invoke native, compile or package tasks. Gradle's project cache is outside the preserved source stage, and selected Java/SDK environment variables apply only inside setup.
+Expected files are `out/lib/libbz2.a`, `out/bin/wesnoth-native-check`, `out/bin/libc++_shared.so`, and a build receipt under `build/android-native-bootstrap`. The receipt records inputs and artifact hashes. The device helper verifies them before ADB, checks the selected device's boot/API/ABI, then pushes only the executable and C++ runtime into a uniquely named directory under `/data/local/tmp/wesnoth-native-bootstrap`. It does not install an APK, request root or change game/server data.
 
-Expected: setup header `2026-10-12.2` and detailed SDK output. A successful retry continues with:
+Expected runtime output includes identifying Android x86_64/API23 information, successful compression/C++ checks, and final `ANDROID NATIVE BOOTSTRAP TEST PASSED`. A nonzero device command or missing success marker is a failure. Send the complete build and test console output, including errors. The receipt is useful build evidence; these wrappers print to the console rather than creating a new diagnostics transcript.
 
-- NDK 26.3 installation succeeds, or SDK manager reports it is already installed.
-- Private SCons preparation succeeds; the subsequent check reports `Project-private SCons 4.11.0 verified and runnable with MSYS2 Python`.
-- Gradle reports `CACHE RESOLUTION PASSED: offline=false`, then `offline=true`, followed by `SETUP COMPLETE`.
-- Prerequisite header is `2026-10-12.3`, its final line reports `Check complete=True; BLOCKED entries=0`, and `PREREQUISITE_CHECK_EXIT: 0`.
-
-A successful offline resolution only proves the selected Java/plugin/AAPT2 files can resolve from that cache. Native dependencies, Android compilation and a complete offline APK build remain unverified. No server rebuild or ADB setup is needed. Send full console output and the prerequisite file named by `Report saved to:`. If setup fails, send that output without deleting caches or rerunning broad installers. If report saving fails, the prerequisite helper tries `%TEMP%\wesnoth-diagnostics`; exit 3 means no complete report was saved.
-
-## Reuse the private SCons package offline
-
-Windows setup uses native Python to extract the universal wheel and MSYS Python to run it. Once cached, `prepare_scons.py prepare` uses no network; `version` and `run -- <SCons arguments>` always verify the retained wheel and installed files first. Future native build helpers must use this runner with the selected interpreter, not assume a global scons command exists. Both the wheel and private tool directory live under ignored build/ and must be retained for offline use.
+After this passes on Windows and LDPlayer, continue with remaining native dependencies and the actual client build. Keep the prepared SDK, private SCons, Gradle caches and the 23 native source archives for offline work. Do not rerun the connected setup merely to build this checkpoint.
 
 ## Reference: restart the verified server if it has stopped
 
-The server is already running in the latest report; no restart is needed for the prerequisite check. If you stop it later, start it again in a separate normal PowerShell window:
+The server is already running in the latest report; no restart is needed for the native bootstrap test. If you stop it later, start it again in a separate normal PowerShell window:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
@@ -79,7 +68,7 @@ Keep that window open; Ctrl+C stops the server. The printed transcript path is d
 
 ## Reference: update and rebuild after future implementation changes
 
-These commands are retained for later code changes, not required for the current prerequisite-check step. Temporarily connect to GitHub and pull using the established MSYS2 route:
+These commands are retained for later code changes, not required for the current native bootstrap step. Temporarily connect to GitHub and pull using the established MSYS2 route:
 
 ```powershell
 & {
