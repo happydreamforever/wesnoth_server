@@ -1,6 +1,6 @@
 # Android build checkpoint
 
-Current checkpoint (2026-10-12): Windows font compilation and actual LDPlayer shaping/rasterization now pass; see the latest BASELINE.md evidence. The next command is Test-WindowsAndroidTextToolchain.ps1 from NEXT_TEST.md, which checks the MSYS tool/interpreter selections and Make/pkg-config/native-NDK path handling before the remaining text library builds. Completed stages below are retained as reproduction history.
+Current checkpoint (2026-10-12): Windows font compilation and actual LDPlayer shaping/rasterization now pass; see the latest BASELINE.md evidence. The first MSYS diagnostic confirmed tool versions but stopped at an interpreter path comparison before compilation. Pull and rerun the corrected Test-WindowsAndroidTextToolchain.ps1 from NEXT_TEST.md; it verifies executable aliases and actual Python/Meson runtime identity before the Make/pkg-config/native-NDK path check. Completed stages below are retained as reproduction history.
 
 The first emulator target is x86_64 on the user's verified LDPlayer Android9/API28. The native minimum API remains23. Compile/target SDK35 is a build setting and does not require the emulator to run Android35. The ARM entries in the reported ABI list and libnb.so identify advertised translation support; ARM APK execution has not been tested. A physical-phone ABI will be selected from that phone's actual report later.
 
@@ -218,3 +218,7 @@ python3 tests/test_android_text_toolchain_windows.py \
 ```
 
 The VPS-only verification image extends wesnoth-server-verify:1.19.26 with host gperf3.2.1 and Meson1.12.0 prepared online before these offline checks. Its temporary recipe and preparation log remain under ignored build/Dockerfile.text-toolchain-verify and build/text-toolchain-image.log. Windows uses its existing MSYS installation and needs no Docker/Linux tools.
+
+### Windows interpreter alias correction
+
+The first actual Windows diagnostic confirmed all listed versions, including MSYS Python3.12.13/Meson1.12.0, but rejected their binding because realpath strings differed. Compiler/archive execution was skipped. The helper now accepts actual file identity or byte-identical same-directory copies and additionally compares the shebang interpreter runtime/module identity with the selected Python. It prints both paths on success or failure. Twenty-four shell fixtures, including copied/hardlinked alias and genuine mismatch regressions, and a real network-disabled Linux NDK compile/archive run pass. Windows rerun remains pending; see NEXT_TEST.md. No Windows package changes are required by this correction.

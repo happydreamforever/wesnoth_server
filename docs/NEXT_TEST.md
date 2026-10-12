@@ -1,6 +1,8 @@
-# Check the build tools for the remaining text libraries
+# Rerun the corrected MSYS Python/Meson check
 
 The Windows FreeType/HarfBuzz build and real LDPlayer font test passed, including Latin ligatures, Arabic shaping and glyph rasterization. Their pixel counts match the Linux check. Keep the completed builds and verified `D:\Test\wesnoth-setup\gamedata-1.19.26` folder.
+
+Your latest Windows report reached client75b1d25/server4dbea32. All listed tools ran and reported their versions, but the old helper rejected the Python/Meson binding by comparing executable path names. The compiler/archive test was therefore skipped. The correction recognizes same-file aliases and byte-identical copies in the same installation directory, then checks that the actual interpreter has matching Python/Meson runtime locations and versions. It also prints both paths. Pull the correction and rerun this diagnostic; keep all installed versions and completed builds.
 
 The remaining text libraries use MSYS Make and Meson. This focused diagnostic checks the selected tools and compiles/archives a small Android object through Make and isolated pkg-config, using temporary paths containing spaces. It installs nothing, does not build the game and does not need LDPlayer or the server running. Actual Autotools/Meson package builds remain the following checkpoint.
 
