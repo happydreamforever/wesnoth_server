@@ -1,71 +1,54 @@
-# Windows server verified; check ADB after the LDPlayer restart
+# ADB verified; prepare the Windows Android build inputs
 
-The user found the host ADB setting, saved and restarted LDPlayer after the Open local connection instructions. That UI step is complete; do not ask them to find the setting again. The earlier missing-device errors occurred before this change. The next step verifies the connection and reads actual Android API/ABI; no successful post-restart ADB output has been returned yet.
+The user verified LDPlayer after enabling local ADB: Android9/API28, boot_completed=1, model2203121C, primary ABI x86_64, ABI list x86_64,x86,arm64-v8a,armeabi-v7a,armeabi, native bridge libnb.so. SDK ADB connected successfully to127.0.0.1:5555; both that TCP serial and emulator-5554 appear ready. Use the explicit TCP serial for future device commands. Device discovery is complete; no more ADB/settings inventory is requested.
 
-Windows server build, guest protocol and normal launcher remain verified. No server rebuild, Git pull, new installation or full inventory is needed for this inline diagnostic. Preserve all local changes and the server Git setting/stash.
+Windows server1.19.26 build, guest protocol and normal runtime are also verified. The next checkpoint prepares a separate client source tree and checks the exact Windows Android inputs. **It does not build an APK yet.** The native build scripts need a Windows port. See ANDROID_BUILD.md for selected versions and remaining work.
 
-## 1. Wait for the restarted instance's Android home screen
+## 1. Pull the new preparation tools
 
-Keep LDPlayer open and run the block below in a normal Windows PowerShell window. It uses the already-installed SDK ADB. Local connection was requested in the prior instructions and the user reports completing the save/restart; that does not independently prove a working ADB transport. No further settings, root or emulator restart is requested now.
-
-## 2. Test the default local endpoint and read actual ready-device properties
-
-The observed emulator-5554 name makes 127.0.0.1:5555 a documented default candidate: [Android's port-pair explanation](https://developer.android.com/tools/adb#howadbworks) distinguishes console5554 from ADB5555, and section X of [LDPlayer's ADB guide](https://www.ldplayer.net/support/ldplayer-ldconsole-command-line-developer-usage-guide.html) describes the matching instance0 default. It is a connection attempt, not proof that this installation currently exposes that endpoint. A missing/failed connection does not prove a firewall or settings cause.
-
-Paste this in a normal PowerShell window. The listener check reads only ports5037/5554/5555, is diagnostic rather than a prerequisite, and does not prove process ownership. All ADB operations use the confirmed SDK executable and local daemon. No ldconsole/bundled ADB calls are mixed into this block. ADB may start or replace its own incompatible host daemon normally.
+Temporarily connect to GitHub. Run in a normal PowerShell window using the verified MSYS2 Git route:
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
-    $adb = 'C:\Users\Uni\AppData\Local\Android\Sdk\platform-tools\adb.exe'
-    $endpoint = '127.0.0.1:5555'
-
-    'LOCAL ADB LISTENERS'
-    try {
-        Get-NetTCPConnection -State Listen -ErrorAction Stop |
-            Where-Object { $_.LocalPort -in @(5037, 5554, 5555) } |
-            Format-Table LocalAddress,LocalPort,OwningProcess -AutoSize
-    } catch { 'Listener check: ' + $_.Exception.Message }
-
-    "CONNECTING: $endpoint"
-    & $adb -H localhost -P 5037 connect $endpoint
-    "CONNECT_EXIT: $LASTEXITCODE"
-
-    $lines = @(& $adb -H localhost -P 5037 devices -l)
-    $listExit = $LASTEXITCODE
-    $lines
-    "DEVICES_EXIT: $listExit"
-    if ($listExit -ne 0) { throw 'Device listing failed. Send all output.' }
-
-    $serials = @($lines | ForEach-Object {
-        if ($_ -match '^(127\.0\.0\.1:5555|emulator-5554)\s+device(?:\s|$)') {
-            $Matches[1]
-        }
-    })
-    if ($serials.Count -eq 0) {
-        'LDPlayer is not ready in ADB. Send all output.'
-        return
-    }
-    $serial = $serials[0]
-    if ($serials -contains $endpoint) { $serial = $endpoint }
-
-    foreach ($property in @(
-        'sys.boot_completed', 'ro.product.model', 'ro.build.version.release',
-        'ro.build.version.sdk', 'ro.product.cpu.abi', 'ro.product.cpu.abilist',
-        'ro.dalvik.vm.native.bridge'
-    )) {
-        "PROPERTY: $serial $property"
-        & $adb -H localhost -P 5037 -s $serial shell getprop $property
-        $propertyExit = $LASTEXITCODE
-        "PROPERTY_EXIT: $propertyExit"
-        if ($propertyExit -ne 0) { break }
+    $bash = 'D:\Test\msys64\usr\bin\bash.exe'
+    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
+        $repo = '/d/Test/wesnoth-setup/' + $name
+        Write-Host "Updating $name"
+        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
+        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Stop and send the output." }
+        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
+        if ($LASTEXITCODE -ne 0) { throw "Cannot read the $name commit." }
     }
 }
 ```
 
-Expected: connected/already connected to127.0.0.1:5555, a ready device row, boot completion1, and Android model/release/API/ABI values. A blank native bridge can be valid. Return all output including listener rows (or no rows), CONNECT_EXIT, DEVICES_EXIT, PROPERTY/PROPERTY_EXIT and any daemon/error messages. Do not interpret CONNECT_EXIT0 alone as success: some ADB connection failures are printed with zero exit. Only a successful devices command and a ready row for the specific candidate serial or the observed emulator-5554 alias permit property queries; unrelated devices are ignored. The TCP serial is preferred if both aliases appear. A failed property query stops further properties.
+Preserve README/engine edits, server-local core.filemode=false and the saved stash. This delivery adds tools/profile and updates docs; it does not replace engine/. Stop on a pull conflict without reset, clean or stash application.
 
-This diagnostic block parses with the available Linux PowerShell7.4.6 verifier and uses Windows PowerShell5.1 syntax. Windows listener/connection execution remains pending. If it still finds no target after the reported settings change/restart, inspect the returned listener and connection evidence before requesting further changes or trying more ports. API/ABI selection, offline Android dependencies, local game data/OBB, LAN play and MongoDB remain pending.
+## 2. Prepare source and check prerequisites offline
+
+Disconnect from the internet if desired; these commands do not download anything. Run:
+
+```powershell
+& {
+    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client' -ErrorAction Stop
+    & 'C:\Users\Uni\AppData\Local\Programs\Python\Python314\python.exe' '.\tools\prepare_android_source.py'
+    "SOURCE_PREPARATION_EXIT: $LASTEXITCODE"
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File '.\tools\Test-WindowsAndroidPrerequisites.ps1' `
+        -MsysRoot 'D:\Test\msys64'
+    "PREREQUISITE_CHECK_EXIT: $LASTEXITCODE"
+}
+```
+
+The prerequisite check is useful even if source preparation is blocked. It reads the originals and reports differences without changing them. Send complete console output plus the new client diagnostics/android-prerequisites-*.txt file. Do not send .env or credentials.
+
+Expected source result:1591 preserved files match SHA256, then PREPARED (or ALREADY PREPARED) for build/android-source. It deliberately states APK build remains blocked because native integration is unfinished. A content mismatch or unmanaged/edited destination stops staging without overwriting. Executable-bit-only changes do not prevent matching. An interrupted stage is preserved; use the returned output to choose a recovery, not deletion/reset.
+
+Expected prerequisite result: a completed report with specific PASS/BLOCKED checks for source integrity, selected Java/SDK/NDK, MSYS build tools/SCons, actual Gradle/AndroidX cache files and the23 native archive hashes. Existing Windows evidence suggests NDK26.3.11579264 and SCons4.11.0 may be missing, so exit2/BLOCKED is an expected actionable result. Exit0 establishes these prerequisite checks only, not full offline dependency resolution or APK readiness. A Gradle cache file's presence is not a build test. No blanket tool upgrades or downloads are requested in this step; missing packages/cache will be prepared from the report.
+
+No server rebuild or repeated protocol test is needed. Android app build/install/run commands will follow when the Windows native pipeline and offline dependency set are prepared. Existing server run instructions below remain valid.
 
 ## Reference: restart the verified server if it has stopped
 
