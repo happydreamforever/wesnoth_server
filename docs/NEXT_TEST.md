@@ -1,10 +1,10 @@
-# ADB verified; prepare the Windows Android build inputs
+# Windows source prepared; complete the Android prerequisite report
 
-The user verified LDPlayer after enabling local ADB: Android9/API28, boot_completed=1, model2203121C, primary ABI x86_64, ABI list x86_64,x86,arm64-v8a,armeabi-v7a,armeabi, native bridge libnb.so. SDK ADB connected successfully to127.0.0.1:5555; both that TCP serial and emulator-5554 appear ready. Use the explicit TCP serial for future device commands. Device discovery is complete; no more ADB/settings inventory is requested.
+Windows source preparation passed with all 1,591 preserved file hashes matching, created `build/android-source`, and exited 0. The server build/protocol/runtime and LDPlayer connection are already verified. Use `127.0.0.1:5555` for future ADB commands; the emulator is Android 9/API 28 with primary ABI x86_64.
 
-Windows server1.19.26 build, guest protocol and normal runtime are also verified. The next checkpoint prepares a separate client source tree and checks the exact Windows Android inputs. **It does not build an APK yet.** The native build scripts need a Windows port. See ANDROID_BUILD.md for selected versions and remaining work.
+Prerequisite helper 2026-10-12.1 stopped because writing its report hit a file-sharing error. The JDK/MSYS2 section failures named the report file, not those tools. NDK 26.3.11579264 is genuinely missing; Gradle and native archive checks were not reached. Version 2026-10-12.2 keeps console results in memory and saves the complete report separately, with bounded retries and a temporary-directory fallback. The current step reruns this check. **It does not build an APK.** The Windows native build port is still pending; see ANDROID_BUILD.md.
 
-## 1. Pull the new preparation tools
+## 1. Pull the logging fix and updated project records
 
 Temporarily connect to GitHub. Run in a normal PowerShell window using the verified MSYS2 Git route:
 
@@ -23,18 +23,15 @@ Temporarily connect to GitHub. Run in a normal PowerShell window using the verif
 }
 ```
 
-Preserve README/engine edits, server-local core.filemode=false and the saved stash. This delivery adds tools/profile and updates docs; it does not replace engine/. Stop on a pull conflict without reset, clean or stash application.
+Preserve README/engine edits, server-local core.filemode=false and the saved stash. This delivery changes the prerequisite helper and project records. Stop on a pull conflict without reset, clean or stash application.
 
-## 2. Prepare source and check prerequisites offline
+## 2. Rerun only the prerequisite check
 
-Disconnect from the internet if desired; these commands do not download anything. Run:
+This command can run offline and does not install or download anything. Source preparation already passed and is unchanged, so keep the existing stage.
 
 ```powershell
 & {
     Set-Location 'D:\Test\wesnoth-setup\wesnoth_client' -ErrorAction Stop
-    & 'C:\Users\Uni\AppData\Local\Programs\Python\Python314\python.exe' '.\tools\prepare_android_source.py'
-    "SOURCE_PREPARATION_EXIT: $LASTEXITCODE"
-
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
         -File '.\tools\Test-WindowsAndroidPrerequisites.ps1' `
         -MsysRoot 'D:\Test\msys64'
@@ -42,17 +39,15 @@ Disconnect from the internet if desired; these commands do not download anything
 }
 ```
 
-The prerequisite check is useful even if source preparation is blocked. It reads the originals and reports differences without changing them. Send complete console output plus the new client diagnostics/android-prerequisites-*.txt file. Do not send .env or credentials.
+Expected: header version `2026-10-12.2`, followed by all checks including Gradle cache and native archive integrity, then `Check complete=True`. NDK-related BLOCKED entries and exit 2 are expected while that selected package is missing. Other missing inputs will be listed. Exit 0 means these prerequisite checks passed; it does not establish complete offline resolution, native compilation or an APK.
 
-Expected source result:1591 preserved files match SHA256, then PREPARED (or ALREADY PREPARED) for build/android-source. It deliberately states APK build remains blocked because native integration is unfinished. A content mismatch or unmanaged/edited destination stops staging without overwriting. Executable-bit-only changes do not prevent matching. An interrupted stage is preserved; use the returned output to choose a recovery, not deletion/reset.
+The helper prints `Report saved to:` only after a successful save. The normal destination is client `diagnostics/android-prerequisites-*.txt`. If that destination remains unavailable, it tries a unique report under `%TEMP%\wesnoth-diagnostics`; use the actual printed path. If both destinations fail, the full results remain on screen and exit 3 identifies a report-save failure independently of dependency results. Send the complete console output and the report at the printed path if saved. Do not send `.env` or credentials.
 
-Expected prerequisite result: a completed report with specific PASS/BLOCKED checks for source integrity, selected Java/SDK/NDK, MSYS build tools/SCons, actual Gradle/AndroidX cache files and the23 native archive hashes. Existing Windows evidence suggests NDK26.3.11579264 and SCons4.11.0 may be missing, so exit2/BLOCKED is an expected actionable result. Exit0 establishes these prerequisite checks only, not full offline dependency resolution or APK readiness. A Gradle cache file's presence is not a build test. No blanket tool upgrades or downloads are requested in this step; missing packages/cache will be prepared from the report.
-
-No server rebuild or repeated protocol test is needed. Android app build/install/run commands will follow when the Windows native pipeline and offline dependency set are prepared. Existing server run instructions below remain valid.
+Let the check finish; no server rebuild, repeated ADB setup, Windows service change or tool installation is requested for this rerun. The complete report will guide targeted preparation of NDK/SCons/caches and the native Windows port. Android build/install/run commands follow when that pipeline is ready.
 
 ## Reference: restart the verified server if it has stopped
 
-The server is already running in the latest report; no restart is needed for the device probe. If you stop it later, start it again in a separate normal PowerShell window:
+The server is already running in the latest report; no restart is needed for the prerequisite check. If you stop it later, start it again in a separate normal PowerShell window:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
@@ -63,7 +58,7 @@ Keep that window open; Ctrl+C stops the server. The printed transcript path is d
 
 ## Reference: update and rebuild after future implementation changes
 
-These commands are retained for later code changes, not required for the current startup/inventory step. Temporarily connect to GitHub and pull using the established MSYS2 route:
+These commands are retained for later code changes, not required for the current prerequisite-check step. Temporarily connect to GitHub and pull using the established MSYS2 route:
 
 ```powershell
 & {
