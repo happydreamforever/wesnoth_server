@@ -4,9 +4,13 @@ Windows server build, guest protocol and normal launcher remain verified. LDPlay
 
 This handoff updates project records only. No pull, rebuild, new installation or full inventory rerun is needed for the inline command. Preserve all local changes and the server Git setting/stash.
 
-## 1. Confirm LDPlayer local ADB access
+## 1. Locate the LDPlayer Windows settings panel
 
-In LDPlayer Settings (gear) > Other settings > ADB debugging, select **Open local connection** if it is not already selected. Save and restart only LDPlayer if the setting changes; wait for Android's home screen. If it is already selected, leave it unchanged. Tell us which option was selected. The user has been asked this focused question; until answered the setting is unknown. Root permission does not need to change. See the vendor's [local ADB explanation](https://www.ldplayer.net/blog/introduction-to-version-4.0.37-and-3.102-features.html).
+The user cannot find Other settings / ADB debugging. The actual selected option is still unknown; this is not evidence that it is disabled or that the user opened the wrong screen. First locate the host application's settings before asking for another connection test.
+
+In LDPlayer's outer Windows window, click the Settings icon near the top of the vertical toolbar at the far right. Alternatively use its top-right menu > Settings. The vendor's screenshots show a separate settings dialog with a left category list. Look near the bottom for Other settings / Others, then ADB debugging > Open local connection. Save and restart only LDPlayer if changing that option, then wait for Android's home screen. Leave Root permission unchanged.
+
+The [official toolbar/settings screenshots](https://www.ldplayer.net/support/how-to-solve-locked-screen.html) illustrate this route, but do not prove the exact layout of installed9.5.3. The linked article's root/unlock script is unrelated and should not be followed. The [LDPlayer9 menu guide](https://www.ldplayer.net/support/use-fps-settings-offered-by-ldplayer.html) also shows opening Settings from the menu. If the category or ADB option is still absent, ask the user to attach a screenshot of the full LDPlayer window with the settings dialog, title bar, left category list and right toolbar visible. The screenshot will establish the actual interface; do not invent another menu path or modify config files blindly. No Git pull or server rebuild is needed.
 
 ## 2. Test the default local endpoint and read actual ready-device properties
 
