@@ -1,6 +1,10 @@
-# Build and test the next GLib prerequisites
+# Retry the gettext archive check with the pipe correction
 
-The Windows libiconv/libcharset and Pixman build and actual LDPlayer probe passed. Keep the completed build/android-text-base directory. The next separate stage builds gettext-runtime/libintl 0.21.1, PCRE2-8 10.42 and libffi 3.4.4 from the existing cache. It uses the verified libiconv library without rebuilding or changing that prefix.
+The Windows build stopped during gettext configuration with repeated `LLVM ERROR: IO failure on output stream: Invalid argument`. The log ends with the helper terminating its owned build processes. Wait for the PowerShell prompt before updating or moving the stage.
+
+The next configure operation feeds llvm-ar output into an ELF reader that originally closed after five bytes. This matches the [LLVM Windows closed-pipe bug report](https://www.mail-archive.com/llvm-bugs@lists.llvm.org/msg49040.html). The corrected reader drains the remaining stream while keeping the ELF-class check. The exact Windows behavior still needs your rerun.
+
+Keep all installed versions, cached archives and completed build/android-text-base output. The correction changes the privately extracted gettext configure source, so preserve the failed GLib dependency stage under a unique name and create a fresh one. The commands below perform that preservation without deleting its logs or files.
 
 ## Pull the prepared update
 
@@ -20,9 +24,35 @@ Temporarily connect Windows to GitHub. Run in normal PowerShell:
 
 Only the pulls need internet. Preserve repository-local Git settings and the old saved helper stash. If Git reports a local conflict, stop and return the output; do not reset or overwrite files.
 
+## Preserve the failed stage once
+
+After both pulls succeed and the previous build has stopped, run this block once. It renames only build/android-glib-deps to a sibling backup with a UTC timestamp and GUID. The verified text-base prefix and earlier stages remain available.
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $stage = 'D:\Test\wesnoth-setup\wesnoth_client\build\android-glib-deps'
+    if (Test-Path -LiteralPath $stage) {
+        $item = Get-Item -LiteralPath $stage -Force
+        if (-not $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw 'The GLib dependency stage is not a normal directory. Stop and send the output.'
+        }
+        $backupName = 'android-glib-deps-before-pipe-fix-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N')
+        $backup = Join-Path $item.Parent.FullName $backupName
+        if (Test-Path -LiteralPath $backup) { throw "Backup already exists; nothing was moved: $backup" }
+        Rename-Item -LiteralPath $stage -NewName $backupName -ErrorAction Stop
+        Write-Host "BUILD BACKUP SAVED: $backup"
+    } else {
+        Write-Host 'No active GLib dependency stage to preserve. Existing backups are unchanged.'
+    }
+}
+```
+
+Expected: `BUILD BACKUP SAVED: ...android-glib-deps-before-pipe-fix-...`, or a message that no active stage exists. Keep this backup until the retry succeeds. If a later retry is needed, follow the next diagnosis rather than repeating this preservation step automatically.
+
 ## Build, then run the native LDPlayer test
 
-After both pulls succeed, return to offline use and keep LDPlayer open with Android booted. Paste this entire block into normal PowerShell:
+After the backup succeeds, return to offline use and keep LDPlayer open with Android booted. Paste this entire block into normal PowerShell:
 
 ```powershell
 & {
@@ -59,4 +89,4 @@ PASS wesnoth-android-glib-deps
 ANDROID GLIB DEPS TEST PASSED
 ```
 
-Send the complete console output on success or failure. These helpers stream to the console and do not create a transcript. Package logs remain in the owned build directory; the device helper prints the retained executable/catalog directory. Windows compilation and LDPlayer execution of this new batch remain unverified until your result. GLib itself, full text layout, the game APK/OBB and gameplay are later steps.
+Send the complete console output on success or failure. These helpers stream to the console and do not create a transcript. Package logs remain in the owned build directory; the device helper prints the retained executable/catalog directory. The Windows correction, completed package compilation and LDPlayer execution of this batch remain unverified until your result. The library-suffix check should now continue through iconv checks instead of repeating LLVM errors. GLib itself, full text layout, the game APK/OBB and gameplay are later steps.
