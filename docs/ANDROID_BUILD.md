@@ -1,6 +1,6 @@
 # Android build checkpoint
 
-Current checkpoint (2026-10-12): Windows font compilation and actual LDPlayer shaping/rasterization now pass; see the latest BASELINE.md evidence. The first MSYS diagnostic confirmed tool versions but stopped at an interpreter path comparison before compilation. The corrected helper pull is currently blocked by a local client shell-helper difference; use the guarded recovery and rerun in NEXT_TEST.md; it verifies executable aliases and actual Python/Meson runtime identity before the Make/pkg-config/native-NDK path check. Completed stages below are retained as reproduction history.
+Current checkpoint (2026-10-12): The Windows MSYS text toolchain check passed, including copied Python alias/runtime identity and real Make/pkg-config compilation and archiving with NDK26.3.11579264 through a native include path containing spaces. Keep the existing tools and successful server/bootstrap/SDL/media/font/data outputs. The next checkpoint builds reusable libiconv1.17 (bundled libcharset1.5) and Pixman0.42.2, then runs their C probe in LDPlayer. Use the normal MSYS2 pulls and commands in NEXT_TEST.md. No further inventory, Git recovery, package installation or unchanged diagnostic rerun is required. Actual Windows Autoconf/Meson package builds and Android execution of these new libraries remain pending. Full text layout, remaining libraries/game engine, Android asset import/OBB, audible playback, local/LAN gameplay and MongoDB remain pending. Completed stages below are retained as reproduction history.
 
 The first emulator target is x86_64 on the user's verified LDPlayer Android9/API28. The native minimum API remains23. Compile/target SDK35 is a build setting and does not require the emulator to run Android35. The ARM entries in the reported ABI list and libnb.so identify advertised translation support; ARM APK execution has not been tested. A physical-phone ABI will be selected from that phone's actual report later.
 
@@ -10,7 +10,7 @@ The machine-readable profile lives in client tools/android-build-profile.json. T
 
 | Component | Selected value | Reason/status |
 | --- | --- | --- |
-| Engine/data core | Wesnoth1.19.26 | Restored engine commit75c84d2ed344b954d1fd308e588dfe13aef53b20; game-data delivery still pending |
+| Engine/data core | Wesnoth1.19.26 | Restored engine commit75c84d2ed344b954d1fd308e588dfe13aef53b20; complete Windows game-data copy verified; Android import pending |
 | First APK ABI | x86_64 | Actual LDPlayer primary ABI |
 | Native/minimum API |23 | Upstream minimum; compatible with actual device API28 |
 | Java compile/target SDK |35 | Upstream; installed Windows package metadata observed |
@@ -195,17 +195,17 @@ The image build and initial dependency preparation need connectivity. The final 
 
 ## Remaining text library build path
 
-The cached sources require mixed build systems: libiconv1.17, gettext-runtime0.21.1, libffi3.4.4 and Cairo1.16.0 use Autotools; Pixman0.42.2, GLib2.82.1, Fontconfig2.17.1 and Pango1.50.14 offer Meson. Fontconfig requires Meson>=1.6.1 and host gperf. The earlier complete Windows collector records installed Meson1.12.0/gperf3.3, and actual MSYS Make4.4.1/pkg-config3.0.5/Python3.12.13/Ninja1.13.2 executions. Active wrapper-selected Autotools versions and the native Windows NDK bridge need the focused check. Release-generated configure scripts avoid treating every regeneration utility as mandatory now.
+The cached sources require mixed build systems: libiconv1.17, gettext-runtime0.21.1, libffi3.4.4 and Cairo1.16.0 use Autotools; Pixman0.42.2, GLib2.82.1, Fontconfig2.17.1 and Pango1.50.14 offer Meson. Fontconfig requires Meson>=1.6.1 and host gperf. The earlier complete Windows collector records installed Meson1.12.0/gperf3.3, and actual MSYS Make4.4.1/pkg-config3.0.5/Python3.12.13/Ninja1.13.2 executions. The latest Windows result verifies the selected MSYS tools and the native Windows NDK bridge. Release-generated configure scripts avoid treating every regeneration utility as mandatory now.
 
 Test-WindowsAndroidTextToolchain.ps1 runs check_android_text_toolchain.sh with a fresh temporary scratch directory. It reports core tools and optional generators, checks that selected MSYS Python imports the same Meson version, then compiles an Android x86_64/API23 object using an isolated temporary .pc header path containing spaces, archives it and verifies ELF metadata. There are no downloads, installs, persistent environment changes, ADB calls or changes to completed output stages. This proves that narrow bridge only; it does not prove a whole Autoconf or Meson package builds on Windows.
 
-The proposed next reusable package stage is libiconv/Pixman. GLib also needs PCRE2, libffi and real libintl even with NLS disabled; Cairo/Pango need Fontconfig/Expat, existing FreeType/HarfBuzz/media outputs, and a pinned FriBidi source not present in the current 23-archive cache. ICU is a separate missing source/backend decision for Boost.Locale. Provision future inputs separately without changing the completed stages' manifests/receipts unnecessarily. All dependency downloads must happen during explicit preparation, never during offline build/run.
+The next reusable package stage builds libiconv/Pixman as described below. GLib also needs PCRE2, libffi and real libintl even with NLS disabled; Cairo/Pango need Fontconfig/Expat, existing FreeType/HarfBuzz/media outputs, and a pinned FriBidi source not present in the current 23-archive cache. ICU is a separate missing source/backend decision for Boost.Locale. Provision future inputs separately without changing the completed stages' manifests/receipts unnecessarily. All dependency downloads must happen during explicit preparation, never during offline build/run.
 
 The bridge uses the [NDK documented direct clang --target invocation](https://developer.android.com/ndk/guides/other_build_systems#overview) and the future recipes must isolate host/target discovery through [Meson's cross-build configuration](https://mesonbuild.com/Cross-compilation.html). The NDK documentation cautions that Autoconf projects are generally not buildable on Windows; a successful small bridge cannot override that limitation for untested packages. Keep the existing Windows tools until actual package evidence supports the next implementation choice.
 
 ### Verification of the diagnostic
 
-Eighteen shell fixtures (real Make/pkg-config, controlled NDK) and ten PowerShell wrapper fixtures pass. A separate real NDK r26d compile/archive run passes with Docker networking disabled and a path containing spaces. These are Linux checks; the Windows MSYS/native boundary remains the user's next test. Host package differences are listed in BASELINE.md.
+Eighteen shell fixtures (real Make/pkg-config, controlled NDK) and ten PowerShell wrapper fixtures pass. A separate real NDK r26d compile/archive run passes with Docker networking disabled and a path containing spaces. These were Linux checks; the subsequent Windows report separately confirms the MSYS/native bridge. Host package differences are listed in BASELINE.md.
 
 On the prepared VPS, run the shell fixtures from the client checkout:
 
@@ -221,4 +221,33 @@ The VPS-only verification image extends wesnoth-server-verify:1.19.26 with host 
 
 ### Windows interpreter alias correction
 
-The first actual Windows diagnostic confirmed all listed versions, including MSYS Python3.12.13/Meson1.12.0, but rejected their binding because realpath strings differed. Compiler/archive execution was skipped. The helper now accepts actual file identity or byte-identical same-directory copies and additionally compares the shebang interpreter runtime/module identity with the selected Python. It prints both paths on success or failure. Twenty-four shell fixtures, including copied/hardlinked alias and genuine mismatch regressions, and a real network-disabled Linux NDK compile/archive run pass. Windows rerun remains pending; see NEXT_TEST.md. No Windows package changes are required by this correction.
+The first actual Windows diagnostic confirmed all listed versions, including MSYS Python3.12.13/Meson1.12.0, but rejected their binding because realpath strings differed. Compiler/archive execution was skipped. The helper now accepts actual file identity or byte-identical same-directory copies and additionally compares the shebang interpreter runtime/module identity with the selected Python. It prints both paths on success or failure. Twenty-four shell fixtures, including copied/hardlinked alias and genuine mismatch regressions, and a real network-disabled Linux NDK compile/archive run pass. The subsequent Windows result confirms byte-identical aliases /usr/bin/python3.exe and /usr/bin/python, actual module/runtime identity and the real compile/archive check. No Windows package changes or further diagnostic rerun are needed.
+
+
+## libiconv/Pixman reusable text foundation
+
+The new independent build/android-text-base stage uses the existing cached libiconv1.17 (bundled libcharset1.5) and Pixman0.42.2 archives. It builds static PIC libraries, public headers, portable pkg-config metadata, license notices and one C executable with NDK r26d for x86_64/API23. libiconv uses its release configure script and Make; Pixman uses Meson with downloads forbidden and MSYS Ninja. The earlier CMake outputs and their receipt inputs remain unchanged.
+
+Build-WindowsAndroidTextBase.ps1 selects MSYS /usr/bin/python3 and scopes its environment to the child process. GNU Make requires the workspace path to contain no spaces or shell metacharacters; the verified D:\Test\wesnoth-setup path is supported. NDK paths may contain spaces. Scoped compiler-wrapper exclusions preserve target /usr/lib macro values while normal native compiler path conversion remains active. Neutral package installation paths plus manual staging avoid distributing host paths in libtool files. The installed prefix uses relative package metadata and does not depend on its original location.
+
+The new driver verifies archive hashes, immutable extracted inputs, owned output directories, current build inputs, full installed-prefix hashes and Android ELF/archive metadata. It refuses changed/unowned sources or prefixes and withholds its receipt after a failed build. It builds only the libiconv library subdirectories and disables Pixman demos/tests and optional GTK/libpng/OpenMP use. The probe's link map must show object members from all three archives, including the separate libcharset archive.
+
+Test-AndroidTextBase.ps1 runs the same driver's read-only --verify-only route under the existing native Windows Python3.14.3 before any ADB action. Verification does not need MSYS, NDK or source archives. The helper selects SDK ADB and the explicit ready x86_64 device, pushes only one executable, then requires its exit status, identity and all pass markers. The native probe checks exact library versions, UTF-8/UTF-16LE conversion including a surrogate pair, invalid/incomplete input, insufficient output space, unknown encoding, exact alpha compositing and destination clipping. It requires only Android system libraries; no libc++ payload, fonts, copied game assets, APK or server is needed. A successful test advances the reusable dependency build but does not establish complete paragraph layout or gameplay.
+
+Reproduce the cross-build on the already prepared VPS:
+
+```sh
+docker run --rm --network none --user "$(id -u):$(id -g)" \
+  -v "$PWD:/workspace" -w /workspace wesnoth-text-toolchain-verify:meson1.12 \
+  python3 -I -B -u tools/build_android_text_base.py \
+    --ndk /workspace/build/toolchains/android-ndk-r26d --jobs 2
+python3 -I -B tools/build_android_text_base.py --verify-only
+docker run --rm --network none --user "$(id -u):$(id -g)" \
+  -v "$PWD:/workspace" -w /workspace wesnoth-text-toolchain-verify:meson1.12 \
+  python3 -B tests/test_android_text_base.py
+python3 -B tests/test_android_text_base_windows.py --pwsh /tmp/wesnoth-audit-pwsh/pwsh
+```
+
+The verification image/host-version differences are recorded above. Windows uses the already verified installed versions, not Docker. Current Windows commands and expected markers are in NEXT_TEST.md; send the complete console output on success or failure.
+
+The actual offline Android cross-build, relocated-prefix consumer and separate Linux probe execution pass. The16 installed files contain38 verified static-library objects and a1,758,128-byte C probe. Seventeen driver tests,20 PowerShell fixtures and an actual-receipt integration with simulated ADB pass. Windows library compilation and LDPlayer execution remain the next check; detailed hashes, host differences, the package-metadata correction and negative-test evidence are recorded in BASELINE.md.

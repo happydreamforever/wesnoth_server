@@ -1,71 +1,60 @@
-# Recover the client update and rerun the diagnostic
+# Build and test libiconv/Pixman on Windows
 
-The Windows FreeType/HarfBuzz build and real LDPlayer font test passed, including Latin ligatures, Arabic shaping and glyph rasterization. Their pixel counts match the Linux check. Keep the completed builds and verified `D:\Test\wesnoth-setup\gamedata-1.19.26` folder.
+The actual Windows MSYS/NDK compiler check passed. Both Python aliases have identical bytes and the same Meson runtime; the real Make/pkg-config/NDK compile/archive check also passed with a native include path containing spaces. Keep all installed versions and completed server/bootstrap/SDL/media/font/data results. The new stage uses your existing source cache to build reusable libiconv1.17, bundled libcharset1.5 and Pixman0.42.2 for Android x86_64/API23.
 
-The latest pull updated the server to c2da5e0, but the client remains at75b1d25: Git fetched e75b0bf and then refused to overwrite a local change to tools/check_android_text_toolchain.sh. The corrected Python/Meson diagnostic has therefore not run on Windows. A working-tree executable-bit difference is possible, as previously confirmed in the server, but the client difference is not yet identified.
+## Pull the prepared update
 
-The guarded command below prints helper metadata and checks both its index and content against HEAD. It stops on any staged/content difference or Git error, preserving the file. Only if both checks pass does it set client-local core.filemode=false, verify that setting, pull both repositories and run the corrected diagnostic. Keep all installed versions, existing server-local configuration, saved stash and completed builds.
-
-The remaining text libraries use MSYS Make and Meson. This focused diagnostic checks the selected tools and compiles/archives a small Android object through Make and isolated pkg-config, using temporary paths containing spaces. It installs nothing, does not build the game and does not need LDPlayer or the server running. Actual Autotools/Meson package builds remain the following checkpoint.
-
-## Pull and check
-
-Temporarily connect to GitHub and run in normal PowerShell:
+Temporarily connect Windows to GitHub. Run in normal PowerShell:
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
     $bash = 'D:\Test\msys64\usr\bin\bash.exe'
-    $prefix = 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_client '
-    $file = ' -- tools/check_android_text_toolchain.sh'
-
-    & $bash --noprofile --norc -c ($prefix + 'diff --no-ext-diff --no-textconv --raw --numstat HEAD' + $file)
-    if ($LASTEXITCODE -ne 0) { throw 'Inspection failed. Send the output.' }
-
-    foreach ($check in @(
-        'diff --no-ext-diff --no-textconv --cached --quiet HEAD'
-        '-c core.filemode=false diff --no-ext-diff --no-textconv --quiet HEAD'
-    )) {
-        Write-Host "CHECK: $check"
-        & $bash --noprofile --norc -c ($prefix + $check + $file)
-        if ($LASTEXITCODE -ne 0) {
-            throw 'Helper has staged/content changes, or Git could not check it. Stop and send all output; files are preserved.'
-        }
-    }
-
-    & $bash --noprofile --norc -c ($prefix + 'config --local core.filemode false')
-    if ($LASTEXITCODE -ne 0) { throw 'Client Git setting failed. Send the output.' }
-    $mode = & $bash --noprofile --norc -c ($prefix + 'config --get core.filemode')
-    if ($LASTEXITCODE -ne 0 -or ([string]$mode).Trim() -ne 'false') {
-        throw 'Client Git setting was not confirmed. Send the output.'
-    }
-    Write-Host "Client core.filemode=$mode"
-
     foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
         $repo = '/d/Test/wesnoth-setup/' + $name
         & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
         if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Send the output." }
     }
-
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Test-WindowsAndroidTextToolchain.ps1'
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Text toolchain check failed. Send the complete output.'
-    }
 }
 ```
 
-Only the pulls need internet. The guarded setting applies to the Windows client repository only; it makes Git ignore working-tree executable-bit differences, while content and staged changes remain guarded. No source is reset, restored, stashed or cleaned. Preserve the existing server-local core.filemode=false and stash f0c22d3. A different local conflict still stops the ordinary fast-forward pull.
+Only the pulls need internet. Preserve repository-local Git settings and the old saved helper stash. If Git reports a local conflict, stop and return the output; do not reset or overwrite files. The successful diagnostic does not require another Git recovery experiment.
 
-The helper uses MSYS2 at `D:\Test\msys64` and NDK26.3.11579264 under the existing `%LOCALAPPDATA%\Android\Sdk`. Its environment is scoped to the child process. Unlike the CMake stages, this build family selects MSYS Python/Meson/Ninja together; existing native CMake/Ninja outputs are unchanged. Autoconf/Automake regeneration tools are reported separately because release archives already contain generated configure scripts.
+## Build, then run the native LDPlayer test
 
-If the client difference is only its executable bit, the initial metadata should show 100644 -> 100755 with zero added/deleted lines. After the guards pass, expect Client core.filemode=false and successful pulls. If a guard stops, return that output; do not bypass it.
+After both pulls succeed, return to offline use and keep LDPlayer open with Android booted. Paste this entire block into normal PowerShell:
 
-Expected final diagnostic marker:
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
 
-```text
-ANDROID TEXT TOOLCHAIN CHECK PASSED
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File '.\tools\Build-WindowsAndroidTextBase.ps1'
+    if ($LASTEXITCODE -ne 0) { throw 'Text library build failed. Send the complete output.' }
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File '.\tools\Test-AndroidTextBase.ps1' -Serial '127.0.0.1:5555'
+    if ($LASTEXITCODE -ne 0) { throw 'Text library device test failed. Send the complete output.' }
+}
 ```
 
-The helper removes its own temporary directory after success and preserves it with a printed path after failure. No diagnostics transcript or app window is created. Send the complete console output, including pulled commit IDs and any missing tool/error; no package installation or version upgrade is requested before reviewing that result.
+The build uses D:\Test\msys64, the existing SDK/NDK26.3.11579264, MSYS Python3.12.13/Meson1.12.0/Ninja1.13.2 and two jobs. It compiles the release Autoconf/Make and Meson libraries without network access. Configure checks and compilation can take several minutes; let the helper finish. Warnings or unsupported-feature probes alone do not indicate a failure; the exit status and final markers determine success. The new managed stage is D:\Test\wesnoth-setup\wesnoth_client\build\android-text-base. Other completed stages are not rebuilt.
+
+The test verifies current source/artifact receipts with the existing native Windows Python3.14.3, then uses SDK ADB to connect to 127.0.0.1:5555 and executes only the new C probe. The server need not be running. No game-data copy, font transfer, APK install or new app screen is expected.
+
+Expected completion lines:
+
+```text
+ANDROID TEXT BASE BUILD PASS
+ANDROID TEXT BASE BUILD COMPLETE: ...\build\android-text-base\receipt.json
+ANDROID TEXT BASE ARTIFACTS VERIFIED
+WESNOTH_ANDROID_TEXT_BASE version=1.19.26 abi=x86_64 min_api=23
+PASS libiconv conversion
+PASS libiconv error handling
+PASS Pixman compositing
+PASS wesnoth-android-text-base
+ANDROID TEXT BASE TEST PASSED
+```
+
+Send the complete console output, including library versions or the first error. These helpers stream to the console; they do not create a transcript. Build/configure logs stay in the owned stage and the device helper prints its retained executable directory. Windows package compilation and actual LDPlayer execution remain unverified until your result. This tests reusable character conversion and pixel compositing, not full text layout, the game APK/OBB or gameplay.
