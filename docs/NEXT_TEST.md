@@ -1,6 +1,8 @@
-# Verify the copied game data
+# Build and test the Android font libraries
 
-The Windows media build and LDPlayer codec test passed, including PNG, JPEG, WebP, Ogg Vorbis and in-memory SDL_mixer rendering. The user copied the game data to `D:\Test\wesnoth-setup\gamedata-1.19.26`. This step checks that every filename and byte matches the recorded VPS copy. The data stays in that folder; no OBB or Android installation is created yet.
+The Windows game-data verification passed: 26,748 files / 726,207,542 bytes and the complete tree hash match the VPS reference. Keep the verified folder at `D:\Test\wesnoth-setup\gamedata-1.19.26`. No recopy, full data recheck, SDK setup, server rebuild or unchanged media/SDL retest is needed.
+
+The next step builds reusable FreeType 2.13.0 and HarfBuzz 7.1.0 libraries from the existing source cache. A native Android test loads the actual Lato and DejaVu Sans fonts from the verified data, checks Latin ligatures and Arabic shaping, and rasterizes glyphs into memory. This prepares text rendering for the game. It does not open a new app window or implement the complete text-layout/game engine.
 
 ## 1. Pull the new tools
 
@@ -21,34 +23,49 @@ Temporarily connect to GitHub and run in normal PowerShell:
 }
 ```
 
-Preserve local work, server-local core.filemode=false and stash f0c22d3. Stop on a pull conflict without reset, clean or stash application. The data folder remains outside both repositories.
+Preserve local work, server-local core.filemode=false and stash f0c22d3. Stop on a pull conflict without reset, clean or stash application.
 
-## 2. Verify the folder offline
+## 2. Build offline and run the real-font test
 
-After pulling, internet access is unnecessary. This check uses the installed native Python 3.14.3. No server, LDPlayer, compiler, SDK setup or rebuild is needed.
+Keep LDPlayer open at its Android home screen. After pulling, internet access is unnecessary. The build uses the existing native Windows Python 3.14.3, CMake 4.3.0, Ninja 1.13.2 and NDK 26.3.11579264, targeting x86_64/API23.
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
     Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
+
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Test-WindowsGameData.ps1' `
-        -DataRoot 'D:\Test\wesnoth-setup\gamedata-1.19.26'
+        -File '.\tools\Build-WindowsAndroidFonts.ps1'
     if ($LASTEXITCODE -ne 0) {
-        throw 'Game-data verification failed or was interrupted. Send the complete console output.'
+        throw 'Android font build failed. Send the complete console output.'
+    }
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File '.\tools\Test-AndroidFonts.ps1' `
+        -DataRoot 'D:\Test\wesnoth-setup\gamedata-1.19.26' `
+        -Serial '127.0.0.1:5555'
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Android font test failed. Send the complete console output.'
     }
 }
 ```
 
-Let it finish reading approximately 726 MB; it prints progress. Expected final output:
+Let the first compilation finish; configuration and compilation can take several minutes. Subsequent unchanged builds reuse the output. If a source archive is missing or any build step fails, send its exact error before changing tool versions or packages. This build never downloads dependencies.
+
+The independent output is `wesnoth_client\build\android-fonts\prefix`, containing static FreeType/HarfBuzz libraries, headers, package metadata, license notices and the native test/runtime. A successful build writes its input/output hashes to `build/android-fonts/receipt.json`. The original engine, prepared source, bootstrap, SDL APK, media prefix and verified data folder remain separate.
+
+Before ADB, the device helper verifies the current source hashes, complete installed prefix, runtime artifacts and three selected asset hashes. It pushes only the native test, libc++ runtime, Lato-Regular.ttf, DejaVuSans.ttf and fonts/COPYING into a unique project directory under `/data/local/tmp` on the explicit device. The test uses fixed original font names. Existing apps and data are preserved. No diagnostics transcript is created; send the console output.
+
+Expected build marker: `ANDROID FONTS BUILD COMPLETE`. The device output must include:
 
 ```text
-PASS: 26,748 files; 726,207,542 bytes; 13 expected empty files
-Tree SHA256: d805fd055b263a5b09cd19576dc9df83c64e47bbcf7821cbb6550b686a74e53c
-Core 1.19.26; music 1.19.18; manual_install=true (metadata matches).
-GAME DATA VERIFICATION PASSED
+WESNOTH_ANDROID_FONTS version=1.19.26 abi=x86_64 min_api=23
+PASS FreeType font loading
+PASS HarfBuzz Latin ligatures
+PASS HarfBuzz Arabic shaping
+PASS FreeType glyph rasterization
+PASS wesnoth-android-fonts
+ANDROID FONTS TEST PASSED
 ```
 
-Send the complete console output, including the pulled commit IDs and final result. No diagnostics log file is created. A mismatch is reported by parent directory; preserve the copied files and send the error before changing them. The 13 empty files, two hidden .gitignore files and original line endings are part of the reference. Timestamps, permission bits and empty-directory structure are ignored.
-
-This verifies copy integrity only. The current SDL check app does not consume these assets. Remaining work includes the text/network libraries, actual game engine, Android asset import/OBB, audible playback, single-player, a LAN turn and MongoDB. The existing server, SDL app and media tests remain completed checkpoints.
+Send the full build/test output, including pulled commit IDs and any error. Success verifies the selected font decoding, shaping and in-memory rasterization on Android. It does not establish full paragraph layout, visible game UI, general Android asset import/OBB, gameplay or MongoDB. Those remain subsequent milestones alongside the remaining native dependencies and game engine.

@@ -132,18 +132,42 @@ The final Android cross-build passed with networking disabled:188 installed file
 
 ## Offline game-data copy verification
 
-The selected asset source is the sibling folder `D:\Test\wesnoth-setup\gamedata-1.19.26`. Run `tools/Test-WindowsGameData.ps1` from the client checkout with the installed native Python 3.14.3; no compiler, ADB, server or internet is required. The helper calls `verify_game_data.py` with isolated, unbuffered Python and bytecode writing disabled. It hashes every file and compares against `tools/gamedata-1.19.26.reference.json`. No archive, OBB, receipt or transcript is generated. Hash checking reads about 726 MB and prints progress; let it finish.
+The selected asset source is the sibling folder `D:\Test\wesnoth-setup\gamedata-1.19.26`. Attachment d4ab7e23 confirms this Windows folder passed the complete reference check. For relevant future data changes, run `tools/Test-WindowsGameData.ps1` from the client checkout with the installed native Python 3.14.3; no compiler, ADB, server or internet is required. The helper calls `verify_game_data.py` with isolated, unbuffered Python and bytecode writing disabled. It hashes every file and compares against `tools/gamedata-1.19.26.reference.json`. No archive, OBB, receipt or transcript is generated. Hash checking reads about 726 MB and prints progress; let it finish.
 
 Success means 26,748 files, 726,207,542 bytes and 13 expected empty files match the VPS copy. File names and bytes must match exactly, including hidden files and original line endings. Changes are reported by parent directory; preserve the copy and send the output before attempting repairs. This manifest is a copy-integrity reference, not a new source of game assets or a game installation. The current SDL check app does not load these assets. OBB support and Android asset import are still pending.
 
 For relevant verifier changes, run `python3 -B tests/test_game_data.py`. Reproduce the full VPS check from the client checkout with `python3 -I -B -u tools/verify_game_data.py --data-root ../gamedata-1.19.26`. The expected tree SHA256 is recorded in BASELINE.md; never rebaseline it merely to accept a changed copy.
 
+## FreeType/HarfBuzz font foundation
+
+The next independent prefix, `build/android-fonts/prefix`, provides FreeType 2.13.0 and HarfBuzz 7.1.0 static libraries, development headers, package metadata and license notices. Both exact source archives are already pinned in android-native-archives.json and present in the Windows cache. The builder uses the existing native CMake/Ninja and NDK r26d, x86_64/API23, PIC and shared libc++. It does not read game data or download packages. The completed bootstrap, SDL and media output directories are preserved.
+
+FreeType disables the optional HarfBuzz auto-hint dependency, as the preserved upstream Android configuration does, so it can build first. It uses bundled zlib and disables external PNG, bzip2 and Brotli helpers for this font foundation. HarfBuzz enables its FreeType bridge and disables unrelated optional integrations. Latin/OpenType and explicit-direction Arabic shaping do not require GLib, FriBidi, Pango or an Android window. Full paragraph layout, bidirectional paragraph analysis, fallback selection and the remaining text stack are subsequent work; this test does not stand in for them.
+
+The native probe consumes Lato-Regular.ttf and DejaVuSans.ttf from a runtime directory. The Windows device helper checks their exact sizes/hashes plus fonts/COPYING against `tools/native-fonts/assets.json`, which is itself included in the successful build receipt's nine source hashes. The selected files come directly from the verified sibling data folder. Only the two fonts, their notice, the test and libc++ are transferred to a unique `/data/local/tmp/wesnoth-fonts-check/` directory. No game-data archive, APK, OBB or installed application data is changed.
+
+The probe checks actual library versions and font loading, Latin ligature substitution with the feature enabled/disabled, contextual Arabic shaping with explicit direction, and nonempty glyph rasterization. Output remains in memory. Build receipt validation covers the complete prefix and x86_64 library members plus Android executable/runtime metadata. Existing changed files are preserved and a failed rebuild cannot retain a successful receipt for that attempted build. Windows commands and exact output markers are in NEXT_TEST.md.
+
+For relevant helper changes, use `python3 -B tests/test_android_fonts.py` and `python3 -B tests/test_android_fonts_windows.py --pwsh /tmp/wesnoth-audit-pwsh/pwsh`. Windows-wrapper fixtures simulate tools and ADB; only the user's LDPlayer output can establish Android execution. Reproduce the offline cross-build from the client checkout on the prepared VPS:
+
+```sh
+docker run --rm --network none --user "$(id -u):$(id -g)" \
+  -v "$PWD:/workspace" -w /workspace \
+  wesnoth-server-verify:1.19.26 \
+  python3 -I tools/build_android_fonts.py \
+    --ndk /workspace/build/toolchains/android-ndk-r26d \
+    --cmake /opt/build-tools/bin/cmake \
+    --ninja /opt/build-tools/bin/ninja --jobs 2
+```
+
+This uses the already prepared Linux tools and caches; Windows uses its recorded installations and needs no Docker setup. The offline cross-build, unchanged rebuild and consumer build from a relocated prefix with spaces passed: 108 installed files and 43 validated static-library objects. Fourteen builder tests, 27 PowerShell fixtures and a real-prefix integration with mocked ADB passed. A separate Linux execution using the real fonts also passed all shaping/raster checks and negative cases. Windows font compilation and LDPlayer execution remain pending; see BASELINE.md for evidence and limits.
+
 ## Remaining implementation and verification
 
-1. The native bootstrap, SDL APK graphics/input and reusable media build/codec execution have passed on Windows/LDPlayer. Verify the user-copied data folder using NEXT_TEST.md; preserve the successful prior checkpoints.
+1. The native bootstrap, SDL APK graphics/input, reusable media build/codec execution and full Windows data parity have passed. Build the font prefix and run the real-font native probe using NEXT_TEST.md; preserve the successful prior checkpoints.
 2. Port the remaining native dependencies and SCons Android tool selection to the Windows NDK host. Pango 1.50.14 requires FriBidi >=1.0.6, absent from the current 23-archive cache; its wrap points to Git master. Pin and provision that source before an offline text-stack build, rather than allowing a Meson download. GLib's gvdb sources are already bundled.  Separate native API23 from Java SDK35; ensure all paths/quoting work and prohibit network downloads during offline builds. Google's [NDK guidance](https://developer.android.com/ndk/guides/other_build_systems) cautions about Autoconf on Windows, so this requires actual cross-build validation.
 3. Build the x86_64 dependency libraries and libmain.so, supply matching SDL Java sources, validate ABI/nonempty outputs, then permit Gradle packaging with the complete offline cache. Windows build and matching VPS verification remain required; current source-stage tests are not compilation tests.
-4. The user has copied the data folder to Windows; verify parity, then implement/test Android asset import/OBB behavior. Install a nonempty debug APK to the known device serial, test local single-player and a LAN turn against the verified server, then implement local MongoDB persistence. Neither successful ADB nor the server smoke test establishes those milestones.
+4. The copied Windows data folder passed full parity verification. Implement/test Android asset import/OBB behavior. Install a nonempty debug APK to the known device serial, test local single-player and a LAN turn against the verified server, then implement local MongoDB persistence. Neither successful ADB nor the server smoke test establishes those milestones.
 
 Current user commands and expected outputs are in NEXT_TEST.md. The SDL diagnostic APK is verified; the actual Wesnoth game APK and OBB integration remain pending.
 
