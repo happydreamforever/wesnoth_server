@@ -1,16 +1,12 @@
-# Windows server verified; connect LDPlayer ADB directly
+# Windows server verified; check ADB after the LDPlayer restart
 
-Windows server build, guest protocol and normal launcher remain verified. LDPlayer instance 0 reports Android started=1, but SDK ADB lists no device. The last ldconsole probe targeted emulator-5554 and every command failed with device-not-found, despite wrapper exit0. No Android property was read. Keep the working server available; Android API/ABI, APK build and gameplay remain pending.
+The user found the host ADB setting, saved and restarted LDPlayer after the Open local connection instructions. That UI step is complete; do not ask them to find the setting again. The earlier missing-device errors occurred before this change. The next step verifies the connection and reads actual Android API/ABI; no successful post-restart ADB output has been returned yet.
 
-This handoff updates project records only. No pull, rebuild, new installation or full inventory rerun is needed for the inline command. Preserve all local changes and the server Git setting/stash.
+Windows server build, guest protocol and normal launcher remain verified. No server rebuild, Git pull, new installation or full inventory is needed for this inline diagnostic. Preserve all local changes and the server Git setting/stash.
 
-## 1. Locate the LDPlayer Windows settings panel
+## 1. Wait for the restarted instance's Android home screen
 
-The user supplied the visible categories: Network & internet, Connected devices, Apps & notifications, Battery, Display, Sound, Storage, Security & location, Accounts, Accessibility, Google, System and About tablet. This identifies Android's Settings app inside the emulator. The ADB option needed here is in LDPlayer's outer Windows settings panel. Its selected value is still unknown. First open that host panel; no Android Developer options or root changes are required.
-
-In LDPlayer's outer Windows window, click the Settings icon near the top of the vertical toolbar at the far right. Alternatively use the three-horizontal-lines menu at the top-right of the outer window, near the Windows minimize/maximize/close controls, then Settings. The vendor's screenshots show a separate settings dialog with a left category list. Look near the bottom for Other settings / Others, then ADB debugging > Open local connection. Save and restart only LDPlayer if changing that option, then wait for Android's home screen. Leave Root permission unchanged.
-
-The [official toolbar/settings screenshots](https://www.ldplayer.net/support/how-to-solve-locked-screen.html) illustrate this route, but do not prove the exact layout of installed9.5.3. The linked article's root/unlock script is unrelated and should not be followed. The [LDPlayer9 menu guide](https://www.ldplayer.net/support/use-fps-settings-offered-by-ldplayer.html) also shows opening Settings from the menu. If the category or ADB option is still absent, ask the user to attach a screenshot of the full LDPlayer window with the settings dialog, title bar, left category list and right toolbar visible. The screenshot will establish the actual interface; do not invent another menu path or modify config files blindly. No Git pull or server rebuild is needed.
+Keep LDPlayer open and run the block below in a normal Windows PowerShell window. It uses the already-installed SDK ADB. Local connection was requested in the prior instructions and the user reports completing the save/restart; that does not independently prove a working ADB transport. No further settings, root or emulator restart is requested now.
 
 ## 2. Test the default local endpoint and read actual ready-device properties
 
@@ -47,7 +43,7 @@ Paste this in a normal PowerShell window. The listener check reads only ports503
         }
     })
     if ($serials.Count -eq 0) {
-        'LDPlayer is not ready in ADB. Send all output and the selected ADB setting.'
+        'LDPlayer is not ready in ADB. Send all output.'
         return
     }
     $serial = $serials[0]
@@ -67,9 +63,9 @@ Paste this in a normal PowerShell window. The listener check reads only ports503
 }
 ```
 
-Expected: connected/already connected to127.0.0.1:5555, a ready device row, boot completion1, and Android model/release/API/ABI values. A blank native bridge can be valid. Return all output including listener rows (or no rows), CONNECT_EXIT, DEVICES_EXIT, PROPERTY/PROPERTY_EXIT and any daemon/error messages. If it fails, return the selected LDPlayer ADB setting too. Do not interpret CONNECT_EXIT0 alone as success: some ADB connection failures are printed with zero exit. Only a successful devices command and a ready row for the specific candidate serial or the observed emulator-5554 alias permit property queries; unrelated devices are ignored. The TCP serial is preferred if both aliases appear. A failed property query stops further properties.
+Expected: connected/already connected to127.0.0.1:5555, a ready device row, boot completion1, and Android model/release/API/ABI values. A blank native bridge can be valid. Return all output including listener rows (or no rows), CONNECT_EXIT, DEVICES_EXIT, PROPERTY/PROPERTY_EXIT and any daemon/error messages. Do not interpret CONNECT_EXIT0 alone as success: some ADB connection failures are printed with zero exit. Only a successful devices command and a ready row for the specific candidate serial or the observed emulator-5554 alias permit property queries; unrelated devices are ignored. The TCP serial is preferred if both aliases appear. A failed property query stops further properties.
 
-This diagnostic block parses with the available Linux PowerShell7.4.6 verifier and uses Windows PowerShell5.1 syntax. Windows listener/connection execution remains pending. If it still finds no target, investigate the reported setting, listener state and actual instance configuration before changing tools or trying more ports. API/ABI selection, offline Android dependencies, local game data/OBB, LAN play and MongoDB remain pending.
+This diagnostic block parses with the available Linux PowerShell7.4.6 verifier and uses Windows PowerShell5.1 syntax. Windows listener/connection execution remains pending. If it still finds no target after the reported settings change/restart, inspect the returned listener and connection evidence before requesting further changes or trying more ports. API/ABI selection, offline Android dependencies, local game data/OBB, LAN play and MongoDB remain pending.
 
 ## Reference: restart the verified server if it has stopped
 
