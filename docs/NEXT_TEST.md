@@ -1,8 +1,8 @@
-# Build and test GLib on Android
+# Build and test font selection and Cairo rendering
 
-Your Windows gettext/PCRE2/libffi build and all LDPlayer probe checks passed. The repeated LLVM output-stream error is resolved. Keep the successful `build/android-text-base` and `build/android-glib-deps` directories and the backup already saved.
+Your GLib2.82.1 Windows build and every LDPlayer probe check passed. Preserve that completed stage and all earlier successful prefixes.
 
-The next stage builds GLib 2.82.1, GObject, GIO, GModule and the GThread compatibility archive from the existing cached source. It consumes both verified prerequisite prefixes read-only and uses the selected NDK's system zlib interface for GIO compression. No tool installation or cache download is needed.
+The next independent stage builds cached Expat2.5.0, Fontconfig2.17.1 and Cairo1.16.0 using the existing tools. It consumes the completed fonts/text-base prefixes read-only. No source download or package installation is needed.
 
 ## Pull the prepared update
 
@@ -32,38 +32,37 @@ Return to offline use and keep LDPlayer open with Android booted. Paste this ent
     Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Build-WindowsAndroidGlib.ps1'
-    if ($LASTEXITCODE -ne 0) { throw 'GLib build failed. Send the complete output.' }
+        -File '.\tools\Build-WindowsAndroidTextRender.ps1'
+    if ($LASTEXITCODE -ne 0) { throw 'Text rendering build failed. Send the complete output.' }
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Test-AndroidGlib.ps1' -Serial '127.0.0.1:5555'
-    if ($LASTEXITCODE -ne 0) { throw 'GLib device test failed. Send the complete output.' }
+        -File '.\tools\Test-AndroidTextRender.ps1' -Serial '127.0.0.1:5555'
+    if ($LASTEXITCODE -ne 0) { throw 'Text rendering device test failed. Send the complete output.' }
 }
 ```
 
-The build uses D:\Test\msys64, existing MSYS Python/Meson/Ninja and NDK 26.3.11579264 with two jobs. Its separate output is D:\Test\wesnoth-setup\wesnoth_client\build\android-glib. Configuration and compilation can take several minutes; let the helper finish. No repeated backup or rebuilding of successful prerequisite stages is required. Feature checks reporting unsupported facilities are not by themselves build failures; use the exit status and final markers.
+The build uses D:\Test\msys64, existing MSYS Python/Meson/Make/Ninja and NDK26.3.11579264 with two jobs. Its separate output is D:\Test\wesnoth-setup\wesnoth_client\build\android-text-render. Let configuration and compilation finish. No repeated backup or rebuilding of earlier stages is required.
 
-The test uses native Windows Python 3.14.3 to verify all three prefixes and receipts before SDK ADB transfers one executable to 127.0.0.1:5555. It checks Unicode conversion and errors, regular expressions, serialized values, object signals/lifetime, gzip memory streams, threads/main-loop delivery and process-symbol lookup. No APK installation, new app screen, game-data transfer or running server is needed.
+The device helper first uses native Windows Python3.14.3 to verify the completed fonts/text-base and new text-rendering prefixes and receipts. It then verifies exactly these existing files under D:\Test\wesnoth-setup\gamedata-1.19.26 against their pinned sizes and hashes: fonts/Lato-Regular.ttf, fonts/DejaVuSans.ttf and fonts/COPYING. Before ADB starts, it stops if any required input differs.
+
+The test sends one native executable and those three small font/license files to a unique directory on the selected LDPlayer instance. It checks incremental XML parsing and error handling, private font registration and selection, fallback from Lato to DejaVu Sans for an Arabic character, image compositing and glyph rendering into memory. No new APK screen or running server is needed. This is font selection and rendering; full paragraph shaping/bidirectional layout remains a later Pango checkpoint.
 
 Expected completion lines:
 
 ```text
-ANDROID GLIB BUILD PASS
-ANDROID GLIB BUILD COMPLETE: ...\build\android-glib\receipt.json
+ANDROID TEXT RENDER BUILD PASS
+ANDROID TEXT RENDER BUILD COMPLETE: ...\build\android-text-render\receipt.json
 ANDROID TEXT BASE ARTIFACTS VERIFIED
-ANDROID GLIB DEPS ARTIFACTS VERIFIED
-ANDROID GLIB ARTIFACTS VERIFIED
-WESNOTH_ANDROID_GLIB version=1.19.26 abi=x86_64 min_api=23
-PASS GLib Unicode and regex
-PASS GLib variants
-PASS GObject signals and lifetime
-PASS GIO streams and compression
-PASS GLib threads and main context
-PASS GModule process symbols
-PASS wesnoth-android-glib
-ANDROID GLIB TEST PASSED
+ANDROID FONTS ARTIFACTS VERIFIED
+ANDROID TEXT RENDER ARTIFACTS VERIFIED
+WESNOTH_ANDROID_TEXT_RENDER version=1.19.26 abi=x86_64 min_api=23
+PASS Expat XML and errors
+PASS Fontconfig private font selection
+PASS Fontconfig character fallback
+PASS Cairo image compositing
+PASS Cairo FreeType glyph rendering
+PASS wesnoth-android-text-render
+ANDROID TEXT RENDER TEST PASSED
 ```
 
-The probe also prints GLib and zlib versions. GLib must be 2.82.1; the NDK zlib header version and Android system zlib runtime version can differ. The compression round trip tests the selected interface on the actual device.
-
-Send the complete console output on success or failure. The helpers stream to the console without creating a transcript; Meson configuration details remain in build/android-glib/build/glib/meson-logs/meson-log.txt. The device helper prints its retained executable directory. The VPS build and host checks cannot establish Windows compilation or Android execution of this new stage; those results await this test. Full text layout, the game APK/OBB and gameplay remain later steps.
+The probe also reports Expat2.5.0, Fontconfig21701 (2.17.1), Cairo1.16.0 and FreeType2.13.0. Send the complete console output on success or failure. These helpers stream output without creating a transcript; package configure logs and Meson's log remain under build/android-text-render/build. The device helper prints the retained test directory. Actual Windows compilation and LDPlayer execution of this new batch remain pending until your result. The game APK, asset import/OBB, gameplay and MongoDB remain later required work.
