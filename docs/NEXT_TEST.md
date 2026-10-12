@@ -1,10 +1,10 @@
-# Build and run the first native Android dependency test
+# Build and run the first SDL graphics/input APK
 
-Windows dependency preparation passed: NDK 26.3.11579264/clang 17.0.2, private SCons 4.11.0, Gradle 8.9/AGP 8.7.3 and selected Java/Windows AAPT2 caches. Online and offline resolution produced the same 24 artifact hashes. Prerequisite .3 completed with zero blockers and exit 0. The earlier connection reset did not recur; no additional online setup or inventory is needed now.
+The Windows native bootstrap build and actual LDPlayer execution passed. All five compression/C++ checks succeeded. The NDK CMake deprecation warnings were nonfatal. Dependency setup, the first native compiler/runtime test and local ADB connection are complete; keep their existing tools, caches and successful artifacts.
 
-Next, compile the real bzip2 1.0.8 library and a small C++ test program for Android x86_64/API23, then run the program on the verified LDPlayer Android 9/API28 device. It tests bzip2/zlib compression, C++ runtime support and exceptions. This creates the first target library and verifies native compile/link/device execution before porting the remaining dependencies. **It is a command-line native test, not a game APK or playable client.** No game window is expected.
+The next checkpoint creates a separate **Wesnoth SDL Check** Android app. It builds the same SDL 3.4.2 native library and matching Java code used by the restored game source, opens an OpenGL ES landscape screen, and exercises tap input. It does not load the game engine or game data yet. The expected visible result is a colored target with tap/frame counters and an animated bar.
 
-## 1. Pull the native bootstrap tools
+## 1. Pull the APK build/test tools
 
 Temporarily connect to GitHub and run in normal PowerShell:
 
@@ -23,9 +23,9 @@ Temporarily connect to GitHub and run in normal PowerShell:
 
 Preserve local work, server-local core.filemode=false and stash f0c22d3. Stop on a pull conflict without reset, clean or stash application.
 
-## 2. Build offline and run in LDPlayer
+## 2. Build offline, install and test in LDPlayer
 
-Internet access is no longer needed for these commands. Keep LDPlayer running and wait for its Android home screen. The test uses its already verified local ADB endpoint; no settings change or server restart is needed.
+Keep LDPlayer open at its Android home screen. Internet access is unnecessary for the build and device test. The helper selects the existing native CMake/Ninja/NDK, Windows Python and Android Studio Java, and uses Gradle --offline with SDK auto-downloads disabled.
 
 ```powershell
 & {
@@ -33,31 +33,39 @@ Internet access is no longer needed for these commands. Keep LDPlayer running an
     Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Build-WindowsAndroidBootstrap.ps1'
+        -File '.\tools\Build-WindowsSdlCheck.ps1'
     if ($LASTEXITCODE -ne 0) {
-        throw 'Android native build failed. Send the complete console output.'
+        throw 'SDL APK build failed. Send the complete console output.'
     }
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Test-AndroidBootstrap.ps1' `
+        -File '.\tools\Test-AndroidSdlCheck.ps1' `
         -Serial '127.0.0.1:5555'
     if ($LASTEXITCODE -ne 0) {
-        throw 'Android native runtime test failed. Send the complete console output.'
+        throw 'SDL APK test failed. Send the complete console output.'
     }
 }
 ```
 
-The build uses existing Windows Python 3.14, native CMake 4.3.0, native Ninja 1.13.2 and NDK 26.3.11579264. It verifies the cached bzip2 source archive before using it and downloads nothing. It builds in a separate ignored `build/android-native-bootstrap` directory, preserving engine/ and build/android-source. The executable links the newly built bzip2 library, Android system zlib and the matching NDK C++ runtime. This checkpoint uses the native Windows CMake toolchain; it does not establish that the eventual SCons/MSYS2 game build is ported.
+The first build compiles SDL and Java and packages a debug APK. Let it finish; later unchanged builds reuse the outputs. Native CMake feature probes can report "not found" for unavailable optional features; the final result and process exit determine success. If an offline cache input is missing, send its exact error before installing packages or rerunning connected setup.
 
-Expected files are `out/lib/libbz2.a`, `out/bin/wesnoth-native-check`, `out/bin/libc++_shared.so`, and a build receipt under `build/android-native-bootstrap`. The receipt records inputs and artifact hashes. The device helper verifies them before ADB, checks the selected device's boot/API/ABI, then pushes only the executable and C++ runtime into a uniquely named directory under `/data/local/tmp/wesnoth-native-bootstrap`. It does not install an APK, request root or change game/server data.
+Expected build marker: `SDL CHECK APK BUILD COMPLETE`. The APK is at:
 
-Expected runtime output includes identifying Android x86_64/API23 information, successful compression/C++ checks, and final `ANDROID NATIVE BOOTSTRAP TEST PASSED`. A nonzero device command or missing success marker is a failure. Send the complete build and test console output, including errors. The receipt is useful build evidence; these wrappers print to the console rather than creating a new diagnostics transcript.
+```text
+D:\Test\wesnoth-setup\wesnoth_client\build\android-sdl-apk\app\build\outputs\apk\debug\app-debug.apk
+```
 
-After this passes on Windows and LDPlayer, continue with remaining native dependencies and the actual client build. Keep the prepared SDK, private SCons, Gradle caches and the 23 native source archives for offline work. Do not rerun the connected setup merely to build this checkpoint.
+The builder verifies the SDL source archive, exact matching Java files, Android x86_64/API23 libraries, APK native payload, package/SDK metadata and APK signature. The receipt is build/android-sdl-apk/receipt.json. The package is org.wesnoth.offlinecheck, version 1.0/code 1, with minimum API23 and target35. It is separate from the eventual game app. Original engine/, build/android-source and build/android-native-bootstrap remain preserved.
+
+The device helper checks current source and artifact hashes before ADB, verifies the selected API/ABI, installs this APK, and launches a fresh test run. It reads only that app's process logs without clearing device logs. A READY marker must confirm a presented OpenGL ES frame; then an automated center tap must produce a presented INPUT response from the same run. The final expected marker is `ANDROID SDL CHECK AUTOMATED TEST PASSED`.
+
+After the automated test finishes, leave the app open and click its colored target a few times. Confirm that the tap counter increases, the color changes and the animation continues. Send the full build/test console output and describe the visible result. If the display is blank or incorrect, include a screenshot of the app. These helpers print to the console; they do not create a new diagnostics transcript.
+
+This validates SDL graphics/input, JNI library loading and a first APK build/install. The actual Wesnoth client, remaining dependency libraries, game data/OBB, audio, LAN gameplay and MongoDB still need implementation/testing. The working server does not need a rebuild or restart for this step.
 
 ## Reference: restart the verified server if it has stopped
 
-The server is already running in the latest report; no restart is needed for the native bootstrap test. If you stop it later, start it again in a separate normal PowerShell window:
+The server is already running in the latest report; no restart is needed for the SDL APK test. If you stop it later, start it again in a separate normal PowerShell window:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
@@ -68,7 +76,7 @@ Keep that window open; Ctrl+C stops the server. The printed transcript path is d
 
 ## Reference: update and rebuild after future implementation changes
 
-These commands are retained for later code changes, not required for the current native bootstrap step. Temporarily connect to GitHub and pull using the established MSYS2 route:
+These commands are retained for later code changes, not required for the current SDL APK step. Temporarily connect to GitHub and pull using the established MSYS2 route:
 
 ```powershell
 & {

@@ -40,9 +40,9 @@ No wrapper .bat is present upstream, so setup explicitly runs org.gradle.wrapper
 
 The VPS retains all23 upstream-named native source archives in original client packaging/android/download/, totaling313,798,831bytes. Their tar member traversals succeeded and compressed byte hashes are recorded in tools/android-native-archives.json. These hashes establish parity with the audited VPS cache, not publisher signature/checksum verification or successful compilation. Windows now verified all 23 source archive sizes and SHA256 values against these copies. No usable native .a/.so outputs were found in the original client tree, and no binary archives are committed to Git.
 
-## First native build and device checkpoint
+## Completed native build and device checkpoint
 
-New bootstrap tools build verified bzip2 1.0.8 and a small Android x86_64/API23 C++ executable, using the official NDK CMake toolchain with the existing native CMake/Ninja versions. The executable checks compression through bzip2 and Android system zlib, plus C++ STL/exception support. Artifact/receipt checks precede an explicit-serial ADB test on LDPlayer. Existing engine and prepared Gradle source are unchanged. This is a first real native dependency build and runtime test, not an APK, graphics/SDL test or LAN game.
+The bootstrap tools build verified bzip2 1.0.8 and a small Android x86_64/API23 C++ executable, using the official NDK CMake toolchain with the existing native CMake/Ninja versions. The executable checks compression through bzip2 and Android system zlib, plus C++ STL/exception support. Artifact/receipt checks precede an explicit-serial ADB test on LDPlayer. Existing engine and prepared Gradle source are unchanged. This is a first real native dependency build and runtime test, not an APK, graphics/SDL test or LAN game.
 
 Google documents [CMake as a supported NDK build route](https://developer.android.com/ndk/guides/cmake). The remaining upstream dependencies mix Autoconf, Meson, Boost and SDL build systems; [Google cautions that Autoconf projects are generally not buildable on Windows](https://developer.android.com/ndk/guides/other_build_systems#autoconf). Therefore full Windows native integration remains substantive work. Future choices may include portable recipes or a reproducible target-library bundle built on the VPS with the same NDK; neither approach is claimed completed or selected for all remaining libraries in this checkpoint.
 
@@ -66,10 +66,46 @@ The tool validates seven x86_64 bzip2 objects, the executable's Android API23 no
 
 For changes to these helpers, run `python3 tests/test_android_bootstrap.py` and `python3 tests/test_android_bootstrap_windows.py --pwsh /tmp/wesnoth-audit-pwsh/pwsh` on the VPS. The latter uses the locally available Linux PowerShell to simulate Windows tools and ADB. Nineteen builder tests and 17 wrapper fixtures passed; the wrapper also accepted the real cross-build receipt/artifacts with ADB simulated. Neither test replaces actual Windows/LDPlayer evidence.
 
+## SDL graphics/input APK checkpoint
+
+Actual Windows bootstrap compilation and LDPlayer execution now passed, including bzip2/system-zlib roundtrips, C++ STL and exception unwinding. The effective zlib header version is 1.2.8 for native target API23; the device reports runtime 1.2.11. The NDK applies that header compatibility override deliberately, and the roundtrip passed. Keep the successful bootstrap and original game stage.
+
+The new tools/build_android_sdl_check.py uses the verified cached SDL3-3.4.2 archive, which contains 2,176 regular files and eleven Java glue sources matching the restored engine byte for byte. It creates a separate managed build/android-sdl-apk project and compiles shared SDL3/main libraries with NDK r26d, x86_64/API23 and shared libc++. A simple SDL callback program uses the built-in debug font, so this checkpoint needs no SDL_image, SDL_ttf or game assets. It explicitly selects the OpenGL ES 2 renderer, draws a landscape target/animation and reports input after presentation. These libraries are a reusable foundation, but the probe does not compile the game engine.
+
+The isolated Gradle project uses the existing 8.9/AGP 8.7.3, SDK35/build-tools34 and Java21. It needs no AndroidX artifacts. Gradle runs with --offline; the exact completed wrapper cache must exist before invoking Java, and SDK auto-downloads are disabled. The builder preserves the old managed source before regenerating its own project files, validates native ELF/API/dependencies, compares the packaged three-library payload, checks package/SDK/ABI metadata with AAPT2 and verifies the debug signature with apksigner. Failed builds do not leave a successful APK receipt. Project and artifact hashes gate installation.
+
+Build-WindowsSdlCheck.ps1 uses the confirmed Windows paths and reports the selected SDK package revisions. Test-AndroidSdlCheck.ps1 installs only org.wesnoth.offlinecheck, launches with a unique run identifier, reads process-specific logs and requires both first-frame and input-response markers. It leaves the app open for the user's visual click/counter/color/animation confirmation. See NEXT_TEST.md for exact commands. No actual SDL display/input success on Windows/LDPlayer is claimed until that result returns.
+
+The native/Java arrangement follows the [SDL Android port](https://github.com/libsdl-org/SDL/blob/release-3.4.2/docs/README-android.md); native source comes from the existing pinned archive. The latest SDL wiki may describe newer NDK defaults, so it does not silently change this project's proven r26d profile.
+
+## Reproduce the SDL APK build on the VPS
+
+The complete SDL APK build passed with Docker networking disabled. Fifteen builder tests, seventeen wrapper fixtures and a real-APK/receipt integration with mocked ADB passed. The resulting signed debug APK is 3,483,756 bytes. These checks establish compilation, packaging, signature and helper control flow; the user's LDPlayer graphics/input result remains pending.
+
+The combined tools/Dockerfile.android-sdl-verify reuses the existing server verification image and Java/Gradle image. For the current prepared VPS, run from the client repository:
+
+```sh
+docker build --network none -t wesnoth-android-sdl-verify:ndk26-java21 \
+  -f tools/Dockerfile.android-sdl-verify tools
+docker run --rm --network none \
+  -v "$PWD:/workspace" -v /tmp/wesnoth-gradle-cache-check:/cache \
+  -w /workspace wesnoth-android-sdl-verify:ndk26-java21 \
+  python3 -I tools/build_android_sdl_check.py \
+    --ndk /workspace/build/toolchains/android-ndk-r26d \
+    --cmake /opt/build-tools/bin/cmake --ninja /opt/build-tools/bin/ninja \
+    --java /opt/java/openjdk/bin/java \
+    --sdk /workspace/build/toolchains/android-sdk \
+    --gradle-user-home /cache/userhome --jobs 2
+```
+
+This command assumes the recorded Linux NDK/SDK35/build-tools34 and completed Gradle/AAPT2 caches have already been prepared. Exact package provenance is in BASELINE.md. It is not a bootstrap command for an empty machine. Windows uses its existing installations and does not need Docker or these Linux downloads. The script always invokes Gradle --offline and emits a successful receipt only after APK/signature/content validation.
+
+For relevant helper changes, run `python3 tests/test_android_sdl_check.py` and `python3 tests/test_android_sdl_check_windows.py --pwsh /tmp/wesnoth-audit-pwsh/pwsh`. The PowerShell fixtures simulate Windows/ADB and cannot establish graphics on a device. Keep the original game-stage guards intact until the actual game native build is ready.
+
 ## Remaining implementation and verification
 
-1. Run the offline native bootstrap build and LDPlayer test in NEXT_TEST.md. Tool/cache preparation and all native source archive hashes are already verified; preserve the existing installations and caches.
-2. Port MSYS2/native dependency commands and SCons Android tool selection to the Windows NDK host. Separate native API23 from Java SDK35; ensure all paths/quoting work and prohibit network downloads during offline builds. Google's [NDK guidance](https://developer.android.com/ndk/guides/other_build_systems) cautions about Autoconf on Windows, so this requires actual cross-build validation.
+1. Run the offline SDL APK build/install/graphics/input test in NEXT_TEST.md. The native bootstrap has already passed on Windows and LDPlayer; preserve the existing installations, source stage and caches.
+2. Port the remaining native dependencies and SCons Android tool selection to the Windows NDK host. Pango 1.50.14 requires FriBidi >=1.0.6, absent from the current 23-archive cache; its wrap points to Git master. Pin and provision that source before an offline text-stack build, rather than allowing a Meson download. GLib's gvdb sources are already bundled.  Separate native API23 from Java SDK35; ensure all paths/quoting work and prohibit network downloads during offline builds. Google's [NDK guidance](https://developer.android.com/ndk/guides/other_build_systems) cautions about Autoconf on Windows, so this requires actual cross-build validation.
 3. Build the x86_64 dependency libraries and libmain.so, supply matching SDL Java sources, validate ABI/nonempty outputs, then permit Gradle packaging with the complete offline cache. Windows build and matching VPS verification remain required; current source-stage tests are not compilation tests.
 4. Deliver game data and implement/test asset import/OBB behavior. Install a nonempty debug APK to the known device serial, test local single-player and a LAN turn against the verified server, then implement local MongoDB persistence. Neither successful ADB nor the server smoke test establishes those milestones.
 
