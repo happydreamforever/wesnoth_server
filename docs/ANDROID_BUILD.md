@@ -1,6 +1,6 @@
 # Android build checkpoint
 
-Current checkpoint (2026-10-12): Windows font compilation and actual LDPlayer shaping/rasterization now pass; see the latest BASELINE.md evidence. The first MSYS diagnostic confirmed tool versions but stopped at an interpreter path comparison before compilation. Pull and rerun the corrected Test-WindowsAndroidTextToolchain.ps1 from NEXT_TEST.md; it verifies executable aliases and actual Python/Meson runtime identity before the Make/pkg-config/native-NDK path check. Completed stages below are retained as reproduction history.
+Current checkpoint (2026-10-12): Windows font compilation and actual LDPlayer shaping/rasterization now pass; see the latest BASELINE.md evidence. The first MSYS diagnostic confirmed tool versions but stopped at an interpreter path comparison before compilation. The corrected helper pull is currently blocked by a local client shell-helper difference; use the guarded recovery and rerun in NEXT_TEST.md; it verifies executable aliases and actual Python/Meson runtime identity before the Make/pkg-config/native-NDK path check. Completed stages below are retained as reproduction history.
 
 The first emulator target is x86_64 on the user's verified LDPlayer Android9/API28. The native minimum API remains23. Compile/target SDK35 is a build setting and does not require the emulator to run Android35. The ARM entries in the reported ABI list and libnb.so identify advertised translation support; ARM APK execution has not been tested. A physical-phone ABI will be selected from that phone's actual report later.
 
