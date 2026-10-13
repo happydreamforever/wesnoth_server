@@ -1,6 +1,6 @@
-# Build and test OpenSSL/curl on Windows and LDPlayer
+# Retry OpenSSL/curl after the Windows header-selection fix
 
-The actual Windows Boost build and every LDPlayer check passed in boost-20261013-023639-578.txt. Keep all completed stages. This checkpoint builds OpenSSL 3.4.1 and curl 8.1.1 from their existing cache and runs a native Android test. It does not install an APK or open a visible app window.
+The returned network-20261013-034501-839.txt confirms that MSYS Perl/Make finished OpenSSL generation, then header verification stopped the build before compilation. Windows wildcard matching includes two uppercase VMS .H files that Linux excludes. The fix selects and installs explicit public-header lists while retaining all original header hashes. Windows compilation and Android execution still need this retry. All earlier stages, including Boost, remain complete. This test does not install an APK or open a visible app window.
 
 While temporarily connected to GitHub, paste this into normal PowerShell. It uses the verified MSYS2 Git and stops if either pull fails:
 
@@ -18,7 +18,7 @@ While temporarily connected to GitHub, paste this into normal PowerShell. It use
 }
 ```
 
-Disconnect from the internet, keep LDPlayer running and run this second block. The build uses existing MSYS2 Perl/Make to generate OpenSSL files, then native Python/CMake/Ninja/NDK for Android compilation. The helper defaults to the verified MSYS2 root D:\Test\wesnoth-setup\msys64. No package installation or download is required. The server need not run. Let the build finish; output is saved automatically.
+Disconnect from the internet, keep LDPlayer running and run this second block. The build uses existing MSYS2 Perl/Make to generate OpenSSL files, then native Python/CMake/Ninja/NDK for Android compilation. The helper defaults to the verified MSYS2 root D:\Test\wesnoth-setup\msys64. No package installation or download is required. The server need not run. The block first renames only the previous build/android-network directory to a unique backup because its interrupted generation has no completed state. Keep that backup. Source archives and all earlier stages stay in place. Let the build finish; output is saved automatically.
 
 ```powershell
 & {
@@ -28,13 +28,29 @@ Disconnect from the internet, keep LDPlayer running and run this second block. T
     $log = Join-Path (Get-Location).Path ('diagnostics\network-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.txt')
     try {
         & {
-            powershell.exe -NoProfile -ExecutionPolicy Bypass `
-                -File '.\tools\Build-WindowsAndroidNetwork.ps1'
-            if ($LASTEXITCODE -ne 0) { throw 'Network build failed. Send the saved log.' }
+            try {
+                $stage = Join-Path (Get-Location).Path 'build\android-network'
+                if (Test-Path -LiteralPath $stage) {
+                    $item = Get-Item -LiteralPath $stage -Force
+                    if (-not $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+                        throw 'Network build path is not a regular directory. Send this log.'
+                    }
+                    $backup = $stage + '-before-header-fix-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N')
+                    Move-Item -LiteralPath $stage -Destination $backup -ErrorAction Stop
+                    Write-Output "BUILD BACKUP SAVED: $backup"
+                }
 
-            powershell.exe -NoProfile -ExecutionPolicy Bypass `
-                -File '.\tools\Test-AndroidNetwork.ps1' -Serial '127.0.0.1:5555'
-            if ($LASTEXITCODE -ne 0) { throw 'Network device test failed. Send the saved log.' }
+                powershell.exe -NoProfile -ExecutionPolicy Bypass `
+                    -File '.\tools\Build-WindowsAndroidNetwork.ps1'
+                if ($LASTEXITCODE -ne 0) { throw 'Network build failed. Send the saved log.' }
+
+                powershell.exe -NoProfile -ExecutionPolicy Bypass `
+                    -File '.\tools\Test-AndroidNetwork.ps1' -Serial '127.0.0.1:5555'
+                if ($LASTEXITCODE -ne 0) { throw 'Network device test failed. Send the saved log.' }
+            } catch {
+                Write-Output ('ERROR: ' + $_.Exception.Message)
+                throw
+            }
         } 2>&1 | Tee-Object -FilePath $log
     } finally { Write-Host "Saved log: $log" }
 }
