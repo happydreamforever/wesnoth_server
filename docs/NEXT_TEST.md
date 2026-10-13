@@ -1,25 +1,70 @@
-# Complete the first offline turn
+# Connect the Android game to the Windows server
 
-Windows APK packaging, signing, installation, complete OBB import and the visible main menu now pass. The user confirms that they have not played a turn yet. Use the game already open in LDPlayer; this test needs no pull, build, reinstall or server command. Keep the installed app and all completed build/data stages.
+The user reports that the requested local turn test is okay. Local gameplay is recorded as a user-reported pass; no new gameplay log was supplied. The next checkpoint is the installed Android game joining the existing Windows server and reaching turn 2 in a multiplayer game against the AI. No server rebuild, APK rebuild, reinstall or game-data copy is needed.
 
-1. Disconnect internet for this local test, leaving LDPlayer running.
-2. From the main menu choose **Campaigns**.
-3. Select **Heir to the Throne, Classic**. Choose **Fighter / Easy**, then **Play**. This is the Classic campaign; the newer campaign has a similar name.
-4. Answer **Yes** to **Play Battle Training?**, then choose either hero.
-5. Follow the instructions to select/move your hero and attack the training dummy.
-6. When prompted, press **End Turn** at the bottom right. Wait for the dummy's turn and confirm that control returns on **turn 2** (the healing lesson).
+Use normal Windows PowerShell. Temporarily connect to GitHub for this update:
 
-The exact gamedata-1.19.26 version puts this tutorial inside the Classic campaign; its title screen has no separate Tutorial button. End Turn is intentionally disabled until the movement and first attack lessons are completed.
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
+    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
+        $repo = '/d/Test/wesnoth-setup/' + $name
+        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
+        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Send the output." }
+        & $bash --noprofile --norc -c ('/usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
+        if ($LASTEXITCODE -ne 0) { throw "Could not read $name commit. Send the output." }
+    }
+}
+```
 
-Expected result: the map, terrain, units and text render; unit selection/movement/attack respond; the AI takes its turn; turn 2 begins without a crash. Also note whether music or sound effects are audible. This establishes the first local playable turn; it does not yet establish the client/server LAN game.
+This delivers the new read-only server address helper and updated project records. Keep the installed org.wesnoth.offline app, its imported OBB data, all native/build receipts, existing stashes/backups and unrelated README edits.
 
-Report:
+After updating, disconnect the internet/WAN connection while keeping Windows connected to the local Wi-Fi router or Ethernet network. Turning off Wi-Fi or unplugging Ethernet would remove the LAN connection this test needs. If no local network is available, return the address helper's report before choosing another connection method. Start LDPlayer and keep the game at its main menu.
 
-- Did the training map open, and were the map/text readable?
-- Did movement and attack work, and did turn 2 begin?
-- Was music or sound audible, and was internet disconnected?
-- If anything failed, the last successful action and exact visible error or screen state.
+## Start the existing server
 
-On a successful manual test, a short written result is enough. On failure, report what happened before rerunning the APK installer or changing build files. The previous successful startup logs are retained under diagnostics/game-20261013-141502-308-32ac9f66ce3741e4a0ca9f94f46e35a9.txt, game-logcat-20261013-144318-475-da8d4905c22944da8f5a9a3464550cf1.txt and game-userdata-20261013-144318-661-da8d4905c22944da8f5a9a3464550cf1. New gameplay errors may require a fresh scoped log capture; the saved startup logs do not automatically include later play.
+If the server is already running, keep its window open and proceed to the address report. Otherwise run this in the first PowerShell window:
 
-After the local turn is confirmed, the next checkpoint connects this Android game to the existing Windows server and completes a LAN turn without internet. Phone testing, MongoDB integration and custom game features remain subsequent required work. For the later server launch use the recorded current MSYS2 root explicitly, because the existing launcher still defaults to the historical D:\Test\msys64 path; no global default or runtime changes are requested now.
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsServer.ps1' `
+    -MsysRoot 'D:\Test\wesnoth-setup\msys64'
+```
+
+Expected: Wesnoth server 1.19.26 starts on TCP port 15000 and prints its server-run log path. Leave this window open. The explicit MSYS2 path uses the verified current installation; the launcher's historical default remains unchanged.
+
+If Windows asks about firewall access, allow wesnothd on your trusted Private network. Do not disable the firewall. If the current network is Public or the client times out, keep its settings and return the reports for a specific connection fix.
+
+## Read the Windows server address
+
+In a second PowerShell window run:
+
+```powershell
+& {
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Show-WindowsLanAddress.ps1'
+    if ($LASTEXITCODE -ne 0) { throw 'Server address check failed. Send the saved report and server log.' }
+}
+```
+
+Expected: the report lists a wesnothd listener and one or more **Server** addresses, for example `192.168.1.25:15000`, followed by `LAN ADDRESS REPORT COMPLETE`. Use the actual printed address. If there are multiple rows, start with the adapter connected to your local router. Do not enter the example address, the ADB address or Android's 127.0.0.1.
+
+The helper reads physical adapter IPv4 addresses, network profiles and local TCP listeners. It saves server diagnostics/lan-address-*.txt and changes no network/firewall settings. A report pass establishes local metadata only; the Android connection below is the real test. See Microsoft's [Get-NetAdapter](https://learn.microsoft.com/en-us/powershell/module/netadapter/get-netadapter), [Get-NetIPAddress](https://learn.microsoft.com/en-us/powershell/module/nettcpip/get-netipaddress) and [Get-NetTCPConnection](https://learn.microsoft.com/en-us/powershell/module/nettcpip/get-nettcpconnection) references.
+
+## Join and play in LDPlayer
+
+1. In the game choose **Multiplayer**. Set **Login** to `UniLAN`, select **Connect to Server**, then **OK**.
+2. Enter the printed **Server** address under **Address**, then **Connect**.
+3. Confirm the lobby shows `Welcome to the offline Wesnoth LAN server.` and your player name.
+4. Choose **Create Game**, select **Scenarios**, then **2p — The Freelands** and era **Default**. Name it `Offline-LAN-Test`, leave the password empty, then **Create Game**.
+5. In **Game Lobby**, leave side 1 assigned to `UniLAN`. Change side 2's controller to **Computer Player**. Keep the opposing North/South teams and random factions.
+6. Press **I'm Ready**. Move your leader to a highlighted adjacent hex, then **End Turn**. Confirm the AI acts and your **turn 2** begins. Leave the game and server running.
+
+No second human is needed for this check. If I'm Ready stays disabled, check that side 2 is Computer Player and no unoccupied Network Player side remains. These labels and the scenario were checked against the supplied 1.19.26 source/data.
+
+Return whether the lobby appeared, the game started, turn 2 began and internet/WAN was disconnected while the local connection remained active. Also return the saved server diagnostics/lan-address-*.txt and server-run-*.txt files. On failure include the exact visible error and last successful step; do not reinstall or rebuild first.
+
+Expected server events include `UniLAN has logged on`, `created game:` and `started game:`. The normal info log does not record every turn, so your visible turn-2 observation is still needed. Periodic game/user counts alone do not prove a playable turn.
+
+This validates the actual Android client/server session using the Windows LAN address and one human plus AI. LDPlayer on the same Windows computer does not establish separate-phone connectivity or synchronization between two human devices. Physical-phone support, those additional tests, MongoDB persistence and custom game features remain subsequent work.

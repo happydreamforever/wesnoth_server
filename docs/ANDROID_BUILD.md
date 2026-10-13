@@ -1,16 +1,16 @@
 # Android build checkpoint
 
-Current checkpoint (2026-10-13): Windows game-20261013-141502-308-32ac9f66ce3741e4a0ca9f94f46e35a9.txt confirms actual APK packaging, signing, installation, matching OBB transfer, all 26,748 data files imported and game activity startup on LDPlayer. The user separately confirms the main menu is visible and has not played a turn yet. Use the already installed game for NEXT_TEST.md: Campaigns -> Heir to the Throne, Classic -> Fighter/Easy -> Play Battle Training, then move, attack and advance to turn 2. No pull, rebuild or reinstall is needed for this manual check. A complete local turn and offline LAN turn are still required for the first milestone; audio/input details, phone testing and MongoDB remain unverified.
+Current checkpoint (2026-10-13): The user reports "All is okay" after the requested offline local-turn check. Record local gameplay as a user-reported pass, with no new gameplay log or independent network-disconnection measurement. Windows APK build, signing, complete OBB import and the visible menu were already confirmed. NEXT_TEST.md now connects the installed Android game to the existing Windows server at its LAN IPv4 address, enters the guest lobby and reaches turn 2 against AI. Pull the new Show-WindowsLanAddress.ps1 helper through current MSYS2 Git, launch the existing server with explicit -MsysRoot D:\Test\wesnoth-setup\msys64, then follow the verified 1.19.26 GUI steps. No rebuild, reinstall or data copy is needed. Keep local Wi-Fi/Ethernet connected while internet/WAN is disconnected. Actual client/server play, separate-phone connectivity, two-human synchronization and MongoDB remain unverified.
 
 The first emulator target is x86_64 on the user's verified LDPlayer Android9/API28. The native minimum API remains23. Compile/target SDK35 is a build setting and does not require the emulator to run Android35. The ARM entries in the reported ABI list and libnb.so identify advertised translation support; ARM APK execution has not been tested. A physical-phone ABI will be selected from that phone's actual report later.
 
 ## Selected inputs
 
-The machine-readable profile lives in client tools/android-build-profile.json. These are selected project inputs; their installation and full operation on both hosts are not yet verified.
+The machine-readable profile lives in client tools/android-build-profile.json. These are the selected project inputs. Actual Windows APK build and LDPlayer import/startup now pass; retain the separately recorded host differences and test scope.
 
 | Component | Selected value | Reason/status |
 | --- | --- | --- |
-| Engine/data core | Wesnoth1.19.26 | Restored engine commit75c84d2ed344b954d1fd308e588dfe13aef53b20; complete Windows game-data copy verified; Android import pending |
+| Engine/data core | Wesnoth1.19.26 | Restored engine commit75c84d2ed344b954d1fd308e588dfe13aef53b20; complete Windows game-data copy and actual Android OBB import verified |
 | First APK ABI | x86_64 | Actual LDPlayer primary ABI |
 | Native/minimum API |23 | Upstream minimum; compatible with actual device API28 |
 | Java compile/target SDK |35 | Upstream; installed Windows package metadata observed |
@@ -465,3 +465,6 @@ The already prepared cache and SDK/NDK are prerequisites. The builder refuses an
 Relevant tests: `python3 -B tests/test_android_game.py`, `python3 -B tests/test_android_game_data.py`, and `python3 -B tests/test_android_game_windows.py --pwsh build/host-tools/powershell-7.4.6/pwsh`. Pure-Java importer tests and their harness live in tools/native-game/tests. Full-data import/reuse runs on the host JVM, while actual Android storage, graphics and gameplay require the user's LDPlayer report.
 
 Actual VPS offline game packaging passed: signed debug APK 37,572,492 bytes, SHA256 325e9bdb2fc79cf6b3cb42b986b62fd05eb081c8b5e6787cf37cceeda99d2086. These identify this Linux build, not required Windows output bytes. The receipt binds 74 project inputs, 22 generated project files, Engine/Data receipts and all payloads. Windows signing/tool output can differ. Android runtime is still pending.
+
+
+Current runtime handoff: the user reports the requested local turn test is okay. Keep the installed x86_64 game, its OBB/imported data and all completed prefixes/receipts. NEXT_TEST.md now pulls a read-only Windows server address helper and tests the actual game against the existing guest server. No native or Gradle build, APK reinstall, new data transfer or dependency download is needed. Client/server play, physical-phone support, two-human synchronization and MongoDB still await their own evidence.
