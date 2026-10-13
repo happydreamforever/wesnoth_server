@@ -38,7 +38,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current status (2026-10-13):** The updated log.txt confirms actual Windows helper startup and every TextRender runtime check passed in LDPlayer. The helper verified all three native prefixes/receipts and the two pinned fonts plus COPYING before connecting to 127.0.0.1:5555 (booted Android9/API28, primary x86_64). The6,591,104-byte Windows probe reported Expat2.5.0, Fontconfig2.17.1, Cairo1.16.0 and FreeType2.13.0, then passed XML/errors, private font selection, Arabic-character fallback, image compositing and FreeType glyph rendering. Final marker: ANDROID TEXT RENDER TEST PASSED. Saved Windows log: diagnostics/text-render-device-20261012-213145-362.txt. This checkpoint is complete; preserve the existing prefixes, receipts and assets and do not repeat its build or device test. Next development work is a separately pinned/provisioned FriBidi source and an offline Pango1.50.14 text-layout stage. Full paragraph layout, game APK/assets/OBB, gameplay and MongoDB remain later work.
+**Current status (2026-10-13):** TextRender is complete: the user's Windows build and every LDPlayer Expat/Fontconfig/Cairo check passed. The next handoff prepares the missing FriBidi 1.0.17 source for offline Pango 1.50.14 paragraph layout. Prepare-WindowsAndroidLayoutSources.ps1 -Download retrieves one pinned 1,203,284-byte official release while connected; its default mode only verifies the cached archive offline. The dedicated tools/native-text-layout/sources.json and build/android-layout-sources cache do not change the original 23-archive manifest, completed prefixes or receipts. See NEXT_TEST.md for normal MSYS2 pulls, preparation and saved-log offline verification. Windows preparation is pending; no Pango build or Android layout execution is claimed. Full game APK/assets/OBB, gameplay and MongoDB remain later work.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -471,3 +471,8 @@ The first milestone is complete only when all relevant checks have actual eviden
 Include the client and server commit IDs; Windows report filename; exact command and shell; selected emulator/device and ABI; expected result; actual result; full relevant build error or server log; and Android logcat around the failure. Record the last successful step. Remove secrets before sharing logs.
 
 Future handoffs should update `BASELINE.md` with confirmed versions, commands that actually ran, results, remaining blockers and the next action.
+
+
+## Preparing newly required offline sources
+
+For the paragraph-layout stage, the original source cache lacks FriBidi. The explicit connected helper Prepare-WindowsAndroidLayoutSources.ps1 -Download prepares its separate pinned release archive. Run the default helper after disconnecting to verify the cache offline. NEXT_TEST.md contains the current saved-log commands. Keep the existing 23-archive manifest and completed native receipts unchanged; later build commands must consume verified local sources with downloads disabled. A successful source-preparation marker is not evidence of a library build, Android runtime or gameplay.

@@ -1,23 +1,63 @@
-# TextRender passed; next stage is paragraph layout
+# Prepare the missing paragraph-layout source
 
-The latest log.txt confirms the corrected Windows helper and every TextRender check passed in LDPlayer:
+TextRender passed on Windows and LDPlayer. The next stage is Pango paragraph layout; it needs the missing FriBidi source. This delivery prepares that source only. The existing Pango 1.50.14 archive and completed native builds remain usable.
 
-```text
-PASS Expat XML and errors
-PASS Fontconfig private font selection
-PASS Fontconfig character fallback
-PASS Cairo image compositing
-PASS Cairo FreeType glyph rendering
-PASS wesnoth-android-text-render
-ANDROID TEXT RENDER TEST PASSED
+Temporarily connect Windows to the internet. In normal PowerShell, paste this block to update both existing checkouts with MSYS2 Git and prepare the pinned FriBidi 1.0.17 archive:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $bash = 'D:\Test\msys64\usr\bin\bash.exe'
+    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
+        $repo = '/d/Test/wesnoth-setup/' + $name
+        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
+        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Send the output." }
+        & $bash --noprofile --norc -c ('/usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
+        if ($LASTEXITCODE -ne 0) { throw "Could not read $name commit. Send the output." }
+    }
+
+    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
+    $null = New-Item -ItemType Directory -Path '.\diagnostics' -Force
+    $log = Join-Path (Get-Location).Path ('diagnostics\layout-sources-prepare-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.txt')
+    $setupExit = 2
+    try {
+        powershell.exe -NoProfile -ExecutionPolicy Bypass `
+            -File '.\tools\Prepare-WindowsAndroidLayoutSources.ps1' -Download `
+            2>&1 | Tee-Object -FilePath $log
+        $setupExit = $LASTEXITCODE
+    } finally { Write-Host "Saved log: $log" }
+    if ($setupExit -ne 0) { throw 'Source preparation failed. Send the saved log file.' }
+}
 ```
 
-The helper verified all three native prefixes/receipts and the two fonts plus COPYING, then ran the Windows-built probe on the selected booted API28/x86_64 device at127.0.0.1:5555. Windows compilation was already confirmed by the preceding build log. The saved report is D:\Test\wesnoth-setup\wesnoth_client\diagnostics\text-render-device-20261012-213145-362.txt.
+The helper downloads 1,203,284 bytes from the exact official release URL recorded in tools/native-text-layout/sources.json, checks SHA256, and caches the archive at D:\Test\wesnoth-setup\wesnoth_client\build\android-layout-sources\fribidi-1.0.17.tar.xz. An already valid archive is reused. If an existing file differs from the pin, it is preserved and the helper stops; send the log without deleting or replacing the file.
 
-This checkpoint needs no further Windows command. Keep the completed build/android-text-render directory, all earlier prefixes/receipts and the verified gamedata-1.19.26 folder. No rebuild, repeated probe, dependency upgrade, source reset or full data copy is needed.
+After the preparation succeeds, disconnect internet access and run the offline verification:
 
-The next development stage is full paragraph layout with Pango1.50.14 and FriBidi, using the completed FreeType, HarfBuzz, GLib, Fontconfig and Cairo libraries. The original source cache lacks FriBidi; its exact release, checksum and separate offline preparation path must be verified before supplying the next Windows command. Preserve the completed stages' manifests and receipts. Pango's unpinned Git fallback must not download during an offline build.
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
+    $null = New-Item -ItemType Directory -Path '.\diagnostics' -Force
+    $log = Join-Path (Get-Location).Path ('diagnostics\layout-sources-offline-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.txt')
+    $setupExit = 2
+    try {
+        powershell.exe -NoProfile -ExecutionPolicy Bypass `
+            -File '.\tools\Prepare-WindowsAndroidLayoutSources.ps1' `
+            2>&1 | Tee-Object -FilePath $log
+        $setupExit = $LASTEXITCODE
+    } finally { Write-Host "Saved log: $log" }
+    if ($setupExit -ne 0) { throw 'Offline source verification failed. Send the saved log file.' }
+}
+```
 
-Next-stage implementation also needs a managed host glib-mkenums generator from the pinned GLib source and portable handling of Pango's generated-documentation case collision. These belong to the new stage; prior prefixes stay unchanged. A later native probe should check mixed-direction paragraphs, wrapping and PangoCairo rendering with private fonts before integration into the game.
+Both commands should exit successfully and print:
 
-Current changes record the successful result only. No new source download, build or runtime helper is delivered in this update. Full game APK/assets/OBB, first playable local/LAN turns and MongoDB integration remain later required milestones. Continue returning long results as attached or named workspace files; future Windows test commands should save logs under the checkout's diagnostics directory.
+```text
+PASS: FriBidi 1.0.17; bytes=1203284; SHA256=6949dcde27d41cebad1fd741fcafc36d55a1020d2d872d4a6eb3914caabbada2
+ANDROID LAYOUT SOURCES VERIFIED
+```
+
+The second command should also say Existing FriBidi source matches its pin; no download needed. Return both saved logs from the client diagnostics folder. Files can be attached or copied to workspace log files; no lengthy console copy is needed.
+
+This step needs only the existing PowerShell/Git and temporary connectivity for preparation. No build, LDPlayer test or server launch is requested yet. After this cache check, the next implementation builds/tests FriBidi and Pango for mixed-direction paragraphs, wrapping and PangoCairo rendering with the verified fonts. The full game APK/assets/OBB, a playable local/LAN turn and MongoDB remain later milestones.
