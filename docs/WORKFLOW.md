@@ -38,7 +38,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current status (2026-10-13):** FriBidi source preparation is confirmed on Windows: the new log shows client 74461ca/server 6f02e77 pulled, the exact archive downloaded/hashed, and two default-mode cache verifications passed. Later update attempts fail before Git because the old D:\Test\msys64\usr\bin\bash.exe cannot be found. The user now reports copying MSYS2 to D:\Test\wesnoth-setup\msys64. The uploaded VPS msys64 directory has all 1,184 EXEs and 863 DLLs empty, so that exact copy cannot run. Verify file sizes at both Windows roots using the standalone PowerShell block in NEXT_TEST.md before selecting a toolchain or resuming pulls/builds. No Git update is required for that check. Keep the successful source cache and all native builds/receipts. The offline Pango layout build remains next after resolving the changed tool location/copy.
+**Current status (2026-10-13):** The Windows size check confirms all eight sampled tools missing at D:\Test\msys64 and nonempty at D:\Test\wesnoth-setup\msys64. The new Windows installation differs from the uploaded VPS copy with empty executables; do not request restoration based on that upload. Use the new root explicitly for the next offline Bash/Git/runtime/host-compiler and MSYS/NDK toolchain check in NEXT_TEST.md. No pull or new script is needed because the existing checker already accepts -MsysRoot. Actual runtime/versions at the new root remain pending. Keep the completed FriBidi source cache and all native builds/receipts; Pango paragraph layout follows toolchain validation.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -49,7 +49,7 @@ The user now confirms that both repositories are already cloned at the following
 | `D:\Test\wesnoth-setup\wesnoth_server` | Existing server clone |
 | `D:\Test\wesnoth-setup\gamedata-1.19.26` | Verified offline asset source; Windows full hash check passed |
 | `D:\Test\msys64` | Previously verified MSYS2 root; latest log cannot launch Bash here |
-| `D:\Test\wesnoth-setup\msys64` | Newly reported copied MSYS2 root; Windows contents/runtime await validation |
+| `D:\Test\wesnoth-setup\msys64` | Current Windows candidate: eight tools confirmed nonempty; runtime/version check next |
 
 The first collector run was interrupted with Ctrl+C and saved a partial report after Git version results. Keep LDPlayer running and temporarily connect to GitHub to update the existing server. The installed Git for Windows path below is confirmed by the user's report. The client does not need updating for this diagnostic step.
 
@@ -482,3 +482,8 @@ For the paragraph-layout stage, the original source cache lacks FriBidi. The exp
 ## Validate a changed MSYS2 copy before resuming updates
 
 FriBidi preparation and default cache verification passed. The later failure occurs before Git: the old Bash path is unavailable. The user reports the new MSYS2 root D:\Test\wesnoth-setup\msys64, but the corresponding uploaded tree has empty EXEs/DLLs. Current NEXT_TEST.md therefore starts with standalone PowerShell file-size checks at both Windows locations and saves a log. It needs no pull, MSYS process, network or package installation. Verify the actual copy before adopting the new root; preserve intact installations and completed builds. Existing helpers accept -MsysRoot, so avoid changing old receipt inputs to select a new location. The historical MSYS2 pull block above resumes only after the selected Bash/Git/runtime are usable.
+
+
+## Runtime check after the Windows location report
+
+The returned Windows report confirms nonempty tools at D:\Test\wesnoth-setup\msys64 and missing sampled tools at the old root. This differs from the uploaded empty VPS copy. NEXT_TEST.md now runs offline version/runtime checks and the existing MSYS/NDK checker with explicit -MsysRoot, saving one report. No pull is needed for this handoff. Use the new Bash path for subsequent Git updates after it runs successfully; preserve repository-local Git settings and successful builds. Never treat nonzero file size as a confirmed version or require a reinstall based on the different uploaded copy.

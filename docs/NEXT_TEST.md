@@ -1,40 +1,39 @@
-# Check the newly copied MSYS2 folder
+# Verify the MSYS2 runtime at its new Windows location
 
-FriBidi source preparation and both default cache verifications passed on Windows. Keep the downloaded source and completed native builds. The later errors occur before Git because the command still points to D:\Test\msys64\usr\bin\bash.exe. The newly reported root is D:\Test\wesnoth-setup\msys64.
+Your Windows report confirms all eight sampled tools are nonempty at D:\Test\wesnoth-setup\msys64. The corresponding old paths under D:\Test\msys64 are missing. Your Windows copy differs from the zero-byte uploaded VPS files; it does not need restoration based on that upload.
 
-The uploaded VPS msys64 copy has empty Bash/Git/runtime files: all 1,184 EXEs and 863 DLLs are zero bytes. That copy cannot run. The Windows copy must be checked before changing build/pull commands to use it. This is new evidence about a changed tool installation, not a request to repeat the full environment inventory.
-
-Run this in normal PowerShell. No Git pull or internet connection is needed. It inspects file sizes at both roots and saves the output; it does not execute or modify either MSYS2 copy.
+Next verify that the new location can execute the expected tools and compile through the Android NDK. This uses the existing checker already present in your client checkout, so no Git pull or internet connection is needed. Run in normal PowerShell:
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
-    $diagnostics = 'D:\Test\wesnoth-setup\wesnoth_client\diagnostics'
-    $null = New-Item -ItemType Directory -Path $diagnostics -Force
-    $log = Join-Path $diagnostics ('msys-location-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.txt')
+    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
+    $msys = 'D:\Test\wesnoth-setup\msys64'
+    $bash = Join-Path $msys 'usr\bin\bash.exe'
+    $null = New-Item -ItemType Directory -Path '.\diagnostics' -Force
+    $log = Join-Path (Get-Location).Path ('diagnostics\msys-runtime-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.txt')
+
     try {
         & {
-            foreach ($root in @('D:\Test\msys64', 'D:\Test\wesnoth-setup\msys64')) {
-                "ROOT: $root"
-                foreach ($name in @('bash.exe', 'git.exe', 'msys-2.0.dll', 'python3.exe', 'make.exe', 'meson', 'ninja.exe', 'gcc.exe')) {
-                    $file = Join-Path $root ('usr\bin\' + $name)
-                    if (Test-Path -LiteralPath $file -PathType Leaf) {
-                        $bytes = (Get-Item -LiteralPath $file -Force).Length
-                        $status = if ($bytes -eq 0) { 'EMPTY' } else { 'PRESENT' }
-                        '{0}: {1}; bytes={2}' -f $status, $name, $bytes
-                    } else {
-                        "MISSING: $name"
-                    }
-                }
-            }
-            'Size inspection complete. PRESENT means nonempty; runtime and versions are not tested.'
+            "MSYS2 root: $msys"
+            & $bash --noprofile --norc -c 'export PATH=/usr/bin:/bin; /usr/bin/cygpath -w / && /usr/bin/git --version && /usr/bin/uname -r && /usr/bin/gcc --version'
+            if ($LASTEXITCODE -ne 0) { throw 'MSYS2 runtime check failed. Send the saved log.' }
+
+            powershell.exe -NoProfile -ExecutionPolicy Bypass `
+                -File '.\tools\Test-WindowsAndroidTextToolchain.ps1' `
+                -MsysRoot $msys
+            if ($LASTEXITCODE -ne 0) { throw 'Text toolchain check failed. Send the saved log.' }
         } 2>&1 | Tee-Object -FilePath $log
     } finally { Write-Host "Saved log: $log" }
 }
 ```
 
-Return the saved msys-location-*.txt file from the client diagnostics folder. Expected: two ROOT sections, each with eight PRESENT/EMPTY/MISSING entries. An intact candidate needs nonzero bytes for every listed file; size alone does not prove validity. The uploaded VPS copy would produce EMPTY for every listed tool.
+Expected: the new MSYS2 root, Git/runtime/host-GCC versions, tool/interpreter checks, selected NDK26.3.11579264, and a successful temporary Androidx86_64 compile/archive check. The final success marker is:
 
-If the new Windows files are also empty, recover a complete intact copy of the previously working MSYS2 installation or its original archive. Preserve any remaining working copy and successful build directories. Do not attempt an in-place package update with empty executables or replace one executable at a time. The uploaded package cache is incomplete and not a verified replacement installation.
+```text
+ANDROID TEXT TOOLCHAIN CHECK PASSED
+```
 
-If a Windows candidate contains real tools, the next check will confirm actual versions and the MSYS/NDK compile boundary using the existing Test-WindowsAndroidTextToolchain.ps1 with an explicit -MsysRoot. Adopt the reported new root only after it is usable; prior helpers already accept this override. Then resume MSYS2 Git updates and the offline Pango/FriBidi layout stage. No source download, native build, server launch or LDPlayer test is requested in this inspection step.
+Return the saved msys-runtime-*.txt report from the client diagnostics folder. Versions will be compared against the earlier confirmed installation; the new root has not yet passed runtime verification. The checker installs nothing and uses owned temporary space, preserving completed native stages. An unsuccessful check prints the failing tool and retains diagnostic scratch where applicable.
+
+After this passes, resume MSYS2 Git updates with D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe and prepare the offline Pango/FriBidi layout build. FriBidi source preparation is already complete. Existing build helpers accept -MsysRoot; keep their old defaults and all completed input fingerprints unchanged. No full native build, server launch or Android test is requested for this relocation check.

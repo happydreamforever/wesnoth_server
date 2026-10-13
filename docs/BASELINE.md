@@ -53,12 +53,12 @@ Initial Git remote URLs contain an embedded access token. Never print raw remote
 
 ## Current milestone and next actions
 
-Status: FriBidi source preparation is confirmed on Windows: the new log shows client 74461ca/server 6f02e77 pulled, the exact archive downloaded/hashed, and two default-mode cache verifications passed. Later update attempts fail before Git because the old D:\Test\msys64\usr\bin\bash.exe cannot be found. The user now reports copying MSYS2 to D:\Test\wesnoth-setup\msys64. The uploaded VPS msys64 directory has all 1,184 EXEs and 863 DLLs empty, so that exact copy cannot run. Verify file sizes at both Windows roots using the standalone PowerShell block in NEXT_TEST.md before selecting a toolchain or resuming pulls/builds. No Git update is required for that check. Keep the successful source cache and all native builds/receipts. The offline Pango layout build remains next after resolving the changed tool location/copy.
+Status: The Windows size check confirms all eight sampled tools missing at D:\Test\msys64 and nonempty at D:\Test\wesnoth-setup\msys64. The new Windows installation differs from the uploaded VPS copy with empty executables; do not request restoration based on that upload. Use the new root explicitly for the next offline Bash/Git/runtime/host-compiler and MSYS/NDK toolchain check in NEXT_TEST.md. No pull or new script is needed because the existing checker already accepts -MsysRoot. Actual runtime/versions at the new root remain pending. Keep the completed FriBidi source cache and all native builds/receipts; Pango paragraph layout follows toolchain validation.
 
 Both repos contain `engine/` snapshots pinned to upstream Wesnoth 1.19.26, commit `75c84d2ed344b954d1fd308e588dfe13aef53b20`, matching the game-data core. Client includes the exact pinned Lua submodule and its manifest. Original empty files and unrelated modified README files remain untouched. These are reconstructed upstream foundations, not recovered custom features.
 
 1. Preserve the successful server, Android bootstrap, SDL/media/font/text-base/GLib-prerequisite/GLib/TextRender outputs and verified data; no unchanged rebuild/retest or full inventory is needed.
-2. FriBidi source preparation/default cache verification passed on Windows. Inspect the two reported MSYS2 roots with NEXT_TEST.md; the uploaded copy has empty executables and cannot establish a usable replacement. After confirming/restoring the existing tool versions, implement the offline Pango1.50.14 library/probe stage. Preserve completed manifests/receipts; never use the bundled unpinned Git fallback.
+2. The new Windows MSYS2 root contains nonempty tools. Run the offline runtime/version/NDK-boundary check in NEXT_TEST.md with -MsysRoot D:\Test\wesnoth-setup\msys64. FriBidi preparation is complete. Once the relocated toolchain passes, implement the offline Pango1.50.14 library/probe stage while preserving completed manifests/receipts.
 3. Keep x86_64/minAPI23, compile/targetSDK35, build-tools34, NDK26.3.11579264, Java21, Gradle8.9/AGP8.7.3 and SCons4.11.0. SDK35 revision2/build-tools34.0.0 match the prepared Linux releases. Host OS/Python/package differences remain explicit.
 4. Port the remaining text/network libraries and full game build, implement local asset import/OBB, then test single-player and a LAN turn. Add/test local MongoDB persistence as subsequent required work.
 
@@ -821,3 +821,29 @@ The nonempty package cache is not a proven recovery source: it has 506 files/551
 Existing build helpers already accept -MsysRoot overrides, so do not globally replace their historical D:\Test\msys64 defaults or rebuild successful prefixes merely because a new directory was reported. New commands can use D:\Test\wesnoth-setup\msys64 only after it proves usable. The MSYS2 Git route remains required after recovery; do not retry native Git, change services, repeat full inventory or bypass old receipts. When a candidate contains real tools, the existing Test-WindowsAndroidTextToolchain.ps1 with an explicit -MsysRoot can verify its versions and MSYS/NDK compile boundary. Pango/FriBidi compilation and Android layout runtime remain future work.
 
 This delivery changes shared project records only. The exact NEXT_TEST.md block passes PowerShell parsing and four isolated missing/empty/nonempty-root fixtures using Linux PowerShell 7.4.6; each saves the expected 16 entries and leaves inspected files unchanged. Evidence: build/msys-location-handoff-fixtures.json. Independent log/audit/handoff review found no blocking issue. This does not validate the actual Windows copy; native helpers, original source manifests, archives, installed prefixes and receipts remain unchanged.
+
+
+## Nonempty MSYS2 tools confirmed at the new Windows root (2026-10-13)
+
+The user returned the standalone inspection, saved as D:\Test\wesnoth-setup\wesnoth_client\diagnostics\msys-location-20261013-002330-380.txt. All eight sampled usr/bin files are MISSING at D:\Test\msys64 and PRESENT at D:\Test\wesnoth-setup\msys64. Exact reported sizes:
+
+| File | Bytes at new Windows root |
+| --- | ---: |
+| bash.exe | 2,452,446 |
+| git.exe | 4,010,214 |
+| msys-2.0.dll | 3,367,041 |
+| python3.exe | 10,026 |
+| make.exe | 236,000 |
+| meson | 218 |
+| ninja.exe | 324,725 |
+| gcc.exe | 2,007,036 |
+
+This directly establishes that the Windows files differ from the zero-byte uploaded VPS equivalents. Do not infer corruption or a restoration requirement for the Windows installation from the VPS audit. Small Python launcher and Meson script sizes alone do not identify a problem. File sizes do not establish tool versions, runtime/DLL resolution or the full installation's integrity. The old-root result is limited to these eight paths; it does not establish that the entire directory was deleted.
+
+The immediate next step uses the new root explicitly and stays offline: invoke its Bash with startup profiles skipped, print cygpath -w /, MSYS Git --version, uname -r and host GCC --version, then run the existing Test-WindowsAndroidTextToolchain.ps1 -MsysRoot D:\Test\wesnoth-setup\msys64. The existing checker isolates MSYS/Python lookup, verifies Meson interpreter/module binding and selected NDK26.3.11579264, and compiles/archives a small Androidx86_64/API23 object in owned temporary space. The host GCC version is collected because the future FriBidi stage needs native table generators; this check does not build those generators. No installed dependency, prior native prefix, receipt input or archive is changed.
+
+The wrapper/checker already exists in the last confirmed Windows client74461ca, so no pull is required for this diagnostic. Commands save combined output to diagnostics/msys-runtime-*.txt and stop on a failed Bash probe or failed checker. The expected final marker is ANDROID TEXT TOOLCHAIN CHECK PASSED. A successful result permits resuming MSYS2 Git using the new Bash path and implementing the Pango stage. Existing native wrappers keep their historical default because they accept explicit -MsysRoot; changing defaults would needlessly alter completed input fingerprints.
+
+This is a documentation-only handoff. Runtime/tool-version/compile results at the new root are still pending; previous Windows builds, Android probes and FriBidi source verification remain passed. Full Pango/FriBidi Windows build and Android layout execution are not yet delivered.
+
+VPS handoff validation: the exact PowerShell block and Bash command parse; three isolated simulated-native scenarios cover success, runtime failure before the checker, and checker failure. Each saves the output, forwards the new -MsysRoot where applicable and preserves failure status. Evidence: build/msys-runtime-handoff-check.json. Independent review confirms the existing helper supports the override and leaves completed stages unchanged. Validation used the isolated Linux PowerShell7.4.6 tool, restored after temporary host files disappeared and verified against its official release SHA256. No project compiler/dependency version changed; actual Windows execution remains pending.

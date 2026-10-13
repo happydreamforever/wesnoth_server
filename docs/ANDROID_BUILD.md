@@ -357,3 +357,8 @@ Windows preparation awaits the user's result. VPS actual download, read-only ver
 ### Source cache complete; MSYS2 copy check
 
 The user log confirms the actual Windows FriBidi download/hash check and two default-mode cache verifications. Preserve build/android-layout-sources/fribidi-1.0.17.tar.xz; no further source download is needed. Later pull attempts fail before Git because D:\Test\msys64\usr\bin\bash.exe is unavailable. The user reports a new root at D:\Test\wesnoth-setup\msys64, but all EXEs and DLLs in the supplied VPS copy are empty. NEXT_TEST.md now checks Windows file sizes at both roots using only PowerShell. Native layout build/run is waiting on a usable toolchain; current commands do not execute the supplied copy. Existing helpers support explicit -MsysRoot; keep their completed receipt inputs and native outputs unchanged.
+
+
+### New Windows MSYS2 root contains real file data
+
+The Windows location report confirms all eight sampled tools are nonempty under D:\Test\wesnoth-setup\msys64, unlike the uploaded VPS equivalents. The next command uses this explicit root with the existing Test-WindowsAndroidTextToolchain.ps1 after collecting Bash/Git/runtime/host-GCC identity. It verifies the temporary MSYS/NDK compile boundary offline and saves diagnostics/msys-runtime-*.txt. No pull, source download, native stage rebuild or helper change is needed. Runtime and versions at the new path await the returned log. Keep completed prefixes/receipts; later build commands can pass -MsysRoot rather than changing historical defaults.
