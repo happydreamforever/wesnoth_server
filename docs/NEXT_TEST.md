@@ -1,6 +1,6 @@
-# Retry OpenSSL/curl after the Windows header-selection fix
+# Resume OpenSSL/curl after the Ninja dependency-file fix
 
-The returned network-20261013-034501-839.txt confirms that MSYS Perl/Make finished OpenSSL generation, then header verification stopped the build before compilation. Windows wildcard matching includes two uppercase VMS .H files that Linux excludes. The fix selects and installs explicit public-header lists while retaining all original header hashes. Windows compilation and Android execution still need this retry. All earlier stages, including Boost, remain complete. This test does not install an APK or open a visible app window.
+The returned network-20261013-062509-357.txt confirms that OpenSSL generation and the corrected header verification pass on Windows. CMake also configures successfully. Ninja stopped during compilation when Windows blocked deletion of a dependency file. The Network builder now retains those files with -d keepdepfile; Ninja still tracks header dependencies normally. Keep the existing build/android-network and earlier backup in place. This retry reuses completed generation and resumes compilation. All earlier native stages remain complete.
 
 While temporarily connected to GitHub, paste this into normal PowerShell. It uses the verified MSYS2 Git and stops if either pull fails:
 
@@ -18,7 +18,7 @@ While temporarily connected to GitHub, paste this into normal PowerShell. It use
 }
 ```
 
-Disconnect from the internet, keep LDPlayer running and run this second block. The build uses existing MSYS2 Perl/Make to generate OpenSSL files, then native Python/CMake/Ninja/NDK for Android compilation. The helper defaults to the verified MSYS2 root D:\Test\wesnoth-setup\msys64. No package installation or download is required. The server need not run. The block first renames only the previous build/android-network directory to a unique backup because its interrupted generation has no completed state. Keep that backup. Source archives and all earlier stages stay in place. Let the build finish; output is saved automatically.
+Disconnect from the internet, keep LDPlayer running and run this second block. Native Python/CMake/Ninja/NDK resume the existing stage after verifying the cached sources, generated files and prefix state. No download, package change or earlier-stage rebuild is required. Keep the current build directory in place so generation can be reused. The server need not run. Let the build finish; output is saved automatically.
 
 ```powershell
 & {
@@ -29,17 +29,6 @@ Disconnect from the internet, keep LDPlayer running and run this second block. T
     try {
         & {
             try {
-                $stage = Join-Path (Get-Location).Path 'build\android-network'
-                if (Test-Path -LiteralPath $stage) {
-                    $item = Get-Item -LiteralPath $stage -Force
-                    if (-not $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-                        throw 'Network build path is not a regular directory. Send this log.'
-                    }
-                    $backup = $stage + '-before-header-fix-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N')
-                    Move-Item -LiteralPath $stage -Destination $backup -ErrorAction Stop
-                    Write-Output "BUILD BACKUP SAVED: $backup"
-                }
-
                 powershell.exe -NoProfile -ExecutionPolicy Bypass `
                     -File '.\tools\Build-WindowsAndroidNetwork.ps1'
                 if ($LASTEXITCODE -ne 0) { throw 'Network build failed. Send the saved log.' }
@@ -56,7 +45,7 @@ Disconnect from the internet, keep LDPlayer running and run this second block. T
 }
 ```
 
-Expected: ANDROID NETWORK BUILD COMPLETE, then ANDROID NETWORK ARTIFACTS VERIFIED and these native test markers:
+Expected first: `Verified existing OpenSSL generation; no regeneration needed.` The compilation commands include `-- -d keepdepfile`. Then expect ANDROID NETWORK BUILD COMPLETE, ANDROID NETWORK ARTIFACTS VERIFIED and these native test markers:
 
 ```text
 WESNOTH_ANDROID_NETWORK version=1.19.26 abi=x86_64 min_api=23

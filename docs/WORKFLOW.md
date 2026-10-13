@@ -38,7 +38,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current status (2026-10-13):** Windows network-20261013-034501-839.txt confirms successful MSYS Perl/Make OpenSSL generation, followed by a header-hash mismatch before target compilation. A reproduced Windows wildcard case difference includes two uppercase VMS .H files; the corrected recipe validates and installs explicit public-header lists with unchanged hash pins. Preserve the interrupted build/android-network by renaming it as shown in NEXT_TEST.md, then retry only Network compilation and LDPlayer testing. All earlier stages, including Boost and ICU, remain verified. Use MSYS2 at D:\Test\wesnoth-setup\msys64. The full game/APK/assets/OBB, playable local/LAN turns and MongoDB remain required.
+**Current status (2026-10-13):** Windows network-20261013-062509-357.txt confirms the header-selection fix: OpenSSL generation and exact header verification pass, and CMake configures successfully. Ninja then stops while deleting a compiler dependency file because Windows reports it in use. The scoped Network fix retains depfiles with -d keepdepfile while preserving normal dependency tracking. Keep the current build/android-network and its completed generation state in place; NEXT_TEST.md resumes it without another backup or regeneration. Earlier native stages remain complete. Actual Windows Network build completion and LDPlayer execution are still pending; full game/APK/assets/OBB, playable local/LAN turns and MongoDB remain required.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
