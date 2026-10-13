@@ -38,7 +38,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current status (2026-10-13):** The actual Windows ICU78.3 download and size/SHA256 verification passed. User report icu-sources-prepare-20261013-013533-502.txt confirms successful pulls to server9405682/clientacf5f1e and the exact27,977,255-byte archive in client build/android-icu-sources. The next step is only the default cached verification after disconnecting, using the existing helper in NEXT_TEST.md; no additional pull or download is needed. Preserve all completed native stages, including Windows/LDPlayer-proven FriBidi/Pango. MSYS2 remains verified at D:\Test\wesnoth-setup\msys64. Android ICU/Boost and OpenSSL/curl compilation, full game APK/OBB, gameplay and MongoDB remain pending.
+**Current status (2026-10-13):** Windows ICU 78.3 source preparation is complete: the connected download and default cached verification both passed, most recently in icu-sources-offline-20261013-015515-738.txt. The new offline ICU static-library builder and native Android probe now pass VPS cross-compilation and host/fixture checks. Next: pull both repositories through the verified MSYS2 Git at D:\Test\wesnoth-setup\msys64, then build ICU and run its probe on LDPlayer using NEXT_TEST.md. Actual Windows ICU compilation and Android ICU execution await that result. Preserve every completed native stage, including Windows/LDPlayer-proven FriBidi/Pango. Boost, OpenSSL/curl, the full game APK/assets/OBB, a playable turn and MongoDB remain pending.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
