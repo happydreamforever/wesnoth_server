@@ -338,3 +338,10 @@ Verification:24 builder tests pass; a real Bash injected-EBUSY test recovers on 
 The latest log.txt confirms Cairo configuration recovered on attempt3 and the complete Windows TextRender build/receipt passed. The device test stopped before verification or ADB because its parameter default evaluated PSScriptRoot while empty. Test-AndroidTextRender.ps1 now resolves the default sibling data directory in the initialized script body; explicit DataRoot paths remain supported. This helper is outside the native receipt's input list, so updating it does not require rebuilding libraries or the probe. NEXT_TEST.md now runs only the device test and saves its output as a diagnostics file. Actual Android rendering execution remains pending.
 
 Validation:29 helper fixtures pass, including direct -File startup and the reported empty-PSScriptRoot binding condition. Real receipt verification and direct helper integration with actual prefixes/assets pass with mocked ADB. Existing native outputs remain valid without a rebuild. Output-file handoff checks pass for both success and failure. The updated helper still awaits the user's Windows/LDPlayer result.
+
+
+### TextRender checkpoint complete (2026-10-13)
+
+The latest log.txt confirms the corrected PowerShell helper, full receipt/font verification and every Expat/Fontconfig/Cairo probe check passed on the selected Android9/API28/x86_64 LDPlayer. Windows compilation was confirmed by the preceding build log. Keep the completed stage; no repeat build or test is needed. Current status and exact result evidence are in BASELINE.md.
+
+Next development work is to pin/provision the missing FriBidi source separately, then build/test Pango1.50.14 for full paragraph layout and bidirectional text using the completed libraries. The current checkpoint checks isolated glyphs, fallback and image rendering; it does not yet establish Pango layout or the full game. No new Windows setup/build command is ready in this documentation-only update.
