@@ -38,7 +38,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current status (2026-10-13):** The Windows size check confirms all eight sampled tools missing at D:\Test\msys64 and nonempty at D:\Test\wesnoth-setup\msys64. The new Windows installation differs from the uploaded VPS copy with empty executables; do not request restoration based on that upload. Use the new root explicitly for the next offline Bash/Git/runtime/host-compiler and MSYS/NDK toolchain check in NEXT_TEST.md. No pull or new script is needed because the existing checker already accepts -MsysRoot. Actual runtime/versions at the new root remain pending. Keep the completed FriBidi source cache and all native builds/receipts; Pango paragraph layout follows toolchain validation.
+**Current status (2026-10-13):** The relocated Windows MSYS2 root D:\Test\wesnoth-setup\msys64 passed actual Bash/Git/runtime/host-GCC checks and the Android NDK compile/archive boundary. User report: msys-runtime-20261013-005308-141.txt. Git2.55.0/runtime3.6.10, host GCC15.3.0, MSYS Python3.12.13/Meson1.12.0 and NDK26.3.11579264 match prior reports. Preserve all completed native stages and the verified FriBidi source cache. The next Windows checkpoint builds FriBidi1.0.17/Pango1.50.14 and runs the new paragraph-layout probe on LDPlayer using NEXT_TEST.md. The Android cross-build and host semantic checks pass on the VPS; actual Windows compilation and Android layout execution remain pending.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -48,8 +48,8 @@ The user now confirms that both repositories are already cloned at the following
 | `D:\Test\wesnoth-setup\wesnoth_client` | Existing client clone |
 | `D:\Test\wesnoth-setup\wesnoth_server` | Existing server clone |
 | `D:\Test\wesnoth-setup\gamedata-1.19.26` | Verified offline asset source; Windows full hash check passed |
-| `D:\Test\msys64` | Previously verified MSYS2 root; latest log cannot launch Bash here |
-| `D:\Test\wesnoth-setup\msys64` | Current Windows candidate: eight tools confirmed nonempty; runtime/version check next |
+| `D:\Test\msys64` | Historical MSYS2 root; sampled tools now missing |
+| `D:\Test\wesnoth-setup\msys64` | Current verified MSYS2 root; runtime and Android compile boundary passed |
 
 The first collector run was interrupted with Ctrl+C and saved a partial report after Git version results. Keep LDPlayer running and temporarily connect to GitHub to update the existing server. The installed Git for Windows path below is confirmed by the user's report. The client does not need updating for this diagnostic step.
 
@@ -419,14 +419,14 @@ Verification: both pasted blocks parse with the Linux PowerShell 7.4.6 verifier.
 
 **This MSYS2 update route has now succeeded on Windows.** Server reached ebfb18d and client f35d0af, followed by a complete collector run. Keep the commands below as the project's Windows update route. Historically, the full restart did not restore native Git: NetActvity returned Running under PID 4172 and the server pull failed at object `55/eb0340cb3a6018aee02ed2e87cecf41a08bc0b`. The earlier direct locker PID 15800 must not be reused for process actions.
 
-This route uses the user's existing `D:\Test\msys64\usr\bin\git.exe` (confirmed version 2.55.0) through its MSYS2 Bash and runtime `3.6.10-8fbd9808.x86_64`. [MSYS2 distinguishes its runtime-based Git from native Windows Git](https://www.msys2.org/docs/git/). In the installed Git for Windows version, [opening the rename source with DELETE access returns immediately on failure](https://github.com/git-for-windows/git/blob/v2.53.0.windows.2/compat/mingw.c#L2970-L2978). The [MSYS2 runtime implementation](https://github.com/msys2/msys2-runtime/blob/cf8cb2aaf2102d0e8ca382790970b2b2ded0680b/winsup/cygwin/syscalls.cc#L2632-L2650) waits and retries source opens on sharing violations. The successful MSYS2 pulls are consistent with avoiding the earlier brief conflict through retry handling; there was no trace of the successful run to prove each internal retry. This establishes a working update route, not the unidentified service's purpose or a repair to native Git.
+This route uses the user's existing `D:\Test\wesnoth-setup\msys64\usr\bin\git.exe` (confirmed version 2.55.0) through its MSYS2 Bash and runtime `3.6.10-8fbd9808.x86_64`. [MSYS2 distinguishes its runtime-based Git from native Windows Git](https://www.msys2.org/docs/git/). In the installed Git for Windows version, [opening the rename source with DELETE access returns immediately on failure](https://github.com/git-for-windows/git/blob/v2.53.0.windows.2/compat/mingw.c#L2970-L2978). The [MSYS2 runtime implementation](https://github.com/msys2/msys2-runtime/blob/cf8cb2aaf2102d0e8ca382790970b2b2ded0680b/winsup/cygwin/syscalls.cc#L2632-L2650) waits and retries source opens on sharing violations. The successful MSYS2 pulls are consistent with avoiding the earlier brief conflict through retry handling; there was no trace of the successful run to prove each internal retry. This establishes a working update route, not the unidentified service's purpose or a repair to native Git.
 
 Connect to GitHub and open **Windows PowerShell normally**: click the Start-menu result without choosing Run as administrator. Close any other Git commands. Paste the entire block and press Enter:
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
-    $bash = 'D:\Test\msys64\usr\bin\bash.exe'
+    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
 
     & $bash --noprofile --norc -c '/usr/bin/git --version && /usr/bin/uname -r'
     if ($LASTEXITCODE -ne 0) { throw 'MSYS2 check failed. Send all output.' }
@@ -450,7 +450,7 @@ This selects /usr/bin/git explicitly so a MINGW/native Git elsewhere on PATH is 
 
 Expected: MSYS2 Git version (previously 2.55.0), active runtime version, both successful pulls and commit IDs, then `Both updates completed successfully using MSYS2 Git.` The guard stops on the first error. If authentication, credential-helper, certificate, ownership, conflict or file-write errors occur, return that output rather than falling back to native Git or changing security/configuration. Never paste a token or credential-bearing remote URL into the conversation.
 
-After both pulls succeed, start LDPlayer and wait for Android, then run the existing Windows environment-collector command from the preceding section in normal PowerShell. Expected collector version remains `2026-10-11.2`; return the complete report from the server diagnostics directory, even if inventory is INCOMPLETE or contains BLOCKED/UNKNOWN entries. Inventory completion and a successful Git workaround do not establish gameplay or explain the service's purpose.
+After both pulls succeed, follow the current build/test commands in NEXT_TEST.md. The complete environment inventory is already recorded; do not repeat it for ordinary delivery. The current verified MSYS2 location is D:\Test\wesnoth-setup\msys64 as confirmed by the 2026-10-13 runtime check.
 
 Verification: the pasted PowerShell block and its generated Bash commands passed syntax checks on the VPS, and the user has now completed both fast-forward pulls on Windows. The following inventory finished 10/10 sections with exit 0; its BLOCKED/UNKNOWN entries still require interpretation. No new service configuration, global Git setting or installation was required by the successful commands. If a future MSYS2 update fails, assess that exact error and current locking-process evidence rather than reusing old PIDs or blindly changing services. That explanation did not need another pull; the current source/build delivery does require the new pulls in NEXT_TEST.md.
 
@@ -487,3 +487,10 @@ FriBidi preparation and default cache verification passed. The later failure occ
 ## Runtime check after the Windows location report
 
 The returned Windows report confirms nonempty tools at D:\Test\wesnoth-setup\msys64 and missing sampled tools at the old root. This differs from the uploaded empty VPS copy. NEXT_TEST.md now runs offline version/runtime checks and the existing MSYS/NDK checker with explicit -MsysRoot, saving one report. No pull is needed for this handoff. Use the new Bash path for subsequent Git updates after it runs successfully; preserve repository-local Git settings and successful builds. Never treat nonzero file size as a confirmed version or require a reinstall based on the different uploaded copy.
+
+
+## Current delivery after the MSYS2 runtime passed (2026-10-13)
+
+The historical location/runtime diagnostics above are complete. Use the guarded MSYS2 pull block in NEXT_TEST.md with D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe. The new TextLayout builder defaults to this verified root; old build helpers keep their receipt-bound inputs and accept -MsysRoot overrides. No reinstall or package upgrade is requested.
+
+After pulling, disconnect and build only the new FriBidi/Pango prefix, then run its native probe on the selected LDPlayer. The saved-log block stops after a build failure and prints the client diagnostics/text-layout-*.txt path in either case. Preserve prior stages, source caches, game data, stashes and backups. Review each returned result before advancing to full client integration; the completed host checks do not establish Android layout success.
