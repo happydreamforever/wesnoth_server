@@ -38,7 +38,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current status (2026-10-13):** The actual Windows FriBidi1.0.17/Pango1.50.14 build and LDPlayer paragraph-layout probe passed. Report text-layout-20261013-010656-643.txt confirms bidi ordering, private fonts/Arabic shaping, nine wrapped lines and9,350 rendered/6,948 antialiased pixels on Android9/API28/x86_64. Preserve build/android-text-layout and all earlier stages; no unchanged rebuild/retest is needed. The next checkpoint prepares pinned ICU78.3 source for the Android Boost.Locale dependency, matching the installed Windows server ICU release. Use the verified MSYS2 root D:\Test\wesnoth-setup\msys64 for pulls. NEXT_TEST.md downloads the new source while connected, then verifies it with the default offline mode. Android ICU/Boost and OpenSSL/curl compilation, full game APK/OBB, gameplay and MongoDB remain pending.
+**Current status (2026-10-13):** The actual Windows ICU78.3 download and size/SHA256 verification passed. User report icu-sources-prepare-20261013-013533-502.txt confirms successful pulls to server9405682/clientacf5f1e and the exact27,977,255-byte archive in client build/android-icu-sources. The next step is only the default cached verification after disconnecting, using the existing helper in NEXT_TEST.md; no additional pull or download is needed. Preserve all completed native stages, including Windows/LDPlayer-proven FriBidi/Pango. MSYS2 remains verified at D:\Test\wesnoth-setup\msys64. Android ICU/Boost and OpenSSL/curl compilation, full game APK/OBB, gameplay and MongoDB remain pending.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -499,3 +499,8 @@ After pulling, disconnect and build only the new FriBidi/Pango prefix, then run 
 ## Current source handoff after Android layout passed
 
 The new Windows/LDPlayer result completes TextLayout. Keep all earlier outputs and receipt-bound helpers unchanged. NEXT_TEST.md now combines ordinary MSYS2 pulls with explicit connected ICU78.3 source preparation, then a separate default-mode verification after disconnecting. Both source-helper runs save logs and stop on failure; Git pulls retain their already verified direct invocation and stop before preparation on an error. Return those reports before requesting a Windows ICU library build. This does not repeat source inventory, the runtime relocation check or successful layout tests. All actual offline builds/gameplay must remain independent of internet access.
+
+
+## Remaining ICU cache verification after the successful download
+
+Actual Windows pulls and ICU78.3 download/hash verification passed. The current NEXT_TEST.md now requests only disconnecting and invoking the already present source helper in its default mode, with output saved under client diagnostics. No new pull or repeated -Download step is required to read a documentation-only checkpoint update. Preserve the successful source cache and native stages; no actual ICU library build or Android ICU runtime is implied by a source-helper success marker.

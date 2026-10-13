@@ -1,34 +1,8 @@
-# Prepare the missing ICU source for offline Android builds
+# Verify the prepared ICU source offline
 
-Windows compilation and actual LDPlayer execution of FriBidi/Pango passed. Keep that stage and all previous outputs; no repeat layout build or device test is needed.
+Windows successfully pulled server9405682/clientacf5f1e and downloaded the exact ICU78.3 archive. The source size and SHA256 passed in icu-sources-prepare-20261013-013533-502.txt. Keep that cache and all successful native builds.
 
-Boost.Locale needs an Android ICU build. The existing source cache has Boost1.88.0, OpenSSL3.4.1 and curl8.1.1 but no ICU source. This checkpoint prepares only ICU78.3, matching the release already reported in the Windows server toolchain. Its Windows DLLs cannot be used as Android libraries. The selected Android compiler and existing package installations stay unchanged.
-
-Connect temporarily to GitHub. Paste this entire block in normal PowerShell; it updates the two existing checkouts and downloads/verifies the 27,977,255-byte source archive:
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
-    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
-    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
-        $repo = '/d/Test/wesnoth-setup/' + $name
-        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
-        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Send the output." }
-    }
-    $null = New-Item -ItemType Directory -Path '.\diagnostics' -Force
-    $log = Join-Path (Get-Location).Path ('diagnostics\icu-sources-prepare-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.txt')
-    try {
-        & {
-            powershell.exe -NoProfile -ExecutionPolicy Bypass `
-                -File '.\tools\Prepare-WindowsAndroidIcuSources.ps1' -Download
-            if ($LASTEXITCODE -ne 0) { throw 'ICU source preparation failed. Send the saved log.' }
-        } 2>&1 | Tee-Object -FilePath $log
-    } finally { Write-Host "Saved log: $log" }
-}
-```
-
-After it succeeds, disconnect from the internet and verify the saved source:
+The remaining step is to disconnect from the internet and run the existing helper without -Download. No additional Git pull is needed. Paste this block into normal PowerShell:
 
 ```powershell
 & {
@@ -46,6 +20,6 @@ After it succeeds, disconnect from the internet and verify the saved source:
 }
 ```
 
-Both runs must end with ANDROID ICU SOURCES VERIFIED. Expected source: ICU78.3,27,977,255bytes,SHA2563a2e7a47604ba702f345878308e6fefeca612ee895cf4a5f222e7955fabfe0c0. Cache: client build/android-icu-sources/icu4c-78.3-sources.tgz. Existing valid bytes are reused; mismatches are preserved and rejected. The default mode makes no network request and installs nothing.
+Expected: Existing ICU source matches its pin; no download needed, followed by ANDROID ICU SOURCES VERIFIED. The default helper performs no network request and only verifies local bytes.
 
-Return the two client diagnostics/icu-sources-*.txt files, or the first failure log. LDPlayer and the server need not run for source preparation. This step does not compile ICU or run an Android probe; those recipes remain to be implemented and tested. The selected release and hash come from the [official ICU78.3 release](https://github.com/unicode-org/icu/releases/tag/release-78.3); the VPS also checked its published SHA512. No release-signature verification is claimed.
+Return the saved client diagnostics/icu-sources-offline-*.txt file on success or failure. This completes the source-cache check; it does not compile ICU or run an Android program. The server and LDPlayer need not run. No tool installation, version change or completed native rebuild is requested.
