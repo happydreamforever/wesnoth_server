@@ -1,65 +1,25 @@
-# Open the actual offline game on LDPlayer
+# Complete the first offline turn
 
-Your Windows engine build and LDPlayer version test passed. This step packages that completed engine into **Wesnoth Offline**, prepares an OBB from the already copied `D:\Test\wesnoth-setup\gamedata-1.19.26`, and opens the game. Keep LDPlayer running. The first data import can take several minutes. Allow roughly 2 GB free on the emulator for the OBB, extracted data, APK and game cache.
+Windows APK packaging, signing, installation, complete OBB import and the visible main menu now pass. The user confirms that they have not played a turn yet. Use the game already open in LDPlayer; this test needs no pull, build, reinstall or server command. Keep the installed app and all completed build/data stages.
 
-Temporarily connect and update both existing checkouts with MSYS2 Git. Run this in PowerShell:
+1. Disconnect internet for this local test, leaving LDPlayer running.
+2. From the main menu choose **Campaigns**.
+3. Select **Heir to the Throne, Classic**. Choose **Fighter / Easy**, then **Play**. This is the Classic campaign; the newer campaign has a similar name.
+4. Answer **Yes** to **Play Battle Training?**, then choose either hero.
+5. Follow the instructions to select/move your hero and attack the training dummy.
+6. When prompted, press **End Turn** at the bottom right. Wait for the dummy's turn and confirm that control returns on **turn 2** (the healing lesson).
 
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
-    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
-        $repo = '/d/Test/wesnoth-setup/' + $name
-        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
-        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Send the output." }
-        & $bash --noprofile --norc -c ('/usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
-        if ($LASTEXITCODE -ne 0) { throw "Could not read $name commit. Send the output." }
-    }
-}
-```
+The exact gamedata-1.19.26 version puts this tutorial inside the Classic campaign; its title screen has no separate Tutorial button. End Turn is intentionally disabled until the movement and first attack lessons are completed.
 
-The following build and device test use existing tools and caches without downloads. You can disconnect internet after pulling. Run this entire block in PowerShell:
+Expected result: the map, terrain, units and text render; unit selection/movement/attack respond; the AI takes its turn; turn 2 begins without a crash. Also note whether music or sound effects are audible. This establishes the first local playable turn; it does not yet establish the client/server LAN game.
 
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
-    $python = Join-Path $env:LOCALAPPDATA 'Programs\Python\Python314\python.exe'
-    $null = New-Item -ItemType Directory -Path '.\diagnostics' -Force
-    $log = Join-Path (Get-Location).Path ('diagnostics\game-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N') + '.txt')
+Report:
 
-    try {
-        & {
-            & $python -I -B -u '.\tools\prepare_android_game_data.py' `
-                --data-root 'D:\Test\wesnoth-setup\gamedata-1.19.26'
-            if ($LASTEXITCODE -ne 0) { throw 'Game-data OBB preparation failed. Send the saved log.' }
+- Did the training map open, and were the map/text readable?
+- Did movement and attack work, and did turn 2 begin?
+- Was music or sound audible, and was internet disconnected?
+- If anything failed, the last successful action and exact visible error or screen state.
 
-            powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\tools\Build-WindowsAndroidGame.ps1'
-            if ($LASTEXITCODE -ne 0) { throw 'Game APK packaging failed. Send the saved log.' }
+On a successful manual test, a short written result is enough. On failure, report what happened before rerunning the APK installer or changing build files. The previous successful startup logs are retained under diagnostics/game-20261013-141502-308-32ac9f66ce3741e4a0ca9f94f46e35a9.txt, game-logcat-20261013-144318-475-da8d4905c22944da8f5a9a3464550cf1.txt and game-userdata-20261013-144318-661-da8d4905c22944da8f5a9a3464550cf1. New gameplay errors may require a fresh scoped log capture; the saved startup logs do not automatically include later play.
 
-            powershell.exe -NoProfile -ExecutionPolicy Bypass `
-                -File '.\tools\Test-AndroidGame.ps1' -Serial '127.0.0.1:5555'
-            if ($LASTEXITCODE -ne 0) { throw 'Game launch check failed. Send the saved log and game-logcat file.' }
-        } 2>&1 | Tee-Object -FilePath $log
-    } catch {
-        ('ERROR: ' + $_.Exception.Message) | Tee-Object -FilePath $log -Append
-        throw
-    } finally {
-        Write-Host "Saved log: $log"
-    }
-}
-```
-
-Expected sequence:
-
-- `ANDROID GAME DATA PREPARED`: all 26,748 source files match the trusted data hash. The 731,274,164-byte stored-ZIP OBB is `build/android-game-data/main.1192600.org.wesnoth.offline.obb`. The original folder stays unchanged.
-- `ANDROID GAME BUILD PASS`: Gradle packages a signed debug x86_64 APK at `build/android-game/app/build/outputs/apk/debug/app-debug.apk`. It reuses the engine and dependencies; it removes debug information only from new copies. No native recompilation is requested.
-- `ANDROID GAME ARTIFACTS VERIFIED`, successful APK installation and OBB transfer/hash verification. This creates the separate `org.wesnoth.offline` app, versionName1.19.26/versionCode1192600; the earlier SDL Check app is a different package.
-- A **Wesnoth Offline** data-import screen opens. It verifies every extracted file locally against the full trusted manifest inside the APK. Progress remains visible; no online asset download is used. After import, the actual game activity starts.
-- The helper waits up to ten minutes for this run's data and activity readiness markers, then prints `ANDROID GAME LAUNCH CHECK PASSED`. **This is an import/activity check, not proof that the title screen or gameplay works.** Native initialization may still need time after the activity opens.
-
-When the title screen appears, check that text and images are readable and buttons respond. Open the tutorial or a local game, move a unit and finish one turn if possible. Report exactly how far it reaches, whether sound plays, and any visible error or crash. Keep internet disconnected during this check. Do not select an online multiplayer server or download add-ons for this milestone.
-
-Attach the saved `diagnostics/game-*.txt` even on success. The helper also prints paths for `game-logcat-*.txt` and any copied `game-userdata-*` native log directory; include those on failure. If the importer or build fails, preserve its files and send the logs before deleting or rebuilding anything. This does not require new tools, another engine/dependency/server rebuild, a new data download or a new inventory. Existing user data, native stages, caches and receipts are preserved.
-
-The next confirmed milestone needs your visual/runtime result. LAN gameplay with the Windows server, a physical Android phone, release packaging and local MongoDB integration remain subsequent required work.
+After the local turn is confirmed, the next checkpoint connects this Android game to the existing Windows server and completes a LAN turn without internet. Phone testing, MongoDB integration and custom game features remain subsequent required work. For the later server launch use the recorded current MSYS2 root explicitly, because the existing launcher still defaults to the historical D:\Test\msys64 path; no global default or runtime changes are requested now.
