@@ -38,7 +38,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current status (2026-10-13):** Actual Windows ICU 78.3 compilation and every LDPlayer native check now pass, confirmed by icu-20261013-020820-611.txt. The new Boost 1.88 checkpoint uses the already cached Boost/bzip2 sources and the verified ICU prefix. Follow NEXT_TEST.md for its MSYS2 Git pull, offline native build and LDPlayer test; actual Windows/Android Boost success awaits the returned report. Preserve all completed native stages and use the verified MSYS2 root D:\Test\wesnoth-setup\msys64. OpenSSL/curl, final engine/APK/assets/OBB integration, a playable local/LAN turn and MongoDB remain required.
+**Current status (2026-10-13):** Actual Windows Boost 1.88 compilation and every LDPlayer native check now pass, confirmed by boost-20261013-023639-578.txt. ICU 78.3 and all earlier native stages remain verified. The next checkpoint builds the already cached OpenSSL 3.4.1 and curl 8.1.1 sources for Android x86_64/API23 and tests them locally without an internet service. Preserve completed stages and use the verified MSYS2 root D:\Test\wesnoth-setup\msys64. Follow NEXT_TEST.md for current commands. The full engine/APK/assets/OBB integration, a playable local/LAN turn and MongoDB remain required.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
