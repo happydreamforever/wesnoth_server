@@ -331,3 +331,10 @@ The first Windows TextRender run built Expat and Fontconfig, then Cairo configur
 The recovery changes the runner only. The existing source inventory, package plan, generated compiler wrappers, dependencies and incomplete Windows prefix remain usable without a backup or reset. NEXT_TEST.md contains the normal pull/build/device-test commands. Attempt logs are printed and retained under build/android-text-render/build/cairo-configure-attempts. The same helpers still require a complete verified receipt before Android testing. Actual Windows recovery and TextRender runtime success remain pending.
 
 Verification:24 builder tests pass; a real Bash injected-EBUSY test recovers on attempt two; the actual offline Android rebuild reuses the existing stage; and receipt/device-helper verification with actual artifacts passes using mocked ADB. Existing source/toolchain/prefix bytes remain identical, and only the new driver's receipt fingerprint changes. Detailed evidence and the unresolved Windows cause are recorded in BASELINE.md.
+
+
+### Windows build confirmed; device test startup
+
+The latest log.txt confirms Cairo configuration recovered on attempt3 and the complete Windows TextRender build/receipt passed. The device test stopped before verification or ADB because its parameter default evaluated PSScriptRoot while empty. Test-AndroidTextRender.ps1 now resolves the default sibling data directory in the initialized script body; explicit DataRoot paths remain supported. This helper is outside the native receipt's input list, so updating it does not require rebuilding libraries or the probe. NEXT_TEST.md now runs only the device test and saves its output as a diagnostics file. Actual Android rendering execution remains pending.
+
+Validation:29 helper fixtures pass, including direct -File startup and the reported empty-PSScriptRoot binding condition. Real receipt verification and direct helper integration with actual prefixes/assets pass with mocked ADB. Existing native outputs remain valid without a rebuild. Output-file handoff checks pass for both success and failure. The updated helper still awaits the user's Windows/LDPlayer result.

@@ -1,12 +1,12 @@
-# Retry Cairo configuration, then test font rendering
+# Run the completed font-rendering probe in LDPlayer
 
-Your new log confirms Expat and Fontconfig built, then Cairo configuration stopped on a Bash temporary-file error. The Android test was not reached. Keep the current build/android-text-render directory and all earlier successful stages.
+Your log.txt confirms the Windows Expat/Fontconfig/Cairo build succeeded, including the final probe and receipt. Cairo recovered on its third configure attempt. Keep the completed build/android-text-render directory and all earlier stages; no rebuild is needed.
 
-The updated helper gives Cairo configuration a fresh private temporary directory and records each attempt. It retries at most twice after the exact reported busy-file failure; other failures stop immediately. The existing sources, compiler and dependencies are reused. No source download, package installation or manual file edit is needed.
+The device helper stopped before verification or ADB because its default game-data path was evaluated before PSScriptRoot was available. This update resolves that default after script initialization. The existing data directory remains D:\Test\wesnoth-setup\gamedata-1.19.26.
 
-## Pull the prepared update
+## Pull the helper fix
 
-Temporarily connect Windows to GitHub. Paste this block into normal PowerShell:
+Temporarily connect Windows to GitHub and paste this into normal PowerShell:
 
 ```powershell
 & {
@@ -20,38 +20,38 @@ Temporarily connect Windows to GitHub. Paste this block into normal PowerShell:
 }
 ```
 
-Only the pulls need internet. Keep repository-local Git settings and saved stashes. If a pull reports a conflict, stop and return its output; preserve local files.
+Keep repository-local Git settings and saved stashes. If a pull reports a conflict, preserve local files and return the error. Only the pulls need internet.
 
-## Build, then run the native LDPlayer test
+## Run only the device test and save its output
 
-Return to offline use and keep LDPlayer open with Android booted. Paste this entire block into normal PowerShell:
+Return to offline use. Keep LDPlayer open with Android booted and paste this block into normal PowerShell:
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
     Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
-
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Build-WindowsAndroidTextRender.ps1'
-    if ($LASTEXITCODE -ne 0) { throw 'Text rendering build failed. Send the complete output.' }
-
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Test-AndroidTextRender.ps1' -Serial '127.0.0.1:5555'
-    if ($LASTEXITCODE -ne 0) { throw 'Text rendering device test failed. Send the complete output.' }
+    $null = New-Item -ItemType Directory -Path '.\diagnostics' -Force
+    $log = Join-Path (Get-Location).Path ('diagnostics\text-render-device-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.txt')
+    $deviceExit = 2
+    try {
+        powershell.exe -NoProfile -ExecutionPolicy Bypass `
+            -File '.\tools\Test-AndroidTextRender.ps1' -Serial '127.0.0.1:5555' `
+            2>&1 | Tee-Object -FilePath $log
+        $deviceExit = $LASTEXITCODE
+    } finally {
+        Write-Host "Saved log: $log"
+    }
+    if ($deviceExit -ne 0) { throw 'Device test failed. Send the saved log file.' }
 }
 ```
 
-The build uses D:\Test\msys64, existing MSYS Python/Meson/Make/Ninja and NDK26.3.11579264 with two jobs. Its separate output is D:\Test\wesnoth-setup\wesnoth_client\build\android-text-render. Let configuration and compilation finish. No backup or deletion is required. Keep all files in the existing stage. The helper reruns configuration and reuses available object files; earlier prerequisite stages are not rebuilt.
+The output remains visible and is saved in D:\Test\wesnoth-setup\wesnoth_client\diagnostics\text-render-device-<timestamp>.txt. Send that file or place it in the VPS workspace and tell me its filename; there is no need to copy the entire console. If the helper fails, send the saved file as well.
 
-The device helper first uses native Windows Python3.14.3 to verify the completed fonts/text-base and new text-rendering prefixes and receipts. It then verifies exactly these existing files under D:\Test\wesnoth-setup\gamedata-1.19.26 against their pinned sizes and hashes: fonts/Lato-Regular.ttf, fonts/DejaVuSans.ttf and fonts/COPYING. Before ADB starts, it stops if any required input differs.
-
-The test sends one native executable and those three small font/license files to a unique directory on the selected LDPlayer instance. It checks incremental XML parsing and error handling, private font registration and selection, fallback from Lato to DejaVu Sans for an Arabic character, image compositing and glyph rendering into memory. No new APK screen or running server is needed. This is font selection and rendering; full paragraph shaping/bidirectional layout remains a later Pango checkpoint.
+The helper verifies the existing font/text-base/TextRender prefixes and receipts with native Windows Python, then verifies the two TTFs and their COPYING notice against their pinned hashes. It sends the probe and those three files to the selected booted x86_64/API28 LDPlayer at127.0.0.1:5555. No APK screen or running server is needed.
 
 Expected completion lines:
 
 ```text
-ANDROID TEXT RENDER BUILD PASS
-ANDROID TEXT RENDER BUILD COMPLETE: ...\build\android-text-render\receipt.json
 ANDROID TEXT BASE ARTIFACTS VERIFIED
 ANDROID FONTS ARTIFACTS VERIFIED
 ANDROID TEXT RENDER ARTIFACTS VERIFIED
@@ -65,4 +65,4 @@ PASS wesnoth-android-text-render
 ANDROID TEXT RENDER TEST PASSED
 ```
 
-The probe also reports Expat2.5.0, Fontconfig21701 (2.17.1), Cairo1.16.0 and FreeType2.13.0. Send the complete console output on success or failure. Cairo attempt logs and failed config.log/config.status snapshots are retained under the attempt paths printed by the builder. Other package configure logs and Meson's log remain under build/android-text-render/build. The device helper prints the retained test directory. Actual Windows compilation and LDPlayer execution of this new batch remain pending until your result. The game APK, asset import/OBB, gameplay and MongoDB remain later required work.
+This checks font selection, character fallback and rendering into memory. Actual TextRender execution remains pending until your device result. Full paragraph shaping/bidirectional layout, the game APK/assets/OBB, gameplay and MongoDB remain later required work.
