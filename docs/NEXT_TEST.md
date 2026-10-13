@@ -1,63 +1,40 @@
-# Prepare the missing paragraph-layout source
+# Check the newly copied MSYS2 folder
 
-TextRender passed on Windows and LDPlayer. The next stage is Pango paragraph layout; it needs the missing FriBidi source. This delivery prepares that source only. The existing Pango 1.50.14 archive and completed native builds remain usable.
+FriBidi source preparation and both default cache verifications passed on Windows. Keep the downloaded source and completed native builds. The later errors occur before Git because the command still points to D:\Test\msys64\usr\bin\bash.exe. The newly reported root is D:\Test\wesnoth-setup\msys64.
 
-Temporarily connect Windows to the internet. In normal PowerShell, paste this block to update both existing checkouts with MSYS2 Git and prepare the pinned FriBidi 1.0.17 archive:
+The uploaded VPS msys64 copy has empty Bash/Git/runtime files: all 1,184 EXEs and 863 DLLs are zero bytes. That copy cannot run. The Windows copy must be checked before changing build/pull commands to use it. This is new evidence about a changed tool installation, not a request to repeat the full environment inventory.
 
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $bash = 'D:\Test\msys64\usr\bin\bash.exe'
-    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
-        $repo = '/d/Test/wesnoth-setup/' + $name
-        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
-        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Send the output." }
-        & $bash --noprofile --norc -c ('/usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
-        if ($LASTEXITCODE -ne 0) { throw "Could not read $name commit. Send the output." }
-    }
-
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
-    $null = New-Item -ItemType Directory -Path '.\diagnostics' -Force
-    $log = Join-Path (Get-Location).Path ('diagnostics\layout-sources-prepare-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.txt')
-    $setupExit = 2
-    try {
-        powershell.exe -NoProfile -ExecutionPolicy Bypass `
-            -File '.\tools\Prepare-WindowsAndroidLayoutSources.ps1' -Download `
-            2>&1 | Tee-Object -FilePath $log
-        $setupExit = $LASTEXITCODE
-    } finally { Write-Host "Saved log: $log" }
-    if ($setupExit -ne 0) { throw 'Source preparation failed. Send the saved log file.' }
-}
-```
-
-The helper downloads 1,203,284 bytes from the exact official release URL recorded in tools/native-text-layout/sources.json, checks SHA256, and caches the archive at D:\Test\wesnoth-setup\wesnoth_client\build\android-layout-sources\fribidi-1.0.17.tar.xz. An already valid archive is reused. If an existing file differs from the pin, it is preserved and the helper stops; send the log without deleting or replacing the file.
-
-After the preparation succeeds, disconnect internet access and run the offline verification:
+Run this in normal PowerShell. No Git pull or internet connection is needed. It inspects file sizes at both roots and saves the output; it does not execute or modify either MSYS2 copy.
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
-    $null = New-Item -ItemType Directory -Path '.\diagnostics' -Force
-    $log = Join-Path (Get-Location).Path ('diagnostics\layout-sources-offline-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.txt')
-    $setupExit = 2
+    $diagnostics = 'D:\Test\wesnoth-setup\wesnoth_client\diagnostics'
+    $null = New-Item -ItemType Directory -Path $diagnostics -Force
+    $log = Join-Path $diagnostics ('msys-location-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.txt')
     try {
-        powershell.exe -NoProfile -ExecutionPolicy Bypass `
-            -File '.\tools\Prepare-WindowsAndroidLayoutSources.ps1' `
-            2>&1 | Tee-Object -FilePath $log
-        $setupExit = $LASTEXITCODE
+        & {
+            foreach ($root in @('D:\Test\msys64', 'D:\Test\wesnoth-setup\msys64')) {
+                "ROOT: $root"
+                foreach ($name in @('bash.exe', 'git.exe', 'msys-2.0.dll', 'python3.exe', 'make.exe', 'meson', 'ninja.exe', 'gcc.exe')) {
+                    $file = Join-Path $root ('usr\bin\' + $name)
+                    if (Test-Path -LiteralPath $file -PathType Leaf) {
+                        $bytes = (Get-Item -LiteralPath $file -Force).Length
+                        $status = if ($bytes -eq 0) { 'EMPTY' } else { 'PRESENT' }
+                        '{0}: {1}; bytes={2}' -f $status, $name, $bytes
+                    } else {
+                        "MISSING: $name"
+                    }
+                }
+            }
+            'Size inspection complete. PRESENT means nonempty; runtime and versions are not tested.'
+        } 2>&1 | Tee-Object -FilePath $log
     } finally { Write-Host "Saved log: $log" }
-    if ($setupExit -ne 0) { throw 'Offline source verification failed. Send the saved log file.' }
 }
 ```
 
-Both commands should exit successfully and print:
+Return the saved msys-location-*.txt file from the client diagnostics folder. Expected: two ROOT sections, each with eight PRESENT/EMPTY/MISSING entries. An intact candidate needs nonzero bytes for every listed file; size alone does not prove validity. The uploaded VPS copy would produce EMPTY for every listed tool.
 
-```text
-PASS: FriBidi 1.0.17; bytes=1203284; SHA256=6949dcde27d41cebad1fd741fcafc36d55a1020d2d872d4a6eb3914caabbada2
-ANDROID LAYOUT SOURCES VERIFIED
-```
+If the new Windows files are also empty, recover a complete intact copy of the previously working MSYS2 installation or its original archive. Preserve any remaining working copy and successful build directories. Do not attempt an in-place package update with empty executables or replace one executable at a time. The uploaded package cache is incomplete and not a verified replacement installation.
 
-The second command should also say Existing FriBidi source matches its pin; no download needed. Return both saved logs from the client diagnostics folder. Files can be attached or copied to workspace log files; no lengthy console copy is needed.
-
-This step needs only the existing PowerShell/Git and temporary connectivity for preparation. No build, LDPlayer test or server launch is requested yet. After this cache check, the next implementation builds/tests FriBidi and Pango for mixed-direction paragraphs, wrapping and PangoCairo rendering with the verified fonts. The full game APK/assets/OBB, a playable local/LAN turn and MongoDB remain later milestones.
+If a Windows candidate contains real tools, the next check will confirm actual versions and the MSYS/NDK compile boundary using the existing Test-WindowsAndroidTextToolchain.ps1 with an explicit -MsysRoot. Adopt the reported new root only after it is usable; prior helpers already accept this override. Then resume MSYS2 Git updates and the offline Pango/FriBidi layout stage. No source download, native build, server launch or LDPlayer test is requested in this inspection step.

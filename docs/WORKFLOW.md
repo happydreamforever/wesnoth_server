@@ -38,7 +38,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current status (2026-10-13):** TextRender is complete: the user's Windows build and every LDPlayer Expat/Fontconfig/Cairo check passed. The next handoff prepares the missing FriBidi 1.0.17 source for offline Pango 1.50.14 paragraph layout. Prepare-WindowsAndroidLayoutSources.ps1 -Download retrieves one pinned 1,203,284-byte official release while connected; its default mode only verifies the cached archive offline. The dedicated tools/native-text-layout/sources.json and build/android-layout-sources cache do not change the original 23-archive manifest, completed prefixes or receipts. See NEXT_TEST.md for normal MSYS2 pulls, preparation and saved-log offline verification. Windows preparation is pending; no Pango build or Android layout execution is claimed. Full game APK/assets/OBB, gameplay and MongoDB remain later work.
+**Current status (2026-10-13):** FriBidi source preparation is confirmed on Windows: the new log shows client 74461ca/server 6f02e77 pulled, the exact archive downloaded/hashed, and two default-mode cache verifications passed. Later update attempts fail before Git because the old D:\Test\msys64\usr\bin\bash.exe cannot be found. The user now reports copying MSYS2 to D:\Test\wesnoth-setup\msys64. The uploaded VPS msys64 directory has all 1,184 EXEs and 863 DLLs empty, so that exact copy cannot run. Verify file sizes at both Windows roots using the standalone PowerShell block in NEXT_TEST.md before selecting a toolchain or resuming pulls/builds. No Git update is required for that check. Keep the successful source cache and all native builds/receipts. The offline Pango layout build remains next after resolving the changed tool location/copy.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -48,7 +48,8 @@ The user now confirms that both repositories are already cloned at the following
 | `D:\Test\wesnoth-setup\wesnoth_client` | Existing client clone |
 | `D:\Test\wesnoth-setup\wesnoth_server` | Existing server clone |
 | `D:\Test\wesnoth-setup\gamedata-1.19.26` | Verified offline asset source; Windows full hash check passed |
-| `D:\Test\msys64` | Installed MSYS2 folder |
+| `D:\Test\msys64` | Previously verified MSYS2 root; latest log cannot launch Bash here |
+| `D:\Test\wesnoth-setup\msys64` | Newly reported copied MSYS2 root; Windows contents/runtime await validation |
 
 The first collector run was interrupted with Ctrl+C and saved a partial report after Git version results. Keep LDPlayer running and temporarily connect to GitHub to update the existing server. The installed Git for Windows path below is confirmed by the user's report. The client does not need updating for this diagnostic step.
 
@@ -476,3 +477,8 @@ Future handoffs should update `BASELINE.md` with confirmed versions, commands th
 ## Preparing newly required offline sources
 
 For the paragraph-layout stage, the original source cache lacks FriBidi. The explicit connected helper Prepare-WindowsAndroidLayoutSources.ps1 -Download prepares its separate pinned release archive. Run the default helper after disconnecting to verify the cache offline. NEXT_TEST.md contains the current saved-log commands. Keep the existing 23-archive manifest and completed native receipts unchanged; later build commands must consume verified local sources with downloads disabled. A successful source-preparation marker is not evidence of a library build, Android runtime or gameplay.
+
+
+## Validate a changed MSYS2 copy before resuming updates
+
+FriBidi preparation and default cache verification passed. The later failure occurs before Git: the old Bash path is unavailable. The user reports the new MSYS2 root D:\Test\wesnoth-setup\msys64, but the corresponding uploaded tree has empty EXEs/DLLs. Current NEXT_TEST.md therefore starts with standalone PowerShell file-size checks at both Windows locations and saves a log. It needs no pull, MSYS process, network or package installation. Verify the actual copy before adopting the new root; preserve intact installations and completed builds. Existing helpers accept -MsysRoot, so avoid changing old receipt inputs to select a new location. The historical MSYS2 pull block above resumes only after the selected Bash/Git/runtime are usable.
