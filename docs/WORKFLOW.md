@@ -38,7 +38,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current status (2026-10-13):** Windows network-20261013-062509-357.txt confirms the header-selection fix: OpenSSL generation and exact header verification pass, and CMake configures successfully. Ninja then stops while deleting a compiler dependency file because Windows reports it in use. The scoped Network fix retains depfiles with -d keepdepfile while preserving normal dependency tracking. Keep the current build/android-network and its completed generation state in place; NEXT_TEST.md resumes it without another backup or regeneration. Earlier native stages remain complete. Actual Windows Network build completion and LDPlayer execution are still pending; full game/APK/assets/OBB, playable local/LAN turns and MongoDB remain required.
+**Current status (2026-10-13):** Windows network-20261013-065142-325.txt confirms OpenSSL compilation and installation succeeded with retained depfiles. Curl configuration completes, but CMake fails when Ninja -t restat replaces its build log (failed recompaction: Permission denied). That error can occur before or after the original .ninja_log is deleted, so its surviving state must be inspected before another configure/build. Keep the current stage and backups intact. NEXT_TEST.md collects only a read-only Network state report, including exact Ninja log contents and saved generation/prefix checks. Actual curl build completion, Android Network execution, full game/APK/assets/OBB, playable turns and MongoDB remain pending.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
