@@ -38,7 +38,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current status (2026-10-13):** The relocated Windows MSYS2 root D:\Test\wesnoth-setup\msys64 passed actual Bash/Git/runtime/host-GCC checks and the Android NDK compile/archive boundary. User report: msys-runtime-20261013-005308-141.txt. Git2.55.0/runtime3.6.10, host GCC15.3.0, MSYS Python3.12.13/Meson1.12.0 and NDK26.3.11579264 match prior reports. Preserve all completed native stages and the verified FriBidi source cache. The next Windows checkpoint builds FriBidi1.0.17/Pango1.50.14 and runs the new paragraph-layout probe on LDPlayer using NEXT_TEST.md. The Android cross-build and host semantic checks pass on the VPS; actual Windows compilation and Android layout execution remain pending.
+**Current status (2026-10-13):** The actual Windows FriBidi1.0.17/Pango1.50.14 build and LDPlayer paragraph-layout probe passed. Report text-layout-20261013-010656-643.txt confirms bidi ordering, private fonts/Arabic shaping, nine wrapped lines and9,350 rendered/6,948 antialiased pixels on Android9/API28/x86_64. Preserve build/android-text-layout and all earlier stages; no unchanged rebuild/retest is needed. The next checkpoint prepares pinned ICU78.3 source for the Android Boost.Locale dependency, matching the installed Windows server ICU release. Use the verified MSYS2 root D:\Test\wesnoth-setup\msys64 for pulls. NEXT_TEST.md downloads the new source while connected, then verifies it with the default offline mode. Android ICU/Boost and OpenSSL/curl compilation, full game APK/OBB, gameplay and MongoDB remain pending.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -494,3 +494,8 @@ The returned Windows report confirms nonempty tools at D:\Test\wesnoth-setup\msy
 The historical location/runtime diagnostics above are complete. Use the guarded MSYS2 pull block in NEXT_TEST.md with D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe. The new TextLayout builder defaults to this verified root; old build helpers keep their receipt-bound inputs and accept -MsysRoot overrides. No reinstall or package upgrade is requested.
 
 After pulling, disconnect and build only the new FriBidi/Pango prefix, then run its native probe on the selected LDPlayer. The saved-log block stops after a build failure and prints the client diagnostics/text-layout-*.txt path in either case. Preserve prior stages, source caches, game data, stashes and backups. Review each returned result before advancing to full client integration; the completed host checks do not establish Android layout success.
+
+
+## Current source handoff after Android layout passed
+
+The new Windows/LDPlayer result completes TextLayout. Keep all earlier outputs and receipt-bound helpers unchanged. NEXT_TEST.md now combines ordinary MSYS2 pulls with explicit connected ICU78.3 source preparation, then a separate default-mode verification after disconnecting. Both source-helper runs save logs and stop on failure; Git pulls retain their already verified direct invocation and stop before preparation on an error. Return those reports before requesting a Windows ICU library build. This does not repeat source inventory, the runtime relocation check or successful layout tests. All actual offline builds/gameplay must remain independent of internet access.
