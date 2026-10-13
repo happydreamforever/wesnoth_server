@@ -1,6 +1,6 @@
-# Recover Network build history, then resume the existing build
+# Build and load the actual Android game engine
 
-The returned Windows state JSON confirms that .ninja_log is missing. Its surviving .ninja_log.restat has the exact 942 crypto objects, 90 SSL objects and both archives; the144 installed OpenSSL files and saved generation pass. This recovery preserves the completed work and earlier backups.
+The Network stage passed on Windows and LDPlayer. Keep its completed files and metadata backups; its old report-based recovery command is finished. This step builds the actual Wesnoth 1.19.26 engine using the ten completed dependency prefixes, then runs the engine's version command on LDPlayer. APK/activity and game-data integration follow after this result.
 
 Temporarily connect and pull both existing checkouts through MSYS2 Git:
 
@@ -18,30 +18,22 @@ Temporarily connect and pull both existing checkouts through MSYS2 Git:
 }
 ```
 
-After pulling, disconnect and open LDPlayer. Run this block in normal PowerShell. It uses the state report already saved in the client diagnostics directory. Keep that JSON at its existing path. The Windows server is not needed for the native loopback HTTPS check.
+After pulling, disconnect and open LDPlayer. Run this block in normal PowerShell. The Windows server is not needed for this engine-loading check. The existing verified `gamedata-1.19.26` directory stays in place for the later APK/asset step.
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
     Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
-    $python = Join-Path $env:LOCALAPPDATA 'Programs\Python\Python314\python.exe'
-    $report = Join-Path (Get-Location).Path 'diagnostics\network-state-20261013-092657-266-0a25997b14e74caa908736082192203c.json'
     $null = New-Item -ItemType Directory -Path '.\diagnostics' -Force
-    $log = Join-Path (Get-Location).Path ('diagnostics\network-recovery-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N') + '.txt')
+    $log = Join-Path (Get-Location).Path ('diagnostics\engine-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N') + '.txt')
 
     try {
         & {
-            if (-not (Test-Path -LiteralPath $report -PathType Leaf)) {
-                throw "The saved state report is missing: $report"
-            }
-            & $python -I -B -u '.\tools\build_android_network.py' --recover-ninja-state $report
-            if ($LASTEXITCODE -ne 0) { throw 'Metadata recovery stopped. Send the saved log.' }
+            powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\tools\Build-WindowsAndroidEngine.ps1'
+            if ($LASTEXITCODE -ne 0) { throw 'Engine build failed. Send the saved log.' }
 
-            powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\tools\Build-WindowsAndroidNetwork.ps1'
-            if ($LASTEXITCODE -ne 0) { throw 'Network build failed. Send the saved log.' }
-
-            powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\tools\Test-AndroidNetwork.ps1' -Serial '127.0.0.1:5555'
-            if ($LASTEXITCODE -ne 0) { throw 'Android Network test failed. Send the saved log.' }
+            powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\tools\Test-AndroidEngine.ps1' -Serial '127.0.0.1:5555'
+            if ($LASTEXITCODE -ne 0) { throw 'Android engine test failed. Send the saved log.' }
         } 2>&1 | Tee-Object -FilePath $log
     } catch {
         ('ERROR: ' + $_.Exception.Message) | Tee-Object -FilePath $log -Append
@@ -54,10 +46,12 @@ After pulling, disconnect and open LDPlayer. Run this block in normal PowerShell
 
 Expected sequence:
 
-- `ANDROID NETWORK NINJA STATE RECOVERED`, with a preserved metadata-backup path. Recovery checks the report/current metadata hashes, owned source/generation/prefix records and exact expected output files before creating the missing log. It keeps the surviving .restat.
-- Verified OpenSSL generation reuse, protected configure operations, and resumed native compilation. Completed OpenSSL objects should be reused; curl and the probe still need building. A build failure stops before the device test.
-- `ANDROID NETWORK BUILD PASS`, then `ANDROID NETWORK ARTIFACTS VERIFIED` and `ANDROID NETWORK TEST PASSED`. The test exercises cryptography and verified HTTPS entirely inside LDPlayer. It opens no visible app window.
+- Verification of existing Media, text/layout, ICU, Boost and Network prerequisites, without rebuilding them. Hash checks may take a few minutes.
+- Native compilation of 537 actual game C++ files, 31 bundled Lua files and the small CLI runner, then linking `libmain.so` and the runner. The engine is substantially larger than the earlier probes; leave the build running until it finishes or reports an error. Default parallelism is two compiler jobs.
+- `ANDROID ENGINE BUILD PASS` and a receipt in `build/android-engine/receipt.json`.
+- `ANDROID ENGINE ARTIFACTS VERIFIED`, six file transfers to a unique LDPlayer temporary directory, then the actual `Battle for Wesnoth 1.19.26` report with `Library versions:` and `Optional features:`.
+- `ANDROID ENGINE TEST PASSED`. No visible app opens: the real engine exits after its version report, before graphics/game-data initialization.
 
-Attach the complete saved diagnostics/network-recovery-*.txt, including successful output. If recovery or a configure transaction stops, keep its metadata backup and send the log; do not delete metadata, run Ninja directly or repeat an old stage-rename command. The current repair block is for this reviewed report. Subsequent ordinary builds use Build-WindowsAndroidNetwork.ps1, which explicitly configures both phases while preserving Ninja history; automatic Ninja-driven CMake regeneration is disabled for this owned stage.
+Attach the complete saved `diagnostics/engine-*.txt`, including successful output. If the new stage fails, preserve its files and send the log. Do not delete Ninja metadata, rerun Network recovery, rename old dependency stages, or rebuild earlier libraries. The helper reuses a successfully recorded engine configuration when inputs are unchanged; an interrupted or changed configuration stops for inspection. No source downloads, package upgrades, full inventory or previous server/Android retests are needed.
 
-No source download, package upgrade, full inventory or rerun of earlier native/server tests is needed. The full game APK/assets/OBB, playable turns and MongoDB remain later required steps.
+The actual game APK/activity, offline asset/OBB import, title screen, playable local and LAN turns, physical phone testing and MongoDB remain required future steps. No game-engine execution on Windows/LDPlayer is claimed until this log is returned.

@@ -38,7 +38,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current status (2026-10-13):** The returned network-state-20261013-092657-266-0a25997b14e74caa908736082192203c.json confirms that .ninja_log is missing and .ninja_log.restat contains exactly all 942 crypto objects, 90 SSL objects and both archives. Saved generation and the 144-file OpenSSL prefix pass. NEXT_TEST.md now verifies that report against current Windows files, preserves a metadata backup, restores the exact reviewed log, then resumes only the Network build and LDPlayer probe. Each configure protects both Ninja logs; completed source generation, objects and earlier stages stay in place. Actual curl build completion, Android Network execution, full game/APK/assets/OBB, playable turns and MongoDB remain pending.
+**Current status (2026-10-13):** Windows network-recovery-20261013-115646-392-0df8d5ce80634e0dbd7dc9c60169af15.txt confirms recovery of all 1,034 Ninja records, OpenSSL reuse without recompilation, completion of all 168 remaining curl/probe steps, and every LDPlayer crypto/HTTPS check. Network compilation and Android runtime are complete. Preserve the source cache, surviving .restat, metadata backups, completed prefixes and receipts. The next milestone builds the actual Wesnoth 1.19.26 libmain.so and tests its real --version entry point on LDPlayer. Full game APK/activity/assets/OBB, local and LAN playable turns, and MongoDB remain pending.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -507,3 +507,8 @@ Actual Windows pulls and ICU78.3 download/hash verification passed. The current 
 
 
 Latest Network checkpoint (2026-10-13): The returned network-state-20261013-092657-266-0a25997b14e74caa908736082192203c.json confirms that .ninja_log is missing and .ninja_log.restat contains exactly all 942 crypto objects, 90 SSL objects and both archives. Saved generation and the 144-file OpenSSL prefix pass. NEXT_TEST.md now verifies that report against current Windows files, preserves a metadata backup, restores the exact reviewed log, then resumes only the Network build and LDPlayer probe. Each configure protects both Ninja logs; completed source generation, objects and earlier stages stay in place. Actual curl build completion, Android Network execution, full game/APK/assets/OBB, playable turns and MongoDB remain pending. The Network builder now uses report-checked recovery and protected explicit configure operations for both .ninja_log and .ninja_deps. It disables automatic CMake regeneration only for this stage; use the normal helper for later builds. Preserve the surviving .restat and metadata transaction backups. Read the final BASELINE.md section for exact evidence and validation.
+
+
+## Network complete; actual-engine handoff
+
+The 2026-10-13 returned `network-recovery-20261013-115646-392-0df8d5ce80634e0dbd7dc9c60169af15.txt` completes Windows Network compilation and LDPlayer crypto/HTTPS execution. Its old metadata-state JSON is historical; do not reuse it for a new recovery after the completed build. Retain original metadata backups and all completed stages. Current NEXT_TEST.md moves to the actual engine shared library and version entry point, with a saved `diagnostics/engine-*.txt` log. Only the new owned engine stage is built. Android gameplay evidence still requires the later APK/activity/asset integration and a real playable turn.
