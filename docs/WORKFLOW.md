@@ -38,7 +38,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current status (2026-10-13):** Windows ICU 78.3 source preparation is complete: the connected download and default cached verification both passed, most recently in icu-sources-offline-20261013-015515-738.txt. The new offline ICU static-library builder and native Android probe now pass VPS cross-compilation and host/fixture checks. Next: pull both repositories through the verified MSYS2 Git at D:\Test\wesnoth-setup\msys64, then build ICU and run its probe on LDPlayer using NEXT_TEST.md. Actual Windows ICU compilation and Android ICU execution await that result. Preserve every completed native stage, including Windows/LDPlayer-proven FriBidi/Pango. Boost, OpenSSL/curl, the full game APK/assets/OBB, a playable turn and MongoDB remain pending.
+**Current status (2026-10-13):** Actual Windows ICU 78.3 compilation and every LDPlayer native check now pass, confirmed by icu-20261013-020820-611.txt. The new Boost 1.88 checkpoint uses the already cached Boost/bzip2 sources and the verified ICU prefix. Follow NEXT_TEST.md for its MSYS2 Git pull, offline native build and LDPlayer test; actual Windows/Android Boost success awaits the returned report. Preserve all completed native stages and use the verified MSYS2 root D:\Test\wesnoth-setup\msys64. OpenSSL/curl, final engine/APK/assets/OBB integration, a playable local/LAN turn and MongoDB remain required.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 

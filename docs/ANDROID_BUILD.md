@@ -392,3 +392,15 @@ The recipe compiles the release's exact 202 common and 254 internationalization 
 The receipt verifier checks sources/recipe identity, the previous font receipt, every installed file, Android architectures, complete linked data bytes, the probe's API23 loader and the shared C++ runtime. Test-AndroidIcu.ps1 verifies that receipt before ADB and sends only the native probe and libc++_shared.so. The probe disables external ICU file loading and tests versions, normalization, case folding, strict UTF conversion, locale-specific sorting/formatting, grapheme boundaries and regular expressions. LDPlayer must be running; no server, game-data transfer, APK installation or visible window is needed.
 
 VPS network-disabled cross-compilation, same-source host semantics and helper fixtures pass; actual Windows ICU compilation and LDPlayer execution remain pending. See BASELINE.md for exact evidence and limitations. NEXT_TEST.md contains the current pull/build/test commands and saved-log path. This supplies reusable ICU libraries; Boost, OpenSSL/curl, the full game APK/assets/OBB, gameplay and MongoDB remain later work.
+
+
+## ICU checkpoint passed; Boost integration follows
+
+The actual Windows report icu-20261013-020820-611.txt confirms all462 ICU build steps and every native test on LDPlayer Android9/API28/x86_64, including complete embedded data with external data files disabled. Native Windows drive-path assembly now works in the user's installation. CMake unused-variable and ICU deprecated-API warnings did not prevent success. Preserve this stage; no unchanged rebuild/test is requested.
+
+The next stage builds the cached Boost1.88 libraries needed by restored Wesnoth1.19.26 against the verified ICU78.3 prefix. Native Python/CMake/Ninja/NDKr26d drive the Android build directly. This retains the selected Android source versions; Windows server Boost1.91 remains a separately recorded platform version. No installed-package upgrade is part of this checkpoint. Current commands and saved-log path are in NEXT_TEST.md.
+
+
+Build-WindowsAndroidBoost.ps1 creates build/android-boost from the existing Boost/bzip2 cache and verified ICU prefix. It builds twelve Boost libraries plus libbz2, installs all16,010 Boost include files and complete licenses, and provides relocatable wesnoth-boost.pc metadata with ICU as a separate dependency. Downloads and previous-stage rebuilds are not part of the recipe. Native path parameters mirror the ICU helper; the relocated UCRT Ninja default is retained.
+
+Test-AndroidBoost.ps1 performs full receipt verification before ADB, then transfers two files and runs the no-argument probe in a unique directory. The tests cover locale conversion/sorting, scoped file operations and Process lookup, options/random/Charconv/Regex, gzip/bzip2, threading/atomic/chrono, coroutine switching and local asynchronous work. No child application or network service is launched. The test draws no visible window and installs no APK. Logs are saved by the exact NEXT_TEST.md command; report the complete file on success or failure. See BASELINE.md for the measured verification results and remaining platform differences.

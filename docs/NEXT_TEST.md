@@ -1,6 +1,6 @@
-# Build and test ICU on Windows and LDPlayer
+# Build and test Boost on Windows and LDPlayer
 
-The actual Windows ICU source download and default cache verification passed. Keep the archive and all completed native stages. This checkpoint builds the new ICU 78.3 static libraries and runs a native Android Unicode/locale test. It does not install an APK or open a visible app window.
+The actual Windows ICU build and every LDPlayer check passed in icu-20261013-020820-611.txt. Keep that completed stage. This checkpoint builds Boost 1.88 against the verified ICU libraries and runs a native Android test. It does not install an APK or open a visible app window.
 
 While temporarily connected to GitHub, paste this into normal PowerShell. It uses the verified MSYS2 Git and stops if either pull fails:
 
@@ -25,31 +25,32 @@ Disconnect from the internet, keep LDPlayer running and run this second block. T
     $ErrorActionPreference = 'Stop'
     Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
     $null = New-Item -ItemType Directory -Path '.\diagnostics' -Force
-    $log = Join-Path (Get-Location).Path ('diagnostics\icu-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.txt')
+    $log = Join-Path (Get-Location).Path ('diagnostics\boost-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.txt')
     try {
         & {
             powershell.exe -NoProfile -ExecutionPolicy Bypass `
-                -File '.\tools\Build-WindowsAndroidIcu.ps1'
-            if ($LASTEXITCODE -ne 0) { throw 'ICU build failed. Send the saved log.' }
+                -File '.\tools\Build-WindowsAndroidBoost.ps1'
+            if ($LASTEXITCODE -ne 0) { throw 'Boost build failed. Send the saved log.' }
 
             powershell.exe -NoProfile -ExecutionPolicy Bypass `
-                -File '.\tools\Test-AndroidIcu.ps1' -Serial '127.0.0.1:5555'
-            if ($LASTEXITCODE -ne 0) { throw 'ICU device test failed. Send the saved log.' }
+                -File '.\tools\Test-AndroidBoost.ps1' -Serial '127.0.0.1:5555'
+            if ($LASTEXITCODE -ne 0) { throw 'Boost device test failed. Send the saved log.' }
         } 2>&1 | Tee-Object -FilePath $log
     } finally { Write-Host "Saved log: $log" }
 }
 ```
 
-Expected: ANDROID ICU BUILD COMPLETE, then ANDROID ICU ARTIFACTS VERIFIED and all native test markers:
+Expected: ANDROID BOOST BUILD COMPLETE, then ANDROID BOOST ARTIFACTS VERIFIED and all native test markers:
 
 ```text
-WESNOTH_ANDROID_ICU version=1.19.26 abi=x86_64 min_api=23
-PASS ICU packaged data and versions
-PASS ICU normalization casefold and strict UTF
-PASS ICU locale collation and formatting
-PASS ICU boundaries and regular expressions
-PASS wesnoth-android-icu
-ANDROID ICU TEST PASSED
+WESNOTH_ANDROID_BOOST version=1.19.26 abi=x86_64 min_api=23
+PASS Boost.Locale ICU backend and embedded data
+PASS Boost.Filesystem and Process scoped file operations
+PASS Boost.ProgramOptions Random Charconv and Regex
+PASS Boost.Iostreams gzip and bzip2 round trips
+PASS Boost.Thread Context Coroutine and Asio
+PASS wesnoth-android-boost
+ANDROID BOOST TEST PASSED
 ```
 
-The probe contains its locale data. Only it and the existing C++ runtime are sent to LDPlayer; no gamedata/OBB copy is needed for this test. Return the complete saved diagnostics/icu-*.txt file on success or failure. You do not need to paste the long console output. Actual Windows ICU compilation and Android execution remain unverified until that report arrives; earlier completed native tests do not need repeating.
+The probe links the already verified ICU data. Only it and the existing C++ runtime are sent to LDPlayer; no gamedata/OBB copy is needed. Temporary file tests run inside a unique directory created for this probe. No external server or internet service is contacted. Return the complete saved diagnostics/boost-*.txt file on success or failure. You do not need to paste the long console output. Actual Windows Boost compilation and Android execution remain unverified until that report arrives; earlier completed native tests do not need repeating.
