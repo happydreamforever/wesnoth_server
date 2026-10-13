@@ -1,6 +1,6 @@
 # Android build checkpoint
 
-Current checkpoint (2026-10-13): Windows network-recovery-20261013-115646-392-0df8d5ce80634e0dbd7dc9c60169af15.txt confirms recovery of all 1,034 Ninja records, OpenSSL reuse without recompilation, completion of all 168 remaining curl/probe steps, and every LDPlayer crypto/HTTPS check. Network compilation and Android runtime are complete. Preserve the source cache, surviving .restat, metadata backups, completed prefixes and receipts. The next milestone builds the actual Wesnoth 1.19.26 libmain.so and tests its real --version entry point on LDPlayer. Full game APK/activity/assets/OBB, local and LAN playable turns, and MongoDB remain pending.
+Current checkpoint (2026-10-13): Windows engine-20261013-130750-281-de820fddb62a48a88c901bc687ac84b3.txt confirms all 571 actual engine build steps and successful execution of Battle for Wesnoth 1.19.26 --version on LDPlayer. The native game engine now builds and loads on the real Windows/Android path. Preserve all completed native stages, data, caches and metadata backups. NEXT_TEST.md packages the existing engine into org.wesnoth.offline and the copied game data into a verified offline OBB, then installs and opens the game. Android OBB import, the title screen, local and LAN playable turns, physical-phone testing and MongoDB remain unverified.
 
 The first emulator target is x86_64 on the user's verified LDPlayer Android9/API28. The native minimum API remains23. Compile/target SDK35 is a build setting and does not require the emulator to run Android35. The ARM entries in the reported ABI list and libnb.so identify advertised translation support; ARM APK execution has not been tested. A physical-phone ABI will be selected from that phone's actual report later.
 
@@ -436,3 +436,32 @@ The native CMake adapter retains widget registration, bundled Lua configuration,
 
 
 The full native recipe now compiles and links offline on the VPS. The six-file prefix and52-input receipt verify;568 actual game/Lua objects were checked, and an unchanged configuration resumes without recompilation.59 helper/artifact/PowerShell tests and6 exact-handoff scenarios pass. The unstripped VPS engine is501,485,056bytes and retains debug information; device pushes have a300-second per-file limit. Windows build and engine execution remain pending. Detailed artifact hashes, preservation evidence and limitations are in BASELINE.md.
+
+
+Current game packaging checkpoint: the actual Windows engine build and LDPlayer --version execution pass (engine-20261013-130750-281-de820fddb62a48a88c901bc687ac84b3.txt). The next test uses only new build/android-game-data and build/android-game stages, the existing data folder, engine outputs and cached Android build tools. org.wesnoth.offline/versionCode1192600 is separate from the previous SDL check app. The OBB is main.1192600.org.wesnoth.offline.obb; it contains exactly the 26,748 pinned game-data files and is extracted/verified locally by the app. The APK embeds the full per-file manifest with the existing trusted tree hash. No game network download is needed. Follow docs/NEXT_TEST.md; actual Android title-screen and gameplay validation remains pending.
+
+
+## Actual offline game APK and OBB
+
+The actual engine now builds and runs its version command on Windows/LDPlayer. Follow NEXT_TEST.md for the new Windows data-preparation/APK-build/device-launch flow. Completed native stages are read-only. The deterministic OBB contains the exact verified dataset; the app hashes each imported file against a trusted embedded index before starting the engine. This is new org.wesnoth.offline, separate from the SDL check package.
+
+On the prepared VPS, use the current Linux Gradle cache (the old /tmp cache was absent and was replaced separately in an ignored new directory). From the client checkout:
+
+```sh
+python3 -I -B -u tools/prepare_android_game_data.py
+
+docker run --rm --network none --user "$(id -u):$(id -g)" \
+  -e ANDROID_USER_HOME=/workspace/build/android-game-host-user/.android \
+  -v "$PWD:/workspace" -w /workspace wesnoth-android-sdl-verify:ndk26-java21 \
+  python3 -I -B -u tools/build_android_game.py \
+    --ndk /workspace/build/toolchains/android-ndk-r26d \
+    --java /opt/java/openjdk/bin/java \
+    --sdk /workspace/build/toolchains/android-sdk \
+    --gradle-user-home /workspace/build/android-game-gradle-cache
+```
+
+The already prepared cache and SDK/NDK are prerequisites. The builder refuses an uncached Gradle wrapper before invocation and always uses --offline. The helper creates only build/android-game and strips only new library copies. `python3 -I -B tools/build_android_game.py --verify-only` checks saved artifacts without NDK/Gradle; adding both `--sdk` and `--java` also rechecks the Android metadata and signature. Windows device tests always request that signature recheck.
+
+Relevant tests: `python3 -B tests/test_android_game.py`, `python3 -B tests/test_android_game_data.py`, and `python3 -B tests/test_android_game_windows.py --pwsh build/host-tools/powershell-7.4.6/pwsh`. Pure-Java importer tests and their harness live in tools/native-game/tests. Full-data import/reuse runs on the host JVM, while actual Android storage, graphics and gameplay require the user's LDPlayer report.
+
+Actual VPS offline game packaging passed: signed debug APK 37,572,492 bytes, SHA256 325e9bdb2fc79cf6b3cb42b986b62fd05eb081c8b5e6787cf37cceeda99d2086. These identify this Linux build, not required Windows output bytes. The receipt binds 74 project inputs, 22 generated project files, Engine/Data receipts and all payloads. Windows signing/tool output can differ. Android runtime is still pending.

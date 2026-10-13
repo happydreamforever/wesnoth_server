@@ -1,8 +1,8 @@
-# Build and load the actual Android game engine
+# Open the actual offline game on LDPlayer
 
-The Network stage passed on Windows and LDPlayer. Keep its completed files and metadata backups; its old report-based recovery command is finished. This step builds the actual Wesnoth 1.19.26 engine using the ten completed dependency prefixes, then runs the engine's version command on LDPlayer. APK/activity and game-data integration follow after this result.
+Your Windows engine build and LDPlayer version test passed. This step packages that completed engine into **Wesnoth Offline**, prepares an OBB from the already copied `D:\Test\wesnoth-setup\gamedata-1.19.26`, and opens the game. Keep LDPlayer running. The first data import can take several minutes. Allow roughly 2 GB free on the emulator for the OBB, extracted data, APK and game cache.
 
-Temporarily connect and pull both existing checkouts through MSYS2 Git:
+Temporarily connect and update both existing checkouts with MSYS2 Git. Run this in PowerShell:
 
 ```powershell
 & {
@@ -18,22 +18,28 @@ Temporarily connect and pull both existing checkouts through MSYS2 Git:
 }
 ```
 
-After pulling, disconnect and open LDPlayer. Run this block in normal PowerShell. The Windows server is not needed for this engine-loading check. The existing verified `gamedata-1.19.26` directory stays in place for the later APK/asset step.
+The following build and device test use existing tools and caches without downloads. You can disconnect internet after pulling. Run this entire block in PowerShell:
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
     Set-Location 'D:\Test\wesnoth-setup\wesnoth_client'
+    $python = Join-Path $env:LOCALAPPDATA 'Programs\Python\Python314\python.exe'
     $null = New-Item -ItemType Directory -Path '.\diagnostics' -Force
-    $log = Join-Path (Get-Location).Path ('diagnostics\engine-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N') + '.txt')
+    $log = Join-Path (Get-Location).Path ('diagnostics\game-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N') + '.txt')
 
     try {
         & {
-            powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\tools\Build-WindowsAndroidEngine.ps1'
-            if ($LASTEXITCODE -ne 0) { throw 'Engine build failed. Send the saved log.' }
+            & $python -I -B -u '.\tools\prepare_android_game_data.py' `
+                --data-root 'D:\Test\wesnoth-setup\gamedata-1.19.26'
+            if ($LASTEXITCODE -ne 0) { throw 'Game-data OBB preparation failed. Send the saved log.' }
 
-            powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\tools\Test-AndroidEngine.ps1' -Serial '127.0.0.1:5555'
-            if ($LASTEXITCODE -ne 0) { throw 'Android engine test failed. Send the saved log.' }
+            powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\tools\Build-WindowsAndroidGame.ps1'
+            if ($LASTEXITCODE -ne 0) { throw 'Game APK packaging failed. Send the saved log.' }
+
+            powershell.exe -NoProfile -ExecutionPolicy Bypass `
+                -File '.\tools\Test-AndroidGame.ps1' -Serial '127.0.0.1:5555'
+            if ($LASTEXITCODE -ne 0) { throw 'Game launch check failed. Send the saved log and game-logcat file.' }
         } 2>&1 | Tee-Object -FilePath $log
     } catch {
         ('ERROR: ' + $_.Exception.Message) | Tee-Object -FilePath $log -Append
@@ -46,12 +52,14 @@ After pulling, disconnect and open LDPlayer. Run this block in normal PowerShell
 
 Expected sequence:
 
-- Verification of existing Media, text/layout, ICU, Boost and Network prerequisites, without rebuilding them. Hash checks may take a few minutes.
-- Native compilation of 537 actual game C++ files, 31 bundled Lua files and the small CLI runner, then linking `libmain.so` and the runner. The engine is substantially larger than the earlier probes; leave the build running until it finishes or reports an error. Default parallelism is two compiler jobs.
-- `ANDROID ENGINE BUILD PASS` and a receipt in `build/android-engine/receipt.json`.
-- `ANDROID ENGINE ARTIFACTS VERIFIED`, six file transfers to a unique LDPlayer temporary directory, then the actual `Battle for Wesnoth 1.19.26` report with `Library versions:` and `Optional features:`.
-- `ANDROID ENGINE TEST PASSED`. No visible app opens: the real engine exits after its version report, before graphics/game-data initialization.
+- `ANDROID GAME DATA PREPARED`: all 26,748 source files match the trusted data hash. The 731,274,164-byte stored-ZIP OBB is `build/android-game-data/main.1192600.org.wesnoth.offline.obb`. The original folder stays unchanged.
+- `ANDROID GAME BUILD PASS`: Gradle packages a signed debug x86_64 APK at `build/android-game/app/build/outputs/apk/debug/app-debug.apk`. It reuses the engine and dependencies; it removes debug information only from new copies. No native recompilation is requested.
+- `ANDROID GAME ARTIFACTS VERIFIED`, successful APK installation and OBB transfer/hash verification. This creates the separate `org.wesnoth.offline` app, versionName1.19.26/versionCode1192600; the earlier SDL Check app is a different package.
+- A **Wesnoth Offline** data-import screen opens. It verifies every extracted file locally against the full trusted manifest inside the APK. Progress remains visible; no online asset download is used. After import, the actual game activity starts.
+- The helper waits up to ten minutes for this run's data and activity readiness markers, then prints `ANDROID GAME LAUNCH CHECK PASSED`. **This is an import/activity check, not proof that the title screen or gameplay works.** Native initialization may still need time after the activity opens.
 
-Attach the complete saved `diagnostics/engine-*.txt`, including successful output. If the new stage fails, preserve its files and send the log. Do not delete Ninja metadata, rerun Network recovery, rename old dependency stages, or rebuild earlier libraries. The helper reuses a successfully recorded engine configuration when inputs are unchanged; an interrupted or changed configuration stops for inspection. No source downloads, package upgrades, full inventory or previous server/Android retests are needed.
+When the title screen appears, check that text and images are readable and buttons respond. Open the tutorial or a local game, move a unit and finish one turn if possible. Report exactly how far it reaches, whether sound plays, and any visible error or crash. Keep internet disconnected during this check. Do not select an online multiplayer server or download add-ons for this milestone.
 
-The actual game APK/activity, offline asset/OBB import, title screen, playable local and LAN turns, physical phone testing and MongoDB remain required future steps. No game-engine execution on Windows/LDPlayer is claimed until this log is returned.
+Attach the saved `diagnostics/game-*.txt` even on success. The helper also prints paths for `game-logcat-*.txt` and any copied `game-userdata-*` native log directory; include those on failure. If the importer or build fails, preserve its files and send the logs before deleting or rebuilding anything. This does not require new tools, another engine/dependency/server rebuild, a new data download or a new inventory. Existing user data, native stages, caches and receipts are preserved.
+
+The next confirmed milestone needs your visual/runtime result. LAN gameplay with the Windows server, a physical Android phone, release packaging and local MongoDB integration remain subsequent required work.

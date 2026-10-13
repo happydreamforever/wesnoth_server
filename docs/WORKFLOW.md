@@ -38,7 +38,7 @@ The user confirmed on 2026-10-11 that Windows temporarily connects to GitHub to 
 
 ## First environment check
 
-**Current status (2026-10-13):** Windows network-recovery-20261013-115646-392-0df8d5ce80634e0dbd7dc9c60169af15.txt confirms recovery of all 1,034 Ninja records, OpenSSL reuse without recompilation, completion of all 168 remaining curl/probe steps, and every LDPlayer crypto/HTTPS check. Network compilation and Android runtime are complete. Preserve the source cache, surviving .restat, metadata backups, completed prefixes and receipts. The next milestone builds the actual Wesnoth 1.19.26 libmain.so and tests its real --version entry point on LDPlayer. Full game APK/activity/assets/OBB, local and LAN playable turns, and MongoDB remain pending.
+**Current status (2026-10-13):** Windows engine-20261013-130750-281-de820fddb62a48a88c901bc687ac84b3.txt confirms all 571 actual engine build steps and successful execution of Battle for Wesnoth 1.19.26 --version on LDPlayer. The native game engine now builds and loads on the real Windows/Android path. Preserve all completed native stages, data, caches and metadata backups. NEXT_TEST.md packages the existing engine into org.wesnoth.offline and the copied game data into a verified offline OBB, then installs and opens the game. Android OBB import, the title screen, local and LAN playable turns, physical-phone testing and MongoDB remain unverified.
 
 The user now confirms that both repositories are already cloned at the following paths. Use these existing checkouts; an additional diagnostics checkout is unnecessary.
 
@@ -512,3 +512,6 @@ Latest Network checkpoint (2026-10-13): The returned network-state-20261013-0926
 ## Network complete; actual-engine handoff
 
 The 2026-10-13 returned `network-recovery-20261013-115646-392-0df8d5ce80634e0dbd7dc9c60169af15.txt` completes Windows Network compilation and LDPlayer crypto/HTTPS execution. Its old metadata-state JSON is historical; do not reuse it for a new recovery after the completed build. Retain original metadata backups and all completed stages. Current NEXT_TEST.md moves to the actual engine shared library and version entry point, with a saved `diagnostics/engine-*.txt` log. Only the new owned engine stage is built. Android gameplay evidence still requires the later APK/activity/asset integration and a real playable turn.
+
+
+Current game packaging checkpoint: the actual Windows engine build and LDPlayer --version execution pass (engine-20261013-130750-281-de820fddb62a48a88c901bc687ac84b3.txt). The next test uses only new build/android-game-data and build/android-game stages, the existing data folder, engine outputs and cached Android build tools. org.wesnoth.offline/versionCode1192600 is separate from the previous SDL check app. The OBB is main.1192600.org.wesnoth.offline.obb; it contains exactly the 26,748 pinned game-data files and is extracted/verified locally by the app. The APK embeds the full per-file manifest with the existing trusted tree hash. No game network download is needed. Follow docs/NEXT_TEST.md; actual Android title-screen and gameplay validation remains pending.
