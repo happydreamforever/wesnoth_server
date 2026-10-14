@@ -4,13 +4,13 @@ The user confirms that the actual Android game in LDPlayer joined the Windows se
 
 The latest tested Windows commits are server 275f0ea and client bfa53b8. Later documentation-only commits record results and do not require another pull, rebuild, reinstall, data copy or repeated emulator turn. Keep all completed stages and the working app/server.
 
-## Immediate next step
+## Current next step: game design, LDPlayer only
 
-Ask whether a physical Android phone is available to connect to Windows by USB. Keep the user's requested one-step-at-a-time pace. No new command is required for the completed emulator test.
+The user has chosen to test only with LDPlayer. Do not request a phone, USB inspection or another ABI. The current server-connected offline AI-turn test remains complete.
 
-If a phone is available, the next device step should establish USB/ADB visibility and that phone's actual Android API and ABI. The existing installed APK targets x86_64 LDPlayer; do not install it on a guessed phone ABI or select an ARM target based only on a model name. Use the already verified Windows Android SDK tools, then choose the necessary phone build from the returned device evidence.
+Current task: explain existing guest-server storage and campaign/multiplayer progression, and present ten team-mode proposals. MongoDB integration, permanent accounts and hero progression across independent matches are not implemented. Campaign saves and within-match unit leveling already exist on the client. Read the latest BASELINE.md section for the source audit and proposals.
 
-If no phone is available, agree on the next available test or development milestone. Separate-phone connectivity, two-human synchronization, MongoDB persistence and custom game features remain untested. Do not describe the successful one-human-plus-AI session as two-device synchronization.
+Before building persistent cross-mode progression, define account versus hero levels, how campaign rewards are accepted, and whether PvP uses full persistent stats, level brackets or normalized stats. No particular mode or progression policy has been selected. This is a design discussion, so no new build, pull, install or test is required. When a feature is selected, keep Windows testing one step per reply; later two-human tests can use separate LDPlayer instances.
 
 ## Saved evidence
 
