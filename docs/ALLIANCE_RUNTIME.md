@@ -33,7 +33,7 @@ All website assets are local. Neither the website nor MongoDB binds to the LAN. 
 
 ## Windows sequence
 
-Run one numbered step at a time. The initial handoff asks for step 1 only; return its saved log before continuing to installation. Use the existing checkouts under `D:\Test\wesnoth-setup`.
+Run one numbered step at a time. Step 1 now passed on Windows (server e9b42e7/client d8ab444): all 17 wheels and MongoDB 8.0.32 verified. Current handoff is step 2 only; no pull or repeat download is needed. Return its saved installation log before continuing to initialization. Use the existing checkouts under `D:\Test\wesnoth-setup`.
 
 ### 1. While temporarily connected: pull and prepare the cache
 
