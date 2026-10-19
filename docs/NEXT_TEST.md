@@ -1,15 +1,23 @@
-# Next step: quarantine the reported threat and return its status
+# Next step: independent VPS account-transport work
 
-The expanded user report identifies **C:\Windows\SysWOW64\netactive32.dll** as the affected item for **Trojan:Win32/Wacatac.B!ml**, **Severe**, **Active**, dated **10/19/2026 3:36 PM**. The affected filename is now known. Network disconnection, remediation outcome and final scan completion have not been confirmed. This alert does not establish a relationship to NetActvity/PID4600 or the cause of the earlier MongoDB crash.
+On 2026-10-20 the user said "I can't delete it. Let's ignore it." Malware troubleshooting is deferred at the user's request. No further scan, removal command or repeated quarantine question is requested. The removal method/error was not supplied: this does not establish a failed Defender quarantine operation. The last supplied alert was Severe/Active on 2026-10-19 for C:\Windows\SysWOW64\netactive32.dll; cleanup and current network status are unconfirmed. Its relationship to the traced process or MongoDB crash remains unverified.
 
-## Immediate Windows action
+## Current Windows state
 
-1. If Windows is connected, disconnect its network connections for now, including Ethernet/Wi-Fi. Keep MongoDB stopped and leave builds/Git pulls until the threat state is reviewed.
-2. Open **Windows Security -> Virus & threat protection -> Protection history** and expand this detection. Choose **Actions -> Quarantine**, then **Start actions** if that button is shown. Let Defender complete the action. Do not select Allow on device, Restore, or an antivirus exclusion, and do not manually delete the DLL. [Microsoft Protection History guidance](https://support.microsoft.com/en-us/windows/security/windows-security/protection-history-in-the-windows-security-app)
-3. Return the action taken and the **resulting status**. Expected containment confirmation is a Defender status such as **Threat quarantined** or **Threat blocked**; this is not proof that the whole computer is clean. If it remains Active, reports Remediation incomplete, requests a restart, or the stated controls are unavailable, send the exact displayed status/options.
+The earlier MongoDB startup failed with a Windows file-sharing violation. Setting aside the security investigation does not resolve that technical failure or validate database initialization. Keep initialization, admin login, persistence and disconnected-WAN Alliance checks pending. Preserve the partial runtime, completed game, caches, native stages and reports. No pull, rebuild, reinstall, database retry or additional diagnostic collection is required for this documentation handoff.
 
-If quarantine has already completed, report that outcome instead of repeating it. Do not send the detected binary, full PML or a memory dump, and do not delay quarantine for further diagnostic collection. Existing capture/reports stay on Windows; do not restore any quarantined item to reproduce the file-locking failure.
+The recommendation remains to resolve the active detection before entrusting this Windows installation with new credentials or database records. This is risk advice, not a prerequisite for independent VPS development. Do not disable protection or add exclusions to work around the issue. The existing .env internet database is not an offline replacement and remains unused.
 
-## Project scope
+## Next independent implementation scope
 
-The prior scratch trace and current private executable-region report remain valid but do not attribute their caller code to this DLL. No successful cleanup, credential theft or specific malware-family behavior is inferred. The active alert takes priority over database experiments. No new collector, pull, build, install, manual service/process change, database repair or startup is requested. The next check depends on Defender's remediation outcome; do not restart the historical Git/registry/reboot investigation.
+A read-only source review confirms that the current client's network_asio.cpp disables TLS for numeric addresses and supports plaintext fallback. The server's server_base.cpp already supports configured TLS certificates/private keys. Neither finding means that custom account integration is implemented.
+
+Continue checklist section 3 on the VPS:
+
+- Provision a public connection/trust profile for an explicit Alliance account connection mode; private server keys must never reach the Android client.
+- Verify the server identity for a numeric LAN IP and reject downgrade replies, EOF fallback and invalid handshakes in that account mode.
+- Do not transmit account passwords or session tokens until the provisioned profile has authenticated the server.
+- Preserve the existing guest connection behavior and previously completed game stages.
+- Verify trusted identity, untrusted/wrong/expired identity, downgrade/EOF failure, invalid handshake and guest compatibility with isolated VPS fixtures.
+
+This turn records scope and completes source review only; no transport code or runtime test was changed. A later tested implementation delivery will provide its own exact Windows build/run/test commands. Windows MongoDB acceptance remains separate and pending; do not label Alliance playable or persistently tested on Windows from VPS results alone.
