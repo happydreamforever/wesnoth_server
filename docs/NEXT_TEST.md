@@ -1,81 +1,35 @@
-# Next test: identify the process captured blocking replacement
+# Next check: inspect the captured file-open stack
 
-The Windows scratch probe reproduced the failure at iteration 2: Python PID19540, operation replace, errno13 / winerror32. Logfile.CSV identifies svchost.exe PID4600 holding the source file with sharing that excludes delete access. Python's rename-related open requests Delete access and fails while that handle remains open. Its approximately 9.48-millisecond lifetime shows why an after-the-fact handle search can miss this kind of conflict.
+The elevated Windows result confirms:
 
-This identifies the blocker in the scratch test. The CSV does not identify its hosted service/software or prove it held the earlier actual MongoDB metadata file. MsMpEng.exe mapping events are present, but they do not demonstrate a conflicting open handle. Do not attribute this to the historical service or disable security software from these observations.
+| Role | PID | Path | Creation time (Windows local) | Service association |
+| --- | --- | --- | --- | --- |
+| Captured scratch blocker | 4600 | C:\Windows\SysWOW64\svchost.exe | 2026-10-17 03:24:19 | No matching service |
+| Current parent | 4196 | C:\Windows\SysWOW64\svchost.exe | 2026-10-17 03:24:09 | NetActvity, Running |
 
-## One read-only identity check
+The parent reports parentPID960. Both creation times precede the capture, and the parent predates the child. The blocker is a child of the process hosting **NetActvity** (exact spelling). This repeats the pattern recorded during the earlier Git sharing failure; it does not identify the service's publisher/implementation or prove which process held the real MongoDB file when it crashed.
 
-No pull, rebuild, new capture, probe repeat or database startup is needed. Keep MongoDB stopped. Open Windows Start, search **Windows PowerShell**, choose **Run as administrator**, and paste:
+Earlier service configuration, registry, installation-event and reboot checks did not identify this component. Do not repeat those experiments or stop the unidentified service. The next useful evidence is which code made the captured file-open call.
 
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $principal = New-Object Security.Principal.WindowsPrincipal($identity)
-    if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-        throw 'Open Windows PowerShell with Run as administrator, then run this block.'
-    }
+## One observation from the retained capture
 
-    $capturedAt = [datetime]'2026-10-19T14:23:41.9345583'
-    $target = Get-CimInstance Win32_Process -Filter 'ProcessId = 4600'
-    if (-not $target) {
-        'Captured PID 4600 is no longer running. Send this result; do not rerun the probe.'
-        return
-    }
+No pull, command, build, new capture or probe/database run is needed. Keep MongoDB stopped.
 
-    'CURRENT TARGET'
-    $target | Format-List ProcessId,Name,ExecutablePath,ParentProcessId,CreationDate
-    if (-not $target.CreationDate -or $target.Name -ne 'svchost.exe' -or $target.CreationDate -gt $capturedAt) {
-        'Current PID identity cannot be matched to the capture. Stop here and send this output.'
-        return
-    }
+The user confirms **the original capture is still open in Process Monitor**. Use that existing session with capture stopped; do not clear it, reopen the CSV or start a new capture. The supplied ordinary event CSV does not contain the required stack data and cannot recreate it. If the session is unexpectedly lost before this step, report that instead of rerunning anything.
 
-    'SERVICES IN CURRENT TARGET'
-    $services = @(Get-CimInstance Win32_Service -Filter 'ProcessId = 4600')
-    if ($services.Count -eq 0) { 'No matching service.' }
-    else { $services | Format-List Name,DisplayName,State,ProcessId }
+In the retained session/PML:
 
-    'CURRENT PARENT'
-    if ($target.ParentProcessId -eq 0) {
-        'No reportable parent PID.'
-        return
-    }
-    $parent = Get-CimInstance Win32_Process -Filter ('ProcessId = ' + $target.ParentProcessId)
-    if (-not $parent) {
-        'Parent PID is no longer running.'
-        return
-    }
-    $parent | Format-List ProcessId,Name,ExecutablePath,ParentProcessId,CreationDate
-    if (-not $parent.CreationDate -or $parent.CreationDate -gt $target.CreationDate) {
-        'Parent PID cannot be matched to the original parent; it may have been reused.'
-        return
-    }
+1. Find the row with **Time of Day 2:23:41.9316899 PM**, **Process Name svchost.exe**, **PID4600**, **Operation CreateFile**, **Result SUCCESS**, and Path ending `mongo-file-probe-sdynefqx\WiredTiger.turtle.set`. This is CSV line57 when counting its header as line1. Select this successful open by the blocker, not the later failed Python event.
+2. Double-click that row to open **Event Properties**, then select **Stack**.
+3. Use **Copy All** to copy the stack text and paste it here, or use the Stack tab's **Save** button to save its stack CSV as `D:\Test\mongo-blocker-stack.csv` (choose a new name if it exists), then attach that file. If those controls are unavailable, a screenshot of the Stack tab with module/path columns visible is sufficient.
+4. Keep all available rows, including unknown/unresolved addresses. Do not download symbols or install debugging tools for this check. If Stack is empty/unavailable, report that exact result.
 
-    'SERVICES IN CURRENT PARENT'
-    $services = @(Get-CimInstance Win32_Service -Filter ('ProcessId = ' + $parent.ProcessId))
-    if ($services.Count -eq 0) { 'No matching service.' }
-    else { $services | Format-List Name,DisplayName,State,ProcessId }
-}
-```
+Return only this event's stack, not the full PML, process memory, private runtime or credentials. Leave the retained session/PML on Windows for reference. Viewing available stack frames does not require reproducing the failure. [Microsoft explains the Event Properties Stack tab](https://techcommunity.microsoft.com/blog/askperf/troubleshooting-with-process-monitor/372401); the [Process Monitor documentation](https://learn.microsoft.com/en-us/sysinternals/downloads/procmon) describes per-operation stacks and native capture retention.
 
-Send the complete output, including blank fields, `No matching service`, absent/reused PID messages or errors. This reads only targeted process metadata and service associations; it does not read command lines, credential files, service configuration or the database, and does not stop/change anything.
+## Interpretation and preserved state
 
-Creation-time guards reject a target created after the capture, a mismatched process name, an unavailable creation time, or a parent created after the target. These are current metadata observations, not an immutable historical service mapping. If the target exited/reused its PID or information remains unavailable, keep the original Process Monitor session/PML locally. The captured event's Process properties can provide trace-bound image/parent information later; do not repeat the probe just to obtain a new PID or upload the full PML.
+A stack may associate the observed file open with a module; it can also be unresolved or incomplete. An unrecognized address, a Microsoft host executable, or a vendor label alone does not establish malware, innocence or a safe service stop. If the original capture is unavailable, a narrowly scoped, identity-guarded loaded-module inventory of current4600/4196 is the next possible diagnostic; no such command or recapture is requested now.
 
-## Evidence and remaining work
+Preserve runtime/alliance, the failed scratch files and events.jsonl, Logfile.CSV, the MongoDB crash log/dump and completed packages/game/native/data stages. The .env internet URL remains unused. No MongoDB repair, manual file deletion, service/process/security change, installation or game rebuild is needed. Local MongoDB initialization, admin website and disconnected Alliance runtime remain pending.
 
-CSV lines count the header as line1:
-
-| CSV line | Time | Observed operation |
-| --- | --- | --- |
-| 57 | 14:23:41.9316899 | svchost4600 opens WiredTiger.turtle.set, Generic Read, ShareMode Read/Write without Delete. |
-| 63 | 14:23:41.9344555 | Python19540 closes its writing handle. |
-| 64 | 14:23:41.9345583 | Python19540 requests Delete access and receives SHARING VIOLATION. |
-| 71 | 14:23:41.9411686 | svchost4600 closes its handle. |
-
-The first iteration succeeds because that process closes its read handle before Python's rename. Windows documents that omitted FILE_SHARE_DELETE blocks later delete-access opens, including renames: [CreateFileW](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew). Targeted metadata fields are documented under [Win32_Process](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-process) and [Win32_Service](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-service).
-
-Preserve the original MongoDB runtime, failed scratch files/report, CSV, crash log/dump and completed packages/game/data/native stages. Do not terminate a generic svchost process, change services/security settings, retry initialization or repair/delete metadata. The next action depends on identifying the current process. Local Windows MongoDB remains the deployment; the .env internet server is not used. Initialization, admin website and disconnected Alliance runtime remain pending.
-
-Documentation-only delivery: the probe performed its diagnostic role and is unchanged. No MongoDB fix or startup success is claimed. events.jsonl itself was not supplied; the inline output and CSV establish the reported probe result without requiring another run.
+This delivery records the returned identity result and changes only the next observation. Probe/backend code is unchanged. Current service implementation and a safe startup fix are still unknown.
