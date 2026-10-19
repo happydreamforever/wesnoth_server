@@ -1,34 +1,38 @@
-# Next step: choose the LAN MongoDB deployment
+# Next test: read the local MongoDB startup log
 
-The Windows initializer passed Python 3.14.3 and pinned installed-file checks, then reported `Owned MongoDB did not start; inspect runtime/alliance/logs/mongodb.log locally.` No database log was supplied, so the startup cause remains unknown. Setup stopped before administrator prompts. It may already have created private configuration/credentials and data/log directories under `runtime\alliance`; preserve them. Do not repeat initialization, reinstall, delete runtime data or change Windows permissions while assessing the preferred LAN database.
+The user corrected the earlier answer: the `.env` URL points to an internet server. The game must use MongoDB on the user's Windows computer so it can work without internet. The external-database assessment is no longer the active direction. No external service, database, users or schema were modified, and no external mode was implemented.
 
-## Current user direction and verified facts
+Windows dependency installation passed. Local initialization then passed Python 3.14.3 and pinned-file checks but stopped with `Owned MongoDB did not start; inspect runtime/alliance/logs/mongodb.log locally.` It failed before administrator prompts. The startup log has not been supplied, so the cause remains unknown. Preserve the partially created local runtime and completed installation.
 
-The user asks to use the MongoDB connection in `.env` and explicitly confirms it is on their local network and remains reachable without WAN access. This is a user statement about Windows routing, not a completed disconnected connectivity test.
+## Do this one read-only step
 
-A credential-private, read-only VPS check of the configured connection passed authenticated ping and metadata queries:
+No pull, internet connection, installation, restart or administrator PowerShell is needed for this check. Run:
 
-| Check | Result |
-| --- | --- |
-| MongoDB version | 8.0.32 |
-| Authentication | Passed |
-| Deployment | Standalone |
-| Logical sessions | Available |
-| Shared credential scope | Broad; unsuitable as the long-term application credential |
-| Database named in URI | No |
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $log = 'D:\Test\wesnoth-setup\wesnoth_server\runtime\alliance\logs\mongodb.log'
 
-The current Alliance code uses multi-document transactions for membership, battle reservations and settlement. Standalone MongoDB cannot support those transactions; logical sessions alone do not change that. A replica-set deployment is required for the intended unsharded installation. See [MongoDB transaction requirements](https://www.mongodb.com/docs/manual/core/transactions-production-consideration/).
+    if (-not (Test-Path -LiteralPath $log -PathType Leaf)) {
+        'MONGODB LOG MISSING'
+        return
+    }
+    if ((Get-Item -LiteralPath $log).Length -eq 0) {
+        'MONGODB LOG EMPTY'
+        return
+    }
+    Get-Content -LiteralPath $log -Tail 80 -Encoding UTF8
+}
+```
 
-## Information needed now
+Send only this command's output, including an error or MISSING/EMPTY status. This reads the MongoDB log without starting a process or changing data. The generated MongoDB startup configuration contains paths, port, authorization and replica-set settings; its credentials are stored separately. Do not send `.env`, `root.json`, `config.json`, `keyfile` or the full runtime folder. The selected log may include local paths and hostname.
 
-The user has been asked how the shared MongoDB runs (Docker, Linux service or Windows service) and whether it stores other applications' data. Wait for those answers before choosing a server configuration or providing restart/conversion commands.
+If the log is missing or empty, stop and return that result. Do not rerun initialization, delete the data directory or alter service permissions to create a log. The current launcher discards child stdout/stderr, so a pre-log failure may require a later focused diagnostic after reviewing this output.
 
-We can use the existing LAN database machine. If its MongoDB is shared with other applications, a separate Alliance replica-set instance on that machine is an option that preserves the existing service. If the existing instance is dedicated to this game, converting it can be assessed after its configuration/storage/backups are understood. Neither approach has been executed or finalized.
+## Current deployment and status
 
-Use a dedicated Alliance database and an application login scoped to it. The current `.env` credentials are inspection/bootstrap input only, not credentials to embed in the Android app or reuse unmodified for application operation. Never run the current local initializer against an existing shared database; its lifecycle and schema setup assume exclusive ownership.
+Use the already installed portable MongoDB 8.0.32 on `127.0.0.1:27018`, its owned `runtime\alliance`, and the local administrator website on `127.0.0.1:18765`. No remote URI or shared Windows service is needed. The earlier statement that the internet server was a LAN Windows service is not evidence of a service used by this local runtime; do not inspect or modify unrelated Windows services.
 
-## Work still required
+Initialization, admin/browser checks and disconnected database operation remain pending. The earlier installation succeeded using cached packages while WAN was available; that fact is unchanged. The installed Android game, OBB, guest LAN gameplay milestone, MSYS2 and completed native stages remain preserved. The local database failure does not require rebuilding them.
 
-After selecting the deployment, implement an explicit external-database mode with separate configuration from the partial local runtime, a read-only Windows compatibility check with WAN disconnected, safe ownership-checked schema initialization and a dedicated application credential. External mode must not start/stop/reconfigure the shared MongoDB service. Keep the operator website on Windows loopback. The current Settings and CLI accept only the owned local instance, so editing a URI alone will not enable the LAN database.
-
-No new Windows command, pull, package installation or Android rebuild is required at this assessment step. No remote data, database schema, users, roles or server configuration were changed. Keep `.env` and runtime credentials private. Local MongoDB startup diagnosis can resume later if needed; no private runtime upload is requested now.
+Documentation-only correction: current command reviewed against the existing launcher and parsed with PowerShell. No production source changes or repeated implementation tests. Read the returned log before selecting a fix.
