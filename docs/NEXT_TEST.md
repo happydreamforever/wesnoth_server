@@ -1,50 +1,34 @@
-# Next test: initialize the local Alliance database and administrator
+# Next step: choose the LAN MongoDB deployment
 
-The latest Windows log confirms successful cache verification, all 17 pinned Python packages installed, no broken package requirements, exact installed versions and `ALLIANCE OFFLINE ENVIRONMENT INSTALLED`. MongoDB's executable version check precedes those steps in the installer and therefore also passed. Database and administrator initialization have not run yet.
+The Windows initializer passed Python 3.14.3 and pinned installed-file checks, then reported `Owned MongoDB did not start; inspect runtime/alliance/logs/mongodb.log locally.` No database log was supplied, so the startup cause remains unknown. Setup stopped before administrator prompts. It may already have created private configuration/credentials and data/log directories under `runtime\alliance`; preserve them. Do not repeat initialization, reinstall, delete runtime data or change Windows permissions while assessing the preferred LAN database.
 
-Saved report: `diagnostics/alliance-install-20261019-123832-178-5f6bc73476924db79fd820be123d47e2.txt`. The attachment contains no new pulled heads or automatic rename retries. The user subsequently confirms internet/WAN access was still available during installation. Local-cache installation passed; physically disconnected installation was not demonstrated. No reinstallation is needed to proceed with offline database initialization.
+## Current user direction and verified facts
 
-## Do this one step now
+The user asks to use the MongoDB connection in `.env` and explicitly confirms it is on their local network and remains reachable without WAN access. This is a user statement about Windows routing, not a completed disconnected connectivity test.
 
-Disconnect internet/WAN now while retaining the local network. The initialization script is already in your checkout; no pull, repeat installation, package download or Android rebuild is needed for this documentation-only update.
+A credential-private, read-only VPS check of the configured connection passed authenticated ping and metadata queries:
 
-Run interactively in PowerShell:
+| Check | Result |
+| --- | --- |
+| MongoDB version | 8.0.32 |
+| Authentication | Passed |
+| Deployment | Standalone |
+| Logical sessions | Available |
+| Shared credential scope | Broad; unsuitable as the long-term application credential |
+| Database named in URI | No |
 
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_server'
+The current Alliance code uses multi-document transactions for membership, battle reservations and settlement. Standalone MongoDB cannot support those transactions; logical sessions alone do not change that. A replica-set deployment is required for the intended unsharded installation. See [MongoDB transaction requirements](https://www.mongodb.com/docs/manual/core/transactions-production-consideration/).
 
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Initialize-WindowsAlliance.ps1'
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Initialization failed. Send the error text only; keep private runtime files and passwords private.'
-    }
-}
-```
+## Information needed now
 
-The helper checks the installed environment, creates the dedicated local MongoDB database and asks for:
+The user has been asked how the shared MongoDB runs (Docker, Linux service or Windows service) and whether it stores other applications' data. Wait for those answers before choosing a server configuration or providing restart/conversion commands.
 
-1. `New admin username:` — choose 3–24 ASCII letters, digits or underscores.
-2. `New admin password (12-128 characters):` — choose a password of 12–128 characters. Input is hidden.
-3. `Repeat admin password:` — enter the same password again.
+We can use the existing LAN database machine. If its MongoDB is shared with other applications, a separate Alliance replica-set instance on that machine is an option that preserves the existing service. If the existing instance is dedicated to this game, converting it can be assessed after its configuration/storage/backups are understood. Neither approach has been executed or finalized.
 
-Keep this login for the administrator website. Do not put the password in a command, chat or saved transcript. The helper deliberately does not create a console transcript for initialization.
+Use a dedicated Alliance database and an application login scoped to it. The current `.env` credentials are inspection/bootstrap input only, not credentials to embed in the Android app or reuse unmodified for application operation. Never run the current local initializer against an existing shared database; its lifecycle and schema setup assume exclusive ownership.
 
-Expected final output:
+## Work still required
 
-```text
-ALLIANCE INITIALIZATION PASSED
-MongoDB 8.0.32; authenticated single-node replica set; scoped application user; admin account ready.
-Owned database stopped. Start the database window, then the service window.
-```
+After selecting the deployment, implement an explicit external-database mode with separate configuration from the partial local runtime, a read-only Windows compatibility check with WAN disconnected, safe ownership-checked schema initialization and a dedicated application credential. External mode must not start/stop/reconfigure the shared MongoDB service. Keep the operator website on Windows loopback. The current Settings and CLI accept only the owned local instance, so editing a URI alone will not enable the LAN database.
 
-Wait until PowerShell returns. Stop after this step and return only the final status/error lines. Do not send files from `runtime\alliance` or your password. If it fails, preserve the runtime and stop; report the error before deleting anything or retrying. The runtime's ownership/lock checks protect existing data.
-
-## Scope and next milestone
-
-Initialization creates the owned `runtime\alliance` database/configuration/credentials, uses MongoDB on `127.0.0.1:27018` and temporarily starts that database for setup. It shuts down the owned process before returning. The old `.env` and its database are not used. The game still uses the existing guest protocol; this step does not add player login or Alliance Battle to the Android app.
-
-Database and website run windows, browser login and persistence testing follow a successful initialization report. Their full commands remain in [ALLIANCE_RUNTIME.md](ALLIANCE_RUNTIME.md), but do not advance to them yet.
-
-This delivery changes documentation only. The existing initialization helper and prompt/validation flow were reviewed, and the exact PowerShell handoff was parsed. Unchanged implementation tests were not repeated. Earlier VPS results include real MongoDB initialization/restart/authentication and the current 38 artifact/PowerShell checks; actual Windows initialization and website testing remain pending.
+No new Windows command, pull, package installation or Android rebuild is required at this assessment step. No remote data, database schema, users, roles or server configuration were changed. Keep `.env` and runtime credentials private. Local MongoDB startup diagnosis can resume later if needed; no private runtime upload is requested now.

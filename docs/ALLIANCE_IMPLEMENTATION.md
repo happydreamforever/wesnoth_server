@@ -22,9 +22,9 @@ Mastery comes from advancing the leader, learning terrain and matchups, developi
 
 ## Storage and trust boundaries
 
-Use a separate Python service with local MongoDB 8.0.32, an authenticated single-member replica set and a database-scoped application user. Multi-document transactions must atomically reserve players, award XP, update ratings and close a run. Single-member replication enables transactions, not redundancy.
+Implemented mode uses a separate Python service with local MongoDB 8.0.32, an authenticated single-member replica set and a database-scoped application user. After local MongoDB startup failed, the user requested the existing LAN MongoDB; current read-only checks confirm standalone 8.0.32. An external mode and a suitable replica-set deployment are pending host details. Multi-document transactions must atomically reserve players, award XP, update ratings and close a run. Single-member replication enables transactions, not redundancy.
 
-The existing `.env` remains private and unchanged. Its earlier read-only audit identified a remote standalone database and privileged credentials; this implementation must never initialize or migrate that database. New local runtime credentials are generated into an ignored, access-restricted directory. The Android application never receives MongoDB credentials.
+The existing `.env` remains private and unchanged. User-authorized read-only inspection reconfirms a standalone database and broad credentials. Do not initialize existing shared databases or automatically restart/convert that server. External mode must use an explicitly owned Alliance database and a scoped application credential after topology/deployment is resolved. New local runtime credentials are generated into an ignored, access-restricted directory. The Android application never receives MongoDB credentials.
 
 | Collection | Canonical ownership and constraints |
 | --- | --- |
@@ -54,7 +54,9 @@ The admin website and internal bridge bind to loopback only. Native game account
 - [x] Implement campaign runs and Alliance approvals/readiness/start/settlement state transitions.
 - [x] Verify duplicate rewards, transaction rollback, simultaneous membership/start claims, invalid map/area/lineup and active-run changes using real MongoDB.
 - [x] Confirm Windows cache verification, MongoDB executable version check and isolated installation of the 17 pinned Python packages. The user confirms WAN remained available during installation; this is local-cache installation evidence, not a physically disconnected installation test.
-- [ ] Confirm local MongoDB initialization, authenticated database operation and transactions on Windows. Installation success does not complete this box.
+- [ ] Select the LAN replica-set deployment after confirming its hosting method and other applications sharing it.
+- [ ] Implement explicit external-database configuration, ownership-checked initialization and scoped credentials, preserving the partial local runtime.
+- [ ] Confirm Windows database connectivity, authenticated operation and transactions with WAN disconnected. Installation success does not complete this box.
 
 ### 2. Accounts and operator website
 
