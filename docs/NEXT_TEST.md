@@ -1,20 +1,16 @@
-# Next step: check the unidentified executable code with Windows Security
+# Next step: contain the active Defender detection and return its details
 
-The supplied caller-region report passed all 13 queries and both identity checks. Every queried address is currently `MEM_COMMIT`, `MEM_PRIVATE`, `PAGE_EXECUTE_READ`, with allocation base `0x10000000`. This places the recorded caller addresses in private executable memory at collection time; it does not identify its author or prove it is malicious. These are current mappings, not a reconstruction of the earlier capture.
+The user reports **Trojan:Win32/Wacatac.B!ml**, **10/19/2026 3:35 PM**, **Active**. This is an unresolved Defender alert. The affected item, completed scan result and remediation outcome have not been supplied. The name alone does not connect it to NetActvity, PID4600, libeay64.dll, the captured scratch-file conflict or the earlier MongoDB failure.
 
-The helper deliberately skips mapped-filename lookup for private memory, so `not_applicable` is not a failed filename query or proof of a fileless origin. Repeating module inventories or the same region collector will not establish the missing identity. The prior scratch trace identifies the conflicting file opener; the real earlier MongoDB-crash holder was not directly captured.
+## Immediate Windows action
 
-## One practical Windows check
+1. If Windows is connected, disconnect its network connections for now, including Ethernet/Wi-Fi. Keep MongoDB stopped and leave builds/Git pulls until the threat state is reviewed.
+2. Open **Windows Security -> Virus & threat protection -> Protection history**. Expand that detection and note the exact **Affected items** text (file paths or process entries). Administrator access may be needed to expand details.
+3. Choose **Actions -> Quarantine**, then **Start actions** if that button is shown. Let Defender complete the action. Do not select Allow on device, Restore, or an antivirus exclusion. Quarantine contains the item without manually deleting system files. [Microsoft Protection History guidance](https://support.microsoft.com/en-us/windows/security/windows-security/protection-history-in-the-windows-security-app)
+4. Return the **Affected items**, the action taken and the resulting status. Expected containment confirmation is a Defender status such as **Threat quarantined** or **Threat blocked**; this is not proof that the whole computer is clean. If it remains Active, reports Remediation incomplete, requests another step, or the stated controls are unavailable, send the exact displayed status/options instead of improvising commands.
 
-A Windows Security **Quick scan** checks processes, memory and startup locations. Microsoft recommends it for on-demand scans. [Microsoft scan guidance](https://learn.microsoft.com/en-us/defender-endpoint/schedule-antivirus-scans)
+Copy the affected-item text or send a screenshot, not the detected binary, full PML or memory dump. Do not delay quarantine waiting for a chat reply. Existing capture/reports stay on Windows; do not restore any quarantined item just to reproduce the file-locking failure.
 
-Before starting, save the existing Process Monitor capture locally if it has not been saved: **File -> Save**, choose native **PML** format and an unused filename such as `D:\Test\mongo-blocker-before-scan.pml`. Keep it on Windows; do not upload the full PML. Preserve the already supplied reports and original MongoDB runtime. **The antivirus scan may quarantine or otherwise remediate detected threats; it is not a read-only diagnostic.**
+## Project scope
 
-1. Open **Start -> Windows Security -> Virus & threat protection**.
-2. Select **Quick scan** and let it finish. Use the installed protection; no Git pull, package installation, collector rerun or manual reboot is requested.
-3. Send the completed scan result. For detections, open **Protection history** and return the **threat name, affected item and action/status**. A screenshot or pasted text is sufficient; do not upload suspected binaries or memory dumps.
-4. If Quick scan is unavailable, another antivirus provider is shown, protection is disabled, or an error appears, send that displayed message/provider name. Do not force-enable/disable security settings or install another scanner for this step.
-
-[Microsoft documents these Windows Security controls](https://learn.microsoft.com/en-us/defender-endpoint/microsoft-defender-security-center-antivirus). A clean scan would not prove the unknown code is legitimate or the sharing conflict fixed. A threat detection must also be assessed for relevance; an unrelated detection would not establish the real MongoDB crash cause.
-
-Keep MongoDB stopped for now. Do not kill svchost processes, alter NetActvity, delete system DLLs or repair/delete WiredTiger files based only on these metadata results. No Defender exclusions, memory dump, new code modification, database startup or game rebuild is requested. Local MongoDB initialization, admin setup and offline Alliance validation remain pending.
+The prior scratch trace and private executable-region report remain valid evidence, but neither identifies this alert's affected item. No malware-family behavior, credential theft, false positive, root cause or successful cleanup is inferred from the name alone. The active alert takes priority over further database experiments. No new collector, pull, build, install, manual service/process change, database repair or startup is requested. Once the affected item and remediation outcome are known, choose the next check; do not restart the historical Git/registry/reboot investigation.
