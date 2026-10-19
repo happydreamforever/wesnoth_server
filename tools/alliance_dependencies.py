@@ -33,6 +33,7 @@ VENV = ROOT / "build" / "alliance-venv"
 MONGO = ROOT / "build" / "alliance-mongodb"
 OWNER = "wesnoth-alliance-dependencies-v1"
 DOWNLOAD_ATTEMPTS = 3
+MONGO_RENAME_DELAYS = (0.5, 1, 2, 4, 8)
 MONGO_FILES = (
     "LICENSE-Community.txt", "MPL-2", "README", "THIRD-PARTY-NOTICES",
     "bin/mongod.exe", "bin/vc_redist.x64.exe",
@@ -149,7 +150,7 @@ def prepare(manifest: dict, cache: Path, download: bool = False) -> None:
     for item in manifest["wheels"]:
         ensure_artifact(cache / "wheels" / item["filename"], item, download)
     ensure_artifact(cache / manifest["mongodb"]["filename"], manifest["mongodb"], download)
-    print(f"ALLIANCE DEPENDENCIES VERIFIED: {len(manifest['wheels'])} wheels; MongoDB {manifest['mongodb']['version']}.")
+    print(f"ALLIANCE DEPENDENCIES VERIFIED: {len(manifest['wheels'])} wheels; MongoDB {manifest['mongodb']['version']}.", flush=True)
 
 
 def write_json_new(path: Path, data: dict) -> None:
@@ -158,21 +159,81 @@ def write_json_new(path: Path, data: dict) -> None:
         output.write("\n")
 
 
+def _mongodb_tree_snapshot(directory: Path, item: dict) -> dict:
+    """Verify the exact owned tree and capture its identity before publication."""
+    if directory.is_symlink() or directory.is_junction() or not directory.is_dir():
+        raise PreparationError(f"MongoDB directory is missing or redirected; preserved: {directory}")
+    marker = directory / "alliance-owned.json"
+    if marker.is_symlink() or not marker.is_file():
+        raise PreparationError("Existing MongoDB directory has no ownership receipt; preserved.")
+    folder = directory / "bin"
+    if folder.is_symlink() or folder.is_junction() or not folder.is_dir():
+        raise PreparationError(f"MongoDB directory is missing or redirected; preserved: {folder}")
+    names = (".", "bin", "alliance-owned.json", *MONGO_FILES)
+
+    def identities():
+        result = {}
+        for name in names:
+            value = (directory / name).lstat()
+            result[name] = (value.st_dev, value.st_ino, value.st_mode, value.st_size, value.st_mtime_ns)
+        return result
+
+    before = identities()
+    receipt = json.loads(marker.read_text(encoding="utf-8"))
+    if not isinstance(receipt, dict) or receipt.get("owner") != OWNER or receipt.get("archive_sha256") != item["sha256"]:
+        raise PreparationError("Existing MongoDB directory belongs to another recipe; preserved.")
+    if receipt.get("files") != item["files"] or set(item["files"]) != set(MONGO_FILES):
+        raise PreparationError("MongoDB receipt file selection differs from the recipe.")
+    if set(receipt) != {"owner", "archive_sha256", "files"}:
+        raise PreparationError("MongoDB ownership receipt changed; preserved.")
+    expected_top = {Path(name).parts[0] for name in MONGO_FILES} | {marker.name}
+    if ({p.name for p in directory.iterdir()} != expected_top or
+            {p.name for p in (directory / "bin").iterdir()} != {"mongod.exe", "vc_redist.x64.exe"}):
+        raise PreparationError("MongoDB directory contains unexpected files; preserved.")
+    for name, expected in item["files"].items():
+        verify(directory / name, {**expected, "filename": name})
+    after = identities()
+    if after != before:
+        raise PreparationError("MongoDB directory changed during verification; preserved.")
+    return after
+
+
+def _publish_mongodb(work: Path, destination: Path, item: dict) -> None:
+    original = _mongodb_tree_snapshot(work, item)
+    attempts = len(MONGO_RENAME_DELAYS) + 1
+    for attempt in range(attempts):
+        if destination.exists() or destination.is_symlink() or destination.is_junction():
+            raise PreparationError(f"MongoDB destination appeared during installation; preserved: {destination}")
+        if _mongodb_tree_snapshot(work, item) != original:
+            raise PreparationError(f"Extracted MongoDB directory changed; preserved: {work}")
+        try:
+            # Windows rename refuses an existing destination. Never use replace
+            # or delete a competing destination to make this operation succeed.
+            work.rename(destination)
+        except OSError as error:
+            code = getattr(error, "winerror", None)
+            if code not in (5, 32, 33):
+                raise
+            if attempt == attempts - 1:
+                raise PreparationError(
+                    f"Windows denied MongoDB directory publication after {attempts} attempts (WinError {code}). "
+                    f"Verified extraction preserved: {work}. Send the install log; do not delete these files.") from None
+            delay = MONGO_RENAME_DELAYS[attempt]
+            print(f"Windows denied MongoDB directory rename (WinError {code}); "
+                  f"retry {attempt + 2}/{attempts} in {delay}s. Keeping the extracted files.", flush=True)
+            time.sleep(delay)
+        else:
+            _mongodb_tree_snapshot(destination, item)
+            return
+
+
 def extract_mongodb(manifest: dict, cache: Path, destination: Path) -> Path:
     item = manifest["mongodb"]
     archive = cache / item["filename"]
     verify(archive, item)
     marker = destination / "alliance-owned.json"
-    if destination.exists():
-        if not marker.is_file() or marker.is_symlink():
-            raise PreparationError("Existing MongoDB directory has no ownership receipt; preserved.")
-        receipt = json.loads(marker.read_text(encoding="utf-8"))
-        if receipt.get("owner") != OWNER or receipt.get("archive_sha256") != item["sha256"]:
-            raise PreparationError("Existing MongoDB directory belongs to another recipe; preserved.")
-        if receipt.get("files") != item["files"] or set(item["files"]) != set(MONGO_FILES):
-            raise PreparationError("MongoDB receipt file selection differs from the recipe.")
-        for name, expected in receipt["files"].items():
-            verify(destination / name, {**expected, "filename": name})
+    if destination.exists() or destination.is_symlink() or destination.is_junction():
+        _mongodb_tree_snapshot(destination, item)
         return destination / "bin" / "mongod.exe"
     destination.parent.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix=destination.name + ".extract-", dir=destination.parent))
@@ -191,9 +252,16 @@ def extract_mongodb(manifest: dict, cache: Path, destination: Path) -> Path:
                 verify(target, item["files"][name])
                 files[name] = item["files"][name]
         write_json_new(work / marker.name, {"owner": OWNER, "archive_sha256": item["sha256"], "files": files})
-        work.rename(destination)
     except BaseException:
         shutil.rmtree(work, ignore_errors=True)
+        raise
+    # A completed extraction is useful evidence if publication is blocked.
+    # Cleanup above applies only before the complete ownership receipt exists.
+    try:
+        _publish_mongodb(work, destination, item)
+    except BaseException:
+        print(f"MongoDB publication stopped; no cleanup performed. "
+              f"Keep any files at {work} and {destination}.", flush=True)
         raise
     return destination / "bin" / "mongod.exe"
 

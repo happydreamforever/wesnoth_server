@@ -33,7 +33,7 @@ All website assets are local. Neither the website nor MongoDB binds to the LAN. 
 
 ## Windows sequence
 
-Run one numbered step at a time. Step 1 now passed on Windows (server e9b42e7/client d8ab444): all 17 wheels and MongoDB 8.0.32 verified. Current handoff is step 2 only; no pull or repeat download is needed. Return its saved installation log before continuing to initialization. Use the existing checkouts under `D:\Test\wesnoth-setup`.
+Run one numbered step at a time. Step 1 now passed on Windows (server e9b42e7/client d8ab444): all 17 wheels and MongoDB 8.0.32 verified. The first step 2 attempt stopped at the final MongoDB directory rename with WinError 5. Current handoff is to pull the rename correction, disconnect WAN and retry step 2 only; follow NEXT_TEST.md. No repeat dependency download is needed. Return the installation log before continuing to initialization. Use the existing checkouts under `D:\Test\wesnoth-setup`.
 
 ### 1. While temporarily connected: pull and prepare the cache
 
@@ -111,6 +111,8 @@ In the website, create `Area 2`. Confirm it appears under Areas and the creation
 ## Recovery boundaries
 
 Existing files with a different hash or ownership marker are preserved and rejected. Do not reset/delete completed native stages, overwrite `.env`, or remove `runtime\alliance\data` to retry setup.
+
+The MongoDB installer makes at most six final-directory rename attempts for Windows errors 5/32/33, with 0.5/1/2/4/8s waits. It checks that the verified extraction is unchanged and the destination remains absent before each attempt. A completed extraction is preserved if publication fails; the log reports its path. Stop and return that log rather than deleting the extraction or destination. A later invocation does not automatically adopt preserved `.extract-*` directories. This retry does not change ACLs, services, archive pins or database data.
 
 Clean database shutdown releases `operation.lock`. A forced process termination or power failure can leave it behind. The helper deliberately refuses a second database operation rather than guessing whether another process owns the database. Return the error and process status for a verified recovery step; do not delete a live lock or launch another MongoDB against the same data directory. A full crash-recovery/backup/restore tool remains unchecked in the implementation checklist.
 

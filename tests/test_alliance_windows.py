@@ -296,6 +296,243 @@ class ArtifactTests(unittest.TestCase):
         self.assertFalse((self.root / "destination").exists())
         self.assertEqual(list(self.root.glob("*.extract-*")), [])
 
+    @staticmethod
+    def rename_error(code):
+        error = PermissionError("fixture denied MongoDB publication")
+        error.winerror = code
+        return error
+
+    def assert_complete_mongo_stage(self, stage, manifest):
+        self.assertTrue(stage.is_dir())
+        self.assertEqual(
+            {path.relative_to(stage).as_posix() for path in stage.rglob("*") if path.is_file()},
+            set(deps.MONGO_FILES) | {"alliance-owned.json"})
+        for name, expected in manifest["mongodb"]["files"].items():
+            self.assertEqual((stage / name).stat().st_size, expected["size"])
+            self.assertEqual(deps.digest(stage / name), expected["sha256"])
+
+    def test_mongo_windows_rename_retry_extracts_once_and_reuses_same_stage(self):
+        manifest = self.mongo_fixture()
+        real_rename = Path.rename
+        for code in (5, 32, 33):
+            destination = self.root / f"installed-{code}"
+            attempts = []
+            def rename(path, target):
+                attempts.append((path, Path(target)))
+                if len(attempts) == 1:
+                    raise self.rename_error(code)
+                return real_rename(path, target)
+            with self.subTest(winerror=code), patch.object(Path, "rename", rename), \
+                    patch.object(deps.zipfile, "ZipFile", wraps=zipfile.ZipFile) as archive, \
+                    patch.object(deps.time, "sleep") as sleep:
+                binary = deps.extract_mongodb(manifest, self.root, destination)
+            self.assertEqual(archive.call_count, 1)
+            self.assertEqual(len(attempts), 2)
+            self.assertEqual(attempts[0], attempts[1])
+            sleep.assert_called_once_with(0.5)
+            self.assertEqual(binary, destination / "bin/mongod.exe")
+            self.assert_complete_mongo_stage(destination, manifest)
+            self.assertFalse(attempts[0][0].exists())
+            self.assertEqual(deps.digest(self.root / "mongo.zip"), manifest["mongodb"]["sha256"])
+
+    def test_mongo_exhausted_rename_retries_preserve_complete_stage_and_cache(self):
+        manifest = self.mongo_fixture()
+        destination = self.root / "installed"
+        attempts = []
+        def rename(path, target):
+            attempts.append((path, Path(target)))
+            raise self.rename_error(5)
+        with patch.object(Path, "rename", rename), \
+                patch.object(deps.zipfile, "ZipFile", wraps=zipfile.ZipFile) as archive, \
+                patch.object(deps.time, "sleep") as sleep:
+            with self.assertRaises((deps.PreparationError, OSError)):
+                deps.extract_mongodb(manifest, self.root, destination)
+        self.assertEqual(archive.call_count, 1)
+        self.assertEqual(len(attempts), 6)
+        self.assertEqual(len(set(attempts)), 1)
+        self.assertEqual([call.args for call in sleep.call_args_list], [(0.5,), (1,), (2,), (4,), (8,)])
+        self.assertEqual(list(self.root.glob("installed.extract-*")), [attempts[0][0]])
+        self.assert_complete_mongo_stage(attempts[0][0], manifest)
+        self.assertFalse(os.path.lexists(destination))
+        self.assertEqual(deps.digest(self.root / "mongo.zip"), manifest["mongodb"]["sha256"])
+
+    def test_mongo_destination_created_during_backoff_is_never_replaced(self):
+        manifest = self.mongo_fixture()
+        for kind in ("directory", "file", "dangling-link"):
+            destination = self.root / kind
+            attempts = []
+            def rename(path, target):
+                attempts.append(path)
+                raise self.rename_error(32)
+            def add_destination(_delay):
+                if kind == "directory":
+                    destination.mkdir()
+                    (destination / "keep").write_bytes(b"user data")
+                elif kind == "file":
+                    destination.write_bytes(b"user data")
+                else:
+                    destination.symlink_to(self.root / "absent")
+            with self.subTest(kind=kind), patch.object(Path, "rename", rename), \
+                    patch.object(deps.time, "sleep", side_effect=add_destination) as sleep:
+                with self.assertRaises(deps.PreparationError):
+                    deps.extract_mongodb(manifest, self.root, destination)
+            self.assertEqual(len(attempts), 1)
+            sleep.assert_called_once_with(0.5)
+            self.assert_complete_mongo_stage(attempts[0], manifest)
+            if kind == "directory":
+                self.assertEqual((destination / "keep").read_bytes(), b"user data")
+            elif kind == "file":
+                self.assertEqual(destination.read_bytes(), b"user data")
+            else:
+                self.assertTrue(destination.is_symlink())
+                self.assertEqual(destination.readlink(), self.root / "absent")
+
+    def test_mongo_changed_stage_blocks_another_rename_and_is_preserved(self):
+        manifest = self.mongo_fixture()
+        for kind in ("binary", "receipt", "metadata", "extra-file", "identity"):
+            destination = self.root / f"changed-{kind}"
+            attempts = []
+            def rename(path, target):
+                attempts.append(path)
+                raise self.rename_error(5)
+            def change_source(_delay):
+                stage = attempts[0]
+                if kind == "binary":
+                    (stage / "bin/mongod.exe").write_bytes(b"replacement")
+                elif kind == "receipt":
+                    receipt = stage / "alliance-owned.json"
+                    receipt.write_bytes(receipt.read_bytes() + b"\n")
+                elif kind == "metadata":
+                    path = stage / "bin/mongod.exe"
+                    info = path.stat()
+                    os.utime(path, ns=(info.st_atime_ns, info.st_mtime_ns + 1_000_000_000))
+                elif kind == "extra-file":
+                    (stage / "unexpected").write_bytes(b"preserve evidence")
+                else:
+                    backup = self.root / "original-stage"
+                    os.rename(stage, backup)
+                    shutil.copytree(backup, stage)
+            with self.subTest(kind=kind), patch.object(Path, "rename", rename), \
+                    patch.object(deps.time, "sleep", side_effect=change_source):
+                with self.assertRaises(deps.PreparationError):
+                    deps.extract_mongodb(manifest, self.root, destination)
+            self.assertEqual(len(attempts), 1)
+            self.assertTrue(attempts[0].is_dir())
+            self.assertFalse(os.path.lexists(destination))
+            if kind == "binary":
+                self.assertEqual((attempts[0] / "bin/mongod.exe").read_bytes(), b"replacement")
+            elif kind == "extra-file":
+                self.assertEqual((attempts[0] / "unexpected").read_bytes(), b"preserve evidence")
+
+    def test_mongo_nonwindows_permission_and_other_io_errors_are_not_retried(self):
+        manifest = self.mongo_fixture()
+        for index, error in enumerate((PermissionError("POSIX permission"),
+                                       FileNotFoundError("missing source"), self.rename_error(87))):
+            destination = self.root / f"permanent-{index}"
+            attempts = []
+            def rename(path, target):
+                attempts.append(path)
+                raise error
+            with self.subTest(error=error), patch.object(Path, "rename", rename), \
+                    patch.object(deps.time, "sleep") as sleep:
+                with self.assertRaises((deps.PreparationError, OSError)):
+                    deps.extract_mongodb(manifest, self.root, destination)
+            self.assertEqual(len(attempts), 1)
+            sleep.assert_not_called()
+            self.assert_complete_mongo_stage(attempts[0], manifest)
+            self.assertFalse(os.path.lexists(destination))
+
+    def test_mongo_interrupted_publication_preserves_completed_extraction(self):
+        manifest = self.mongo_fixture()
+        for interrupt_at in ("rename", "backoff"):
+            destination = self.root / interrupt_at
+            attempts = []
+            def rename(path, target):
+                attempts.append(path)
+                if interrupt_at == "rename":
+                    raise KeyboardInterrupt()
+                raise self.rename_error(5)
+            with self.subTest(interrupt_at=interrupt_at), patch.object(Path, "rename", rename), \
+                    patch.object(deps.time, "sleep", side_effect=KeyboardInterrupt()) as sleep:
+                with self.assertRaises(KeyboardInterrupt):
+                    deps.extract_mongodb(manifest, self.root, destination)
+            self.assertEqual(len(attempts), 1)
+            self.assertEqual(sleep.call_count, 1 if interrupt_at == "backoff" else 0)
+            self.assert_complete_mongo_stage(attempts[0], manifest)
+            self.assertFalse(os.path.lexists(destination))
+
+    def test_mongo_existing_root_and_bin_links_are_rejected_without_changes(self):
+        manifest = self.mongo_fixture()
+        original = self.root / "original"
+        deps.extract_mongodb(manifest, self.root, original)
+        original_files = {path.relative_to(original).as_posix(): path.read_bytes()
+                          for path in original.rglob("*") if path.is_file()}
+        linked = self.root / "root-link"
+        linked.symlink_to(original, target_is_directory=True)
+        dangling = self.root / "dangling-root"
+        dangling.symlink_to(self.root / "absent", target_is_directory=True)
+        bin_linked = self.root / "bin-linked"
+        shutil.copytree(original, bin_linked)
+        shutil.rmtree(bin_linked / "bin")
+        (bin_linked / "bin").symlink_to(original / "bin", target_is_directory=True)
+        for destination in (linked, dangling, bin_linked):
+            with self.subTest(destination=destination), patch.object(deps.time, "sleep") as sleep:
+                with self.assertRaises(deps.PreparationError):
+                    deps.extract_mongodb(manifest, self.root, destination)
+                sleep.assert_not_called()
+        self.assertEqual({path.relative_to(original).as_posix(): path.read_bytes()
+                          for path in original.rglob("*") if path.is_file()}, original_files)
+        self.assertTrue(linked.is_symlink())
+        self.assertTrue(dangling.is_symlink())
+        self.assertTrue((bin_linked / "bin").is_symlink())
+
+    def test_mongo_successful_rename_is_followed_by_final_pin_verification(self):
+        manifest = self.mongo_fixture()
+        destination = self.root / "installed"
+        real_rename = Path.rename
+        def rename(path, target):
+            result = real_rename(path, target)
+            (Path(target) / "bin/mongod.exe").write_bytes(b"modified after rename")
+            return result
+        with patch.object(Path, "rename", rename), patch.object(deps.time, "sleep") as sleep:
+            with self.assertRaises(deps.PreparationError):
+                deps.extract_mongodb(manifest, self.root, destination)
+        sleep.assert_not_called()
+        self.assertEqual((destination / "bin/mongod.exe").read_bytes(), b"modified after rename")
+
+    def test_mongo_windows_junction_detection_rejects_root_and_bin(self):
+        # NTFS junctions cannot be created by this Linux suite; exercise the
+        # Windows pathlib result while preserving a real complete directory.
+        manifest = self.mongo_fixture()
+        destination = self.root / "installed"
+        deps.extract_mongodb(manifest, self.root, destination)
+        for redirected in (destination, destination / "bin"):
+            with self.subTest(redirected=redirected), \
+                    patch.object(Path, "is_junction", lambda path: path == redirected), \
+                    patch.object(Path, "rename") as rename, patch.object(deps.time, "sleep") as sleep:
+                with self.assertRaises(deps.PreparationError):
+                    deps.extract_mongodb(manifest, self.root, destination)
+                rename.assert_not_called()
+                sleep.assert_not_called()
+            self.assert_complete_mongo_stage(destination, manifest)
+
+    def test_installer_publication_failure_never_executes_binary_or_creates_venv(self):
+        manifest = {**self.mongo_fixture(), "wheels": []}
+        destination = self.root / "installed"
+        venv = self.root / "venv"
+        attempts = []
+        def rename(path, target):
+            attempts.append(path)
+            raise self.rename_error(5)
+        with patch.object(deps, "assert_windows_python"), patch.object(Path, "rename", rename), \
+                patch.object(deps.time, "sleep"), patch.object(deps.subprocess, "run") as execute:
+            with self.assertRaises((deps.PreparationError, OSError)):
+                deps.install(manifest, self.root, venv, destination)
+        execute.assert_not_called()
+        self.assertFalse(venv.exists())
+        self.assertFalse(os.path.lexists(destination))
+        self.assert_complete_mongo_stage(attempts[0], manifest)
+
     def test_installer_rejects_nonwindows_before_any_changes(self):
         with patch.object(deps.sys, "platform", "linux"):
             with self.assertRaisesRegex(deps.PreparationError, "Windows"):
