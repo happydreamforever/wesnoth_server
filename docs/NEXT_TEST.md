@@ -1,12 +1,12 @@
-# Retry the Alliance identity test with the existing identity
+# Next Windows test: native Alliance account transport
 
-The returned Windows console output confirms that identity preparation succeeded for **100.99.99.14**, using Python3.14.3 and OpenSSL3.6.3. The later fixture failed with `ConnectionResetError`; the original output did not identify which case. The JSON/text files were saved on Windows but have not been supplied. Do not delete or regenerate `runtime\alliance-transport`.
+The returned Windows result completes the Python identity fixture: the existing identity was reused and all five TLS cases passed. Keep `runtime\alliance-transport` and all completed game/OBB/native stages. Do not repeat that check or initialize MongoDB now. WAN status for that returned run was not supplied; this is actual Windows loopback evidence, not a new physically disconnected acceptance claim.
 
-This update corrects the fixture's handling of peer closure during deliberately rejected connections, adds orderly TLS shutdown for successful cases, and prints/saves each case as it runs. Negative cases still require the expected client-side TLS rejection; a client reset or positive-case reset still fails. This is a tested correction to the fixture, not a proven diagnosis of the exact Windows case. No database/game rebuild, identity rotation, malware investigation or tool upgrade is requested.
+Next test compiles the new C++ Alliance connection component with the already installed Windows compiler and runs temporary loopback peers. This is the code intended for the later Alliance account screens; the installed APK and guest server still use their existing code. Native game integration, profile import UI, account login, MongoDB startup and team gameplay remain pending. No game rebuild, reinstall or service change is required.
 
-## 1. Pull the tested update
+## 1. Pull while temporarily connected
 
-Temporarily connect Windows to GitHub. Run in ordinary Windows PowerShell:
+In a normal Windows PowerShell window:
 
 ```powershell
 & {
@@ -22,45 +22,35 @@ Temporarily connect Windows to GitHub. Run in ordinary Windows PowerShell:
 }
 ```
 
-Keep local Ethernet connected and disconnect internet/WAN again for the test. Preserve the existing installation, game, data and runtime. No dependency download or native/Android rebuild is needed for this increment.
+## 2. Disconnect WAN, then build and check the small component
 
-## 2. Retest the preserved identity
-
-Keep local Ethernet connected and disconnect internet/WAN again. The address below is the identity address just confirmed by the user's successful preparation; the probe itself only connects to loopback.
+Keep local Ethernet connected. Run:
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
     Set-Location 'D:\Test\wesnoth-setup\wesnoth_server' -ErrorAction Stop
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Test-WindowsAllianceTransport.ps1' `
-        -MsysRoot 'D:\Test\wesnoth-setup\msys64' `
-        -ServerAddress '100.99.99.14'
+        -File '.\tools\Test-WindowsAllianceNative.ps1'
     if ($LASTEXITCODE -ne 0) {
-        throw 'Alliance identity retest failed. Send the new saved log and JSON report.'
+        throw 'Native Alliance check failed. Send the saved log and JSON report if present.'
     }
 }
 ```
 
-Expected identity message is **reused**. The unchanged preparer validates ownership, file hashes, the key/certificate pair and profile before testing. If existing files are incomplete/changed, stop and return that error; do not delete or rename the identity to force a fresh one. The wrapper still uses pinned native Windows Python3.14.3 and MINGW64 OpenSSL3.6.3. The existing MongoDB runtime and game stages remain untouched.
+The helper uses the existing Python3.14.3, CMake4.3.0, Ninja1.13.2, MINGW64 GCC16.2.0, Boost1.91 and OpenSSL3.6.3 from the current MSYS root. It builds only two C++ source files into a new `build\alliance-native-<runid>` directory. It never downloads dependencies or touches the completed server/Android builds.
+
+It reads only the existing public profile, checks it with native C++, and leaves the original certificate/private key/receipt unchanged. Socket tests use newly generated disposable loopback identities inside the new restricted fixture directory. All sockets bind/connect to `127.0.0.1` on temporary ports. No connection to100.99.99.14 or port15001 occurs. No production account credentials are entered or sent.
 
 ## Expected result and report
 
-Expected output includes:
+The build should finish four steps. Then24 checks pass: existing public identity, disconnected-send guards, wrong IP/pin, hostname/broadcast refusal, expired certificate, TLS1.2/TLS1.3 encrypted frames, server-push receive, untrusted peer, downgrade/unexpected/closed/reset/stalled negotiation, plaintext, stalled TLS, cancellation, oversized/empty/truncated frames and stalled receive. The result ends with:
 
 ```text
-PASS reused server identity; private key stays on this computer.
-PASS TLS1.2 trusted numeric-IP identity and encrypted payload
-PASS TLS1.3 trusted numeric-IP identity and encrypted payload
-PASS wrong-ip rejected before application data
-PASS untrusted rejected before application data
-PASS plaintext rejected before application data
-ALLIANCE TRANSPORT IDENTITY CHECK PASSED
-ALLIANCE TRANSPORT FIXTURE COMPLETE
+ALLIANCE NATIVE TRANSPORT CHECK PASSED
+ALLIANCE NATIVE FIXTURE COMPLETE
 ```
 
-A `RUN` line now precedes each case, and each completed `PASS` prints immediately. On failure, JSON retains completed `checks` and `case_results` with the failed case, client/peer stage and safe error codes. A peer reset is allowed only for the explicitly rejected handshake before application data (or its plaintext reply); the client must still independently reject the connection. The public profile is `runtime\alliance-transport\public-profile.json`; the private key stays in that restricted directory. The profile requires trusted delivery before a client may use it; accepting a profile from an arbitrary server is not authentication. Certificates last 365 days; expiry, changed identities and later address changes need deliberate renewal/provisioning, not silent replacement. Profile port 15001 is the planned account endpoint; this test does not start that endpoint.
+Return the matching **`diagnostics\alliance-native-*.txt` and `.json`** reports, even on failure, plus whether WAN was disconnected. If compilation fails before JSON creation, send the text log. Do not send the disposable fixture directory or any private key. Keep any failed build directory for diagnosis; the helper uses a new one for a later explicit rerun.
 
-Return the matching **`diagnostics\alliance-transport-*.txt` and `.json`** files, even when the check fails, and state whether WAN was disconnected. The JSON contains only public identity metadata, versions and results. Do not send the private identity directory or key.
-
-All test sockets use `127.0.0.1` and a temporary OS-assigned port while verifying the configured Ethernet IP as the certificate identity. Success proves the Python TLS fixture on Windows, not LAN reachability, native-client downgrade refusal, account login, MongoDB persistence or Android gameplay. The installed game menu stays as it is. Next implementation is the strict native account connection mode, then the account bridge and leader/team UI; Windows database acceptance remains pending separately.
+The game menu does not change during this test. A pass establishes Windows C++ component behavior, not Android execution, LAN reachability or authenticated team gameplay. Next integration work will add trusted public-profile import and explicitly route Alliance account screens through this component, with the local backend bridge. Local MongoDB startup remains a separate unresolved acceptance item; its investigation is deferred at the user's request.
