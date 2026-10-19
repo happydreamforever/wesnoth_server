@@ -1,52 +1,81 @@
-# Next test: capture a scratch-file sharing probe
+# Next test: identify the process captured blocking replacement
 
-The user reports **no matching handles** in Resource Monitor. This does not contradict the logged MongoDB sharing failure: a brief lock can disappear before inspection. The process responsible remains unknown. Leave the real MongoDB stopped and its runtime intact.
+The Windows scratch probe reproduced the failure at iteration 2: Python PID19540, operation replace, errno13 / winerror32. Logfile.CSV identifies svchost.exe PID4600 holding the source file with sharing that excludes delete access. Python's rename-related open requests Delete access and fails while that handle remains open. Its approximately 9.48-millisecond lifetime shows why an after-the-fact handle search can miss this kind of conflict.
 
-The new probe creates only a unique `diagnostics\mongo-file-probe-*` folder. It makes up to 20 small file replacements using `WiredTiger.turtle.set` and `WiredTiger.turtle`, stops at the first error, and retains all surviving scratch files and `events.jsonl`. It never starts MongoDB or reads its data/configuration or `.env`. This is a generic filesystem reproduction: success does not prove MongoDB is fixed, because its path, executable and timing differ.
+This identifies the blocker in the scratch test. The CSV does not identify its hosted service/software or prove it held the earlier actual MongoDB metadata file. MsMpEng.exe mapping events are present, but they do not demonstrate a conflicting open handle. Do not attribute this to the historical service or disable security software from these observations.
 
-## 1. Get the diagnostic helper
+## One read-only identity check
 
-In normal PowerShell, temporarily connected to GitHub, update only the existing server checkout:
-
-```powershell
-& {
-    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
-    & $bash --noprofile --norc -c 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server pull --ff-only origin main'
-    if ($LASTEXITCODE -ne 0) { throw 'Pull failed. Stop and send the output.' }
-}
-```
-
-Client changes only mirror these records and can be pulled during the next normal update. No game build, MongoDB reinstall or dependency download is needed. The probe and capture work without internet.
-
-## 2. Capture one probe
-
-Use the existing **Microsoft Process Monitor** (`Procmon64.exe` or `Procmon.exe`) from the earlier Git capture. Run it as administrator; keep the probe in your normal PowerShell window. If you cannot find/open Process Monitor, stop here and report that; do not start MongoDB instead. [Microsoft's documentation](https://learn.microsoft.com/en-us/sysinternals/downloads/procmon) describes its filesystem tracing and filtering.
-
-1. Stop capture with **Ctrl+E** if it is active, then clear events with **Ctrl+X**.
-2. Open **Filter → Filter** (**Ctrl+L**), reset old filters, and add exactly:
-   - **Path** / **begins with** / `D:\Test\wesnoth-setup\wesnoth_server\diagnostics\mongo-file-probe-` / **Include**
-3. Click **Add**, then **OK**. Keep filesystem activity enabled. Do not add a Process Name or Result restriction: successful opens by other processes may explain a later sharing failure. Keep default columns **Time of Day, Process Name, PID, Operation, Path, Result, Detail**.
-4. Start capture with **Ctrl+E**. Immediately run this once in normal PowerShell:
+No pull, rebuild, new capture, probe repeat or database startup is needed. Keep MongoDB stopped. Open Windows Start, search **Windows PowerShell**, choose **Run as administrator**, and paste:
 
 ```powershell
 & {
-    $python = Join-Path $env:LOCALAPPDATA 'Programs\Python\Python314\python.exe'
-    if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
-        throw 'Native Windows Python is missing. Stop and send this output.'
+    $ErrorActionPreference = 'Stop'
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+    if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        throw 'Open Windows PowerShell with Run as administrator, then run this block.'
     }
-    & $python -I -B 'D:\Test\wesnoth-setup\wesnoth_server\tools\probe_windows_file_sharing.py'
-    "PROBE_EXIT: $LASTEXITCODE"
+
+    $capturedAt = [datetime]'2026-10-19T14:23:41.9345583'
+    $target = Get-CimInstance Win32_Process -Filter 'ProcessId = 4600'
+    if (-not $target) {
+        'Captured PID 4600 is no longer running. Send this result; do not rerun the probe.'
+        return
+    }
+
+    'CURRENT TARGET'
+    $target | Format-List ProcessId,Name,ExecutablePath,ParentProcessId,CreationDate
+    if (-not $target.CreationDate -or $target.Name -ne 'svchost.exe' -or $target.CreationDate -gt $capturedAt) {
+        'Current PID identity cannot be matched to the capture. Stop here and send this output.'
+        return
+    }
+
+    'SERVICES IN CURRENT TARGET'
+    $services = @(Get-CimInstance Win32_Service -Filter 'ProcessId = 4600')
+    if ($services.Count -eq 0) { 'No matching service.' }
+    else { $services | Format-List Name,DisplayName,State,ProcessId }
+
+    'CURRENT PARENT'
+    if ($target.ParentProcessId -eq 0) {
+        'No reportable parent PID.'
+        return
+    }
+    $parent = Get-CimInstance Win32_Process -Filter ('ProcessId = ' + $target.ParentProcessId)
+    if (-not $parent) {
+        'Parent PID is no longer running.'
+        return
+    }
+    $parent | Format-List ProcessId,Name,ExecutablePath,ParentProcessId,CreationDate
+    if (-not $parent.CreationDate -or $parent.CreationDate -gt $target.CreationDate) {
+        'Parent PID cannot be matched to the original parent; it may have been reused.'
+        return
+    }
+
+    'SERVICES IN CURRENT PARENT'
+    $services = @(Get-CimInstance Win32_Service -Filter ('ProcessId = ' + $parent.ProcessId))
+    if ($services.Count -eq 0) { 'No matching service.' }
+    else { $services | Format-List Name,DisplayName,State,ProcessId }
 }
 ```
 
-5. When the command returns, stop capture immediately with **Ctrl+E**, whether the probe passed or failed. If it remains blocked, stop capture and report that rather than running another copy.
-6. **File → Save → Events displayed using current filter → CSV**. Save as `D:\Test\mongo-file-probe.csv` (choose a new name if that already exists).
-7. Send that filtered CSV, the printed `events.jsonl` report, and console output. Keep the Process Monitor session/PML local; do not upload an unfiltered trace, credentials, database files or crash dump.
+Send the complete output, including blank fields, `No matching service`, absent/reused PID messages or errors. This reads only targeted process metadata and service associations; it does not read command lines, credential files, service configuration or the database, and does not stop/change anything.
 
-Expected: a printed scratch-folder/report path, then either `FILE PROBE COMPLETED` (exit0), `FILE PROBE FAILED` with operation/errno/winerror (exit1), or `PROBE COLLECTION ERROR` (exit2). Keep any partial report and return errors too. An empty trace means filtering/capture timing needs checking; it is not proof that no conflict occurred. The attempt count and programmed pauses are bounded; individual Windows I/O calls may take longer.
+Creation-time guards reject a target created after the capture, a mismatched process name, an unavailable creation time, or a parent created after the target. These are current metadata observations, not an immutable historical service mapping. If the target exited/reused its PID or information remains unavailable, keep the original Process Monitor session/PML locally. The captured event's Process properties can provide trace-bound image/parent information later; do not repeat the probe just to obtain a new PID or upload the full PML.
 
-## Interpretation and preservation
+## Evidence and remaining work
 
-A sharing failure captured alongside an incompatible overlapping file open may identify the blocker. Other error codes need separate interpretation. A passing probe is only a negative reproduction; a later isolated MongoDB startup with a new empty data path may be needed. No database startup success or repair is claimed by this test.
+CSV lines count the header as line1:
 
-Leave the real `runtime\alliance`, its crash log/dump, installed packages, APK/OBB, MSYS2 and native stages in place. Do not retry initialization, delete/rename real WiredTiger files, remove locks, repair the database or terminate/change unidentified processes/services/security settings. The selected deployment remains local Windows MongoDB; the `.env` internet URL must not be used. Initialization, admin website and disconnected Alliance operation remain pending.
+| CSV line | Time | Observed operation |
+| --- | --- | --- |
+| 57 | 14:23:41.9316899 | svchost4600 opens WiredTiger.turtle.set, Generic Read, ShareMode Read/Write without Delete. |
+| 63 | 14:23:41.9344555 | Python19540 closes its writing handle. |
+| 64 | 14:23:41.9345583 | Python19540 requests Delete access and receives SHARING VIOLATION. |
+| 71 | 14:23:41.9411686 | svchost4600 closes its handle. |
+
+The first iteration succeeds because that process closes its read handle before Python's rename. Windows documents that omitted FILE_SHARE_DELETE blocks later delete-access opens, including renames: [CreateFileW](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew). Targeted metadata fields are documented under [Win32_Process](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-process) and [Win32_Service](https://learn.microsoft.com/en-us/windows/win32/cimwin32prov/win32-service).
+
+Preserve the original MongoDB runtime, failed scratch files/report, CSV, crash log/dump and completed packages/game/data/native stages. Do not terminate a generic svchost process, change services/security settings, retry initialization or repair/delete metadata. The next action depends on identifying the current process. Local Windows MongoDB remains the deployment; the .env internet server is not used. Initialization, admin website and disconnected Alliance runtime remain pending.
+
+Documentation-only delivery: the probe performed its diagnostic role and is unchanged. No MongoDB fix or startup success is claimed. events.jsonl itself was not supplied; the inline output and CSV establish the reported probe result without requiring another run.

@@ -55,7 +55,7 @@ The admin website and internal bridge bind to loopback only. Native game account
 - [x] Verify duplicate rewards, transaction rollback, simultaneous membership/start claims, invalid map/area/lineup and active-run changes using real MongoDB.
 - [x] Confirm Windows cache verification, MongoDB executable version check and isolated installation of the 17 pinned Python packages. The user confirms WAN remained available during installation; this is local-cache installation evidence, not a physically disconnected installation test.
 - [x] Identify the immediate startup failure from the returned log: Windows sharing violation during WiredTiger metadata rename/deletion, followed by WT_PANIC. This does not identify the holder or prove corruption.
-- [ ] Identify the source of the file-sharing conflict and validate a safe startup fix while preserving the partial runtime. Resource Monitor found no current matching handles; the next diagnostic captures a new scratch-file probe with Process Monitor, without starting MongoDB.
+- [ ] Identify the source of the file-sharing conflict and validate a safe startup fix while preserving the partial runtime. The scratch trace identifies svchost.exe PID4600 as a rename blocker; its software/service identity and a safe startup remedy remain pending. Current step reads target/parent metadata with PID-reuse guards; MongoDB remains stopped.
 - [ ] Confirm local MongoDB initialization, authenticated database operation and transactions on Windows with WAN disconnected. Installation success does not complete this box.
 
 ### 2. Accounts and operator website
