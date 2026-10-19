@@ -33,7 +33,7 @@ All website assets are local. Neither the website nor MongoDB binds to the LAN. 
 
 ## Windows sequence
 
-Run one numbered step at a time. Dependency preparation and isolated installation passed on Windows. Local initialization then failed before administrator prompts with `Owned MongoDB did not start`. The user confirms the intended deployment is local MongoDB on Windows; the `.env` internet server must not be used. Current NEXT_TEST.md reads only the local startup log. Preserve the partial local runtime and await that diagnostic before retrying step 3. No pull, reinstall or service change is needed to read the log. The commands below remain the planned local sequence, not instructions to rerun initialization now.
+Run one numbered step at a time. Dependency preparation and isolated installation passed on Windows. Local initialization then failed before administrator prompts with `Owned MongoDB did not start`. The user confirms the intended deployment is local MongoDB on Windows; the `.env` internet server must not be used. The returned log now proves a Windows sharing violation on the WiredTiger.turtle.set rename/deletion, followed by WT_PANIC and fatal assertion 50853. The process responsible is unknown. Current NEXT_TEST.md asks for a Resource Monitor search for current handles to WiredTiger.turtle while MongoDB stays stopped. Preserve the partial runtime and crash dump; do not retry step 3, repair/delete metadata or change services/security settings. No pull or reinstall is needed for this observation. The commands below remain the planned local sequence, not instructions to rerun initialization now.
 
 ### 1. While temporarily connected: pull and prepare the cache
 

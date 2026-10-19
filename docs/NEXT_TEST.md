@@ -1,38 +1,25 @@
-# Next test: read the local MongoDB startup log
+# Next test: identify current handles to the MongoDB metadata file
 
-The user corrected the earlier answer: the `.env` URL points to an internet server. The game must use MongoDB on the user's Windows computer so it can work without internet. The external-database assessment is no longer the active direction. No external service, database, users or schema were modified, and no external mode was implemented.
+The returned MongoDB startup log identifies the immediate failure. Windows refused to rename `WiredTiger.turtle.set` to `WiredTiger.turtle` because a conflicting file handle was open. Deleting the `.set` file then failed with the same sharing error, and WiredTiger stopped with `WT_PANIC` / fatal assertion `50853`. This occurred during storage initialization, before administrator prompts. The log does not identify the process responsible or establish database corruption.
 
-Windows dependency installation passed. Local initialization then passed Python 3.14.3 and pinned-file checks but stopped with `Owned MongoDB did not start; inspect runtime/alliance/logs/mongodb.log locally.` It failed before administrator prompts. The startup log has not been supplied, so the cause remains unknown. Preserve the partially created local runtime and completed installation.
+## Do this one observational step
 
-## Do this one read-only step
+No pull, internet access, download, build or reinstall is needed. Keep MongoDB stopped.
 
-No pull, internet connection, installation, restart or administrator PowerShell is needed for this check. Run:
+1. Open Windows **Start**, type **Resource Monitor**, and choose **Run as administrator**. Accept the Windows prompt for this inspection.
+2. Open the **CPU** tab and expand **Associated Handles**.
+3. Clear any selected process checkboxes in the **Processes** section so they do not restrict the search.
+4. Enter `WiredTiger.turtle` in **Search Handles** and wait a few seconds.
+5. Send the matching **Image**, **PID** and **Handle Name** values. Include the path so we can distinguish the files under `D:\Test\wesnoth-setup\wesnoth_server\runtime\alliance\data` from unrelated files. If nothing appears, reply **no matching handles**. If inspection is blocked, send that message instead.
 
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $log = 'D:\Test\wesnoth-setup\wesnoth_server\runtime\alliance\logs\mongodb.log'
+This is a new search for the current database files, not a repeat of the old Git/service experiment. The built-in workflow is described in [Microsoft's Resource Monitor guidance](https://techcommunity.microsoft.com/blog/itopstalkblog/identify-which-process-is-blocking-a-file-in-windows/4432635). Leave processes and handles open; do not use End Process. The inspection does not need MongoDB to start again.
 
-    if (-not (Test-Path -LiteralPath $log -PathType Leaf)) {
-        'MONGODB LOG MISSING'
-        return
-    }
-    if ((Get-Item -LiteralPath $log).Length -eq 0) {
-        'MONGODB LOG EMPTY'
-        return
-    }
-    Get-Content -LiteralPath $log -Tail 80 -Encoding UTF8
-}
-```
+A match identifies a current user of the file, not necessarily the process that blocked the earlier rename. No matches cannot rule out a transient conflict that disappeared after MongoDB crashed. Neither result establishes a fix. We will choose the next diagnostic from the returned evidence.
 
-Send only this command's output, including an error or MISSING/EMPTY status. This reads the MongoDB log without starting a process or changing data. The generated MongoDB startup configuration contains paths, port, authorization and replica-set settings; its credentials are stored separately. Do not send `.env`, `root.json`, `config.json`, `keyfile` or the full runtime folder. The selected log may include local paths and hostname.
+## Preserve the current installation
 
-If the log is missing or empty, stop and return that result. Do not rerun initialization, delete the data directory or alter service permissions to create a log. The current launcher discards child stdout/stderr, so a pre-log failure may require a later focused diagnostic after reviewing this output.
+Do not delete or rename WiredTiger files, remove lock files, run MongoDB repair, clear the runtime, or disable/stop unidentified software or services. Keep the crash dump locally; it is not needed for this step and should not be uploaded. Do not send `.env`, private configuration/key files or the entire runtime folder.
 
-## Current deployment and status
+Use the already installed local MongoDB 8.0.32 on `127.0.0.1:27018`; the `.env` internet server is not part of the offline deployment. Initialization, administrator website checks and disconnected database operation remain pending. The installed Android game, OBB, guest LAN gameplay milestone, MSYS2 and completed native stages remain preserved.
 
-Use the already installed portable MongoDB 8.0.32 on `127.0.0.1:27018`, its owned `runtime\alliance`, and the local administrator website on `127.0.0.1:18765`. No remote URI or shared Windows service is needed. The earlier statement that the internet server was a LAN Windows service is not evidence of a service used by this local runtime; do not inspect or modify unrelated Windows services.
-
-Initialization, admin/browser checks and disconnected database operation remain pending. The earlier installation succeeded using cached packages while WAN was available; that fact is unchanged. The installed Android game, OBB, guest LAN gameplay milestone, MSYS2 and completed native stages remain preserved. The local database failure does not require rebuilding them.
-
-Documentation-only correction: current command reviewed against the existing launcher and parsed with PowerShell. No production source changes or repeated implementation tests. Read the returned log before selecting a fix.
+This delivery records the log diagnosis and next observation only. No production implementation changed, no database repair was attempted, and no Windows startup success is claimed.
