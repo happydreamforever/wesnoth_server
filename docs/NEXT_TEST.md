@@ -1,35 +1,22 @@
-# Next check: inspect the captured file-open stack
+# Next check: match the unknown stack addresses to recorded modules
 
-The elevated Windows result confirms:
+The user supplied 39 stack frames from the retained successful file-open event. The stack includes Windows filesystem/WOW64 layers and the 32-bit `CreateFileW` entry points. Frames **23–35** contain 13 `<unknown>` callers with no module/path. Their addresses range from `0x1002d3e8` to `0x1010a733`; the first is `0x100fe806`.
 
-| Role | PID | Path | Creation time (Windows local) | Service association |
-| --- | --- | --- | --- | --- |
-| Captured scratch blocker | 4600 | C:\Windows\SysWOW64\svchost.exe | 2026-10-17 03:24:19 | No matching service |
-| Current parent | 4196 | C:\Windows\SysWOW64\svchost.exe | 2026-10-17 03:24:09 | NetActvity, Running |
+This does not identify the software behind those calls. Unknown frames do not by themselves prove malicious injection, and the named Windows frames do not identify a Windows component as the cause. The established facts remain: PID4600 blocks scratch-file replacement, its current parent4196 hosts NetActvity, and the actual earlier MongoDB-crash holder was not traced directly.
 
-The parent reports parentPID960. Both creation times precede the capture, and the parent predates the child. The blocker is a child of the process hosting **NetActvity** (exact spelling). This repeats the pattern recorded during the earlier Git sharing failure; it does not identify the service's publisher/implementation or prove which process held the real MongoDB file when it crashed.
+## One observation from the same retained event
 
-Earlier service configuration, registry, installation-event and reboot checks did not identify this component. Do not repeat those experiments or stop the unidentified service. The next useful evidence is which code made the captured file-open call.
+The original Process Monitor capture is still open by user confirmation. Keep capture stopped and keep that session intact. No pull, command, download, new capture, probe run or MongoDB startup is needed.
 
-## One observation from the retained capture
+1. In **the same Event Properties window**, switch from **Stack** to **Process**. If the window was closed, double-click the same **2:23:41.9316899 PM / svchost.exe / PID4600 / CreateFile / SUCCESS** event for the scratch `WiredTiger.turtle.set` again.
+2. Look at the lower **Modules** table. Its columns include **Module, Address, Size, Path, Company**. Address is the module base address. Widen the window/columns if necessary.
+3. Click **Copy All**, paste into Notepad and send only the **Modules** section with all rows. You can save that section as a new `D:\Test\mongo-modules.txt` file and attach it if long. If Copy All copies only the upper process information, send screenshot(s) of the lower Modules table with those columns visible; overlapping screenshots are fine if it scrolls. Do not send command lines, environment or the whole PML.
+4. If the list is empty or unavailable, report that result. Do not start another capture to populate it.
 
-No pull, command, build, new capture or probe/database run is needed. Keep MongoDB stopped.
+You do not need to calculate address ranges. We will check whether a listed image covers `0x100fe806` and the other unknown callers. [Microsoft's Process-tab screenshot](https://learn.microsoft.com/en-us/sysinternals/downloads/media/procmon/procmon-proc.png) shows those table columns and Copy All. [Microsoft describes the Process tab's process and DLL details](https://techcommunity.microsoft.com/blog/askperf/troubleshooting-with-process-monitor/372401), and [Process Monitor documentation](https://learn.microsoft.com/en-us/sysinternals/downloads/procmon) describes its per-event information and stacks.
 
-The user confirms **the original capture is still open in Process Monitor**. Use that existing session with capture stopped; do not clear it, reopen the CSV or start a new capture. The supplied ordinary event CSV does not contain the required stack data and cannot recreate it. If the session is unexpectedly lost before this step, report that instead of rerunning anything.
+## Limits and preserved state
 
-In the retained session/PML:
+A recorded image range may connect an address to a file; it still does not establish that a service can safely be stopped or identify all code executing there. No match can reflect incomplete capture/module information or code not represented by that list; it is not a malware determination. A later narrowly scoped current memory-region metadata query could inspect those exact addresses with VirtualQueryEx/GetMappedFileName without dumping memory, but no such query is requested now.
 
-1. Find the row with **Time of Day 2:23:41.9316899 PM**, **Process Name svchost.exe**, **PID4600**, **Operation CreateFile**, **Result SUCCESS**, and Path ending `mongo-file-probe-sdynefqx\WiredTiger.turtle.set`. This is CSV line57 when counting its header as line1. Select this successful open by the blocker, not the later failed Python event.
-2. Double-click that row to open **Event Properties**, then select **Stack**.
-3. Use **Copy All** to copy the stack text and paste it here, or use the Stack tab's **Save** button to save its stack CSV as `D:\Test\mongo-blocker-stack.csv` (choose a new name if it exists), then attach that file. If those controls are unavailable, a screenshot of the Stack tab with module/path columns visible is sufficient.
-4. Keep all available rows, including unknown/unresolved addresses. Do not download symbols or install debugging tools for this check. If Stack is empty/unavailable, report that exact result.
-
-Return only this event's stack, not the full PML, process memory, private runtime or credentials. Leave the retained session/PML on Windows for reference. Viewing available stack frames does not require reproducing the failure. [Microsoft explains the Event Properties Stack tab](https://techcommunity.microsoft.com/blog/askperf/troubleshooting-with-process-monitor/372401); the [Process Monitor documentation](https://learn.microsoft.com/en-us/sysinternals/downloads/procmon) describes per-operation stacks and native capture retention.
-
-## Interpretation and preserved state
-
-A stack may associate the observed file open with a module; it can also be unresolved or incomplete. An unrecognized address, a Microsoft host executable, or a vendor label alone does not establish malware, innocence or a safe service stop. If the original capture is unavailable, a narrowly scoped, identity-guarded loaded-module inventory of current4600/4196 is the next possible diagnostic; no such command or recapture is requested now.
-
-Preserve runtime/alliance, the failed scratch files and events.jsonl, Logfile.CSV, the MongoDB crash log/dump and completed packages/game/native/data stages. The .env internet URL remains unused. No MongoDB repair, manual file deletion, service/process/security change, installation or game rebuild is needed. Local MongoDB initialization, admin website and disconnected Alliance runtime remain pending.
-
-This delivery records the returned identity result and changes only the next observation. Probe/backend code is unchanged. Current service implementation and a safe startup fix are still unknown.
+Do not repeat the historical service/registry/event/reboot experiments. Leave MongoDB stopped and do not terminate processes, modify services/security settings, remove/repair database metadata or read .env. Preserve the original runtime, scratch files/report, CSV/retained session, MongoDB crash evidence and completed game/native/data stages. Local MongoDB initialization/admin/offline Alliance validation remain pending. This is a documentation-only evidence update; backend/probe code is unchanged.
