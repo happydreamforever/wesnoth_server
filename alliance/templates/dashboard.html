@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="eyebrow">Server overview</p><h1>Your Alliance world</h1>
+<p class="intro">Review players, organize areas and resolve interrupted game runs.</p>
+<div class="metrics">{% for key,label in [('accounts','Accounts'),('teams','Teams'),('areas','Areas'),('game_runs','Game runs')] %}<article class="metric"><span>{{ label }}</span><strong>{{ counts[key] }}</strong></article>{% endfor %}</div>
+<section class="panel"><h2>Integration status</h2><p>This release provides persistent accounts, game rules and administration. The installed Android game and native guest server do not yet call this service. Playing the existing guest game does not award account or team experience.</p></section>
+<section class="panel"><h2>Recent game runs</h2>{% if runs %}<div class="table-wrap"><table><thead><tr><th>Run</th><th>Type</th><th>Status</th><th>Created</th></tr></thead><tbody>{% for run in runs %}<tr><td><a href="{{ url_for('run_detail', run_id=run._id) }}">{{ run._id }}</a></td><td>{{ run.kind }}</td><td><span class="badge">{{ run.state }}</span></td><td>{{ run.created_at }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="empty">No game runs have been recorded.</p>{% endif %}</section>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Sign in · Alliance administration{% endblock %}
+{% block content %}
+<section class="login panel">
+  <p class="eyebrow">Operator access</p>
+  <h1>Manage your local world</h1>
+  <p>Sign in with the administrator account created during server setup.</p>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="username">Username</label><input id="username" name="username" autocomplete="username" maxlength="64" required autofocus>
+    <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" maxlength="1024" required>
+    <button type="submit">Sign in</button>
+  </form>
+</section>
+{% endblock %}

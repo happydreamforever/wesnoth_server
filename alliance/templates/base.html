@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Alliance administration{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand"><span class="crest" aria-hidden="true">A</span><div><a href="{{ url_for('dashboard') }}">Alliance Battle</a><span class="subtitle">Local server administration</span></div></div>
+    {% if g.admin %}<div class="operator"><span>{{ g.admin.username }}</span><form method="post" action="{{ url_for('logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="secondary" type="submit">Sign out</button></form></div>{% endif %}
+  </header>
+  {% if g.admin %}<nav aria-label="Administration">
+    {% for endpoint, label in [('dashboard', 'Overview'), ('accounts', 'Players'), ('teams', 'Teams'), ('areas', 'Areas'), ('runs', 'Game runs'), ('audit', 'Audit log')] %}<a href="{{ url_for(endpoint) }}"{% if request.endpoint == endpoint %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+  </nav>{% endif %}
+  <main>
+    {% for message in get_flashed_messages() %}<p class="notice" role="status">{{ message }}</p>{% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer>Alliance administration · Available on this Windows computer only</footer>
+</body>
+</html>

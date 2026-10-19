@@ -1,0 +1,4 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="eyebrow">Progression history</p><h1>Game runs</h1><p>Showing the latest 100 runs. Cancelling an unfinished run releases reservations and grants no rewards.</p><section class="panel">{% if records %}<div class="table-wrap"><table><thead><tr><th>Run</th><th>Type</th><th>Status</th><th>Created</th></tr></thead><tbody>{% for run in records %}<tr><td><a href="{{ url_for('run_detail', run_id=run._id) }}">{{ run._id }}</a></td><td>{{ run.kind }}</td><td><span class="badge">{{ run.state }}</span></td><td>{{ run.created_at }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="empty">No game runs have been recorded.</p>{% endif %}</section>
+{% endblock %}

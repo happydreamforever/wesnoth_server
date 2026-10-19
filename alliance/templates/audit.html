@@ -1,0 +1,4 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="eyebrow">Operator history</p><h1>Audit log</h1><p>Latest 100 administrative changes. Records are read-only in this interface.</p><section class="panel">{% if records %}<div class="table-wrap"><table><thead><tr><th>When</th><th>Action</th><th>Actor</th><th>Target</th><th>Reason</th></tr></thead><tbody>{% for record in records %}<tr><td>{{ record.created_at }}</td><td>{{ record.action }}</td><td class="identifier">{{ record.actor_id }}</td><td class="identifier">{{ record.target_id }}</td><td>{{ record.reason }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="empty">No administrative changes have been recorded.</p>{% endif %}</section>
+{% endblock %}

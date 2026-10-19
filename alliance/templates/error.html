@@ -1,0 +1,3 @@
+{% extends "base.html" %}
+{% block title %}Request unavailable · Alliance administration{% endblock %}
+{% block content %}<section class="panel"><p class="eyebrow">Request {{ status }}</p><h1>We could not complete that action</h1><p>{{ message }}</p><a class="button" href="{{ url_for('dashboard') }}">Return to overview</a></section>{% endblock %}

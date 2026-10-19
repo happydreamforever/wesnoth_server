@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="eyebrow">Game run</p><h1 class="identifier">{{ run._id }}</h1><section class="panel"><h2>Current state</h2><dl><dt>Type</dt><dd>{{ run.kind }}</dd><dt>Status</dt><dd>{{ run.state }}</dd><dt>Map or mission</dt><dd>{{ run.map_id or run.mission_id or '—' }}</dd><dt>Created</dt><dd>{{ run.created_at }}</dd></dl><h3>Participants</h3><pre>{{ run.participants | tojson(indent=2) }}</pre></section>
+{% if run.state not in ['completed', 'cancelled'] %}<section class="panel"><h2>Cancel this run</h2><p>Use this when a game has been abandoned or cannot resume. This cannot award or revise experience.</p><form class="compact-form" method="post" action="{{ url_for('cancel_run', run_id=run._id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="reason">Reason for cancellation</label><textarea id="reason" name="reason" maxlength="500" required></textarea><button class="danger" type="submit">Cancel run without rewards</button></form></section>{% endif %}
+{% endblock %}

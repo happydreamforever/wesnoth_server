@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="eyebrow">Local competitions</p><h1>Areas</h1><p>Teams compete with teams in their own area. Every area uses the same approved battle rules.</p>
+<div class="columns"><section class="panel"><h2>Area list</h2>{% if records %}<ul class="record-list">{% for area in records %}<li><strong>{{ area.name }}</strong><span class="identifier">{{ area._id }}</span><span class="badge">{{ 'Enabled' if area.enabled else 'Disabled' }}</span></li>{% endfor %}</ul>{% else %}<p class="empty">No areas found.</p>{% endif %}</section><section class="panel"><h2>Create an area</h2><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="name">Area name</label><input id="name" name="name" maxlength="64" required><button type="submit">Create area</button></form></section></div>
+{% endblock %}
