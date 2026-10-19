@@ -70,7 +70,8 @@ The admin website and internal bridge bind to loopback only. Native game account
 The 2026-10-20 delivery implements the portable server identity/public profile foundation and a Python loopback fixture; Windows execution is the current handoff. Next implement explicit native Alliance account transport with verified numeric-IP TLS and refusal of plaintext fallback. Preserve guest behavior and send no password/session token until server identity verification succeeds. The Python fixture does not complete native game integration.
 
 - [x] Implement offline server TLS identity/public connection profile preparation, preservation and validation; VPS-tested.
-- [ ] Confirm the new identity fixture on Windows using current Ethernet IP and saved reports.
+- [x] Confirm Windows identity creation for100.99.99.14 with Python3.14.3/OpenSSL3.6.3; user console output passes creation/validation.
+- [ ] Confirm all five Windows loopback fixture cases. Initial run failed with peer ConnectionResetError before per-case results were available; preserve the identity and run the corrected fixture.
 - [ ] Import the public profile through a trusted route into the native client; private keys stay on the server.
 - [ ] Fix numeric-IP TLS selection and reject plaintext fallback in custom account mode.
 - [ ] Add a bounded asynchronous native-server bridge; backend outage must not freeze the guest relay.
