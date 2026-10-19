@@ -1,6 +1,6 @@
 # Alliance Battle implementation checklist
 
-Implementation authorized on 2026-10-19. This is the working specification and delivery checklist; unchecked items are not available in the installed game. Test only with LDPlayer. Preserve the completed 1.19.26 game, OBB, native dependencies and guest LAN server.
+Implementation authorized on 2026-10-19. Backend implementation and VPS verification are complete for the checked items; Windows validation is pending. See [the runtime handoff](ALLIANCE_RUNTIME.md). This is the working specification and delivery checklist; unchecked items are not available in the installed game. Test only with LDPlayer. Preserve the completed 1.19.26 game, OBB, native dependencies and guest LAN server.
 
 ## Player experience and first-release rules
 
@@ -47,19 +47,19 @@ The admin website and internal bridge bind to loopback only. Native game account
 ### 1. Database and game rules
 
 - [x] Record the agreed rules, database ownership, delivery order and remaining tests.
-- [ ] Pin Python 3.14.3 and all dependency wheels; provide a hash-verified offline Windows cache.
-- [ ] Provide isolated local MongoDB initialization, replica-set authentication and scoped runtime credentials without changing `.env` or Windows services.
-- [ ] Install explicit collection validators, unique indexes and a versioned schema.
-- [ ] Implement accounts, leader advancement, teams, membership approval, captain transfer, areas and standings.
-- [ ] Implement campaign runs and Alliance approvals/readiness/start/settlement state transitions.
-- [ ] Verify duplicate rewards, transaction rollback, simultaneous membership/start claims, invalid map/area/lineup and active-run changes using real MongoDB.
+- [x] Pin Python 3.14.3 and all dependency wheels; provide a hash-verified offline Windows cache.
+- [x] Provide isolated local MongoDB initialization, replica-set authentication and scoped runtime credentials without changing `.env` or Windows services.
+- [x] Install explicit collection validators, unique indexes and a versioned schema.
+- [x] Implement accounts, leader advancement, teams, membership approval, captain transfer, areas and standings.
+- [x] Implement campaign runs and Alliance approvals/readiness/start/settlement state transitions.
+- [x] Verify duplicate rewards, transaction rollback, simultaneous membership/start claims, invalid map/area/lineup and active-run changes using real MongoDB.
 - [ ] Confirm the new runtime on Windows with offline dependencies. VPS test success does not complete this box.
 
 ### 2. Accounts and operator website
 
-- [ ] Password hashing, revocable scoped sessions, expiry and login throttling.
-- [ ] Local admin login, player/team/area/run views and audited state changes with CSRF and authorization checks.
-- [ ] Explicit first-admin bootstrap; no default shared password or raw database editor.
+- [x] Password hashing, revocable scoped sessions, expiry and login throttling.
+- [x] Local admin login, player/team/area/run views and audited state changes with CSRF and authorization checks.
+- [x] Explicit first-admin bootstrap; no default shared password or raw database editor.
 - [ ] Confirm admin startup, login, state persistence across restart and offline operation on Windows.
 
 ### 3. Native account integration

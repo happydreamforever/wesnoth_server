@@ -1,21 +1,34 @@
-# First offline emulator milestone passed
+# Next test: prepare the Alliance backend dependencies
 
-The user confirms that the actual Android game in LDPlayer joined the Windows server, played against the computer, returned control after the AI turn and kept its connection active. Internet/WAN was disconnected while local Ethernet stayed connected. The existing APK uses the verified gamedata-1.19.26 OBB. The first offline Windows-server/LDPlayer playable baseline is complete at this tested scope.
+The existing Windows-server/LDPlayer offline game milestone remains passed. The user now authorizes implementation of Alliance Battle, with LDPlayer-only testing. No phone inspection, Android rebuild, server rebuild or repeated guest LAN turn is needed here.
 
-The latest tested Windows commits are server 275f0ea and client bfa53b8. Later documentation-only commits record results and do not require another pull, rebuild, reinstall, data copy or repeated emulator turn. Keep all completed stages and the working app/server.
+The first backend delivery implements MongoDB persistence, leader/team rules, transactional rewards and a local administrator website. It is not yet connected to the Android game. Read [ALLIANCE_IMPLEMENTATION.md](ALLIANCE_IMPLEMENTATION.md) for the checked and remaining features, and [ALLIANCE_RUNTIME.md](ALLIANCE_RUNTIME.md) for the full build/run/test sequence.
 
-## Immediate next step
+## Do this one step now
 
-Ask whether a physical Android phone is available to connect to Windows by USB. Keep the user's requested one-step-at-a-time pace. No new command is required for the completed emulator test.
+Temporarily connect Windows to GitHub and the official dependency download hosts. Run this in PowerShell:
 
-If a phone is available, the next device step should establish USB/ADB visibility and that phone's actual Android API and ABI. The existing installed APK targets x86_64 LDPlayer; do not install it on a guessed phone ABI or select an ARM target based only on a model name. Use the already verified Windows Android SDK tools, then choose the necessary phone build from the returned device evidence.
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
+    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
+        $repo = '/d/Test/wesnoth-setup/' + $name
+        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
+        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Send the output." }
+    }
+    Set-Location 'D:\Test\wesnoth-setup\wesnoth_server'
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File '.\tools\Prepare-WindowsAlliance.ps1' -Download
+    if ($LASTEXITCODE -ne 0) { throw 'Alliance preparation failed. Send the saved log.' }
+}
+```
 
-If no phone is available, agree on the next available test or development milestone. Separate-phone connectivity, two-human synchronization, MongoDB persistence and custom game features remain untested. Do not describe the successful one-human-plus-AI session as two-device synchronization.
+Expected: `ALLIANCE DEPENDENCIES VERIFIED: 17 wheels; MongoDB 8.0.32.` First download approximately 810 MB. Matching cached files are reused. The helper does not initialize a database, modify `.env`, install a Windows service or rebuild the game.
 
-## Saved evidence
+Return `D:\Test\wesnoth-setup\wesnoth_server\diagnostics\alliance-prepare-*.txt`, including any error. Stop after this step. Offline installation, initial admin setup, the two run windows and browser/persistence checks follow after this preparation result; their complete commands are already documented in ALLIANCE_RUNTIME.md.
 
-- Windows server startup: server diagnostics/server-run-20261013-171523-854.txt. Pasted startup/idle excerpt only; later gameplay events were not supplied.
-- Windows address report: server diagnostics/lan-address-20261013-195939-200-65afa4e99f034483840e206209ac0c2b.txt. wesnothd PID16216, IPv4/IPv6 port15000, Ethernet100.99.99.14/Public; metadata check passed.
-- User observations: multiplayer lobby appeared, play against the computer worked, control returned after the computer turn, connection remained active, and internet/WAN was explicitly disconnected while Ethernet remained active.
+## Verified here and still pending
 
-The successful endpoint was 100.99.99.14:15000 for that session. Do not assume the address/PID stays fixed. The Public profile did not block the reported connection; no firewall/profile changes or guessed gateway are needed. If a later connection fails after a network change, use the existing address helper against the then-current state.
+84 checks pass: 28 domain/rules/source-data tests, 7 authentication tests, 26 HTTP/admin tests, 5 configuration/deployment tests and 18 offline-artifact/PowerShell tests. Real MongoDB 8.0.32/Python 3.14.3 tests ran with networking disabled, including actual authenticated database initialization/restart and production Waitress HTTP startup. PowerShell helpers use Linux PowerShell 7.4.6 with simulated Windows/native tools. Actual Windows PowerShell 5.1, portable Mongo execution, website browser testing and the eventual Android account/game integration remain unverified.
+
+Keep the existing APK/OBB, game-data source, completed native stages and current MSYS2 location. Prior Network recovery and dependency-build instructions are historical.

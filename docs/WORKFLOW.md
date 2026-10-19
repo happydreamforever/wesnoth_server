@@ -1,5 +1,7 @@
 # Offline Wesnoth development workflow
 
+**Alliance implementation checkpoint (2026-10-19):** The user now authorizes implementation and stepwise commits. Follow docs/ALLIANCE_IMPLEMENTATION.md and docs/ALLIANCE_RUNTIME.md. Backend domain, MongoDB schema/transactions, scoped authentication, local admin website and offline Windows setup are implemented; 84 VPS checks pass. Native account/TLS bridge, Android UI, playable custom campaigns and actual Alliance games remain pending. Windows has not yet run this backend. Current NEXT_TEST.md asks only for guarded MSYS2 Git pulls and Prepare-WindowsAlliance.ps1 -Download (~810 MB), then its saved preparation log. Use existing Python3.14.3/MSYS2 and LDPlayer only; do not request a phone or rebuild completed game stages. Do not read or initialize the legacy .env database; new local state is owned runtime/alliance with Mongo8.0.32 on127.0.0.1:27018, app HTTP127.0.0.1:18765. Preserve all completed native/game outputs and unrelated README changes.
+
 The project is a custom Android game client with a Windows 11 server on a local network, using Wesnoth as its starting point and MongoDB as the intended database. Development takes place on the Linux VPS. The user builds and runs the Windows server and Android app on Windows, with LDPlayer only. Gameplay must work without internet access.
 
 ## Persistent project context
