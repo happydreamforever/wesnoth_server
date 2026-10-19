@@ -1,0 +1,9 @@
+# Build this verification environment while connected; run tests with --network none.
+FROM mongo:8.0.32@sha256:d0d926f94df099bff534b7ee5b5986458131a22489dfff8664509af0c1e2ca9c AS mongo
+FROM python:3.14.3-slim@sha256:5e59aae31ff0e87511226be8e2b94d78c58f05216efda3b07dbbed938ec8583b
+RUN apt-get update && apt-get install -y --no-install-recommends libcurl4t64 libgssapi-krb5-2 libsasl2-2 && rm -rf /var/lib/apt/lists/*
+COPY --from=mongo /usr/bin/mongod /usr/local/bin/mongod
+COPY tools/alliance-dependencies/requirements-verify.txt /tmp/requirements-verify.txt
+RUN python -m pip install --no-cache-dir --only-binary=:all: -r /tmp/requirements-verify.txt && python -m pip check
+WORKDIR /workspace
+ENV PYTHONDONTWRITEBYTECODE=1

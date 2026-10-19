@@ -8,6 +8,7 @@
 
 # Machine-local reports and tools
 /diagnostics/
+/runtime/
 .venv/
 __pycache__/
 *.pyc
