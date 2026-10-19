@@ -53,7 +53,7 @@ The admin website and internal bridge bind to loopback only. Native game account
 - [x] Implement accounts, leader advancement, teams, membership approval, captain transfer, areas and standings.
 - [x] Implement campaign runs and Alliance approvals/readiness/start/settlement state transitions.
 - [x] Verify duplicate rewards, transaction rollback, simultaneous membership/start claims, invalid map/area/lineup and active-run changes using real MongoDB.
-- [x] Confirm Windows cache verification, MongoDB executable version check and isolated installation of the 17 pinned Python packages. Physical WAN disconnection is not established by the install transcript.
+- [x] Confirm Windows cache verification, MongoDB executable version check and isolated installation of the 17 pinned Python packages. The user confirms WAN remained available during installation; this is local-cache installation evidence, not a physically disconnected installation test.
 - [ ] Confirm local MongoDB initialization, authenticated database operation and transactions on Windows. Installation success does not complete this box.
 
 ### 2. Accounts and operator website

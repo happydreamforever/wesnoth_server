@@ -2,11 +2,11 @@
 
 The latest Windows log confirms successful cache verification, all 17 pinned Python packages installed, no broken package requirements, exact installed versions and `ALLIANCE OFFLINE ENVIRONMENT INSTALLED`. MongoDB's executable version check precedes those steps in the installer and therefore also passed. Database and administrator initialization have not run yet.
 
-Saved report: `diagnostics/alliance-install-20261019-123832-178-5f6bc73476924db79fd820be123d47e2.txt`. The attachment contains no new pulled heads, automatic rename retries or explicit WAN-disconnection observation. This records installation success without inferring those additional facts.
+Saved report: `diagnostics/alliance-install-20261019-123832-178-5f6bc73476924db79fd820be123d47e2.txt`. The attachment contains no new pulled heads or automatic rename retries. The user subsequently confirms internet/WAN access was still available during installation. Local-cache installation passed; physically disconnected installation was not demonstrated. No reinstallation is needed to proceed with offline database initialization.
 
 ## Do this one step now
 
-Keep internet/WAN disconnected while retaining the local network. The initialization script is already in your checkout; no pull, repeat installation, package download or Android rebuild is needed for this documentation-only update.
+Disconnect internet/WAN now while retaining the local network. The initialization script is already in your checkout; no pull, repeat installation, package download or Android rebuild is needed for this documentation-only update.
 
 Run interactively in PowerShell:
 
