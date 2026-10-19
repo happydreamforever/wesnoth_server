@@ -273,9 +273,24 @@ def prepare_identity(root, server_address, port, openssl, required_version=None)
     return verify_identity(root, host, port), True
 
 
+def error_details(error):
+    """Safe socket/TLS diagnostics, without arbitrary exception text or data."""
+    details = {"type": type(error).__name__}
+    for name in ("errno", "winerror", "verify_code"):
+        value = getattr(error, name, None)
+        if type(value) is int:
+            details[name] = value
+    reason = getattr(error, "reason", None)
+    if isinstance(reason, str) and re.fullmatch(r"[A-Z0-9_]+", reason):
+        details["reason"] = reason
+    return details
+
+
 @contextmanager
-def loopback_peer(context, challenge, *, plaintext=False):
+def loopback_peer(context, challenge, *, plaintext=False, expect_rejection=False, details=None):
     errors, received = [], []
+    details = details if details is not None else {}
+    details.update(phase="accept", status="running")
     listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     listener.bind(("127.0.0.1", 0))
     listener.listen(1)
@@ -287,63 +302,114 @@ def loopback_peer(context, challenge, *, plaintext=False):
             with listener.accept()[0] as raw:
                 raw.settimeout(TIMEOUT)
                 if plaintext:
+                    details["phase"] = "plaintext-receive"
                     raw.recv(4096)
+                    details["phase"] = "plaintext-send"
                     raw.sendall(b"HTTP/1.0 400 Plaintext rejected\r\n\r\n")
+                    details["status"] = "complete"
                     return
-                try:
-                    with context.wrap_socket(raw, server_side=True) as secure:
-                        data = bytearray()
-                        while len(data) < len(challenge):
-                            part = secure.recv(len(challenge) - len(data))
-                            if not part:
-                                break
-                            data.extend(part)
-                        if data:
-                            received.append(bytes(data))
-                            secure.sendall(bytes(data))
-                except ssl.SSLError:
-                    pass  # Negative peer-verification cases intentionally abort.
+                details["phase"] = "tls-handshake"
+                with context.wrap_socket(raw, server_side=True) as secure:
+                    details["phase"] = "receive-payload"
+                    data = bytearray()
+                    while len(data) < len(challenge):
+                        part = secure.recv(len(challenge) - len(data))
+                        if not part:
+                            raise TransportError("Peer closed before sending the complete probe payload.")
+                        data.extend(part)
+                        received[:] = [bytes(data)]  # Retain even partial application data on error.
+                    details["phase"] = "send-payload"
+                    secure.sendall(bytes(data))
+                    details["phase"] = "tls-shutdown"
+                    secure.unwrap().close()
+                details["status"] = "complete"
         except BaseException as error:
-            errors.append(type(error).__name__)
+            details["error"] = error_details(error)
+            # A rejected TLS handshake can be observed as either a TLS alert or
+            # a TCP reset/broken pipe on the peer. This is never sufficient to
+            # pass: the client must independently prove the expected rejection.
+            rejected_close = (expect_rejection and not received and (
+                (details["phase"] == "tls-handshake" and isinstance(error, (ssl.SSLError, ConnectionResetError, BrokenPipeError)))
+                or (plaintext and details["phase"] == "plaintext-send" and isinstance(error, (ConnectionResetError, BrokenPipeError)))))
+            details["status"] = "rejection-close" if rejected_close else "failed"
+            if not rejected_close:
+                errors.append(type(error).__name__)
 
     worker = threading.Thread(target=serve, name="alliance-tls-loopback", daemon=True)
     worker.start()
+    body_failed = False
     try:
         yield endpoint, received
+    except BaseException:
+        body_failed = True
+        raise
     finally:
         worker.join(TIMEOUT + 1)
         listener.close()
-        if worker.is_alive() or errors:
-            raise TransportError("Loopback fixture did not finish cleanly: " + ",".join(errors))
+        if worker.is_alive():
+            details["status"] = "failed"
+            errors.append("WorkerTimeout")
+        # Keep the client's original exception when cleanup also failed; the
+        # structured peer details retain the secondary failure for the report.
+        if errors and not body_failed:
+            raise TransportError("Loopback fixture did not finish cleanly at "
+                                 + details["phase"] + ": " + ",".join(errors))
 
 
-def run_probe(root, profile):
+def run_probe(root, profile, *, diagnostics=None, progress=None):
     # Verify immutable files again before loading the private key for the fixture.
     if verify_identity(root) != profile:
         raise TransportError("Probe profile differs from the owned identity.")
     context = server_context(Path(root))
     challenge = b"Wesnoth-Alliance-probe:" + secrets.token_bytes(24)
     passed = []
+    diagnostics = diagnostics if diagnostics is not None else {}
+    diagnostics.update(checks=passed, case_results=[])
+
+    @contextmanager
+    def case(name, marker):
+        result = {"id": name, "status": "running", "client_phase": "connect", "peer": {}}
+        diagnostics["case_results"].append(result)
+        if progress:
+            progress("RUN " + name)
+        try:
+            yield result
+        except BaseException as error:
+            result.update(status="failed", error=error_details(error))
+            raise
+        else:
+            result["status"] = "passed"
+            passed.append(marker)
+            if progress:
+                progress("PASS " + marker)
+
     for version, name in ((ssl.TLSVersion.TLSv1_2, "TLS1.2"), (ssl.TLSVersion.TLSv1_3, "TLS1.3")):
         client = tls_client_context(profile)
         client.minimum_version = client.maximum_version = version
-        with loopback_peer(context, challenge) as (endpoint, received):
-            with socket.create_connection(endpoint, timeout=TIMEOUT) as raw:
-                with client.wrap_socket(raw, server_hostname=profile["server_address"]) as secure:
-                    if hashlib.sha256(secure.getpeercert(binary_form=True)).hexdigest() != profile["certificate_sha256"]:
-                        raise TransportError("Loopback peer fingerprint differs from profile.")
-                    secure.sendall(challenge)
-                    reply = bytearray()
-                    while len(reply) < len(challenge):
-                        part = secure.recv(len(challenge) - len(reply))
-                        if not part:
-                            break
-                        reply.extend(part)
-                    if bytes(reply) != challenge:
-                        raise TransportError("Encrypted probe payload did not round-trip.")
-        if received != [challenge]:
-            raise TransportError("Loopback server did not receive the exact probe payload.")
-        passed.append(f"{name} trusted numeric-IP identity and encrypted payload")
+        with case(name, f"{name} trusted numeric-IP identity and encrypted payload") as result:
+            with loopback_peer(context, challenge, details=result["peer"]) as (endpoint, received):
+                with socket.create_connection(endpoint, timeout=TIMEOUT) as raw:
+                    result["client_phase"] = "tls-handshake"
+                    with client.wrap_socket(raw, server_hostname=profile["server_address"]) as secure:
+                        result["client_phase"] = "verify-fingerprint"
+                        if hashlib.sha256(secure.getpeercert(binary_form=True)).hexdigest() != profile["certificate_sha256"]:
+                            raise TransportError("Loopback peer fingerprint differs from profile.")
+                        result["client_phase"] = "send-payload"
+                        secure.sendall(challenge)
+                        result["client_phase"] = "receive-payload"
+                        reply = bytearray()
+                        while len(reply) < len(challenge):
+                            part = secure.recv(len(challenge) - len(reply))
+                            if not part:
+                                break
+                            reply.extend(part)
+                        if bytes(reply) != challenge:
+                            raise TransportError("Encrypted probe payload did not round-trip.")
+                        result["client_phase"] = "tls-shutdown"
+                        secure.unwrap().close()
+            result["client_phase"] = "verify-peer-receipt"
+            if received != [challenge]:
+                raise TransportError("Loopback server did not receive the exact probe payload.")
     for kind in ("wrong-ip", "untrusted", "plaintext"):
         client = tls_client_context(profile) if kind != "untrusted" else ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         client.minimum_version = ssl.TLSVersion.TLSv1_2
@@ -351,22 +417,27 @@ def run_probe(root, profile):
         if kind == "wrong-ip":
             host = "192.0.2.2" if host == "192.0.2.1" else "192.0.2.1"
         rejected = False
-        with loopback_peer(context, challenge, plaintext=(kind == "plaintext")) as (endpoint, received):
-            with socket.create_connection(endpoint, timeout=TIMEOUT) as raw:
-                try:
-                    with client.wrap_socket(raw, server_hostname=host):
-                        raise TransportError(f"Negative TLS case unexpectedly connected: {kind}.")
-                except ssl.SSLCertVerificationError as error:
-                    if kind == "plaintext" or (kind == "wrong-ip" and error.verify_code != 64):
-                        raise
-                    rejected = True
-                except ssl.SSLError:
-                    if kind != "plaintext":
-                        raise
-                    rejected = True
-        if not rejected or received:
-            raise TransportError("Negative TLS case did not reject before application data.")
-        passed.append(f"{kind} rejected before application data")
+        with case(kind, f"{kind} rejected before application data") as result:
+            with loopback_peer(context, challenge, plaintext=(kind == "plaintext"),
+                               expect_rejection=True, details=result["peer"]) as (endpoint, received):
+                with socket.create_connection(endpoint, timeout=TIMEOUT) as raw:
+                    result["client_phase"] = "tls-handshake"
+                    try:
+                        with client.wrap_socket(raw, server_hostname=host):
+                            raise TransportError(f"Negative TLS case unexpectedly connected: {kind}.")
+                    except ssl.SSLCertVerificationError as error:
+                        if kind == "plaintext" or (kind == "wrong-ip" and error.verify_code != 64):
+                            raise
+                        result["rejection"] = error_details(error)
+                        rejected = True
+                    except ssl.SSLError as error:
+                        if kind != "plaintext":
+                            raise
+                        result["rejection"] = error_details(error)
+                        rejected = True
+            result["client_phase"] = "verify-rejection"
+            if not rejected or received:
+                raise TransportError("Negative TLS case did not reject before application data.")
     return passed
 
 
@@ -393,9 +464,8 @@ def main():
                               port=profile["port"], certificate_sha256=profile["certificate_sha256"])
                 print("PASS " + report["identity"] + " server identity; private key stays on this computer.", flush=True)
                 print("Public profile: " + str(args.identity_root / "public-profile.json"), flush=True)
-                report["checks"] = run_probe(args.identity_root, profile)
-                for item in report["checks"]:
-                    print("PASS " + item, flush=True)
+                run_probe(args.identity_root, profile, diagnostics=report,
+                          progress=lambda message: print(message, flush=True))
                 report["status"] = "passed"
             except (Exception, KeyboardInterrupt) as error:
                 report["error"] = str(error) if isinstance(error, TransportError) else type(error).__name__
