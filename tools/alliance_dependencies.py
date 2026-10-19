@@ -7,15 +7,21 @@ are preserved and rejected instead of being replaced.
 from __future__ import annotations
 
 import argparse
+import errno
 import hashlib
+import http.client
 import importlib.metadata
 import json
 import os
 from pathlib import Path
 import shutil
+import socket
+import ssl
 import subprocess
 import sys
 import tempfile
+import time
+import urllib.error
 import urllib.request
 import uuid
 import zipfile
@@ -26,6 +32,7 @@ CACHE = ROOT / "build" / "alliance-dependencies"
 VENV = ROOT / "build" / "alliance-venv"
 MONGO = ROOT / "build" / "alliance-mongodb"
 OWNER = "wesnoth-alliance-dependencies-v1"
+DOWNLOAD_ATTEMPTS = 3
 MONGO_FILES = (
     "LICENSE-Community.txt", "MPL-2", "README", "THIRD-PARTY-NOTICES",
     "bin/mongod.exe", "bin/vc_redist.x64.exe",
@@ -34,6 +41,36 @@ MONGO_FILES = (
 
 class PreparationError(RuntimeError):
     pass
+
+
+class _TransientDownloadError(Exception):
+    """Only errors from network operations may enter the retry loop."""
+
+
+def _network_operation(operation):
+    try:
+        return operation()
+    except urllib.error.HTTPError as error:
+        error.close()
+        if error.code in (408, 429, 500, 502, 503, 504):
+            raise _TransientDownloadError(f"HTTP {error.code}") from error
+        raise PreparationError(f"Download server returned HTTP {error.code}; no automatic retry.") from None
+    except (OSError, http.client.IncompleteRead) as error:
+        reason = error.reason if isinstance(error, urllib.error.URLError) else error
+        # Certificate/protocol problems, permanent DNS failures, and generic
+        # text-only URL errors must not be disguised as a temporary timeout.
+        if isinstance(reason, ssl.SSLError):
+            raise
+        codes = {errno.ETIMEDOUT, errno.ECONNRESET, errno.ECONNABORTED,
+                 errno.ECONNREFUSED, errno.ENETUNREACH, errno.EHOSTUNREACH,
+                 10053, 10054, 10060, 10061, 10065, 11002}
+        transient = (isinstance(reason, (TimeoutError, ConnectionError, http.client.IncompleteRead))
+                     or (isinstance(reason, socket.gaierror) and reason.errno == socket.EAI_AGAIN)
+                     or (isinstance(reason, OSError) and
+                         (reason.errno in codes or getattr(reason, "winerror", None) in codes)))
+        if not transient:
+            raise
+        raise _TransientDownloadError(type(reason).__name__) from error
 
 
 def digest(path: Path) -> str:
@@ -70,29 +107,42 @@ def verify(path: Path, item: dict) -> None:
 def ensure_artifact(path: Path, item: dict, download: bool) -> None:
     if path.exists() or path.is_symlink():
         verify(path, item)
+        print(f"Using verified cached {path.name}.", flush=True)
         return
     if not download:
         verify(path, item)
     path.parent.mkdir(parents=True, exist_ok=True)
-    partial = path.with_name(path.name + ".download-" + uuid.uuid4().hex)
-    print(f"Downloading pinned {path.name} ({item['size']} bytes).", flush=True)
-    try:
-        with urllib.request.urlopen(item["url"], timeout=90) as response, partial.open("xb") as output:
-            count = 0
-            while chunk := response.read(1024 * 1024):
-                count += len(chunk)
-                if count > item["size"]:
-                    raise PreparationError(f"Download exceeds its pinned size: {path.name}")
-                output.write(chunk)
-            output.flush()
-            os.fsync(output.fileno())
-        verify(partial, item)
-        # Do not replace an artifact another invocation may have created.
-        with partial.open("rb") as source, path.open("xb") as destination:
-            shutil.copyfileobj(source, destination, 1024 * 1024)
-        verify(path, item)
-    finally:
-        partial.unlink(missing_ok=True)
+    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+        partial = path.with_name(path.name + ".download-" + uuid.uuid4().hex)
+        print(f"Downloading pinned {path.name} ({item['size']} bytes; attempt {attempt}/{DOWNLOAD_ATTEMPTS}).", flush=True)
+        try:
+            response = _network_operation(lambda: urllib.request.urlopen(item["url"], timeout=90))
+            with response, partial.open("xb") as output:
+                count = 0
+                while chunk := _network_operation(lambda: response.read(1024 * 1024)):
+                    count += len(chunk)
+                    if count > item["size"]:
+                        raise PreparationError(f"Download exceeds its pinned size: {path.name}")
+                    output.write(chunk)
+                output.flush()
+                os.fsync(output.fileno())
+            verify(partial, item)
+            # Publication and local I/O errors are deliberately outside the
+            # network retry classification. Never replace an existing file.
+            with partial.open("rb") as source, path.open("xb") as destination:
+                shutil.copyfileobj(source, destination, 1024 * 1024)
+            verify(path, item)
+            return
+        except _TransientDownloadError as error:
+            if attempt == DOWNLOAD_ATTEMPTS:
+                raise PreparationError(
+                    f"Download failed after {DOWNLOAD_ATTEMPTS} attempts: {path.name} ({error}). "
+                    "Completed cache files are preserved. Keep internet connected and rerun preparation.") from None
+            delay = 2 ** attempt
+            print(f"Temporary download failure for {path.name} ({error}); retrying in {delay}s.", flush=True)
+        finally:
+            partial.unlink(missing_ok=True)
+        time.sleep(delay)
 
 
 def prepare(manifest: dict, cache: Path, download: bool = False) -> None:

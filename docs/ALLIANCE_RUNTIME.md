@@ -52,7 +52,7 @@ Run one numbered step at a time. The initial handoff asks for step 1 only; retur
 }
 ```
 
-Expected: `ALLIANCE DEPENDENCIES VERIFIED: 17 wheels; MongoDB 8.0.32.` The first download is approximately 810 MB, mostly the MongoDB archive. The helper verifies pinned hashes and saves `diagnostics\alliance-prepare-*.txt`. Existing matching files are reused. This step downloads files; it does not install MongoDB, start a service, alter the old database or rebuild the game.
+Expected: `ALLIANCE DEPENDENCIES VERIFIED: 17 wheels; MongoDB 8.0.32.` The first download is approximately 810 MB, mostly the MongoDB archive. The helper verifies pinned hashes and saves `diagnostics\alliance-prepare-*.txt`. Existing matching files are reverified and reused. Temporary connection/read failures and HTTP 408/429/500/502/503/504 receive at most three attempts, with 2s/4s delays. A retry restarts only the current transfer; completed files stay cached. Hash/size mismatches, certificate errors and local file errors stop without automatic retry. After a network failure, keep internet connected and rerun this same step; do not delete the cache. This step downloads files; it does not install MongoDB, start a service, alter the old database or rebuild the game.
 
 ### 2. Offline: install the new backend environment
 

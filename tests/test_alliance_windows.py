@@ -2,16 +2,22 @@
 from __future__ import annotations
 
 import hashlib
+import http.client
+import http.server
 import importlib.util
 import io
 import json
 import os
 from pathlib import Path
 import shutil
+import socket
+import ssl
 import subprocess
 import tempfile
+import threading
 import unittest
 from unittest.mock import patch
+import urllib.error
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -72,6 +78,172 @@ class ArtifactTests(unittest.TestCase):
             with self.assertRaisesRegex(deps.PreparationError, "exceeds"):
                 deps.ensure_artifact(self.root / "wheel.whl", artifact(), True)
         self.assertEqual(list(self.root.iterdir()), [])
+
+    def test_connection_timeout_retries_then_verifies(self):
+        failure = OSError("fixture Windows timeout")
+        failure.winerror = 10060
+        path = self.root / "wheel.whl"
+        with patch.object(deps.urllib.request, "urlopen", side_effect=[
+                urllib.error.URLError(failure), io.BytesIO(b"test wheel")]) as network, \
+                patch.object(deps.time, "sleep") as sleep:
+            deps.ensure_artifact(path, artifact(), True)
+        self.assertEqual(network.call_count, 2)
+        sleep.assert_called_once_with(2)
+        self.assertEqual(path.read_bytes(), b"test wheel")
+        self.assertEqual(list(self.root.glob("*.download-*")), [])
+
+    def test_read_failure_restarts_only_current_file(self):
+        class InterruptedStream(io.BytesIO):
+            def read(self, size=-1):
+                if self.tell():
+                    raise ConnectionResetError("fixture interrupted body")
+                return super().read(4)
+        path = self.root / "wheel.whl"
+        previous = self.root / "already-verified.whl"
+        previous.write_bytes(b"keep completed package")
+        broken = InterruptedStream(b"test wheel")
+        with patch.object(deps.urllib.request, "urlopen", side_effect=[
+                broken, io.BytesIO(b"test wheel")]) as network, patch.object(deps.time, "sleep"):
+            deps.ensure_artifact(path, artifact(), True)
+        self.assertEqual(network.call_count, 2)
+        self.assertTrue(broken.closed)
+        self.assertEqual(path.read_bytes(), b"test wheel")
+        self.assertEqual(previous.read_bytes(), b"keep completed package")
+        self.assertEqual(list(self.root.glob("*.download-*")), [])
+
+    def test_exhausted_retries_are_bounded_and_keep_completed_cache(self):
+        path = self.root / "missing.whl"
+        previous = self.root / "completed.whl"
+        previous.write_bytes(b"saved")
+        with patch.object(deps.urllib.request, "urlopen", side_effect=TimeoutError()) as network, \
+                patch.object(deps.time, "sleep") as sleep:
+            with self.assertRaisesRegex(deps.PreparationError, "after 3 attempts: missing.whl"):
+                deps.ensure_artifact(path, artifact(), True)
+        self.assertEqual(network.call_count, 3)
+        self.assertEqual([c.args for c in sleep.call_args_list], [(2,), (4,)])
+        self.assertEqual(previous.read_bytes(), b"saved")
+        self.assertEqual(list(self.root.iterdir()), [previous])
+
+    def test_transient_http_dns_and_incomplete_reads_retry(self):
+        failures = [urllib.error.HTTPError("https://example.invalid", code, "fixture", {}, io.BytesIO())
+                    for code in (408, 429, 500, 502, 503, 504)]
+        failures += [urllib.error.URLError(socket.gaierror(socket.EAI_AGAIN, "fixture")),
+                     http.client.IncompleteRead(b"partial"), http.client.RemoteDisconnected("fixture")]
+        for index, failure in enumerate(failures):
+            with self.subTest(failure=type(failure).__name__, index=index), \
+                    patch.object(deps.urllib.request, "urlopen", side_effect=[failure, io.BytesIO(b"test wheel")]) as network, \
+                    patch.object(deps.time, "sleep") as sleep:
+                deps.ensure_artifact(self.root / f"retry{index}.whl", artifact(), True)
+                self.assertEqual(network.call_count, 2)
+                sleep.assert_called_once_with(2)
+                if isinstance(failure, urllib.error.HTTPError):
+                    self.assertTrue(failure.closed)
+
+    def test_permanent_network_errors_are_not_retried(self):
+        failures = [urllib.error.HTTPError("https://example.invalid", 404, "fixture", {}, io.BytesIO()),
+                    urllib.error.URLError(ssl.SSLCertVerificationError("fixture certificate failure")),
+                    urllib.error.URLError(socket.gaierror(socket.EAI_NONAME, "fixture")),
+                    urllib.error.URLError("unknown URL configuration")]
+        for failure in failures:
+            with self.subTest(failure=repr(failure)), \
+                    patch.object(deps.urllib.request, "urlopen", side_effect=failure) as network, \
+                    patch.object(deps.time, "sleep") as sleep:
+                with self.assertRaises((deps.PreparationError, OSError)):
+                    deps.ensure_artifact(self.root / "missing.whl", artifact(), True)
+                self.assertEqual(network.call_count, 1)
+                sleep.assert_not_called()
+                self.assertEqual(list(self.root.iterdir()), [])
+
+    def test_invalid_downloads_fail_without_network_retry(self):
+        for body in (b"fail wheel", b"short", b"too much content"):
+            with self.subTest(body=body), \
+                    patch.object(deps.urllib.request, "urlopen", return_value=io.BytesIO(body)) as network, \
+                    patch.object(deps.time, "sleep") as sleep:
+                with self.assertRaises(deps.PreparationError):
+                    deps.ensure_artifact(self.root / "bad.whl", artifact(), True)
+                self.assertEqual(network.call_count, 1)
+                sleep.assert_not_called()
+                self.assertEqual(list(self.root.iterdir()), [])
+
+    def test_local_io_error_is_never_retried_as_network_timeout(self):
+        with patch.object(deps.urllib.request, "urlopen", return_value=io.BytesIO(b"test wheel")) as network, \
+                patch.object(deps.os, "fsync", side_effect=TimeoutError("local fixture timeout")), \
+                patch.object(deps.time, "sleep") as sleep:
+            with self.assertRaisesRegex(TimeoutError, "local fixture"):
+                deps.ensure_artifact(self.root / "local.whl", artifact(), True)
+        self.assertEqual(network.call_count, 1)
+        sleep.assert_not_called()
+        self.assertEqual(list(self.root.iterdir()), [])
+
+    def test_offline_and_cached_calls_do_not_retry_or_download(self):
+        path = self.root / "cached.whl"
+        path.write_bytes(b"test wheel")
+        with patch.object(deps.urllib.request, "urlopen", side_effect=AssertionError("network")), \
+                patch.object(deps.time, "sleep") as sleep:
+            deps.ensure_artifact(path, artifact(), True)
+            with self.assertRaises(deps.PreparationError):
+                deps.ensure_artifact(self.root / "missing.whl", artifact(), False)
+            sleep.assert_not_called()
+
+    def test_prepare_reuses_previous_wheel_but_never_reports_partial_success(self):
+        cache = self.root / "cache"
+        (cache / "wheels").mkdir(parents=True)
+        previous = cache / "wheels" / "first.whl"
+        previous.write_bytes(b"test wheel")
+        manifest = {"wheels": [artifact("first.whl"), artifact("second.whl")],
+                    "mongodb": {**artifact("mongo.zip"), "version": "8.0.32"}}
+        output = io.StringIO()
+        with patch.object(deps.urllib.request, "urlopen", side_effect=TimeoutError()) as network, \
+                patch.object(deps.time, "sleep"), patch("sys.stdout", output):
+            with self.assertRaises(deps.PreparationError):
+                deps.prepare(manifest, cache, True)
+        self.assertEqual(network.call_count, 3)
+        self.assertEqual(previous.read_bytes(), b"test wheel")
+        self.assertIn("Using verified cached first.whl", output.getvalue())
+        self.assertNotIn("ALLIANCE DEPENDENCIES VERIFIED:", output.getvalue())
+
+    def test_real_http_busy_then_body_timeout_then_verified_success(self):
+        # Exercise actual urllib exceptions and socket reads on loopback, with
+        # an intentionally short fixture timeout; no external host is contacted.
+        release = threading.Event()
+        requests = []
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *_args):
+                pass
+
+            def do_GET(self):
+                requests.append(self.path)
+                if len(requests) == 1:
+                    self.send_response(503)
+                    self.end_headers()
+                    return
+                self.send_response(200)
+                self.send_header("Content-Length", "10")
+                self.end_headers()
+                if len(requests) == 2:
+                    self.wfile.write(b"test")
+                    self.wfile.flush()
+                    release.wait(5)
+                else:
+                    self.wfile.write(b"test wheel")
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        worker = threading.Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        opener = deps.urllib.request.build_opener(deps.urllib.request.ProxyHandler({}))
+        item = {**artifact(), "url": f"http://127.0.0.1:{server.server_port}/fixture"}
+        try:
+            with patch.object(deps.urllib.request, "urlopen", side_effect=lambda url, timeout: opener.open(url, timeout=0.2)), \
+                    patch.object(deps.time, "sleep") as sleep:
+                deps.ensure_artifact(self.root / "actual.whl", item, True)
+            self.assertEqual(len(requests), 3)
+            self.assertEqual([c.args for c in sleep.call_args_list], [(2,), (4,)])
+            self.assertEqual((self.root / "actual.whl").read_bytes(), b"test wheel")
+            self.assertEqual(list(self.root.glob("*.download-*")), [])
+        finally:
+            release.set()
+            server.shutdown()
+            server.server_close()
+            worker.join(timeout=2)
 
     def mongo_fixture(self, missing=False):
         path = self.root / "mongo.zip"
