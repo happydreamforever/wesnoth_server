@@ -33,7 +33,7 @@ All website assets are local. Neither the website nor MongoDB binds to the LAN. 
 
 ## Windows sequence
 
-Run one numbered step at a time. Step 1 now passed on Windows (server e9b42e7/client d8ab444): all 17 wheels and MongoDB 8.0.32 verified. The first step 2 attempt stopped at the final MongoDB directory rename with WinError 5. Current handoff is to pull the rename correction, disconnect WAN and retry step 2 only; follow NEXT_TEST.md. No repeat dependency download is needed. Return the installation log before continuing to initialization. Use the existing checkouts under `D:\Test\wesnoth-setup`.
+Run one numbered step at a time. Windows dependency preparation and isolated installation now pass: all 17 packages installed with dependency/version checks, and the MongoDB executable version check passed. Current handoff is step 3 only; the script already exists and no new pull is needed for this documentation update. Return only final initialization status/error text before starting the database/website run windows. Use the existing checkouts under `D:\Test\wesnoth-setup`.
 
 ### 1. While temporarily connected: pull and prepare the cache
 

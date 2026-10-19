@@ -1,6 +1,6 @@
 # Alliance Battle implementation checklist
 
-Implementation authorized on 2026-10-19. Backend implementation and VPS verification are complete for the checked items; Windows validation is pending. See [the runtime handoff](ALLIANCE_RUNTIME.md). This is the working specification and delivery checklist; unchecked items are not available in the installed game. Test only with LDPlayer. Preserve the completed 1.19.26 game, OBB, native dependencies and guest LAN server.
+Implementation authorized on 2026-10-19. Backend implementation and VPS verification are complete for the checked items. Windows cache preparation and isolated package installation now pass; database initialization and website validation remain pending. See [the runtime handoff](ALLIANCE_RUNTIME.md). This is the working specification and delivery checklist; unchecked items are not available in the installed game. Test only with LDPlayer. Preserve the completed 1.19.26 game, OBB, native dependencies and guest LAN server.
 
 ## Player experience and first-release rules
 
@@ -53,7 +53,8 @@ The admin website and internal bridge bind to loopback only. Native game account
 - [x] Implement accounts, leader advancement, teams, membership approval, captain transfer, areas and standings.
 - [x] Implement campaign runs and Alliance approvals/readiness/start/settlement state transitions.
 - [x] Verify duplicate rewards, transaction rollback, simultaneous membership/start claims, invalid map/area/lineup and active-run changes using real MongoDB.
-- [ ] Confirm the new runtime on Windows with offline dependencies. VPS test success does not complete this box.
+- [x] Confirm Windows cache verification, MongoDB executable version check and isolated installation of the 17 pinned Python packages. Physical WAN disconnection is not established by the install transcript.
+- [ ] Confirm local MongoDB initialization, authenticated database operation and transactions on Windows. Installation success does not complete this box.
 
 ### 2. Accounts and operator website
 
