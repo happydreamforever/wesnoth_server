@@ -67,9 +67,11 @@ The admin website and internal bridge bind to loopback only. Native game account
 
 ### 3. Native account integration
 
-Next independent VPS milestone after the 2026-10-20 source review: explicit Alliance account transport using a provisioned public trust profile, verified numeric-IP TLS and rejection of all plaintext fallback. Preserve existing guest behavior. Send no password or session token until server identity verification succeeds. Review completed; implementation and runtime acceptance below remain unchecked.
+The 2026-10-20 delivery implements the portable server identity/public profile foundation and a Python loopback fixture; Windows execution is the current handoff. Next implement explicit native Alliance account transport with verified numeric-IP TLS and refusal of plaintext fallback. Preserve guest behavior and send no password/session token until server identity verification succeeds. The Python fixture does not complete native game integration.
 
-- [ ] Provision a server TLS identity and public client connection profile.
+- [x] Implement offline server TLS identity/public connection profile preparation, preservation and validation; VPS-tested.
+- [ ] Confirm the new identity fixture on Windows using current Ethernet IP and saved reports.
+- [ ] Import the public profile through a trusted route into the native client; private keys stay on the server.
 - [ ] Fix numeric-IP TLS selection and reject plaintext fallback in custom account mode.
 - [ ] Add a bounded asynchronous native-server bridge; backend outage must not freeze the guest relay.
 - [ ] Add Android registration/login/logout and leader/team screens using existing engine UI.
