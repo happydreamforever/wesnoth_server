@@ -4,7 +4,7 @@ This delivery implements the persistent game rules and a local operator website.
 
 The user now prioritizes local MongoDB setup. We use **MongoDB Community Edition8.0.32**, the free self-managed edition that can run offline ([official overview](https://www.mongodb.com/products/self-managed/community-edition)). The pinned portable MongoDB and17 Python packages already passed Windows installation. Reuse them. The previous failure was database startup, not a missing paid product or installer.
 
-Current action: [NEXT_TEST.md](NEXT_TEST.md) checks the previously created area, its audit entry and sign-out in the browser. Both database and website re-launches now succeed in the returned Windows output; the user confirms WAN was disconnected. Keep both healthy windows running. No pull, rebuild, reinstall, initialization, recovery or repeated restart is needed. The recovery-helper backup report and exact shutdown exit codes were not supplied; do not infer those results. The permanent operation.guard file remains after shutdown and must not be deleted.
+Current action: the Windows database and administrator website acceptance is complete at the delivered scope. The user confirms the saved area, matching audit identifier and login page after sign-out following the offline restarts. Preserve both applications and all data. The next milestone in [NEXT_TEST.md](NEXT_TEST.md) is the standalone Android transport check; it does not use MongoDB or change the installed game.
 
 | Stage | Current state |
 | --- | --- |
@@ -14,7 +14,7 @@ Current action: [NEXT_TEST.md](NEXT_TEST.md) checks the previously created area,
 | Initialize the authenticated game replica set, schema and administrator | Complete on Windows; username Uni; selected profile runtime; internet access was available during initialization |
 | Start database and local admin website; check transactions and login | Complete on Windows; console checks pass; browser login/Area 1/WAN disconnection user-confirmed |
 | Verify database and website restart | Re-launches succeed in returned Windows output; user confirms WAN disconnected. Recovery-helper backup report and shutdown exit codes not supplied |
-| Create an area, check audit and sign-out, verify records after restart | User confirms area created before restart; same-area/audit persistence and sign-out observations remain pending |
+| Create an area, check audit and sign-out, verify records after restart | Passed by user report: same area name, matching audit identifier, login required after sign-out; WAN disconnected during restarts |
 | Connect Android accounts, progression and Alliance Battle | Pending integration |
 
 The final database binds to127.0.0.1:27018 and the administrator website to127.0.0.1:18765. The Windows game service will use the database locally; Android clients will communicate with the game service. The internet database URL in `.env` is not used.
@@ -48,7 +48,7 @@ All website assets are local. Neither the website nor MongoDB binds to the LAN. 
 
 ## Windows sequence
 
-Follow [NEXT_TEST.md](NEXT_TEST.md) for the current browser-only check. Both restarted applications are already running. The launch commands below are references for future sessions, not a request to start duplicate processes. The existing credentials and profile data remain authoritative. Do not initialize again or delete either MongoDB storage locks or operation.guard.
+Follow [NEXT_TEST.md](NEXT_TEST.md) for the next Android transport check. The browser acceptance is complete. The launch commands below are references for future sessions, not a request to start duplicate processes. The existing credentials and profile data remain authoritative. Do not initialize again or delete either MongoDB storage locks or operation.guard.
 
 The profile standalone fixture passed startup, journaled write/read, both clean shutdowns and a persisted read after restart. This does not prove recovery of the old repository database or the disappearance of the earlier sharing conflict. Keep `runtime/alliance`, its logs/lock evidence, all disposable test directories and crash dumps. The user deferred the malware investigation; no service/security changes are part of this step.
 
@@ -80,7 +80,7 @@ Keep both open. Expected: database running on `127.0.0.1:27018`, then the admin 
 
 ### 3. Test persistence and permissions
 
-The user confirms an area was created before the successful database and website restarts. In **Areas**, confirm that same name and identifier. In **Audit log**, match the `create_area` row's Target to that identifier; Reason is `Create an area`. Actor and Target are identifiers, not display names. Sign out, then request `http://127.0.0.1:18765/` afresh and confirm login is required. Report missing records without recreating them; if the earlier identifier was not recorded, say so. Keep both processes running and return these observations. The website's automatic database check does not prove browser logout or persistence of the user-created area.
+Completed by user report after the offline restarts: **Areas** retained the same name, the **Audit log** identifier matched, and fresh root-URL access after **Sign out** showed the login page. These observations complement the automatic database checks. Do not repeat the test or create another area for this checkpoint.
 
 ## Recovery boundaries
 
@@ -98,7 +98,7 @@ The verification environment uses Python 3.14.3 and MongoDB 8.0.32. Linux and Wi
 
 `tools/Dockerfile.alliance-verify` records the container image digests and matching Python package versions. Build its small context from that file and `tools/alliance-dependencies/requirements-verify.txt`; never send `.env` or runtime data as a build context. Use `--ulimit nofile=65536:65536` for the Linux test container: repeated fixture collection creation exhausted the default 1024 descriptors in an earlier run. That infrastructure failure was corrected before the final passing run.
 
-Real-database checks cover concurrent team membership/start claims, repeat settlement, transaction rollback, changed leaders/captains, schema uniqueness, admin authorization, CSRF, session expiry/revocation, local-only HTTP, initialization and clean restart. PowerShell helpers are exercised with simulated native tools under Linux PowerShell7.4.6. Actual Windows standalone MongoDB startup/persistence now passes; profile administrator initialization also passes. Authenticated service startup/transaction checks now pass in the returned Windows console; browser login, Area 1 and WAN-disconnected operation are user-confirmed. Database and website re-launches now also pass in the returned output, with WAN disconnected by user report. Same-area/audit persistence and sign-out browser acceptance remain pending.
+Real-database checks cover concurrent team membership/start claims, repeat settlement, transaction rollback, changed leaders/captains, schema uniqueness, admin authorization, CSRF, session expiry/revocation, local-only HTTP, initialization and clean restart. PowerShell helpers are exercised with simulated native tools under Linux PowerShell7.4.6. Actual Windows standalone MongoDB startup/persistence now passes; profile administrator initialization also passes. Authenticated service startup/transaction checks now pass in the returned Windows console; browser login, Area 1 and WAN-disconnected operation are user-confirmed. Database and website re-launches now also pass in the returned output, with WAN disconnected by user report. Same-area/audit persistence and sign-out browser acceptance now pass by user report.
 
 
 ## Completed Windows Python identity fixture
