@@ -4,7 +4,7 @@ This delivery implements the persistent game rules and a local operator website.
 
 The user now prioritizes local MongoDB setup. We use **MongoDB Community Edition8.0.32**, the free self-managed edition that can run offline ([official overview](https://www.mongodb.com/products/self-managed/community-edition)). The pinned portable MongoDB and17 Python packages already passed Windows installation. Reuse them. The previous failure was database startup, not a missing paid product or installer.
 
-Current action: the Windows database and administrator website acceptance is complete at the delivered scope. The user confirms the saved area, matching audit identifier and login page after sign-out following the offline restarts. Preserve both applications and all data. The next milestone in [NEXT_TEST.md](NEXT_TEST.md) is the standalone Android transport check; it does not use MongoDB or change the installed game.
+Current action: the Windows database and administrator website acceptance is complete at the delivered scope. The user confirms the saved area, matching audit identifier and login page after sign-out following the offline restarts. Preserve both applications and all data. The standalone Android transport check now also passes actual Windows build/LDPlayer execution, with WAN available by user confirmation. [NEXT_TEST.md](NEXT_TEST.md) runs only that completed device check with WAN disconnected; it does not use MongoDB or change the installed game.
 
 | Stage | Current state |
 | --- | --- |
@@ -15,6 +15,7 @@ Current action: the Windows database and administrator website acceptance is com
 | Start database and local admin website; check transactions and login | Complete on Windows; console checks pass; browser login/Area 1/WAN disconnection user-confirmed |
 | Verify database and website restart | Re-launches succeed in returned Windows output; user confirms WAN disconnected. Recovery-helper backup report and shutdown exit codes not supplied |
 | Create an area, check audit and sign-out, verify records after restart | Passed by user report: same area name, matching audit identifier, login required after sign-out; WAN disconnected during restarts |
+| Native Android transport fixture | Windows build and22 LDPlayer loopback cases pass; WAN was available. Device-only WAN-disconnected check is next |
 | Connect Android accounts, progression and Alliance Battle | Pending integration |
 
 The final database binds to127.0.0.1:27018 and the administrator website to127.0.0.1:18765. The Windows game service will use the database locally; Android clients will communicate with the game service. The internet database URL in `.env` is not used.
@@ -48,7 +49,7 @@ All website assets are local. Neither the website nor MongoDB binds to the LAN. 
 
 ## Windows sequence
 
-Follow [NEXT_TEST.md](NEXT_TEST.md) for the next Android transport check. The browser acceptance is complete. The launch commands below are references for future sessions, not a request to start duplicate processes. The existing credentials and profile data remain authoritative. Do not initialize again or delete either MongoDB storage locks or operation.guard.
+Follow [NEXT_TEST.md](NEXT_TEST.md) for the device-only offline rerun of the completed Android transport check. The browser acceptance is complete. The launch commands below are references for future sessions, not a request to start duplicate processes. The existing credentials and profile data remain authoritative. Do not initialize again or delete either MongoDB storage locks or operation.guard.
 
 The profile standalone fixture passed startup, journaled write/read, both clean shutdowns and a persisted read after restart. This does not prove recovery of the old repository database or the disappearance of the earlier sharing conflict. Keep `runtime/alliance`, its logs/lock evidence, all disposable test directories and crash dumps. The user deferred the malware investigation; no service/security changes are part of this step.
 
