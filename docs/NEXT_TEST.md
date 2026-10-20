@@ -1,22 +1,54 @@
-# Windows native transport accepted; next milestone is Android execution
+# Next Windows step: local MongoDB startup and persistence check
 
-Both returned files `alliance-native-20261019-213954-440-8912eeea6d884f23a2a3ff882192259c.txt` and `.json` confirm all 24 native transport cases passed. The existing Windows executable was reused; no compilation occurred. The user explicitly confirms internet/WAN was disconnected while local Ethernet remained connected. This is user-observed offline operation, not an independent network trace.
+The user now prioritizes the local database for Alliance Battle. MongoDB Community Edition is free and can run entirely offline ([official overview](https://www.mongodb.com/products/self-managed/community-edition)). Keep our pinned version8.0.32; the MongoDB archive and all17 Python packages were already downloaded, verified and installed on this Windows computer. No new installer, subscription or version upgrade is required for this step.
 
-## Completed scope
+The earlier failure occurred when WiredTiger tried to rename/delete its metadata during startup. Reinstalling does not establish that this file-sharing problem is fixed. The partial game database and crash evidence must be preserved. The new diagnostic starts the existing executable against a separate empty test directory, verifies a synthetic write/read, shuts down cleanly, restarts that test database and verifies its data survived. It never opens the partial game database or internet `.env` connection.
 
-- The existing public profile and disconnected-send guards pass.
-- TLS1.2 and TLS1.3 echo the exact 66-byte test frame; unsolicited server-push receives a 66-byte gzip-prefixed frame without sending client application bytes.
-- Incorrect IP/pin, invalid addresses, expired/untrusted certificates, plaintext and downgrade attempts are rejected as expected.
-- Cancellation, deadlines, frame limits and truncated responses produce the expected errors. Each socket case uses one connection and the required TLS preamble.
+## 1. Pull this update while temporarily connected
 
-Expected negative-case errors in the JSON are successful rejection checks. For example, the untrusted peer's TLSV1_ALERT_UNKNOWN_CA is expected; it is not a new failure.
+Run in a normal PowerShell window:
 
-## Current Windows action
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
+    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
+        $repo = '/d/Test/wesnoth-setup/' + $name
+        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
+        if ($LASTEXITCODE -ne 0) {
+            throw "Pull failed for $name. Stop and send the output."
+        }
+    }
+}
+```
 
-No command is needed for this acceptance checkpoint. Keep the existing executable, old and new fixture directories, diagnostics, original TLS identity, installed game, OBB and completed dependency stages. Do not rerun the passed fixture or initialize MongoDB for this report review. The documentation updates can be pulled with the next implementation delivery.
+## 2. Disconnect WAN, retain local Ethernet, then run the isolated check
 
-## Next development and test delivery
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    Set-Location 'D:\Test\wesnoth-setup\wesnoth_server' -ErrorAction Stop
 
-The next milestone is to build and execute the Android version of this transport component in LDPlayer. Prepare a small independent test using the existing Android x86_64/API23 NDK, Boost1.88/OpenSSL3.4.1 prefixes and selected LDPlayer API28 instance. Preserve completed engine/library/APK stages. Supply and verify the exact Windows build/test commands before asking the user to run them; that Android handoff has not been delivered yet.
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File '.\tools\Test-WindowsMongoStartup.ps1'
 
-The earlier VPS Android cross-build confirms compilation only. Current Windows loopback success does not establish Android transport execution, account login, native backend bridge integration, MongoDB startup or Alliance gameplay. Those remain explicit checklist items. No physical-phone test or repeated environment inventory is requested.
+    if ($LASTEXITCODE -ne 0) {
+        throw 'MongoDB startup check failed. Send the saved text and JSON reports if present.'
+    }
+}
+```
+
+The helper verifies the existing isolated Python3.14.3 environment, pinned package versions and installed MongoDB file hashes before invoking MongoDB. Installation is not repeated. A new retained `build\alliance-mongo-startup-<runid>` contains only disposable test data/logs; the helper prints the exact path. Each process is limited to127.0.0.1 on a temporary port, separate from the real game database port27018. Only the helper's own child process can be stopped. This standalone diagnostic deliberately uses synthetic data without game accounts; it is not the final authenticated replica-set deployment.
+
+## Expected result and what to return
+
+Expect installed-environment verification, MongoDB8.0.32, successful startup, journaled write/read, clean shutdown, restart with the same test record, and another clean shutdown. Final markers:
+
+```text
+ALLIANCE MONGODB STARTUP CHECK PASSED
+ALLIANCE MONGODB STARTUP FIXTURE COMPLETE
+```
+
+Return the matching new **`diagnostics\alliance-mongo-startup-*.txt` and `.json`** files, whether the run passes or fails, and confirm WAN was disconnected. If failure happens before JSON creation, return the text log. Keep the test directory, process logs and any dumps; the JSON identifies the failed phase. If MongoDB fails after launch, also return the new test directory's `logs\mongodb-1.log` (or `mongodb-2.log` for a restart failure), if present. A Windows crash may add a timestamped dump beside installed mongod.exe; keep it locally rather than attaching it. Do not send old runtime credentials, key files or `.env`.
+
+A failure stops this test; do not repeatedly retry or delete/repair the old database. A pass proves fresh-data startup and clean-restart persistence only. After reviewing the result, continue with guarded initialization/resumption of the real authenticated game database, its administrator, transaction check and local admin website. Those later commands are documented as reference in ALLIANCE_RUNTIME.md and are not the current step.
