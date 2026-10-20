@@ -68,7 +68,9 @@ The returned console confirms both success markers and saves diagnostics/allianc
 
 ## 3. Start the existing backend, then the new listener — current step
 
-Keep the existing MongoDB and administrator-service windows open. If they are already running successfully, leave them running. If they are closed, start them in this order, each in its own PowerShell window.
+The latest returned console confirms both MongoDB on127.0.0.1:27018 and the administrator service on127.0.0.1:18765 are running successfully. **Keep those two windows open and run only the account-listener command below in a third window.** No listener ready marker has been returned yet. WAN status for this startup is unreported.
+
+The existing backend's 'native game account bridge is a later milestone' line predates the new separate listener; it is not an error. The database/admin commands below are recovery references only if those windows have subsequently been closed. Do not run duplicate instances or restart healthy processes.
 
 Database window:
 
