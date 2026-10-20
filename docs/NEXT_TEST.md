@@ -1,43 +1,12 @@
-# Next test: start the existing account bridge after backend health passed
+# Next test: build the account-enabled Android game
 
-The Windows backend diagnostic now passes: MongoDB and the Python service are listening on their expected loopback ports, the selected runtime credential authenticates, and the HTTP200 response contains all expected health fields. The native bridge has not yet reported READY. Its earlier failure cause remains unconfirmed.
+The Windows account listener now reports READY on `100.99.99.14:15001`. Its native startup and backend check are accepted. The next visible game milestone is the Android update containing account registration, login, personal-leader profile and logout. Team gameplay and custom campaign rewards remain later work.
 
-**Current step: retry the already-built account bridge once.** Keep the database and admin-service windows open. No pull, rebuild, database initialization, certificate change or service restart is needed. This update records the result and the next command only.
+**Current step: build the Android update only.** This uses the previously delivered helper; no new implementation pull is required. Keep the running database/admin/bridge, their credentials/identity, all completed game stages and OBB. If the helper is absent, return the error before choosing a client-only update. Do not reinstall dependencies or rebuild the server.
 
-## 1. Run the existing bridge
+## 1. Build the account-enabled Android game
 
-Keep local Ethernet connected and internet/WAN disconnected for the test. In the PowerShell window where the failed bridge command returned to the prompt, run:
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAllianceBridge.ps1' `
-        -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime') `
-        -MsysRoot 'D:\Test\wesnoth-setup\msys64'
-
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Bridge retry failed. Send the complete console output and new saved run log.'
-    }
-}
-```
-
-Expected:
-
-```text
-ALLIANCE ACCOUNT BRIDGE ARTIFACT VERIFIED
-ALLIANCE ACCOUNT BRIDGE READY 100.99.99.14:15001 -> local account service
-Keep this window open. Ctrl+C stops the bridge.
-```
-
-**Stop here and send the console output, leaving successful processes running.** If it fails, include the new `stage=...` line and the printed diagnostics/alliance-bridge-run-*.txt log. Do not repeat the rebuild or restart services. If the same backend-health failure repeats despite the healthy Python check, the next investigation must distinguish native connect/write/read/HTTP/validation failure without exposing credentials. Do not send config.json, .env, private keys, passwords or tokens.
-
-Report whether WAN was disconnected during this retry. Native startup success alone will not establish Android reachability or login. The remaining sections are future steps after the READY marker is accepted.
-
-## 2. Build the account-enabled Android game
-
-After the listener starts successfully, use another PowerShell window:
+Keep local Ethernet connected and internet/WAN disconnected. Keep the database, admin-service and account-bridge windows open. In a **new PowerShell window**, run:
 
 ```powershell
 & {
@@ -64,9 +33,9 @@ ANDROID ACCOUNT GAME BUILD COMPLETE: ...\build\android-account-game\receipt.json
 Saved log: ...\diagnostics\android-account-build-<timestamp>-<id>.txt
 ```
 
-The package remains `org.wesnoth.offline`, now versionCode `1192601`, with x86_64/minAPI23. The existing completed engine, original APK and OBB are preserved. Return `android-account-build-*.txt`; a build success is not yet an Android account-runtime pass.
+The package remains `org.wesnoth.offline`, now versionCode `1192601`, with x86_64/minAPI23. The existing completed engine, original APK and OBB are preserved. **Stop after this build and send the saved `android-account-build-*.txt` log**, including any error. Confirm whether WAN was disconnected during the build. A build success is not yet an Android account-runtime pass; installation comes after this result is accepted.
 
-## 3. Update the app and import the public server profile
+## 2. Update the app and import the public server profile
 
 After the Android build is accepted, leave LDPlayer open and run:
 
@@ -100,7 +69,7 @@ Expected LDPlayer screen: **Wesnoth Alliance**, with **Import server profile** a
 
 Return the install log and confirm that the setup screen, profile import and Alliance menu appear. If connection later fails, return the displayed error and account-listener log; the old guest connection on 15000 does not establish reachability on 15001.
 
-## 4. Manual account acceptance with WAN disconnected
+## 3. Manual account acceptance with WAN disconnected
 
 Keep local Ethernet connected, WAN disconnected, and all three Windows backend windows running.
 
