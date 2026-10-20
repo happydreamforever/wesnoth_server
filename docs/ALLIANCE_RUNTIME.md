@@ -4,7 +4,7 @@ This delivery implements the persistent game rules, a local operator website and
 
 The user now prioritizes local MongoDB setup. We use **MongoDB Community Edition8.0.32**, the free self-managed edition that can run offline ([official overview](https://www.mongodb.com/products/self-managed/community-edition)). The pinned portable MongoDB and17 Python packages already passed Windows installation. Reuse them. The previous failure was database startup, not a missing paid product or installer.
 
-Current action: the Windows team bridge rebuild and artifact verification now pass. Keep MongoDB running, start the updated admin service with the existing profile runtime, wait for its database check/admin URL, then start the rebuilt bridge and require READY. Follow [NEXT_TEST.md](NEXT_TEST.md) for the exact two commands and return their output. No pull, repeated build or initialization is needed. APK1192602 build/install and actual LDPlayer team acceptance follow this startup phase; the saved trusted server will be reused.
+Current action: the rebuilt team bridge now reports READY100.99.99.14:15001 after artifact verification and authenticated backend health. Keep all three services open and follow [NEXT_TEST.md](NEXT_TEST.md) to build APK1192602 using Rebuild-WindowsAndroidAccountGame.ps1. It preserves both completed account build stages and the installed game. Return its logs before installation. A fresh updated admin process is required for later team routes; confirmation of that restart is pending. No new pull, server rebuild or database initialization is needed.
 
 | Stage | Current state |
 | --- | --- |
@@ -17,7 +17,7 @@ Current action: the Windows team bridge rebuild and artifact verification now pa
 | Create an area, check audit and sign-out, verify records after restart | Passed by user report: same area name, matching audit identifier, login required after sign-out; WAN disconnected during restarts |
 | Native Android transport fixture | Windows build and 22 LDPlayer loopback cases pass; later device-only rerun also passes with WAN disconnected by corrected user report |
 | Connect Android accounts | Registration, password rejection, login/profile, server logout/relogin and app restart accepted with WAN disconnected by user report; bridge outage/recovery accepted with WAN disconnected; player persistence after all three backend processes restart accepted with WAN disconnected by user report |
-| First team UI | Area/team browsing, creation and My team implemented and VPS-tested; Windows bridge rebuild passes; updated service startup and Android update/acceptance pending |
+| First team UI | Area/team browsing, creation and My team implemented and VPS-tested; Windows bridge rebuild and READY pass; Android update/acceptance pending |
 | Connect progression and Alliance Battle | Pending gameplay integration |
 
 The final database binds to127.0.0.1:27018 and the administrator website to127.0.0.1:18765. The Windows game service will use the database locally; Android clients will communicate with the game service. The internet database URL in `.env` is not used.

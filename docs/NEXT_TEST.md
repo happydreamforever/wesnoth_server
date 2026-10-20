@@ -4,38 +4,13 @@ The user confirms that MongoDB, the admin service and the account bridge all res
 
 This update adds **Teams** inside the existing Alliance menu: enabled areas, team lists, creation and the player's own roster. The creator becomes captain of a team with capacity 8. Joining teams, captain management, campaign rewards and team battles are later updates. Team experience is separate from personal-leader experience.
 
-**The Windows bridge rebuild has now passed. Perform the service-startup phase below, then return its result.** The console confirms the previous bridge backup, native compile/link, artifact verification and the final rebuild marker. Do not repeat the completed pull/rebuild. The user explicitly confirms WAN was disconnected while Ethernet stayed connected for the rebuild. Exact pulled heads were not supplied.
+**The rebuilt Windows bridge is now READY at100.99.99.14:15001. Perform only the Android build below, then return its result.** The console confirms artifact verification and listener startup against the existing profile runtime. READY follows identity validation and authenticated backend health; it does not exercise the new team-directory routes. A fresh admin process must load those routes before the later team test. Confirmation of that admin restart is pending; it does not block the Android build. This startup's WAN state was not supplied; the previous bridge rebuild was explicitly confirmed WAN-disconnected.
 
-This checkpoint changes project records only. No new pull, database initialization, dependency installation or Android update is needed to start the existing updated services. Keep the current MongoDB runtime, player account, server identity, trusted profile, OBB, imported data, saves and backups. Later Android phases remain reference instructions until startup is reviewed.
+This checkpoint changes project records only; no new pull is needed. Keep MongoDB, the admin service and the bridge running in their existing windows. Leave LDPlayer open with the game closed. Keep WAN disconnected and local Ethernet connected. Preserve the current account, runtime, identity, trusted profile, game data/OBB, saves, original native stages and backups. Do not repeat the completed bridge rebuild or database initialization.
 
-## 1. Start the updated admin service and bridge
+## 1. Build the Android team update
 
-Keep WAN disconnected and Ethernet connected. MongoDB should still be running in its existing window on127.0.0.1:27018. The admin service and bridge were stopped for the update; run each command once in its own available PowerShell window. Do not start duplicate copies.
-
-In the admin-service PowerShell window:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAlliance.ps1' `
-    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
-```
-
-Require **ALLIANCE DATABASE CHECK PASSED**, then **Alliance admin: http://127.0.0.1:18765/**. Leave that window running. Existing launcher wording that native account integration is a later milestone predates the accepted account tests; the new team directory still requires this updated service process.
-
-In the account-bridge PowerShell window:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAllianceBridge.ps1' `
-    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime') `
-    -MsysRoot 'D:\Test\wesnoth-setup\msys64'
-```
-
-Require **ALLIANCE ACCOUNT BRIDGE READY 100.99.99.14:15001 -> local account service**. Leave all three service windows open and return their startup results. On an error, stop at that component and send its output and corresponding `alliance-serve-*.txt` or `alliance-bridge-run-*.txt` log; do not initialize the database or replace the identity.
-
-## 2. Later: rebuild and update the existing Android account game
-
-After startup has been reviewed, use a separate PowerShell window. Keep LDPlayer and all three services running, WAN disconnected and Ethernet connected.
+Use a separate PowerShell window. The helper first verifies and preserves both completed account build stages, then builds APK1192602 offline. This command does not install the APK or change the running services.
 
 ```powershell
 & {
@@ -51,7 +26,9 @@ After startup has been reviewed, use a separate PowerShell window. Keep LDPlayer
 }
 ```
 
-The helper verifies and preserves the completed native account engine and account APK stages, then builds the updated sources using the existing pinned dependencies and offline Gradle cache. Expect **ANDROID ACCOUNT GAME REBUILD COMPLETE**. Return the result before installation; on failure send `wesnoth_client\diagnostics\android-account-rebuild-*.txt` and the corresponding `android-account-build-*.txt` log. Preserve all backups and any reported lock; do not rename completed stages manually.
+The helper verifies and preserves the completed native account engine and account APK stages, then builds the updated sources using the existing pinned dependencies and offline Gradle cache. Expect **ANDROID ACCOUNT UPDATE PREPARED**, **ANDROID ACCOUNT GAME BUILD COMPLETE** and **ANDROID ACCOUNT GAME REBUILD COMPLETE**. **Stop here and return the build result and whether WAN stayed disconnected.** Installation follows review; on failure send `wesnoth_client\diagnostics\android-account-rebuild-*.txt` and the corresponding `android-account-build-*.txt` log. Preserve all backups and any reported lock; do not rename completed stages manually.
+
+## 2. Later: install after build review
 
 Once the build is reviewed, install the update while preserving the saved trusted server:
 
