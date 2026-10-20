@@ -51,6 +51,17 @@ def validate_username(value):
     return _name(value, 'Username', username=True)
 
 
+def _directory_id(value, *, empty=False, uuid=False):
+    """Bound public directory selectors before using them in any database query."""
+    if empty and value == '':
+        return value
+    pattern = (r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+               if uuid else r'[A-Za-z0-9_-]{1,64}')
+    if not isinstance(value, str) or not re.fullmatch(pattern, value):
+        raise DomainError('invalid_input', 'The directory identifier is invalid.')
+    return value
+
+
 def _reason(value):
     if not isinstance(value, str) or not 3 <= len(value.strip()) <= 500:
         raise DomainError('invalid_input', 'A reason between 3 and 500 characters is required.')
@@ -186,6 +197,71 @@ class AllianceService:
         self._area(area_id)
         return list(self.db.teams.find({'area_id': area_id, 'status': 'active'},
                                       {'join_requests': 0}).sort([('rating', -1), ('name_key', 1)]).limit(500))
+
+    def _directory_player(self, actor_id):
+        account = self._account(actor_id)
+        if account['role'] != 'player':
+            raise DomainError('forbidden', 'Player access is required.')
+
+    def directory_areas(self, actor_id, after=''):
+        """Twenty public area names per request; no full-area or unbounded response."""
+        self._directory_player(actor_id)
+        _directory_id(after, empty=True)
+        query = {'enabled': True}
+        if after:
+            query['_id'] = {'$gt': after}
+        records = list(self.db.areas.find(query, {'_id': 1, 'name': 1}).sort('_id', 1).limit(21))
+        return {'areas': [{'id': item['_id'], 'name': item['name']} for item in records[:20]],
+                'next': records[19]['_id'] if len(records) > 20 else ''}
+
+    def directory_teams(self, actor_id, area_id, after=''):
+        self._directory_player(actor_id)
+        _directory_id(area_id)
+        _directory_id(after, empty=True, uuid=True)
+        self._area(area_id)
+        query = {'area_id': area_id, 'status': 'active'}
+        if after:
+            query['_id'] = {'$gt': after}
+        projection = {name: 1 for name in ('_id', 'name', 'area_id', 'captain_id',
+                                         'level', 'experience', 'rating', 'members.account_id')}
+        records = list(self.db.teams.find(query, projection).sort('_id', 1).limit(21))
+        return {'teams': [dict(id=item['_id'], name=item['name'], area_id=item['area_id'],
+                              captain_id=item['captain_id'], level=item['level'],
+                              experience=item['experience'], rating=item['rating'],
+                              member_count=len(item['members'])) for item in records[:20]],
+                'next': records[19]['_id'] if len(records) > 20 else ''}
+
+    def _directory_team_record(self, team):
+        """Explicit display fields only: never include pending applicants or account hashes."""
+        area = self.db.areas.find_one({'_id': team['area_id']}, {'name': 1})
+        if area is None:
+            raise DomainError('not_found', 'The team area is unavailable.')
+        ids = [member['account_id'] for member in team['members']]
+        accounts = {item['_id']: item for item in self.db.accounts.find({'_id': {'$in': ids}},
+                    {'_id': 1, 'username': 1, 'leader.unit_type': 1, 'leader.level': 1})}
+        if any(member_id not in accounts for member_id in ids):
+            raise DomainError('not_found', 'The team roster is unavailable.')
+        return dict(id=team['_id'], name=team['name'], area_id=team['area_id'],
+                    area_name=area['name'], captain_id=team['captain_id'], level=team['level'],
+                    experience=team['experience'], rating=team['rating'], capacity=TEAM_CAPACITY,
+                    members=[dict(id=member_id, username=accounts[member_id]['username'],
+                                  unit_type=accounts[member_id]['leader']['unit_type'],
+                                  level=accounts[member_id]['leader']['level']) for member_id in ids])
+
+    def directory_team(self, actor_id, team_id):
+        self._directory_player(actor_id)
+        _directory_id(team_id, uuid=True)
+        return self._directory_team_record(self._team(team_id))
+
+    def directory_my_team(self, actor_id):
+        self._directory_player(actor_id)
+        team = self.db.teams.find_one({'members.account_id': actor_id, 'status': 'active'})
+        return None if team is None else self._directory_team_record(team)
+
+    def directory_create_team(self, actor_id, name, area_id):
+        _directory_id(area_id)
+        team = self.create_team(actor_id, name, area_id)
+        return self.directory_team(actor_id, team['_id'])
 
     def get_team(self, actor_id, team_id):
         """Public roster and leader previews; application IDs only for its captain."""

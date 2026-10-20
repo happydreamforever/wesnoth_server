@@ -6,6 +6,7 @@ No production configuration or .env file is read.
 
 import os
 import re
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -210,6 +211,78 @@ class AllianceWebTests(unittest.TestCase):
         for body in ({"name": "Cheat", "experience": 99999}, {"name": "Cheat", "actor_id": self.admin["_id"]}):
             response = self.client.post("/internal/v1/teams", headers=headers, json=body)
             self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.db.teams.count_documents({}), 0)
+
+    def test_native_directory_create_read_and_recovery_contract(self):
+        headers = self.player_headers()
+        base = '/internal/v1/team-directory/'
+        def post(operation, data):
+            return self.client.post(base + operation, headers=headers, json=data)
+        areas = post('areas', {'after': ''})
+        self.assertEqual(areas.json, {'areas': [{'id': 'area-1', 'name': 'Area 1'}], 'next': ''})
+        self.assertEqual(post('my_team', {}).json, {'team': None})
+        response = post('create_team', {'name': ' Lantern Guard ', 'area_id': 'area-1'})
+        self.assertEqual(response.status_code, 201)
+        team = response.json['team']
+        self.assertEqual(set(team), {'id', 'name', 'area_id', 'area_name', 'captain_id', 'level',
+                                     'experience', 'rating', 'capacity', 'members'})
+        self.assertEqual(team['name'], 'Lantern Guard')
+        self.assertEqual(team['captain_id'], self.player['_id'])
+        self.assertEqual(post('my_team', {}).json['team'], team)
+        self.assertEqual(post('team_detail', {'team_id': team['id']}).json['team'], team)
+        listing = post('teams', {'area_id': 'area-1', 'after': ''})
+        self.assertEqual(listing.json['teams'][0]['member_count'], 1)
+        self.assertNotIn('members', listing.json['teams'][0])
+        self.assertNotIn('join_requests', str(listing.json))
+        self.assertNotIn(self.password_hash, str(response.json))
+        repeat = post('create_team', {'name': 'New Name', 'area_id': 'area-1'})
+        self.assertEqual(repeat.status_code, 409)
+        self.assertEqual(repeat.json['error']['code'], 'already_member')
+        self.assertEqual(self.db.teams.count_documents({}), 1)
+
+    def test_native_directory_rejects_extra_identity_rewards_selectors_and_query(self):
+        headers = self.player_headers()
+        base = '/internal/v1/team-directory/'
+        for operation, data in (
+            ('areas', {}), ('areas', {'after': {'$ne': ''}}), ('areas', {'after': '', 'limit': 1000}),
+            ('teams', {'area_id': {'$ne': ''}, 'after': ''}),
+            ('teams', {'area_id': 'area-1', 'after': 'not-a-uuid'}),
+            ('my_team', {'actor_id': self.admin['_id']}),
+            ('team_detail', {'team_id': 'not-a-uuid'}),
+            ('create_team', {'name': 'Bad<Name', 'area_id': 'area-1'}),
+            ('create_team', {'name': 'Good Name', 'area_id': 'area-1', 'experience': 99}),
+            ('create_team', {'name': 'Good Name', 'area_id': 'area-1', 'captain_id': self.admin['_id']})):
+            with self.subTest(operation=operation, data=data):
+                response = self.client.post(base + operation, headers=headers, json=data)
+                self.assertIn(response.status_code, (400, 409))
+        self.assertEqual(self.client.post(base + 'areas?after=ignored', headers=headers,
+                                         json={'after': ''}).status_code, 400)
+        self.assertEqual(self.client.get(base + 'areas', headers=headers).status_code, 405)
+        self.assertEqual(self.db.teams.count_documents({}), 0)
+
+    def test_native_directory_requires_live_player_scope_on_every_operation(self):
+        base = '/internal/v1/team-directory/'
+        operations = {'areas': {'after': ''}, 'teams': {'area_id': 'area-1', 'after': ''},
+            'my_team': {}, 'create_team': {'name': 'Forbidden Team', 'area_id': 'area-1'},
+            'team_detail': {'team_id': '12345678-1234-1234-1234-123456789abc'}}
+        headers = self.player_headers()
+        admin = self.auth.authenticate('Operator', self.password, 'admin')
+        wrong_scope = {**self.bridge, 'X-Player-Token': admin['token']}
+        for operation, data in operations.items():
+            for supplied in (self.bridge, wrong_scope, {'X-Player-Token': headers['X-Player-Token']}):
+                self.assertEqual(self.client.post(base + operation, headers=supplied, json=data).status_code, 401)
+        for mode in ('expired', 'revoked', 'suspended'):
+            headers = self.player_headers()
+            if mode == 'expired':
+                self.db.auth_sessions.update_many({'account_id': self.player['_id']},
+                    {'$set': {'expires_at': datetime.now(timezone.utc) - timedelta(seconds=1)}})
+            elif mode == 'revoked':
+                self.auth.revoke_token(headers['X-Player-Token'])
+            else:
+                self.db.accounts.update_one({'_id': self.player['_id']}, {'$set': {'status': 'suspended'}})
+            for operation, data in operations.items():
+                with self.subTest(mode=mode, operation=operation):
+                    self.assertEqual(self.client.post(base + operation, headers=headers, json=data).status_code, 401)
         self.assertEqual(self.db.teams.count_documents({}), 0)
 
     def test_campaign_settlement_is_server_only_and_idempotent(self):

@@ -291,6 +291,43 @@ def create_app(settings, db):
     def player_me():
         return jsonify(account=domain.get_account(g.player["_id"]))
 
+    def directory_payload(*keys):
+        # The native directory is a separate bounded contract. Preserve the
+        # existing operator/domain routes and never accept caller identity/XP.
+        data = payload(*keys)
+        if set(data) != set(keys) or request.args:
+            abort(400)
+        return data
+
+    @internal_route("/team-directory/areas")
+    def directory_areas():
+        data = directory_payload("after")
+        return jsonify(domain.directory_areas(g.player["_id"], data["after"]))
+
+    @internal_route("/team-directory/teams")
+    def directory_teams():
+        data = directory_payload("area_id", "after")
+        return jsonify(domain.directory_teams(g.player["_id"], data["area_id"], data["after"]))
+
+    @internal_route("/team-directory/my_team")
+    def directory_my_team():
+        directory_payload()
+        return jsonify(team=domain.directory_my_team(g.player["_id"]))
+
+    @internal_route("/team-directory/team_detail")
+    def directory_team_detail():
+        data = directory_payload("team_id")
+        return jsonify(team=domain.directory_team(g.player["_id"], data["team_id"]))
+
+    @internal_route("/team-directory/create_team")
+    def directory_create_team():
+        data = directory_payload("name", "area_id")
+        # A reply can be lost after commit. My team resolves that uncertainty;
+        # the native client must never automatically repeat this mutation.
+        team = domain.directory_create_team(g.player["_id"], text_field(data, "name", maximum=64),
+                                            text_field(data, "area_id", maximum=64))
+        return jsonify(team=team), 201
+
     @internal_route("/areas", methods=("GET",))
     def player_areas():
         return jsonify(areas=domain.list_areas())

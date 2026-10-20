@@ -9,6 +9,7 @@ No .env is loaded and no existing game database is read or modified.
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from datetime import datetime, timezone
+import json
 import os
 from pathlib import Path
 import re
@@ -174,6 +175,77 @@ class MongoDomainTests(unittest.TestCase):
         self.assertDomain('forbidden', self.service.create_team, admin, 'AdminTeam')
         self.assertDomain('forbidden', self.service.start_campaign, admin, rules.MISSIONS[0])
         self.assertEqual(self.db.admin_audit.count_documents({'action': 'bootstrap_admin'}), 1)
+
+    def test_directory_pages_are_bounded_stable_and_public(self):
+        actor = self.player()
+        admin = self.admin()
+        for index in range(23):
+            self.service.admin_create_area(admin, f'Area Directory {index:02}')
+        hidden = self.service.admin_create_area(admin, 'Hidden Area')
+        self.db.areas.update_one({'_id': hidden['_id']}, {'$set': {'enabled': False}})
+        expected = sorted(row['_id'] for row in self.db.areas.find({'enabled': True}))
+        first = self.service.directory_areas(actor)
+        self.assertEqual(len(first['areas']), 20)
+        self.assertEqual(first['next'], expected[19])
+        second = self.service.directory_areas(actor, first['next'])
+        self.assertEqual([row['id'] for row in first['areas'] + second['areas']], expected)
+        self.assertEqual(second['next'], '')
+        self.assertTrue(all(set(row) == {'id', 'name'} for row in first['areas']))
+        for index in range(23):
+            self.service.create_team(self.player(), f'Directory Team {index:02}')
+        first = self.service.directory_teams(actor, 'area-1')
+        second = self.service.directory_teams(actor, 'area-1', first['next'])
+        expected = sorted(row['_id'] for row in self.db.teams.find({'area_id': 'area-1'}))
+        self.assertEqual([row['id'] for row in first['teams'] + second['teams']], expected)
+        self.assertEqual(len(first['teams']), 20)
+        self.assertEqual(len(second['teams']), 3)
+        self.assertEqual(second['next'], '')
+        self.assertLess(len(json.dumps(first)), 32768)
+        self.assertNotIn('join_requests', json.dumps(first))
+        self.assertNotIn('password_hash', json.dumps(first))
+        for value in (None, {'$gt': ''}, '../team', 'x' * 65):
+            self.assertDomain('invalid_input', self.service.directory_areas, actor, value)
+        self.assertDomain('invalid_input', self.service.directory_teams, actor, 'area-1', 'not-a-uuid')
+        self.assertDomain('not_found', self.service.directory_teams, actor, hidden['_id'])
+        self.assertDomain('forbidden', self.service.directory_my_team, admin)
+
+    def test_directory_team_creation_and_own_team_reconcile_without_duplicate(self):
+        actor, other = self.player(), self.player()
+        original = self.service.get_account(actor)['leader']
+        self.assertIsNone(self.service.directory_my_team(actor))
+        team = self.service.directory_create_team(actor, '  Lantern Guard  ', 'area-1')
+        self.assertEqual(team['name'], 'Lantern Guard')
+        self.assertEqual(team['captain_id'], actor)
+        self.assertEqual((team['level'], team['experience'], team['rating'], team['capacity']), (1, 0, 1000, 8))
+        self.assertEqual(team['members'], [{'id': actor, 'username': 'Player_1', 'unit_type': 'Spearman', 'level': 1}])
+        # Even when a caller discards the successful creation reply, the next
+        # authenticated own-team read finds the single committed team.
+        self.assertEqual(self.service.directory_my_team(actor), team)
+        self.assertEqual(self.service.directory_team(other, team['id']), team)
+        self.assertDomain('already_member', self.service.directory_create_team, actor, 'Another Name', 'area-1')
+        self.assertDomain('conflict', self.service.directory_create_team, other, 'lantern guard', 'area-1')
+        self.assertEqual(self.db.teams.count_documents({'members.account_id': actor}), 1)
+        self.assertEqual(self.service.get_account(actor)['leader'], original)
+        self.service.request_join(other, team['id'])
+        detail = self.service.directory_my_team(actor)
+        self.assertNotIn('join_requests', detail)
+        self.assertNotIn('applicants', detail)
+        self.assertNotIn('password_hash', json.dumps(detail))
+        self.assertIsNone(self.service.directory_my_team(other))
+
+    def test_directory_concurrent_create_keeps_one_team(self):
+        actor = self.player()
+        def create(index):
+            try:
+                return self.service.directory_create_team(actor, f'Concurrent Team {index}', 'area-1')['id']
+            except DomainError as error:
+                return error.code
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(create, range(2)))
+        team = self.service.directory_my_team(actor)
+        self.assertEqual(results.count(team['id']), 1)
+        self.assertEqual(results.count('already_member') + results.count('conflict'), 1)
+        self.assertEqual(self.db.teams.count_documents({'members.account_id': actor}), 1)
 
     def test_team_join_requires_request_captain_and_capacity(self):
         captain, outsider, applicant = self.player(), self.player(), self.player()
