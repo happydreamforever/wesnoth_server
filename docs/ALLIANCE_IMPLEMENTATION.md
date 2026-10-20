@@ -90,6 +90,8 @@ The 2026-10-20 delivery implements the portable server identity/public profile f
 - [x] Route actual account screens through strict native TLS, bounded gzip JSON, cancellation and memory-only sessions. Guest fallback/allow_insecure cannot affect Alliance requests; VPS cross-build and real database flow pass.
 - [x] Add the separate asynchronous account bridge: 32 connections, 10-second request deadline, six-second private backend deadline, four allowlisted operations, no settlement route. VPS real TLS/outage/concurrency checks pass; guest relay is unchanged.
 - [x] Implement Android registration/login/logout and personal-leader view/refresh using existing engine UI and unchanged OBB layouts; actual APK cross-build verified.
+- [x] Compile/link the separate account bridge with the existing Windows MINGW64 tools and verify its artifact (returned console, 2026-10-20).
+- [ ] Start the account listener against the existing Windows runtime and accept its ready marker.
 - [ ] Accept public-profile import and the complete account flow in LDPlayer against Windows with WAN disconnected.
 - [ ] Add team screens and their authenticated bridge operations after account acceptance.
 - [x] Verify rejected identity/downgrade in the accepted transport; verify malformed account messages, backend outage, total deadlines, cancellation and revoked sessions on VPS.

@@ -41,4 +41,4 @@ Passwords and session tokens are not written to game preferences, saves, history
 
 The account bridge does not integrate the persistent leader into campaigns or stock multiplayer. Existing campaign saves cannot grant account XP. Team menus, custom progression missions, match reservation and result settlement require later explicit protocol/game integration. The backend's gameplay integration readiness flags remain false.
 
-VPS tests cover the production codec/client/bridge/backend and real disposable MongoDB, including Unicode credentials, duplicate registration, invalid password, revoked token and account/leader database restart persistence. Actual Windows listener and LDPlayer UI/LAN account tests remain pending in NEXT_TEST.md.
+VPS tests cover the production codec/client/bridge/backend and real disposable MongoDB, including Unicode credentials, duplicate registration, invalid password, revoked token and account/leader database restart persistence. The Windows bridge compile/link and artifact verification pass; actual listener startup and LDPlayer UI/LAN account tests remain pending in NEXT_TEST.md.

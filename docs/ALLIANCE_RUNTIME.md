@@ -16,7 +16,7 @@ Current action: the Windows database/admin acceptance and standalone Android tra
 | Verify database and website restart | Re-launches succeed in returned Windows output; user confirms WAN disconnected. Recovery-helper backup report and shutdown exit codes not supplied |
 | Create an area, check audit and sign-out, verify records after restart | Passed by user report: same area name, matching audit identifier, login required after sign-out; WAN disconnected during restarts |
 | Native Android transport fixture | Windows build and 22 LDPlayer loopback cases pass; later device-only rerun also passes with WAN disconnected by corrected user report |
-| Connect Android accounts | Implemented and VPS-tested; Windows/LDPlayer acceptance pending in NEXT_TEST.md |
+| Connect Android accounts | Implemented and VPS-tested; Windows bridge build passes; listener startup and LDPlayer acceptance pending in NEXT_TEST.md |
 | Connect progression and Alliance Battle | Pending gameplay integration |
 
 The final database binds to127.0.0.1:27018 and the administrator website to127.0.0.1:18765. The Windows game service will use the database locally; Android clients will communicate with the game service. The internet database URL in `.env` is not used.
@@ -38,7 +38,7 @@ The new `alliance-account-bridge.exe` listens on the numeric address/port in the
 
 The Android update adds a public-profile import screen and an Alliance main-menu entry. Only the public JSON is copied to LDPlayer; private keys/runtime credentials stay on Windows. Compare the printed address/fingerprint and approve it explicitly in the app. Create a separate player account; administrator Uni remains an administrator. Closing the app loses the in-memory session, so log in again. Successful logout revokes the server token. Existing campaigns and guest multiplayer still use their original rules and do not award permanent account XP.
 
-VPS integration uses a new disposable authenticated MongoDB replica set; it does not touch the user's database. Registration, Unicode credentials, duplicate rejection, login/profile/logout and restart persistence pass. Windows/LDPlayer account acceptance is pending. Follow [NEXT_TEST.md](NEXT_TEST.md) for exact commands and expected results.
+VPS integration uses a new disposable authenticated MongoDB replica set; it does not touch the user's database. Registration, Unicode credentials, duplicate rejection, login/profile/logout and restart persistence pass. The Windows bridge build now passes; listener startup and LDPlayer account acceptance are pending. Follow [NEXT_TEST.md](NEXT_TEST.md) for exact commands and expected results.
 
 ## Local components
 

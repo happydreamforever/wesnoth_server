@@ -1,12 +1,12 @@
 # Next test: Android player account through the Windows server
 
-The new account integration provides a separate native TLS listener and an in-game Alliance menu for registration, login, a personal leader and logout. Existing MongoDB/admin acceptance and the completed standalone Android transport checks remain valid. Windows compilation and LDPlayer acceptance of this account integration are still pending.
+The new account integration provides a separate native TLS listener and an in-game Alliance menu for registration, login, a personal leader and logout. Existing MongoDB/admin acceptance and the completed standalone Android transport checks remain valid. Windows account-bridge compilation and artifact verification now pass in the returned console. Listener startup and LDPlayer account acceptance remain pending.
 
-Follow the established cycle: pull the delivered changes, disconnect internet/WAN while retaining local Ethernet, build or run the requested step, and return its result. **For the current handoff, complete sections 1 and 2 only, then send the bridge build log.** Sections 3–6 document the later sequence; run them after the preceding result is reviewed.
+The returned build completes section 2. **The current handoff is section 3 only: start the account listener alongside the existing database and admin service, then return the live console output.** No new pull or rebuild is needed. Keep internet/WAN disconnected and local Ethernet connected for this next run. Sections 1–2 below are completed delivery references; sections 4–6 remain later steps. WAN status for the returned build was not reported.
 
 Keep the existing game, native dependency stages, game-data OBB, profile database and administrator data. Use `D:\Test\wesnoth-setup\msys64` and the selected LDPlayer instance `127.0.0.1:5555` (API28/x86_64). This delivery adds no dependency download or MongoDB initialization step.
 
-## 1. Pull both repositories while temporarily connected
+## 1. Previous delivery reference — do not repeat now
 
 Run in ordinary Windows PowerShell:
 
@@ -35,7 +35,7 @@ Expected: both fast-forward pulls succeed, followed by their commit IDs and `Bot
 
 Disconnect internet/WAN now, while keeping local Ethernet and LDPlayer available.
 
-## 2. Build the new Windows account listener — current test
+## 2. Windows account listener build — passed
 
 ```powershell
 & {
@@ -64,11 +64,11 @@ Saved log: ...\wesnoth_server\diagnostics\alliance-bridge-build-<timestamp>-<id>
 
 An unchanged completed build instead reports `Completed native account bridge reused; no build was run.` and verifies its receipt.
 
-**Stop here and return the saved `alliance-bridge-build-*.txt` log**, the printed commit IDs and whether WAN remained disconnected during the build. A successful build establishes the executable; the subsequent connection and account checks remain required.
+The returned console confirms both success markers and saves diagnostics/alliance-bridge-build-20261020-101034-914-4f9607a9e56445d4a9e8df9db469ca65.txt. No rebuild or duplicate build log is required. This proves the executable builds and verifies, not its listener or Android connection. Proceed to section 3.
 
-## 3. Start the existing backend, then the new listener
+## 3. Start the existing backend, then the new listener — current step
 
-After section 2 is accepted, keep the existing MongoDB and administrator-service windows open. If they are already running successfully, leave them running. If they are closed, start them in this order, each in its own PowerShell window.
+Keep the existing MongoDB and administrator-service windows open. If they are already running successfully, leave them running. If they are closed, start them in this order, each in its own PowerShell window.
 
 Database window:
 
@@ -108,6 +108,8 @@ Keep this window open. Ctrl+C stops the bridge.
 ```
 
 The listener uses the existing identity in `wesnoth_server\runtime\alliance-transport`, validates the local backend and binds the IP address recorded in that identity. It keeps its private key and backend credential on Windows. Its log is `wesnoth_server\diagnostics\alliance-bridge-run-*.txt`; the final saved-log line appears when the launcher exits.
+
+**Stop at the ready marker, keep all running windows open, and send the live console output. Do not stop the listener just to obtain its final saved-log line.** Also report whether WAN was disconnected during this startup; the prior build's WAN status remains unknown.
 
 The guest server on port 15000 is unchanged and is not needed for this account-only test. If the listener fails, return its console output and saved log before proceeding. An address change requires reviewing the existing public identity; do not overwrite it or initialize the database again.
 
