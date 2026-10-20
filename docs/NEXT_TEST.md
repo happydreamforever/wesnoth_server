@@ -1,6 +1,6 @@
 # Next Windows test: initialize the game database in the profile folder
 
-The returned text and JSON reports confirm all eight MongoDB startup/persistence checks passed under your Windows profile. Both processes stopped with exit0. This is actual Windows database evidence; authenticated game setup and administrator login have not yet passed. WAN status for that successful run was not recorded.
+The returned text and JSON reports confirm all eight MongoDB startup/persistence checks passed under your Windows profile. Both processes stopped with exit0. This is actual Windows database evidence; authenticated game setup and administrator login have not yet passed. The user now confirms WAN was disconnected while local Ethernet stayed connected during that test. The reports themselves do not measure WAN connectivity.
 
 Use the installed MongoDB8.0.32 and Python3.14.3 environment. This step creates a new persistent runtime at `%LOCALAPPDATA%\WesnothAlliance\runtime` (normally `C:\Users\Uni\AppData\Local\WesnothAlliance\runtime`). It does not reuse the disposable test data or the failed repository runtime. Keep all those directories intact. No download, installer, game build or repeated startup fixture is needed.
 

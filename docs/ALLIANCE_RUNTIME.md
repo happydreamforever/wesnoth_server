@@ -4,13 +4,13 @@ This delivery implements the persistent game rules and a local operator website.
 
 The user now prioritizes local MongoDB setup. We use **MongoDB Community Edition8.0.32**, the free self-managed edition that can run offline ([official overview](https://www.mongodb.com/products/self-managed/community-edition)). The pinned portable MongoDB and17 Python packages already passed Windows installation. Reuse them. The previous failure was database startup, not a missing paid product or installer.
 
-Current action: [NEXT_TEST.md](NEXT_TEST.md) initializes a new permanent game runtime under LOCALAPPDATA/WesnothAlliance/runtime. The actual profile-location MongoDB startup, journaled write/read and clean-restart fixture now passes all8 checks, with both processes exiting0; WAN status is unconfirmed. The earlier D:\Test sharing failure and original partial runtime remain preserved. Installed binaries stay in the repository. All24 Windows transport checks remain passed with user-confirmed WAN disconnection; there is no repeated transport/game build in this step.
+Current action: [NEXT_TEST.md](NEXT_TEST.md) initializes a new permanent game runtime under LOCALAPPDATA/WesnothAlliance/runtime. The actual profile-location MongoDB startup, journaled write/read and clean-restart fixture now passes all8 checks, with both processes exiting0. The user confirms WAN was disconnected while local Ethernet stayed connected; no independent network trace is claimed. The earlier D:\Test sharing failure and original partial runtime remain preserved. Installed binaries stay in the repository. All24 Windows transport checks remain passed with user-confirmed WAN disconnection; there is no repeated transport/game build in this step.
 
 | Stage | Current state |
 | --- | --- |
 | Download pinned MongoDB and Python wheels while connected | Complete on Windows; cache retained |
 | Install from the local cache | Complete on Windows; installation itself was performed while internet remained available |
-| Verify MongoDB startup and clean-restart persistence | Complete on Windows under LOCALAPPDATA; WAN status for this run unconfirmed |
+| Verify MongoDB startup and clean-restart persistence | Complete on Windows under LOCALAPPDATA; user confirms WAN disconnected and local Ethernet connected |
 | Initialize the authenticated game replica set, schema and administrator | Next: a new persistent profile runtime; original partial runtime preserved |
 | Start database and local admin website; check transactions and saved changes | Pending |
 | Connect Android accounts, progression and Alliance Battle | Pending integration |
