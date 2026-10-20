@@ -9,6 +9,7 @@ import secrets
 import socket
 import subprocess
 import time
+import warnings
 from urllib.parse import quote
 
 from pymongo import MongoClient
@@ -203,6 +204,51 @@ def _stop_owned(process, path=None):
             process.wait(timeout=10)
 
 
+def _admin_credentials(admin_username, admin_password):
+    from .domain import DomainError, validate_username
+    if admin_username is None:
+        for _ in range(5):
+            # A complete flushed line is visible even when a parent consumes
+            # stdout line by line. Do not embed this prompt in input().
+            print("New admin username (3-24 ASCII letters, digits or underscores):",
+                  flush=True)
+            try:
+                username, _ = validate_username(input())
+                break
+            except EOFError:
+                raise ConfigurationError(
+                    "Administrator input ended. Rerun initialization in an interactive PowerShell "
+                    "console using the same runtime; existing data was preserved.") from None
+            except DomainError:
+                print("Use 3-24 ASCII letters, digits or underscores for the username.",
+                      flush=True)
+        else:
+            raise ConfigurationError(
+                "Administrator username was invalid five times. Rerun initialization using the "
+                "same runtime; existing data was preserved.")
+    else:
+        # Explicit callers get the same rule and fail before password collection.
+        username, _ = validate_username(admin_username)
+
+    password = admin_password
+    if password is None:
+        try:
+            with warnings.catch_warnings():
+                # getpass normally falls back to visible input when no terminal
+                # is available. Stop before it reads any unmasked password.
+                warnings.simplefilter("error", getpass.GetPassWarning)
+                password = getpass.getpass("New admin password (12-128 characters): ")
+                confirmation = getpass.getpass("Repeat admin password: ")
+        except (EOFError, getpass.GetPassWarning):
+            raise ConfigurationError(
+                "Hidden password input is unavailable or ended. Rerun initialization in an "
+                "interactive PowerShell console without input redirection using the same runtime; "
+                "existing data was preserved.") from None
+        if confirmation != password:
+            raise ConfigurationError("Passwords did not match. Rerun initialization to complete the admin step.")
+    return username, password
+
+
 def initialize(runtime, mongod, *, admin_username=None, admin_password=None):
     """Create only the explicit owned runtime; safe to resume with unchanged files."""
     from .auth import bootstrap_auth_schema, hash_password
@@ -248,10 +294,7 @@ def initialize(runtime, mongod, *, admin_username=None, admin_password=None):
             elif users[0].get("roles") != expected_roles:
                 raise ConfigurationError("Existing application database user has unexpected roles; no permissions changed.")
             if not db.accounts.find_one({"role": "admin"}):
-                username = admin_username if admin_username is not None else input("New admin username: ").strip()
-                password = admin_password if admin_password is not None else getpass.getpass("New admin password (12-128 characters): ")
-                if admin_password is None and getpass.getpass("Repeat admin password: ") != password:
-                    raise ConfigurationError("Passwords did not match. Rerun initialization to complete the admin step.")
+                username, password = _admin_credentials(admin_username, admin_password)
                 AllianceService(db).bootstrap_admin(username, hash_password(password))
             settings = Settings.load(path)
             with _client(settings.mongo_uri) as app_client:

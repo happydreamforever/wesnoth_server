@@ -46,6 +46,11 @@ def _name(value, label, username=False):
     return value, value.casefold()
 
 
+def validate_username(value):
+    """Return the normalized username and lookup key used for every account."""
+    return _name(value, 'Username', username=True)
+
+
 def _reason(value):
     if not isinstance(value, str) or not 3 <= len(value.strip()) <= 500:
         raise DomainError('invalid_input', 'A reason between 3 and 500 characters is required.')
@@ -138,7 +143,7 @@ class AllianceService:
             'created_at': _now()}, session=session)
 
     def register(self, username, password_hash, starter_id='spearman'):
-        username, key = _name(username, 'Username', username=True)
+        username, key = validate_username(username)
         if not isinstance(password_hash, str) or not password_hash.startswith('$argon2id$') or len(password_hash) > 512:
             raise DomainError('invalid_input', 'An Argon2id password hash is required.')
         if not isinstance(starter_id, str) or starter_id not in STARTERS:
@@ -154,7 +159,7 @@ class AllianceService:
 
     def bootstrap_admin(self, username, password_hash):
         """Create the first administrator once; called only by the local setup CLI."""
-        username, key = _name(username, 'Username', username=True)
+        username, key = validate_username(username)
         if not isinstance(password_hash, str) or not password_hash.startswith('$argon2id$') or len(password_hash) > 512:
             raise DomainError('invalid_input', 'An Argon2id password hash is required.')
         account = {'_id': _id(), 'username': username, 'username_key': key,

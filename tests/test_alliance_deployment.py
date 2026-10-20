@@ -1,5 +1,6 @@
 """Local configuration and actual authenticated MongoDB initialization/restart."""
-from contextlib import redirect_stdout
+from contextlib import redirect_stdout, redirect_stderr
+import getpass
 import io
 import json
 import os
@@ -9,6 +10,7 @@ import subprocess
 import sys
 import time
 import unittest
+import warnings
 from unittest.mock import MagicMock, patch
 import urllib.request
 import urllib.error
@@ -19,7 +21,105 @@ from pymongo.errors import OperationFailure
 from alliance.auth import AuthService
 from alliance.config import Settings, ConfigurationError
 from alliance.deployment import (initialize, owned_runtime, runtime_lock, _start_mongo,
-                                 _stop_owned, _client, check_database)
+                                 _stop_owned, _client, check_database, _admin_credentials)
+from alliance.domain import DomainError, validate_username
+
+
+class AdministratorInputTests(unittest.TestCase):
+    def test_invalid_username_reprompts_before_any_hidden_password_read(self):
+        class ObservedOutput(io.StringIO):
+            flushes = 0
+
+            def flush(self):
+                self.flushes += 1
+                return super().flush()
+
+        out, err = ObservedOutput(), io.StringIO()
+        names = iter(("", "secret-looking invalid name", "Üni", " Uni_Admin "))
+        reads = []
+        password = "unit test password only"
+
+        def read_username(*args):
+            self.assertEqual(args, ())
+            self.assertTrue(out.getvalue().endswith("digits or underscores):\n"))
+            self.assertGreaterEqual(out.flushes, len(reads) + 1)
+            self.assertEqual(hidden.call_count, 0)
+            value = next(names)
+            reads.append(value)
+            return value
+
+        def read_password(prompt):
+            self.assertEqual(len(reads), 4)
+            self.assertIn("password", prompt)
+            return password
+
+        with redirect_stdout(out), redirect_stderr(err), \
+             patch("builtins.input", side_effect=read_username), \
+             patch("getpass.getpass", side_effect=read_password) as hidden:
+            self.assertEqual(_admin_credentials(None, None), ("Uni_Admin", password))
+        self.assertEqual(hidden.call_count, 2)
+        self.assertEqual(out.getvalue().count("Use 3-24 ASCII"), 3)
+        for value in ("secret-looking invalid name", "Üni", "Uni_Admin", password):
+            self.assertNotIn(value, out.getvalue() + err.getvalue())
+
+    def test_explicit_username_uses_shared_rule_before_any_password_prompt(self):
+        with patch("builtins.input", side_effect=AssertionError("No username prompt")), \
+             patch("getpass.getpass", side_effect=AssertionError("No password prompt")):
+            for value in ("", "ab", "a" * 25, "bad-name", "Üni", 123):
+                with self.subTest(value=value):
+                    with self.assertRaises(DomainError):
+                        validate_username(value)
+                    with self.assertRaises(DomainError):
+                        _admin_credentials(value, None)
+            self.assertEqual(_admin_credentials(" Uni_Admin ", "supplied test password"),
+                             ("Uni_Admin", "supplied test password"))
+            for value in ("Ab3", "a" * 24):
+                self.assertEqual(_admin_credentials(value, "supplied test password")[0], value)
+
+    def test_username_eof_is_actionable_and_does_not_read_password(self):
+        with redirect_stdout(io.StringIO()), \
+             patch("builtins.input", side_effect=EOFError), \
+             patch("getpass.getpass") as hidden:
+            with self.assertRaisesRegex(ConfigurationError, "same runtime"):
+                _admin_credentials(None, None)
+        hidden.assert_not_called()
+
+    def test_repeated_invalid_usernames_stop_without_password_collection(self):
+        with redirect_stdout(io.StringIO()), \
+             patch("builtins.input", return_value="bad name") as username, \
+             patch("getpass.getpass") as hidden:
+            with self.assertRaisesRegex(ConfigurationError, "invalid five times"):
+                _admin_credentials(None, None)
+        self.assertEqual(username.call_count, 5)
+        hidden.assert_not_called()
+
+    def test_hidden_input_eof_or_visible_fallback_stop_without_echo(self):
+        password = "must never appear in output"
+        for stage in ("first-eof", "confirmation-eof", "fallback"):
+            with self.subTest(stage=stage):
+                out, err = io.StringIO(), io.StringIO()
+
+                def fallback(prompt):
+                    warnings.warn("Can not control echo on the terminal.", getpass.GetPassWarning)
+                    self.fail("Password read must stop before visible fallback")
+
+                effect = fallback if stage == "fallback" else (
+                    [EOFError()] if stage == "first-eof" else [password, EOFError()])
+                with redirect_stdout(out), redirect_stderr(err), \
+                     patch("getpass.getpass", side_effect=effect):
+                    with self.assertRaisesRegex(ConfigurationError, "Hidden password input") as caught:
+                        _admin_credentials("UniAdmin", None)
+                self.assertNotIn(password, out.getvalue() + err.getvalue() + str(caught.exception))
+                self.assertIn("same runtime", str(caught.exception))
+
+    def test_confirmation_mismatch_keeps_passwords_out_of_error(self):
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err), \
+             patch("getpass.getpass", side_effect=["first test password", "second test password"]):
+            with self.assertRaisesRegex(ConfigurationError, "did not match") as caught:
+                _admin_credentials("UniAdmin", None)
+        for value in ("first test password", "second test password"):
+            self.assertNotIn(value, out.getvalue() + err.getvalue() + str(caught.exception))
 
 
 class ConfigurationTests(unittest.TestCase):
@@ -190,12 +290,24 @@ class ActualDeploymentTests(unittest.TestCase):
             sentinel.write_bytes(b"Existing game database stays here.")
             runtime = root / "Local App Data" / "WesnothAlliance" / "runtime"
             out = io.StringIO()
-            with redirect_stdout(out):
-                initialize(runtime, mongod, admin_username="Operator", admin_password="test admin password only")
-            self.assertIn("ALLIANCE INITIALIZATION PASSED", out.getvalue())
-            self.assertNotIn("test admin password only", out.getvalue())
+            # Invalid first-admin input must leave an owned resumable database,
+            # release its operation lock and avoid collecting a password.
+            with redirect_stdout(out), \
+                 patch("getpass.getpass", side_effect=AssertionError("Invalid username must fail first")):
+                with self.assertRaises(DomainError):
+                    initialize(runtime, mongod, admin_username="invalid operator")
+            self.assertNotIn("ALLIANCE INITIALIZATION PASSED", out.getvalue())
+            self.assertFalse((runtime / "operation.lock").exists())
             before = {name: (runtime / name).read_bytes() for name in
                       ("owner.json", "config.json", "root.json", "keyfile", "mongo.json")}
+            with redirect_stdout(out), \
+                 patch("builtins.input", side_effect=["bad operator", "Operator"]), \
+                 patch("getpass.getpass", return_value="test admin password only"):
+                initialize(runtime, mongod)
+            self.assertIn("ALLIANCE INITIALIZATION PASSED", out.getvalue())
+            self.assertNotIn("test admin password only", out.getvalue())
+            self.assertNotIn("bad operator", out.getvalue())
+            self.assertEqual(before, {name: (runtime / name).read_bytes() for name in before})
             mongo_config = json.loads(before["mongo.json"])
             self.assertEqual(mongo_config["storage"]["dbPath"], str(runtime / "data"))
             self.assertEqual(mongo_config["systemLog"]["path"], str(runtime / "logs" / "mongodb.log"))
