@@ -1,20 +1,58 @@
-# Next Windows step: send the retained MongoDB process logs
+# Next Windows step: one file-location comparison
 
-The returned startup reports confirm installed Python3.14.3/package pins and MongoDB8.0.32. MongoDB child PID19492 exits14 during first_start, before the first ping completes. The helper records cleanup not_needed and performs no synthetic write or restart. MongoDB [documents exit14](https://www.mongodb.com/docs/v8.0/reference/exit-codes/) as a fatal/uncaught-error exit; it does not identify the underlying cause. We cannot yet confirm a recurrence of the earlier sharing violation.
+Both requested logs were reviewed. MongoDB failed to rename its new WiredTiger metadata file because Windows reported that it was in use; cleanup deletion failed too, followed by WT_PANIC and assertion50853. This is now confirmed in the fresh disposable database, not only the old game runtime. The installed pins passed. The log does not identify the holder; no new service or malware attribution is established. `process-1.log` is present and empty.
 
-Read the existing logs from this exact failed test. No pull, reinstall, build, database restart or internet connection is needed for this step. Keep the partial game runtime and disposable test directory intact.
+All supplied failures so far occurred under D:\Test. The next bounded question is whether the same file replacement fails under the current user's LOCALAPPDATA, outside the project directory. This is a filesystem-only probe, not another MongoDB start. It creates a new unique subdirectory, performs at most20 synthetic write/sync/close/replace operations and stops at the first failure. Both test files and events.jsonl are retained. No existing game data is moved or reopened.
 
-Run this in PowerShell:
+## 1. Pull the small diagnostic update while temporarily connected
 
 ```powershell
-explorer.exe 'D:\Test\wesnoth-setup\wesnoth_server\build\alliance-mongo-startup-20261019-220233-428-d2627339c57f4d70a0c38631cb9e4a01\logs'
+& {
+    $ErrorActionPreference = 'Stop'
+    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
+    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
+        $repo = '/d/Test/wesnoth-setup/' + $name
+        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
+        if ($LASTEXITCODE -ne 0) {
+            throw "Pull failed for $name. Stop and send the output."
+        }
+    }
+}
 ```
 
-Expected result: File Explorer opens the retained test's logs folder. Attach these two full text files in the conversation:
+## 2. Disconnect WAN, keep local Ethernet and run once in normal PowerShell
 
-- `mongodb-1.log` — MongoDB's own startup/error log.
-- `process-1.log` — captured process output, including errors that may precede file logging.
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $repo = 'D:\Test\wesnoth-setup\wesnoth_server'
+    $python = Join-Path $repo 'build\alliance-venv\Scripts\python.exe'
+    $probe = Join-Path $repo 'tools\probe_windows_file_sharing.py'
+    if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) {
+        throw 'LOCALAPPDATA is missing. Stop and send this output.'
+    }
+    $parent = Join-Path $env:LOCALAPPDATA 'WesnothAllianceStorageCheck'
+    $log = Join-Path $repo ('diagnostics\mongo-profile-probe-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N') + '.txt')
+    Start-Transcript -LiteralPath $log -NoClobber | Out-Null
+    try {
+        Write-Host "Test parent: $parent"
+        & $python -I -B $probe --parent $parent
+        $probeExit = $LASTEXITCODE
+        Write-Host "PROBE_EXIT: $probeExit"
+        if ($probeExit -ne 0) {
+            throw 'File-location check failed. Send the saved transcript and events.jsonl if present.'
+        }
+    } finally {
+        Stop-Transcript | Out-Null
+        Write-Host "Saved log: $log"
+    }
+}
+```
 
-An empty process log is useful information; if a file is empty or missing, report that rather than rerunning the test. Keep any binary crash dump locally. Do not attach the original game runtime, credentials or `.env`. We already have the wrapper text and JSON reports, so they do not need to be sent again.
+The selected interpreter is the already verified native Windows Python3.14.3 isolated environment. No dependencies are installed. The `--parent` argument changes only where the unique probe directory is created; the historical default diagnostics location and replacement algorithm are unchanged. Do not run the old D-drive probe again or start MongoDB alongside this check.
 
-After reading these logs, choose the smallest justified fix or next check. Actual database startup, authenticated replica-set initialization, transactions, admin website and Android account integration remain pending.
+## Expected result and what to return
+
+If the operations succeed here, expect `FILE PROBE COMPLETED: 20 replacements; scratch files preserved.` and `PROBE_EXIT: 0`. If a file operation fails, expect `FILE PROBE FAILED` with iteration/operation/winerror and `PROBE_EXIT: 1`; any setup error can instead return2. In every case, send the new `diagnostics\mongo-profile-probe-*.txt` and the `events.jsonl` from the exact Scratch folder printed by the probe, if created.
+
+This is a one-run location comparison, not proof that another drive is defective or that MongoDB is fixed. Passing would justify a later MongoDB startup/write/restart test at that location before changing production storage. Failure means stop and review the report; do not extend loops or retry old databases. Keep the existing game runtime, test data and crash dumps. No Process Monitor capture, service/security change, installer or administrator elevation is requested.

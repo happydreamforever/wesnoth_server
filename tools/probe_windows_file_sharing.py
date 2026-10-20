@@ -1,10 +1,12 @@
 """Capture a bounded file-sharing reproduction without opening MongoDB's data.
 
-Run while Process Monitor records diagnostics/mongo-file-probe-* paths from all
-processes. This is a generic filesystem probe, not a database or repair test.
+The default location is diagnostics/mongo-file-probe-*. An explicit --parent
+allows a separate location check without Process Monitor. This is a generic
+filesystem probe, not a database or repair test.
 """
 from __future__ import annotations
 
+import argparse
 from datetime import datetime, timezone
 import json
 import os
@@ -69,12 +71,20 @@ def run_probe(parent: Path, iterations: int = 20, delay: float = 0.05) -> int:
     return 0
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     if sys.platform != "win32":
         print("ERROR: Run this diagnostic with native Windows Python.", file=sys.stderr)
         return 2
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--parent", type=Path,
+                        help="Absolute directory for new retained scratch folders.")
+    args = parser.parse_args(argv)
+    if args.parent is not None and not args.parent.is_absolute():
+        parser.error("--parent must be an absolute path")
+    parent = (args.parent if args.parent is not None
+              else Path(__file__).resolve().parents[1] / "diagnostics")
     try:
-        return run_probe(Path(__file__).resolve().parents[1] / "diagnostics")
+        return run_probe(parent)
     except OSError as exc:
         print("PROBE COLLECTION ERROR: " + json.dumps({
             "error_type": type(exc).__name__, "errno": exc.errno,

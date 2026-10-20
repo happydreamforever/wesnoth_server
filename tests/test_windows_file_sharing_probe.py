@@ -213,6 +213,49 @@ class FileSharingProbeTests(unittest.TestCase):
         run.assert_not_called()
         self.assertIn("native Windows Python", self.output.getvalue())
 
+    def test_cli_default_keeps_repository_diagnostics_location(self):
+        with patch.object(probe.sys, "platform", "win32"), \
+                patch.object(probe, "run_probe", return_value=0) as run:
+            self.assertEqual(probe.main([]), 0)
+        run.assert_called_once_with(ROOT / "diagnostics")
+
+    def test_cli_explicit_parent_with_spaces_keeps_original_locations_unchanged(self):
+        custom_parent = self.root / "local app data" / "Wesnoth diagnostics"
+        sentinels = {
+            self.parent / "old-report.jsonl": b"retained earlier report",
+            self.root / "runtime" / "alliance" / "data" / "WiredTiger.turtle": b"old database",
+            self.root / ".env": b"synthetic fixture, not real credentials",
+        }
+        for path, content in sentinels.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(content)
+        with patch.object(probe.sys, "platform", "win32"), \
+                patch.object(probe.time, "sleep"), redirect_stdout(self.output):
+            self.assertEqual(probe.main(["--parent", str(custom_parent)]), 0)
+        scratches = list(custom_parent.glob("mongo-file-probe-*"))
+        self.assertEqual(len(scratches), 1)
+        events = self.events(scratches[0])
+        self.assertEqual(events[0]["iterations"], 20)
+        self.assertEqual(sum(event["event"] == "PASS" for event in events), 20)
+        self.assertEqual(events[-1]["event"], "COMPLETE")
+        self.assertIn(str(scratches[0]), self.output.getvalue())
+        self.assertEqual(list(self.parent.iterdir()), [self.parent / "old-report.jsonl"])
+        for path, content in sentinels.items():
+            self.assertEqual(path.read_bytes(), content)
+
+    def test_cli_relative_parent_is_rejected_before_probe_or_files(self):
+        before = list(self.root.iterdir())
+        for parent in ["relative path", "../other", "", "C:drive-relative"]:
+            with self.subTest(parent=parent), \
+                    patch.object(probe.sys, "platform", "win32"), \
+                    patch.object(probe, "run_probe") as run, redirect_stderr(self.output):
+                with self.assertRaises(SystemExit) as raised:
+                    probe.main(["--parent", parent])
+                self.assertEqual(raised.exception.code, 2)
+                run.assert_not_called()
+        self.assertIn("--parent must be an absolute path", self.output.getvalue())
+        self.assertEqual(list(self.root.iterdir()), before)
+
 
 if __name__ == "__main__":
     unittest.main()
