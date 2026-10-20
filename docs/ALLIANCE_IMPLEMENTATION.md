@@ -22,7 +22,7 @@ Mastery comes from advancing the leader, learning terrain and matchups, developi
 
 ## Storage and trust boundaries
 
-Use a separate Python service with local MongoDB 8.0.32 on the Windows game-server computer, an authenticated single-member replica set and a database-scoped application user. The user corrected the proposed shared connection: it is an internet server and must not be used for offline gameplay. Windows MongoDB startup acceptance remains pending; the user has deferred malware troubleshooting and independent VPS account-transport work can proceed. Multi-document transactions must atomically reserve players, award XP, update ratings and close a run. Single-member replication enables transactions, not redundancy.
+Use a separate Python service with local MongoDB 8.0.32 on the Windows game-server computer, an authenticated single-member replica set and a database-scoped application user. The user corrected the proposed shared connection: it is an internet server and must not be used for offline gameplay. Windows profile startup/persistence and authenticated administrator initialization now pass; offline service/browser acceptance remains pending. The user has deferred malware troubleshooting; preserve earlier runtime and diagnostic evidence. Multi-document transactions must atomically reserve players, award XP, update ratings and close a run. Single-member replication enables transactions, not redundancy.
 
 The existing `.env` remains private, unchanged and unused by the local game runtime. Its internet-hosted database was assessed read-only before the user corrected the deployment; no remote writes or external-mode implementation occurred. Do not continue external-database work or inspect its credentials for this task. New local runtime credentials are generated into an ignored, access-restricted directory. The Android application never receives MongoDB credentials.
 
@@ -59,7 +59,7 @@ The admin website and internal bridge bind to loopback only. Native game account
 - [x] Confirm actual Windows MongoDB8.0.32 standalone startup, journaled write/read and clean-restart persistence in profile storage. Paired20261020-033530 reports pass all8 checks; both processes exit0 with no forced cleanup. Earlier D: failure and original partial runtime remain preserved.
 - [x] Confirm WAN was disconnected during the successful profile-storage fixture: user explicitly confirms WAN disconnected and local Ethernet connected. This is user-observed connectivity; the reports do not contain an independent network trace.
 - [x] Confirm actual Windows profile initialization with authenticated MongoDB8.0.32 replica set, schema, scoped application user and first administrator. Returned console shows corrected username-first ordering, Uni and ALLIANCE INITIALIZATION PASSED, with owned database stopped.
-- [ ] Confirm WAN was disconnected during that successful administrator initialization; earlier offline standalone acceptance remains recorded separately.
+- [x] Record connectivity during successful administrator initialization: user confirms internet access was available. This is setup acceptance, not a disconnected-WAN initialization test; do not repeat initialization solely to change that evidence. Earlier offline standalone acceptance remains recorded separately.
 - [ ] Confirm authenticated service startup and transaction rollback on Windows with WAN disconnected; the website launcher performs this check before serving.
 
 ### 2. Accounts and operator website

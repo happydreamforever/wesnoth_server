@@ -2,7 +2,7 @@
 
 The latest console output confirms administrator initialization passed. The username prompt appeared first, administrator `Uni` was accepted, the authenticated MongoDB8.0.32 setup completed, and the owned database stopped. Keep the same `%LOCALAPPDATA%\WesnothAlliance\runtime` directory and the password you chose. Do not repeat initialization.
 
-This handoff uses helpers already installed in your checkout. No pull, download, build or reinstall is needed for this documentation update. Keep WAN disconnected and local Ethernet connected. Use normal PowerShell windows under the same Windows account as initialization. The earlier standalone storage test was confirmed offline; WAN status for the successful administrator initialization has not yet been reported.
+This handoff uses helpers already installed in your checkout. No pull, download, build or reinstall is needed for this documentation update. Keep WAN disconnected and local Ethernet connected. Use normal PowerShell windows under the same Windows account as initialization. The earlier standalone storage test was confirmed offline. The user confirms internet access was available during administrator initialization; the next service/browser test will establish disconnected-WAN operation of the initialized backend.
 
 ## 1. Start the database in PowerShell window 1
 

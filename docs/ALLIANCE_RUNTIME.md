@@ -4,14 +4,14 @@ This delivery implements the persistent game rules and a local operator website.
 
 The user now prioritizes local MongoDB setup. We use **MongoDB Community Edition8.0.32**, the free self-managed edition that can run offline ([official overview](https://www.mongodb.com/products/self-managed/community-edition)). The pinned portable MongoDB and17 Python packages already passed Windows installation. Reuse them. The previous failure was database startup, not a missing paid product or installer.
 
-Current action: [NEXT_TEST.md](NEXT_TEST.md) starts the existing profile database and administrator website in two PowerShell windows, then checks Windows-browser login as `Uni` and the seeded Area 1. Actual administrator initialization now passes with correct username-first prompt order, authenticated setup and owned database shutdown. Its WAN status is not yet confirmed. Preserve the profile credentials/configuration/data; no repeated initialization, pull, build or reinstall is needed for this documentation update. The earlier standalone startup/persistence test passed all8 checks with user-confirmed WAN disconnection.
+Current action: [NEXT_TEST.md](NEXT_TEST.md) starts the existing profile database and administrator website in two PowerShell windows, then checks Windows-browser login as `Uni` and the seeded Area 1. Actual administrator initialization now passes with correct username-first prompt order, authenticated setup and owned database shutdown. The user confirms internet access was available during that initialization; it is not a disconnected-WAN initialization test. Preserve the profile credentials/configuration/data; no repeated initialization, pull, build or reinstall is needed for this documentation update. The earlier standalone startup/persistence test passed all8 checks with user-confirmed WAN disconnection.
 
 | Stage | Current state |
 | --- | --- |
 | Download pinned MongoDB and Python wheels while connected | Complete on Windows; cache retained |
 | Install from the local cache | Complete on Windows; installation itself was performed while internet remained available |
 | Verify MongoDB startup and clean-restart persistence | Complete on Windows under LOCALAPPDATA; user confirms WAN disconnected and local Ethernet connected |
-| Initialize the authenticated game replica set, schema and administrator | Complete on Windows; username Uni; selected profile runtime; initialization WAN status unconfirmed |
+| Initialize the authenticated game replica set, schema and administrator | Complete on Windows; username Uni; selected profile runtime; internet access was available during initialization |
 | Start database and local admin website; check transactions and saved changes | Next: start both and confirm login; saved-area/restart test follows |
 | Connect Android accounts, progression and Alliance Battle | Pending integration |
 
