@@ -4,7 +4,7 @@ This delivery implements the persistent game rules and a local operator website.
 
 The user now prioritizes local MongoDB setup. We use **MongoDB Community Edition8.0.32**, the free self-managed edition that can run offline ([official overview](https://www.mongodb.com/products/self-managed/community-edition)). The pinned portable MongoDB and17 Python packages already passed Windows installation. Reuse them. The previous failure was database startup, not a missing paid product or installer.
 
-Current action: [NEXT_TEST.md](NEXT_TEST.md) updates the launcher, preserves the confirmed stale legacy marker with fresh safety checks, then tests database start/stop/restart and the existing administrator website. The returned report confirms old owner7400 was absent and both application ports had no listeners. The new permanent operation.guard uses an OS-held lock; its file remains after shutdown and must not be deleted. Recovery uses the same guard, preserves the old marker backup and never changes credentials or database contents. Windows recovery/restart remains pending. No rebuild, reinstall or initialization is needed.
+Current action: [NEXT_TEST.md](NEXT_TEST.md) checks the previously created area, its audit entry and sign-out in the browser. Both database and website re-launches now succeed in the returned Windows output; the user confirms WAN was disconnected. Keep both healthy windows running. No pull, rebuild, reinstall, initialization, recovery or repeated restart is needed. The recovery-helper backup report and exact shutdown exit codes were not supplied; do not infer those results. The permanent operation.guard file remains after shutdown and must not be deleted.
 
 | Stage | Current state |
 | --- | --- |
@@ -13,8 +13,8 @@ Current action: [NEXT_TEST.md](NEXT_TEST.md) updates the launcher, preserves the
 | Verify MongoDB startup and clean-restart persistence | Complete on Windows under LOCALAPPDATA; user confirms WAN disconnected and local Ethernet connected |
 | Initialize the authenticated game replica set, schema and administrator | Complete on Windows; username Uni; selected profile runtime; internet access was available during initialization |
 | Start database and local admin website; check transactions and login | Complete on Windows; console checks pass; browser login/Area 1/WAN disconnection user-confirmed |
-| Recover launcher marker and verify updated stop/restart | Stale owner confirmed; guarded recovery and OS-lock fix ready for Windows acceptance |
-| Create an area, check audit and sign-out, verify records after restart | Pending; check any existing area after recovery before creating another |
+| Verify database and website restart | Re-launches succeed in returned Windows output; user confirms WAN disconnected. Recovery-helper backup report and shutdown exit codes not supplied |
+| Create an area, check audit and sign-out, verify records after restart | User confirms area created before restart; same-area/audit persistence and sign-out observations remain pending |
 | Connect Android accounts, progression and Alliance Battle | Pending integration |
 
 The final database binds to127.0.0.1:27018 and the administrator website to127.0.0.1:18765. The Windows game service will use the database locally; Android clients will communicate with the game service. The internet database URL in `.env` is not used.
@@ -48,7 +48,7 @@ All website assets are local. Neither the website nor MongoDB binds to the LAN. 
 
 ## Windows sequence
 
-Follow [NEXT_TEST.md](NEXT_TEST.md) for the current update/recovery/restart sequence. Keep old launcher sessions stopped during migration and use the updated code only. The existing credentials and profile data remain authoritative. Do not initialize again or delete either MongoDB storage locks or the new operation.guard.
+Follow [NEXT_TEST.md](NEXT_TEST.md) for the current browser-only check. Both restarted applications are already running. The launch commands below are references for future sessions, not a request to start duplicate processes. The existing credentials and profile data remain authoritative. Do not initialize again or delete either MongoDB storage locks or operation.guard.
 
 The profile standalone fixture passed startup, journaled write/read, both clean shutdowns and a persisted read after restart. This does not prove recovery of the old repository database or the disappearance of the earlier sharing conflict. Keep `runtime/alliance`, its logs/lock evidence, all disposable test directories and crash dumps. The user deferred the malware investigation; no service/security changes are part of this step.
 
@@ -80,9 +80,7 @@ Keep both open. Expected: database running on `127.0.0.1:27018`, then the admin 
 
 ### 3. Test persistence and permissions
 
-In **Areas**, create `Area 2` once (or another unused name if it exists). Expect **Area created.**, and note its identifier. In **Audit log**, match the `create_area` row's Target to that identifier; Reason is `Create an area`. Actor and Target are identifiers, not display names. Sign out, then request `http://127.0.0.1:18765/` afresh and confirm login is required.
-
-Stop the website with Ctrl+C once and wait for its PowerShell prompt, then do the same for the database. If an error appears or shutdown does not return, stop and report it instead of forcing a process or deleting locks. Restart database then website using the commands above and wait for each ready message. Sign in and confirm the same area name/identifier and matching audit record still exist. Keep WAN disconnected throughout. Return the observations and both restart outputs; scripts save `diagnostics\alliance-database-*.txt` and `diagnostics\alliance-serve-*.txt` when they exit. The website's automatic check cannot substitute for these browser/restart observations.
+The user confirms an area was created before the successful database and website restarts. In **Areas**, confirm that same name and identifier. In **Audit log**, match the `create_area` row's Target to that identifier; Reason is `Create an area`. Actor and Target are identifiers, not display names. Sign out, then request `http://127.0.0.1:18765/` afresh and confirm login is required. Report missing records without recreating them; if the earlier identifier was not recorded, say so. Keep both processes running and return these observations. The website's automatic database check does not prove browser logout or persistence of the user-created area.
 
 ## Recovery boundaries
 
@@ -90,7 +88,7 @@ Existing files with a different hash or ownership marker are preserved and rejec
 
 The MongoDB installer makes at most six final-directory rename attempts for Windows errors 5/32/33, with 0.5/1/2/4/8s waits. It checks that the verified extraction is unchanged and the destination remains absent before each attempt. A completed extraction is preserved if publication fails; the log reports its path. Stop and return that log rather than deleting the extraction or destination. A later invocation does not automatically adopt preserved `.extract-*` directories. This retry does not change ACLs, services, archive pins or database data.
 
-The helper releases `operation.lock` when its operation finishes. A forced process termination or power failure can leave it behind. The helper deliberately refuses a second database operation rather than guessing whether another process owns the database. Return the error and process status for a verified recovery step; do not delete a live lock or launch another MongoDB against the same data directory. A full crash-recovery/backup/restore tool remains unchecked in the implementation checklist.
+The updated launcher holds an OS lock on permanent `operation.guard` throughout database ownership and cleanup. The OS releases that lock when the owning process exits; the guard file remains. A legacy `operation.lock` from older launchers is refused. The separate Repair-WindowsAllianceRuntimeLock.ps1 helper can preserve an evidence-checked stale marker only while no competing application processes/listeners remain; it does not repair MongoDB storage. Do not delete the guard, bypass a busy lock or launch another MongoDB against the same data directory. The latest user output shows successful re-launches, but the recovery backup report has not been supplied. A full database crash-recovery/backup/restore tool remains unchecked in the implementation checklist.
 
 Interrupted progression runs stay reserved until the bridge completes them or an administrator cancels them with an audit reason. Cancellation releases reservations without XP. Completed results cannot be replaced or cancelled through the admin interface. Result disputes and controlled XP correction are later releases.
 
@@ -100,7 +98,7 @@ The verification environment uses Python 3.14.3 and MongoDB 8.0.32. Linux and Wi
 
 `tools/Dockerfile.alliance-verify` records the container image digests and matching Python package versions. Build its small context from that file and `tools/alliance-dependencies/requirements-verify.txt`; never send `.env` or runtime data as a build context. Use `--ulimit nofile=65536:65536` for the Linux test container: repeated fixture collection creation exhausted the default 1024 descriptors in an earlier run. That infrastructure failure was corrected before the final passing run.
 
-Real-database checks cover concurrent team membership/start claims, repeat settlement, transaction rollback, changed leaders/captains, schema uniqueness, admin authorization, CSRF, session expiry/revocation, local-only HTTP, initialization and clean restart. PowerShell helpers are exercised with simulated native tools under Linux PowerShell7.4.6. Actual Windows standalone MongoDB startup/persistence now passes; profile administrator initialization also passes. Authenticated service startup/transaction checks now pass in the returned Windows console; browser login, Area 1 and WAN-disconnected operation are user-confirmed. New-area/audit/sign-out/restart acceptance remains pending.
+Real-database checks cover concurrent team membership/start claims, repeat settlement, transaction rollback, changed leaders/captains, schema uniqueness, admin authorization, CSRF, session expiry/revocation, local-only HTTP, initialization and clean restart. PowerShell helpers are exercised with simulated native tools under Linux PowerShell7.4.6. Actual Windows standalone MongoDB startup/persistence now passes; profile administrator initialization also passes. Authenticated service startup/transaction checks now pass in the returned Windows console; browser login, Area 1 and WAN-disconnected operation are user-confirmed. Database and website re-launches now also pass in the returned output, with WAN disconnected by user report. Same-area/audit persistence and sign-out browser acceptance remain pending.
 
 
 ## Completed Windows Python identity fixture
