@@ -4,77 +4,13 @@ The user confirms that MongoDB, the admin service and the account bridge all res
 
 This update adds **Teams** inside the existing Alliance menu: enabled areas, team lists, creation and the player's own roster. The creator becomes captain of a team with capacity 8. Joining teams, captain management, campaign rewards and team battles are later updates. Team experience is separate from personal-leader experience.
 
-**Perform only step 1 now, then return its result.** Steps 2–4 are the later handoff reference; wait for review of each phase before continuing. Keep the current MongoDB runtime, player account, server identity, saved trusted profile, OBB, imported game data, saves and completed build stages. The helpers preserve the completed bridge and both completed Android account stages before replacing their active build directories. No dependency download or database initialization is part of this update.
+**The Windows bridge rebuild has now passed. Perform the service-startup phase below, then return its result.** The console confirms the previous bridge backup, native compile/link, artifact verification and the final rebuild marker. Do not repeat the completed pull/rebuild. The user explicitly confirms WAN was disconnected while Ethernet stayed connected for the rebuild. Exact pulled heads were not supplied.
 
-## 1. Update the checkouts and rebuild only the account bridge
+This checkpoint changes project records only. No new pull, database initialization, dependency installation or Android update is needed to start the existing updated services. Keep the current MongoDB runtime, player account, server identity, trusted profile, OBB, imported data, saves and backups. Later Android phases remain reference instructions until startup is reviewed.
 
-### Stop the game, bridge and admin service
+## 1. Start the updated admin service and bridge
 
-1. In LDPlayer, dismiss the profile with **OK**, choose **Back to game**, then the main-menu **Quit**. Leave LDPlayer running.
-2. In the account-bridge PowerShell window showing READY on port 15001, press **Ctrl+C once** and wait for its PowerShell prompt. Normal output includes **Alliance account bridge stopped.**
-3. In the admin-service PowerShell window for port 18765, press **Ctrl+C once** and wait for its PowerShell prompt. An intentional interruption can report exit 130 or Stopped.
-4. **Keep the MongoDB window on port 27018 running.** This update uses the same existing database and runtime.
-
-If either stopped component does not return to its prompt, stop and send its output before rebuilding or starting another copy. Do not close its window forcibly or delete locks/runtime files.
-
-### Pull while temporarily connected to GitHub
-
-Run this in an available PowerShell window. Both checkouts already exist; use their existing MSYS2 Git.
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
-
-    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
-        $repo = '/d/Test/wesnoth-setup/' + $name
-        Write-Host "Updating $name"
-
-        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
-        if ($LASTEXITCODE -ne 0) {
-            throw "Pull failed for $name. Stop here and send the output."
-        }
-
-        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
-        if ($LASTEXITCODE -ne 0) {
-            throw "Could not read $name commit. Stop here and send the output."
-        }
-    }
-
-    'Both updates completed successfully.'
-}
-```
-
-If Git reports local changes, keep them and send the error. Do not reset or reapply old stashes. After both pulls succeed, **disconnect WAN again while keeping local Ethernet connected**.
-
-### Rebuild the bridge offline
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_server' -ErrorAction Stop
-
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Rebuild-WindowsAllianceBridge.ps1' `
-        -MsysRoot 'D:\Test\wesnoth-setup\msys64'
-
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Team bridge rebuild stopped. Send the saved rebuild and build logs.'
-    }
-}
-```
-
-Expected:
-
-- **Completed bridge build preserved:** followed by a unique backup path.
-- **ALLIANCE ACCOUNT BRIDGE ARTIFACT VERIFIED** and **ALLIANCE ACCOUNT BRIDGE BUILD PASSED**.
-- **ALLIANCE ACCOUNT BRIDGE REBUILD PASSED**.
-
-**Stop here.** Return both pulled commit IDs, the rebuild result and whether WAN was disconnected during the build. Send `wesnoth_server\diagnostics\alliance-bridge-rebuild-*.txt` and the corresponding `alliance-bridge-build-*.txt` if there is an error. Keep MongoDB running; the admin service and bridge remain stopped until the next reviewed phase. Do not rerun the preservation/rebuild step after a failure without reviewing its log.
-
-## 2. Later: start the updated admin service and bridge
-
-After step 1 has been reviewed, keep WAN disconnected and Ethernet connected. MongoDB should still be running in its existing window.
+Keep WAN disconnected and Ethernet connected. MongoDB should still be running in its existing window on127.0.0.1:27018. The admin service and bridge were stopped for the update; run each command once in its own available PowerShell window. Do not start duplicate copies.
 
 In the admin-service PowerShell window:
 
@@ -97,7 +33,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 
 Require **ALLIANCE ACCOUNT BRIDGE READY 100.99.99.14:15001 -> local account service**. Leave all three service windows open and return their startup results. On an error, stop at that component and send its output and corresponding `alliance-serve-*.txt` or `alliance-bridge-run-*.txt` log; do not initialize the database or replace the identity.
 
-## 3. Later: rebuild and update the existing Android account game
+## 2. Later: rebuild and update the existing Android account game
 
 After startup has been reviewed, use a separate PowerShell window. Keep LDPlayer and all three services running, WAN disconnected and Ethernet connected.
 
@@ -138,7 +74,7 @@ Expect **ANDROID ACCOUNT GAME INSTALL COMPLETE**, verification of version **1192
 
 Choose **Start game**, then **Alliance → Log in → Open** and log in as the existing **UniPlayer**. Use its private password; do not create another account. Dismiss the login confirmation with **OK**. The Alliance menu should now contain **View personal leader**, **Teams** and **Log out**. Return the install log and whether that menu appears before the team test.
 
-## 4. Later: create and retrieve the first team
+## 3. Later: create and retrieve the first team
 
 Keep WAN disconnected and local Ethernet connected throughout this manual test. Use the current UniPlayer login and the existing **Area 1**. All selectors below require choosing the named row and pressing **Open**.
 
