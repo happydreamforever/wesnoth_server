@@ -49,8 +49,12 @@ def owned_runtime(runtime, create=False):
     path = Path(runtime).absolute()
     def redirected(item):
         return item.is_symlink() or (hasattr(item, "is_junction") and item.is_junction())
-    if redirected(path):
-        raise ConfigurationError("Runtime directory must not be a symbolic link or junction.")
+    # Check the lexical path before resolve/mkdir can follow an existing parent.
+    # Refuse traversal rather than normalizing away a possibly redirected segment.
+    if ".." in path.parts:
+        raise ConfigurationError("Runtime directory must not contain parent traversal.")
+    if any(redirected(item) for item in (*reversed(path.parents), path)):
+        raise ConfigurationError("Runtime directory and its parents must not be symbolic links or junctions.")
     marker = path / "owner.json"
     if not path.exists() and create:
         path.mkdir(parents=True, mode=0o700)
@@ -158,7 +162,7 @@ def _start_mongo(path, mongod):
     try:
         for _ in range(30):
             if process.poll() is not None:
-                raise ConfigurationError("Owned MongoDB did not start; inspect runtime/alliance/logs/mongodb.log locally.")
+                raise ConfigurationError(f"Owned MongoDB did not start; inspect {path / 'logs' / 'mongodb.log'} locally.")
             try:
                 hello = client.admin.command("hello")
                 if process.poll() is not None:
@@ -255,13 +259,16 @@ def initialize(runtime, mongod, *, admin_username=None, admin_password=None):
                 status = app_client.admin.command("connectionStatus")
                 if status["authInfo"]["authenticatedUserRoles"] != expected_roles:
                     raise ConfigurationError("Runtime database scope verification failed.")
-            print("ALLIANCE INITIALIZATION PASSED")
-            print("MongoDB 8.0.32; authenticated single-node replica set; scoped application user; admin account ready.")
-            print("Owned database stopped. Start the database window, then the service window.")
         finally:
             anonymous.close()
             privileged.close()
             _stop_owned(process, path)
+        if process.poll() != 0:
+            raise ConfigurationError(
+                f"Owned MongoDB did not exit cleanly after initialization; inspect {path / 'logs' / 'mongodb.log'} locally.")
+        print("ALLIANCE INITIALIZATION PASSED")
+        print("MongoDB 8.0.32; authenticated single-node replica set; scoped application user; admin account ready.")
+        print("Owned database stopped. Start the database window, then the service window.")
 
 
 def run_database(runtime, mongod):
