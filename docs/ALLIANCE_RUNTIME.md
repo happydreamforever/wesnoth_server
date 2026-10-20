@@ -4,15 +4,15 @@ This delivery implements the persistent game rules and a local operator website.
 
 The user now prioritizes local MongoDB setup. We use **MongoDB Community Edition8.0.32**, the free self-managed edition that can run offline ([official overview](https://www.mongodb.com/products/self-managed/community-edition)). The pinned portable MongoDB and17 Python packages already passed Windows installation. Reuse them. The previous failure was database startup, not a missing paid product or installer.
 
-Current action: [NEXT_TEST.md](NEXT_TEST.md) resumes administrator setup in the existing profile runtime after a prompt-order/username-validation correction. The latest Windows initialization reached password entry but rejected the username; its username prompt was delayed. A VPS PowerShell reproduction confirms buffering of the non-newline stdout prompt. The correction prints a full flushed username line and validates before password entry; invalid interactive usernames can be re-entered. Keep the existing profile credentials/configuration/data. The earlier standalone MongoDB startup/persistence test passed all8 checks, with user-confirmed WAN disconnection. Authenticated game initialization has not yet completed on Windows.
+Current action: [NEXT_TEST.md](NEXT_TEST.md) starts the existing profile database and administrator website in two PowerShell windows, then checks Windows-browser login as `Uni` and the seeded Area 1. Actual administrator initialization now passes with correct username-first prompt order, authenticated setup and owned database shutdown. Its WAN status is not yet confirmed. Preserve the profile credentials/configuration/data; no repeated initialization, pull, build or reinstall is needed for this documentation update. The earlier standalone startup/persistence test passed all8 checks with user-confirmed WAN disconnection.
 
 | Stage | Current state |
 | --- | --- |
 | Download pinned MongoDB and Python wheels while connected | Complete on Windows; cache retained |
 | Install from the local cache | Complete on Windows; installation itself was performed while internet remained available |
 | Verify MongoDB startup and clean-restart persistence | Complete on Windows under LOCALAPPDATA; user confirms WAN disconnected and local Ethernet connected |
-| Initialize the authenticated game replica set, schema and administrator | Profile runtime reaches admin input; next retry fixes prompt order and validates username first |
-| Start database and local admin website; check transactions and saved changes | Pending |
+| Initialize the authenticated game replica set, schema and administrator | Complete on Windows; username Uni; selected profile runtime; initialization WAN status unconfirmed |
+| Start database and local admin website; check transactions and saved changes | Next: start both and confirm login; saved-area/restart test follows |
 | Connect Android accounts, progression and Alliance Battle | Pending integration |
 
 The final database binds to127.0.0.1:27018 and the administrator website to127.0.0.1:18765. The Windows game service will use the database locally; Android clients will communicate with the game service. The internet database URL in `.env` is not used.
@@ -46,15 +46,15 @@ All website assets are local. Neither the website nor MongoDB binds to the LAN. 
 
 ## Windows sequence
 
-Follow [NEXT_TEST.md](NEXT_TEST.md) for the current one-step handoff: pull, disconnect WAN and initialize at `%LOCALAPPDATA%\WesnothAlliance\runtime`. Preparation and installation already passed; do not repeat them. The current retry uses the same profile runtime and retains its credentials/configuration. The following launch/check instructions are reference for after initialization passes.
+Follow [NEXT_TEST.md](NEXT_TEST.md) for the current handoff: with WAN disconnected, start the existing profile database, start the administration service and sign in on Windows as Uni. Initialization is complete. The service performs the database/transaction check automatically. Defer changes and restart testing until login is confirmed. The reference below retains the full sequence.
 
 The profile standalone fixture passed startup, journaled write/read, both clean shutdowns and a persisted read after restart. This does not prove recovery of the old repository database or the disappearance of the earlier sharing conflict. Keep `runtime/alliance`, its logs/lock evidence, all disposable test directories and crash dumps. The user deferred the malware investigation; no service/security changes are part of this step.
 
-### 1. Initialize the private local database and administrator
+### 1. Initialization completed
 
-Use the guarded block in NEXT_TEST.md. All four runtime helpers now accept `-RuntimeRoot`. The normal selected path is `C:\Users\Uni\AppData\Local\WesnothAlliance\runtime`; always pass the same value when initializing, starting or testing this database. Omission retains the old repository default for compatibility, so it does not select the new profile database automatically. Invalid or redirected paths stop without fallback. A new selected runtime is created with restricted access; an existing directory without its ownership marker is preserved and refused. No old data or secret is copied into the new runtime.
+Actual Windows initialization passed in `C:\Users\Uni\AppData\Local\WesnothAlliance\runtime`, with administrator `Uni`. The corrected prompt order was visible; the helper reported authenticated MongoDB8.0.32, single-node replica set, scoped application user and administrator ready, then database stopped. Keep the chosen password private. No repeated initialization is needed.
 
-Enter an administrator username at the first full-line prompt (3–24 ASCII letters, digits or underscores; for example `UniAdmin`). Invalid usernames are rejected and requested again before password input. Then enter a password of12–128 characters twice. Password input is hidden; initialization deliberately creates no transcript. Expected: `ALLIANCE INITIALIZATION PASSED`, printed after the owned database has exited successfully. Rerunning with the same owned runtime preserves credentials/accounts. Do not send private runtime files; a startup error identifies the selected `logs/mongodb.log` to inspect.
+All four runtime helpers accept `-RuntimeRoot`. Always select the same `%LOCALAPPDATA%\WesnothAlliance\runtime` when starting/checking this database. Omitting it retains the old repository default; there is no automatic migration. Existing unowned directories, redirected paths and stale operation locks remain refused. Keep old runtime/scratch/log/dump evidence intact.
 
 ### 2. Run the database and website in two PowerShell windows
 
@@ -74,11 +74,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
     -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
 ```
 
-Keep both open. Expected: database running on `127.0.0.1:27018`, then the admin URL `http://127.0.0.1:18765/`. Open that URL in the Windows browser and sign in with the administrator created above. The initial website shows Area 1 and the administrator account; the existing guest game has no persistent player accounts yet.
+Keep both open. Expected: database running on `127.0.0.1:27018`, then the admin URL `http://127.0.0.1:18765/`. Open that URL in the Windows browser and sign in with the administrator created above. Sign in as `Uni`, then view Areas to find Area 1; the existing guest game has no persistent player accounts yet.
 
 ### 3. Test persistence and permissions
 
-In a third PowerShell window:
+The website launcher already performs the database check. After the first browser result, a separate check can also be run in a third PowerShell window:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
@@ -107,7 +107,7 @@ The verification environment uses Python 3.14.3 and MongoDB 8.0.32. Linux and Wi
 
 `tools/Dockerfile.alliance-verify` records the container image digests and matching Python package versions. Build its small context from that file and `tools/alliance-dependencies/requirements-verify.txt`; never send `.env` or runtime data as a build context. Use `--ulimit nofile=65536:65536` for the Linux test container: repeated fixture collection creation exhausted the default 1024 descriptors in an earlier run. That infrastructure failure was corrected before the final passing run.
 
-Real-database checks cover concurrent team membership/start claims, repeat settlement, transaction rollback, changed leaders/captains, schema uniqueness, admin authorization, CSRF, session expiry/revocation, local-only HTTP, initialization and clean restart. PowerShell helpers are exercised with simulated native tools under Linux PowerShell7.4.6. Actual Windows standalone MongoDB startup/persistence now passes; the new profile-runtime initialization, authenticated checks and visual browser behavior still await the user's reports.
+Real-database checks cover concurrent team membership/start claims, repeat settlement, transaction rollback, changed leaders/captains, schema uniqueness, admin authorization, CSRF, session expiry/revocation, local-only HTTP, initialization and clean restart. PowerShell helpers are exercised with simulated native tools under Linux PowerShell7.4.6. Actual Windows standalone MongoDB startup/persistence now passes; profile administrator initialization also passes. Authenticated service startup/transaction checks and visual browser behavior still await the user's reports.
 
 
 ## Completed Windows Python identity fixture

@@ -1,66 +1,51 @@
-# Next Windows test: resume administrator setup with the corrected prompt
+# Next Windows test: start the database and sign in to administration
 
-The latest Windows initialization reached administrator setup, then rejected the username. Its username prompt appeared after the password prompts. We reproduced the ordering defect with PowerShell piping native stdout: a prompt without a newline was held until later output. The correction prints a full flushed username line and validates it before asking for a password. The actual username entered is unknown; no password or username needs to be returned for diagnosis.
+The latest console output confirms administrator initialization passed. The username prompt appeared first, administrator `Uni` was accepted, the authenticated MongoDB8.0.32 setup completed, and the owned database stopped. Keep the same `%LOCALAPPDATA%\WesnothAlliance\runtime` directory and the password you chose. Do not repeat initialization.
 
-Use the same `%LOCALAPPDATA%\WesnothAlliance\runtime` directory (normally `C:\Users\Uni\AppData\Local\WesnothAlliance\runtime`). The initializer retains its existing credentials/configuration and completes the missing administrator step. Keep the directory intact. MongoDB8.0.32 and Python3.14.3 are already installed; no installer, build, repeated standalone fixture or new runtime path is needed. The earlier standalone profile startup/write/restart passed with user-confirmed WAN disconnection.
+This handoff uses helpers already installed in your checkout. No pull, download, build or reinstall is needed for this documentation update. Keep WAN disconnected and local Ethernet connected. Use normal PowerShell windows under the same Windows account as initialization. The earlier standalone storage test was confirmed offline; WAN status for the successful administrator initialization has not yet been reported.
 
-## 1. Pull the update while temporarily connected
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
-    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
-        $repo = '/d/Test/wesnoth-setup/' + $name
-        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
-        if ($LASTEXITCODE -ne 0) {
-            throw "Pull failed for $name. Stop and send the output."
-        }
-    }
-}
-```
-
-## 2. Disconnect WAN, keep local Ethernet, then retry initialization once
-
-Use normal PowerShell under the same Windows account as the successful test. Leave other MongoDB instances stopped; the helper refuses an occupied port rather than stopping another database. Run this block without adding a transcript or redirecting input:
+## 1. Start the database in PowerShell window 1
 
 ```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_server' -ErrorAction Stop
-    if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) {
-        throw 'LOCALAPPDATA is missing. Stop and send this output.'
-    }
-    $runtimeRoot = Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime'
-
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Initialize-WindowsAlliance.ps1' `
-        -RuntimeRoot $runtimeRoot
-
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Game database initialization failed. Send the console error without passwords or private runtime files.'
-    }
-}
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAllianceDatabase.ps1' `
+    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
 ```
 
-The new `-RuntimeRoot` parameter selects the same permanent location for initialization, database launch, website and checks. Always include it in later commands. Omitting it retains the historical repository runtime; there is no automatic migration or fallback. Empty, relative, UNC, file and redirected paths are rejected. Initialization creates and restricts only its new owned runtime. Existing unowned folders are rejected; an existing valid owned runtime can resume while retaining its credentials and accounts. A stale operation lock is not automatically deleted.
-
-## Expected result and what to return
-
-Expect the selected path under `C:\Users\Uni\AppData\Local\WesnothAlliance\runtime`. The username prompt must appear first on its own line. At that prompt, type a username such as `UniAdmin` and press Enter, then complete:
-
-1. A new administrator username: 3–24 ASCII letters, digits or underscores. An invalid username now shows the allowed format and asks again before any password prompt, up to five attempts.
-2. A password: 12–128 characters.
-3. The same password again. Password entry is hidden.
-
-The initializer resumes authenticated replica set `wesnoth-rs` on `127.0.0.1:27018`, verifies the `wesnoth_game` schema and restricted database application user, and creates your administrator account. It then stops its database. Expected completion:
+Expected after the version/pin checks:
 
 ```text
-ALLIANCE INITIALIZATION PASSED
-MongoDB 8.0.32; authenticated single-node replica set; scoped application user; admin account ready.
-Owned database stopped. Start the database window, then the service window.
+Alliance MongoDB running on 127.0.0.1:27018. Keep this window open. Ctrl+C stops this process.
 ```
 
-Send the completion/error text, confirm the username prompt appeared before the password prompts, and confirm whether WAN was disconnected for this retry. This interactive step intentionally creates no console transcript. Never send the password, `.env`, `root.json`, `config.json` or `keyfile`. If startup fails, send the new runtime's `logs\mongodb.log`; stop at that failure instead of deleting data or repeatedly retrying.
+Wait for that line and leave the window open. If an error appears, stop here and return its output. The command keeps running normally; it should not return to the prompt while the database is serving.
 
-After this result, the next step is to run the database and local administrator website, then verify login, a saved area and restart persistence. The game UI does not yet expose persistent accounts, leader progression or Alliance battles.
+## 2. Start the administrator website in PowerShell window 2
+
+Open a second normal PowerShell window while the database window stays open:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAlliance.ps1' `
+    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
+```
+
+This service automatically checks the database version, authenticated primary, schema, administrator and an aborted transaction before serving the website. A separate Test-WindowsAlliance command is not needed for this step. Expected:
+
+```text
+PASS MongoDB 8.0.32 / authenticated replica set / schema / administrator / transaction rollback
+ALLIANCE DATABASE CHECK PASSED
+Alliance admin: http://127.0.0.1:18765/
+```
+
+Another scope notice and keep-window-open message are normal. Leave both windows open. An error means stop and return the output; do not delete data/locks, rerun initialization or launch extra database instances.
+
+## 3. Open the website in the Windows browser
+
+Open `http://127.0.0.1:18765/` in a browser on the Windows computer. This website is local to Windows; use its browser rather than the Android app.
+
+Sign in with username `Uni` and the password you entered during initialization. Expected: the Overview page headed **Your Alliance world**, showing your signed-in username. Click **Areas** and confirm **Area 1** appears. Viewing it is enough for this step; creating an area, checking its audit record and testing persistence across restart come after this result.
+
+Return both windows' visible startup/error output, whether login succeeded and Area 1 appeared, and whether WAN was disconnected. Do not send passwords, `.env`, cookies or private runtime files. The game still uses the working guest flow; persistent Android accounts/progression/Alliance battles are not connected yet.
+
+Database/service transcripts are saved under `D:\Test\wesnoth-setup\wesnoth_server\diagnostics` as `alliance-database-*.txt` and `alliance-serve-*.txt`. Their exact Saved log paths are printed after the commands exit; do not stop healthy windows just to get those paths. The MongoDB log remains `%LOCALAPPDATA%\WesnothAlliance\runtime\logs\mongodb.log`. Keep previous runtime/scratch/log/dump evidence and all completed game stages.
