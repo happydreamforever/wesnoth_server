@@ -1,10 +1,10 @@
-# Next Windows step: MongoDB startup and persistence under the profile folder
+# Next Windows test: initialize the game database in the profile folder
 
-The returned transcript confirms20 synthetic file replacements and exit0 under `C:\Users\Uni\AppData\Local\WesnothAllianceStorageCheck`. The per-event JSONL was not attached and WAN status was not reported. No repeat file probe is needed: the next check runs the actual installed MongoDB8.0.32 against new disposable data under that same parent.
+The returned text and JSON reports confirm all eight MongoDB startup/persistence checks passed under your Windows profile. Both processes stopped with exit0. This is actual Windows database evidence; authenticated game setup and administrator login have not yet passed. WAN status for that successful run was not recorded.
 
-This is a location change for the existing startup fixture. It does not establish that D: is defective or that the earlier conflict is resolved. The original partial game database and all failed-test data remain intact. No installer, version change, data migration or Windows service/security modification is needed.
+Use the installed MongoDB8.0.32 and Python3.14.3 environment. This step creates a new persistent runtime at `%LOCALAPPDATA%\WesnothAlliance\runtime` (normally `C:\Users\Uni\AppData\Local\WesnothAlliance\runtime`). It does not reuse the disposable test data or the failed repository runtime. Keep all those directories intact. No download, installer, game build or repeated startup fixture is needed.
 
-## 1. Pull the small helper update while temporarily connected
+## 1. Pull the update while temporarily connected
 
 ```powershell
 & {
@@ -20,9 +20,9 @@ This is a location change for the existing startup fixture. It does not establis
 }
 ```
 
-## 2. Disconnect WAN, keep local Ethernet, then run once
+## 2. Disconnect WAN, keep local Ethernet, then initialize once
 
-Use normal PowerShell under the same Windows account as the successful file test:
+Use normal PowerShell under the same Windows account as the successful test. Leave other MongoDB instances stopped; the helper refuses an occupied port rather than stopping another database. Run this block without adding a transcript or redirecting input:
 
 ```powershell
 & {
@@ -31,34 +31,36 @@ Use normal PowerShell under the same Windows account as the successful file test
     if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) {
         throw 'LOCALAPPDATA is missing. Stop and send this output.'
     }
-    $parent = Join-Path $env:LOCALAPPDATA 'WesnothAllianceStorageCheck'
+    $runtimeRoot = Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime'
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Test-WindowsMongoStartup.ps1' `
-        -ScratchParent $parent
+        -File '.\tools\Initialize-WindowsAlliance.ps1' `
+        -RuntimeRoot $runtimeRoot
 
     if ($LASTEXITCODE -ne 0) {
-        throw 'MongoDB profile startup check failed. Send the new saved text and JSON reports if present.'
+        throw 'Game database initialization failed. Send the console error without passwords or private runtime files.'
     }
 }
 ```
 
-The helper requires the chosen parent to be an existing directory with a drive-qualified Windows filesystem path; it stops if missing rather than choosing another location. It uses a new timestamp/GUID child `alliance-mongo-startup-<runid>` under that parent, so the earlier `mongo-file-probe-nj9j87g3` and all previous database directories remain unchanged. The existing Python3.14.3 environment, package/Mongo file pins and MongoDB8.0.32 executable are verified again before startup; they stay installed under D:\Test. The paired text/JSON reports still go under the repository's diagnostics folder.
-
-The unchanged Python fixture creates and restricts only its new child, starts its owned MongoDB on a temporary loopback port, verifies process identity, writes/reads a journaled synthetic record, shuts down cleanly, restarts the same disposable data and reads that record again, then stops. It never opens runtime/alliance or the internet `.env` URL. A failure stops the fixture and retains logs. A Windows crash may add a timestamped dump beside installed mongod.exe; keep dumps locally.
+The new `-RuntimeRoot` parameter selects the same permanent location for initialization, database launch, website and checks. Always include it in later commands. Omitting it retains the historical repository runtime; there is no automatic migration or fallback. Empty, relative, UNC, file and redirected paths are rejected. Initialization creates and restricts only its new owned runtime. Existing unowned folders are rejected; an existing valid owned runtime can resume while retaining its credentials and accounts. A stale operation lock is not automatically deleted.
 
 ## Expected result and what to return
 
-The printed disposable directory must be under `C:\Users\Uni\AppData\Local\WesnothAllianceStorageCheck`, not the old repository build directory. Expect these markers:
+Expect the selected path under `C:\Users\Uni\AppData\Local\WesnothAlliance\runtime`, followed by prompts for:
+
+1. A new administrator username: 3–24 letters, digits or underscores.
+2. A password: 12–128 characters.
+3. The same password again. Password entry is hidden.
+
+The initializer creates authenticated replica set `wesnoth-rs` on `127.0.0.1:27018`, the `wesnoth_game` schema, a restricted database application user and your administrator account. It then stops its database. Expected completion:
 
 ```text
-PASS journaled_write
-PASS persisted_read
-PASS final_clean_shutdown
-ALLIANCE MONGODB STARTUP CHECK PASSED
-ALLIANCE MONGODB STARTUP FIXTURE COMPLETE
+ALLIANCE INITIALIZATION PASSED
+MongoDB 8.0.32; authenticated single-node replica set; scoped application user; admin account ready.
+Owned database stopped. Start the database window, then the service window.
 ```
 
-Send both new `diagnostics\alliance-mongo-startup-*.txt` and `.json`, and confirm WAN was disconnected. If it fails before JSON creation, send the text log. For a failure after MongoDB launches, also attach the new directory's `logs\mongodb-1.log` and `logs\process-1.log` (or the corresponding `-2.log` files if restart failed). Do not repeat the failed run before review.
+Send the completion/error text and confirm whether WAN was disconnected. This interactive step intentionally creates no console transcript. Never send the password, `.env`, `root.json`, `config.json` or `keyfile`. If startup fails, send the new runtime's `logs\mongodb.log`; stop at that failure instead of deleting data or repeatedly retrying.
 
-A full pass establishes only this disposable standalone database's startup, journaled write/read and clean-restart persistence. Authenticated replica-set initialization, transactions, local administrator/website and Android accounts remain pending. Review the report before selecting production storage or initializing the real game runtime.
+After this result, the next step is to run the database and local administrator website, then verify login, a saved area and restart persistence. The game UI does not yet expose persistent accounts, leader progression or Alliance battles.
