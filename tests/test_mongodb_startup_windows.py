@@ -54,10 +54,17 @@ else:
 LAUNCHER = r'''
 $ErrorActionPreference = 'Stop'
 $settings = Get-Content -LiteralPath $env:MONGO_SETTINGS -Raw | ConvertFrom-Json
+if ($settings.drive_root) {
+    New-PSDrive -Name 'P' -PSProvider FileSystem -Root $settings.drive_root | Out-Null
+}
 $env:PATH = $env:MONGO_BASE_PATH
 $beforePath = $env:PATH
 $beforeLocation = (Get-Location).Path
-& $settings.helper
+if ($settings.PSObject.Properties.Name -contains 'scratch_parent') {
+    & $settings.helper -ScratchParent $settings.scratch_parent
+} else {
+    & $settings.helper
+}
 $result = $LASTEXITCODE
 if ($env:PATH -cne $beforePath) { throw 'Helper changed PATH.' }
 if ((Get-Location).Path -cne $beforeLocation) { throw 'Helper changed the working directory.' }
@@ -133,6 +140,13 @@ class MongoStartupPowerShellTests(unittest.TestCase):
         return [path for path in (self.repo / "build").glob("alliance-mongo-startup-*")
                 if path.name != "alliance-mongo-startup-previous"]
 
+    def select_scratch_parent(self, value, *, drive_root=None):
+        settings = json.loads(self.settings.read_text())
+        settings["scratch_parent"] = value
+        if drive_root is not None:
+            settings["drive_root"] = str(drive_root)
+        self.settings.write_text(json.dumps(settings))
+
     def run_helper(self, *, success=True, failure="", report_mode="", expected_logs=1, logged=True):
         result = subprocess.run(
             [str(PWSH), "-NoLogo", "-NoProfile", "-NonInteractive", "-File", str(self.launcher)],
@@ -196,6 +210,66 @@ class MongoStartupPowerShellTests(unittest.TestCase):
         self.assertEqual([call["action"] for call in self.read_calls()], ["check-python"])
         self.assertEqual(self.new_stages(), [])
         self.assertIn("CPython 3.14.3 is required", transcript)
+
+    def test_existing_profile_parent_with_spaces_and_literal_characters(self):
+        parent = self.root / "profile storage [literal] & $"
+        parent.mkdir()
+        sentinel = parent / "retained-filesystem-probe"
+        sentinel.write_bytes(b"PREVIOUS_PROFILE_PROBE")
+        self.protected[sentinel] = hashlib.sha256(sentinel.read_bytes()).hexdigest()
+        self.select_scratch_parent(r"P:\profile storage [literal] & $", drive_root=self.root)
+        result, transcript = self.run_helper()
+        calls = self.read_calls()
+        self.assertEqual([call["action"] for call in calls], ["check-python", "check-installed", "startup"])
+        self.assertEqual(self.new_stages(), [])
+        stages = list(parent.glob("alliance-mongo-startup-*"))
+        self.assertEqual(len(stages), 1)
+        stage = stages[0]
+        report = self.repo / "diagnostics" / (stage.name + ".json")
+        self.assertEqual(calls[-1]["args"], ["-I", "-B", str(self.fixture), "--mongod", str(self.mongod),
+                                            "--scratch", str(stage), "--report", str(report)])
+        self.assertTrue(report.is_file())
+        self.assertIn(str(stage), result.stdout)
+        self.assertIn(str(stage), transcript)
+        first = {path: path.read_bytes() for path in parent.rglob("*") if path.is_file()}
+        self.run_helper(expected_logs=2)
+        self.assertEqual(len(list(parent.glob("alliance-mongo-startup-*"))), 2)
+        for path, content in first.items():
+            self.assertEqual(path.read_bytes(), content, str(path))
+
+    def test_explicit_empty_parent_stops_before_native_execution(self):
+        self.select_scratch_parent("")
+        _, transcript = self.run_helper(success=False)
+        self.assertIn("fully qualified Windows drive path", transcript)
+        self.assertEqual(self.read_calls(), [])
+        self.assertEqual(self.new_stages(), [])
+
+    def test_relative_or_unc_parent_stops_before_native_execution(self):
+        for index, parent in enumerate(("relative", r"P:relative", r"\rooted", r"\\server\share", "   "), 1):
+            with self.subTest(parent=parent):
+                self.select_scratch_parent(parent)
+                _, transcript = self.run_helper(success=False, expected_logs=index)
+                self.assertIn("fully qualified Windows drive path", transcript)
+                self.assertEqual(self.read_calls(), [])
+                self.assertEqual(self.new_stages(), [])
+
+    def test_missing_profile_parent_stops_without_creating_it(self):
+        self.select_scratch_parent(r"P:\missing profile", drive_root=self.root)
+        _, transcript = self.run_helper(success=False)
+        self.assertIn("existing directory; no parent was created", transcript)
+        self.assertFalse((self.root / "missing profile").exists())
+        self.assertEqual(self.read_calls(), [])
+        self.assertEqual(self.new_stages(), [])
+
+    def test_file_profile_parent_stops_and_preserves_it(self):
+        parent = self.root / "profile file"
+        parent.write_bytes(b"EXISTING_FILE_AT_REQUESTED_PARENT")
+        self.protected[parent] = hashlib.sha256(parent.read_bytes()).hexdigest()
+        self.select_scratch_parent(r"P:\profile file", drive_root=self.root)
+        _, transcript = self.run_helper(success=False)
+        self.assertIn("existing directory; no parent was created", transcript)
+        self.assertEqual(self.read_calls(), [])
+        self.assertEqual(self.new_stages(), [])
 
     def test_installed_verification_failure_stops_before_startup(self):
         _, transcript = self.run_helper(success=False, failure="check-installed")

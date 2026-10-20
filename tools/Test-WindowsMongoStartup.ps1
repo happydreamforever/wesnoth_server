@@ -1,9 +1,13 @@
 # Windows PowerShell 5.1; check the installed MongoDB using a new disposable data directory.
 [CmdletBinding()]
-param()
+param(
+    [AllowEmptyString()]
+    [string]$ScratchParent
+)
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
 $transcriptStarted = $false
+$scratch = $null
 $result = 1
 function Invoke-SelectedPython([string[]]$Arguments) {
     # Windows PowerShell 5.1 wraps redirected native stderr as error records.
@@ -27,11 +31,25 @@ try {
     $runName = 'alliance-mongo-startup-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N')
     $logPath = Join-Path $diagnostics ($runName + '.txt')
     $reportPath = Join-Path $diagnostics ($runName + '.json')
-    $scratch = Join-Path (Join-Path $repoRoot 'build') $runName
     Start-Transcript -LiteralPath $logPath -NoClobber | Out-Null
     $transcriptStarted = $true
 
     if ($env:OS -ne 'Windows_NT') { throw 'This helper requires Windows.' }
+    if ($PSBoundParameters.ContainsKey('ScratchParent')) {
+        if ([string]::IsNullOrWhiteSpace($ScratchParent) -or $ScratchParent -notmatch '^[A-Za-z]:[\\/]') {
+            throw 'ScratchParent must be a fully qualified Windows drive path to an existing local directory.'
+        }
+        if (-not (Test-Path -LiteralPath $ScratchParent -PathType Container)) {
+            throw 'ScratchParent must be an existing directory; no parent was created.'
+        }
+        $parentItem = Get-Item -LiteralPath $ScratchParent -Force
+        if ($parentItem.PSProvider.Name -ne 'FileSystem') {
+            throw 'ScratchParent must be a filesystem directory.'
+        }
+        $scratch = Join-Path $parentItem.FullName $runName
+    } else {
+        $scratch = Join-Path (Join-Path $repoRoot 'build') $runName
+    }
     $python = Join-Path $repoRoot 'build\alliance-venv\Scripts\python.exe'
     $mongod = Join-Path $repoRoot 'build\alliance-mongodb\bin\mongod.exe'
     $dependencyCheck = Join-Path $PSScriptRoot 'alliance_dependencies.py'
