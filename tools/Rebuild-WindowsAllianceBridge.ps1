@@ -1,4 +1,4 @@
-# Windows PowerShell 5.1. Preserve one completed bridge build, then build corrected sources.
+# Windows PowerShell 5.1. Preserve one completed bridge build, then build updated sources.
 [CmdletBinding()]
 param(
     [string]$MsysRoot = 'D:\Test\wesnoth-setup\msys64',
@@ -93,17 +93,17 @@ try {
     $started = $true
     Assert-BridgeStopped
     Test-CompletedBridge $false
-    $backupName = 'alliance-account-bridge-before-identity-fix-' + $stamp
+    $backupName = 'alliance-account-bridge-before-update-' + $stamp
     $backup = Join-Path (Split-Path $stage -Parent) $backupName
     if (Test-Path -LiteralPath $backup) { throw 'The unique backup destination already exists. Nothing was renamed.' }
     Assert-BridgeStopped
     Rename-Item -LiteralPath $stage -NewName $backupName -ErrorAction Stop
     Write-Host "Completed bridge build preserved: $backup"
-    Write-Host 'Building only the corrected account listener. Keep the database and admin windows open.'
+    Write-Host 'Building only the updated Alliance listener. The database and completed game stages are preserved.'
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
         -File (Join-Path $PSScriptRoot 'Build-WindowsAllianceBridge.ps1') `
         -MsysRoot $MsysRoot -PythonPath $PythonPath -CMakePath $CMakePath
-    if ($LASTEXITCODE -ne 0) { throw 'The corrected bridge build failed. The old build remains in its backup. Send both saved logs.' }
+    if ($LASTEXITCODE -ne 0) { throw 'The updated bridge build failed. The old build remains in its backup. Send both saved logs.' }
     Test-CompletedBridge $true
     Write-Host 'ALLIANCE ACCOUNT BRIDGE REBUILD PASSED'
     Write-Host 'Next: run tools/Run-WindowsAllianceBridge.ps1 with the existing profile runtime.'

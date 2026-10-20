@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import contextlib
+from copy import deepcopy
 import gzip
 import hashlib
 import http.server
@@ -38,6 +39,16 @@ ACCOUNT = {
     "leader": {"starter_id": "spearman", "unit_type": "Spearman", "level": 1,
                "experience": 0, "total_experience": 0, "advancement_choices": []},
 }
+TEAM = {
+    "id": "22345678-1234-1234-1234-123456789abc", "name": "Lantern Guard",
+    "area_id": "area-1", "area_name": "Area 1", "captain_id": ACCOUNT["_id"],
+    "level": 1, "experience": 0, "rating": 1000, "capacity": 8,
+    "members": [{"id": ACCOUNT["_id"], "username": ACCOUNT["username"],
+                 "unit_type": "Spearman", "level": 1}],
+}
+TEAM_SUMMARY = {key: TEAM[key] for key in
+                ("id", "name", "area_id", "captain_id", "level", "experience", "rating")}
+TEAM_SUMMARY["member_count"] = 1
 
 
 class Backend(http.server.ThreadingHTTPServer):
@@ -278,6 +289,27 @@ class BridgeTests(unittest.TestCase):
                 elif self.path in ("/internal/v1/me", "/internal/v1/logout") and (
                         self.headers.get("X-Player-Token") != parent.token or parent.revoked):
                     code, response = 401, {"error": {"code": "invalid_session"}}
+                elif self.path.startswith("/internal/v1/team-directory/"):
+                    if self.headers.get("X-Player-Token") != parent.token or parent.revoked:
+                        code, response = 401, {"error": {"code": "invalid_session"}}
+                    elif parent.directory_override is not None:
+                        code, response = parent.directory_override
+                    else:
+                        operation = self.path.rsplit("/", 1)[1]
+                        if operation == "areas":
+                            code, response = 200, {"areas": [{"id": "area-1", "name": "Area 1"}], "next": ""}
+                        elif operation == "teams":
+                            code, response = 200, {"teams": [TEAM_SUMMARY], "next": ""}
+                        elif operation == "create_team":
+                            parent.directory_created = True
+                            if parent.mode == "directory_uncertain":
+                                code, response = 503, {"error": {"code": "private_error", "message": parent.secret}}
+                            else:
+                                code, response = 201, {"team": TEAM}
+                        elif operation == "team_detail" or parent.directory_created:
+                            code, response = 200, {"team": TEAM}
+                        else:
+                            code, response = 200, {"team": None}
                 elif self.path == "/internal/v1/register":
                     body = json.loads(raw)
                     if body["username"] == "SlowPlayer":
@@ -333,6 +365,8 @@ class BridgeTests(unittest.TestCase):
     def setUp(self):
         type(self).mode = "normal"
         type(self).revoked = False
+        type(self).directory_override = None
+        type(self).directory_created = False
 
     def connect(self):
         raw = socket.create_connection(("127.0.0.1", 15001), timeout=12)
@@ -353,7 +387,7 @@ class BridgeTests(unittest.TestCase):
 
     def request(self, operation="me", body=None, token=None):
         value = {"v": 1, "id": "a" * 32, "op": operation, "body": body or {}}
-        if operation in ("me", "logout"):
+        if operation in ("me", "logout", "areas", "teams", "my_team", "create_team", "team_detail"):
             value["token"] = token or self.token
         return value
 
@@ -425,6 +459,94 @@ class BridgeTests(unittest.TestCase):
             self.assertEqual(result["status"], 503)
             self.assertNotIn("must-not-leave", json.dumps(result))
             self.assertNotIn("private_config", json.dumps(result))
+
+    def test_directory_cycle_uses_fixed_routes_and_public_fields(self):
+        start = len(self.calls)
+        self.assertEqual(self.exchange(self.request("areas", {"after": ""}))["data"],
+                         {"areas": [{"id": "area-1", "name": "Area 1"}], "next": ""})
+        self.assertEqual(self.exchange(self.request("teams", {"area_id": "area-1", "after": ""}))["data"],
+                         {"teams": [TEAM_SUMMARY], "next": ""})
+        self.assertIsNone(self.exchange(self.request("my_team"))["data"]["team"])
+        created = self.exchange(self.request("create_team", {"name": " Lantern Guard ", "area_id": "area-1"}))
+        self.assertEqual(created["status"], 201)
+        self.assertEqual(created["data"]["team"], TEAM)
+        self.assertEqual(self.exchange(self.request("my_team"))["data"]["team"], TEAM)
+        self.assertEqual(self.exchange(self.request("team_detail", {"team_id": TEAM["id"]}))["data"]["team"], TEAM)
+        for method, path, headers, _body in self.calls[start:]:
+            self.assertEqual(method, "POST")
+            self.assertTrue(path.startswith("/internal/v1/team-directory/"))
+            self.assertEqual(headers["X-Player-Token"], self.token)
+
+    def test_uncertain_team_creation_is_reconciled_without_repeating_mutation(self):
+        type(self).mode = "directory_uncertain"
+        start = len(self.calls)
+        result = self.exchange(self.request("create_team", {"name": "Lantern Guard", "area_id": "area-1"}))
+        self.assertEqual(result["status"], 503)
+        self.assertTrue(type(self).directory_created)
+        self.assertNotIn(self.secret, json.dumps(result))
+        self.assertEqual(self.exchange(self.request("my_team"))["data"]["team"], TEAM)
+        self.assertEqual(sum(path.endswith("/create_team") for _, path, _, _ in self.calls[start:]), 1)
+
+    def test_directory_invalid_requests_are_rejected_before_forwarding(self):
+        cases = [self.request("areas", {"after": {"$gt": ""}}),
+                 self.request("teams", {"area_id": "../server/finish", "after": ""}),
+                 self.request("teams", {"area_id": "area-1", "after": "A" * 36}),
+                 self.request("my_team", {"actor_id": ACCOUNT["_id"]}),
+                 self.request("create_team", {"name": "Bad<Name", "area_id": "area-1"}),
+                 self.request("create_team", {"name": "Good Name", "area_id": "area-1", "experience": 99}),
+                 self.request("team_detail", {"team_id": "area-1"}),
+                 self.request("settle", {"team_id": TEAM["id"]})]
+        missing_token = self.request("areas", {"after": ""})
+        missing_token.pop("token")
+        cases.append(missing_token)
+        for value in cases:
+            with self.subTest(operation=value["op"]), self.connect() as peer:
+                before = len(self.calls)
+                body = gzip.compress(json.dumps(value).encode())
+                peer.sendall(struct.pack("!I", len(body)) + body)
+                with self.assertRaises((EOFError, ssl.SSLError, ConnectionError)):
+                    self.read_exact(peer, 4)
+                self.assertEqual(len(self.calls), before)
+
+    def test_directory_backend_contract_rejects_leaks_bounds_and_invalid_rosters(self):
+        cases = []
+        for field, value in (("password_hash", "secret"), ("capacity", 9), ("level", True),
+                             ("rating", 2147483648), ("captain_id", "32345678-1234-1234-1234-123456789abc"),
+                             ("members", TEAM["members"] * 2), ("members", [])):
+            team = deepcopy(TEAM)
+            team[field] = value
+            cases.append(("my_team", {}, {"team": team}))
+        member_secret = deepcopy(TEAM)
+        member_secret["members"][0]["password_hash"] = "secret"
+        cases.append(("my_team", {}, {"team": member_secret}))
+        cases += [("areas", {"after": ""}, {"areas": [{"id": "area-1", "name": "Area 1"}] * 21, "next": ""}),
+                  ("areas", {"after": ""}, {"areas": [{"id": "area-1", "name": "Area 1"}], "next": "area-1"}),
+                  ("areas", {"after": "area-1"}, {"areas": [{"id": "area-1", "name": "Area 1"}], "next": ""}),
+                  ("teams", {"area_id": "other-area", "after": ""}, {"teams": [TEAM_SUMMARY], "next": ""}),
+                  ("team_detail", {"team_id": "32345678-1234-1234-1234-123456789abc"}, {"team": TEAM}),
+                  ("team_detail", {"team_id": TEAM["id"]}, {"team": None})]
+        for operation, body, response in cases:
+            with self.subTest(operation=operation, response=response):
+                type(self).directory_override = (200, response)
+                result = self.exchange(self.request(operation, body))
+                self.assertEqual(result["status"], 503)
+                self.assertNotIn("password_hash", json.dumps(result))
+                self.assertNotIn('"secret"', json.dumps(result))
+
+    def test_directory_safe_error_codes_and_session_scope(self):
+        for status, backend, expected in ((401, "expired", "invalid_session"),
+                (403, "private_permission_detail", "forbidden"), (404, "not_found", "not_found"),
+                (409, "already_member", "already_member"), (409, "conflict", "conflict"),
+                (409, "invalid_input", "invalid_input"), (409, "busy", "busy")):
+            with self.subTest(status=status, code=backend):
+                type(self).directory_override = (status, {"error": {"code": backend, "message": self.secret}})
+                result = self.exchange(self.request("my_team"))
+                self.assertEqual(result["status"], status)
+                self.assertEqual(result["data"]["code"], expected)
+                self.assertNotIn(self.secret, json.dumps(result))
+        type(self).directory_override = None
+        type(self).revoked = True
+        self.assertEqual(self.exchange(self.request("my_team"))["data"]["code"], "invalid_session")
 
     def test_stalled_backend_does_not_block_other_connection(self):
         slow = self.request("register", {"username": "SlowPlayer", "password": "example-pass-1234", "starter_id": "spearman"})

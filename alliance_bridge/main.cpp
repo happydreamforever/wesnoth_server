@@ -45,6 +45,31 @@ bool ascii_word(const std::string& value, std::size_t lo, std::size_t hi) {
              (c >= '0' && c <= '9') || c == '_' || c == '-')) return false;
     return true;
 }
+bool uuid(const std::string& value) {
+    if(value.size() != 36) return false;
+    for(std::size_t i = 0; i < value.size(); ++i) {
+        const char c = value[i];
+        if(i == 8 || i == 13 || i == 18 || i == 23) { if(c != '-') return false; }
+        else if(!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) return false;
+    }
+    return true;
+}
+std::string directory_name(std::string value) {
+    const auto first = value.find_first_not_of(' '), last = value.find_last_not_of(' ');
+    if(first == std::string::npos) invalid();
+    value = value.substr(first, last - first + 1);
+    if(value.size() < 3 || value.size() > 40) invalid();
+    for(std::size_t i = 0; i < value.size(); ++i) {
+        const char c = value[i];
+        const bool alnum = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+        if(!alnum && (i == 0 || (c != ' ' && c != '_' && c != '-'))) invalid();
+    }
+    return value;
+}
+bool directory_operation(const std::string& operation) {
+    return operation == "areas" || operation == "teams" || operation == "my_team" ||
+           operation == "create_team" || operation == "team_detail";
+}
 bool request_id(const std::string& value) {
     if(value.size() != 32) return false;
     for(char c : value) if(!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) return false;
@@ -181,7 +206,7 @@ std::size_t utf8_characters(const std::string& value) {
     return result;
 }
 struct Request {
-    std::string id, operation, token, body;
+    std::string id, operation, token, body, target;
     http::verb method = http::verb::post;
 };
 Request account_request(const std::vector<unsigned char>& bytes) {
@@ -211,8 +236,26 @@ Request account_request(const std::vector<unsigned char>& bytes) {
         result.token = text(root.at("token"), 43);
         if(!ascii_word(result.token, 43, 43)) invalid();
         if(result.operation == "me") result.method = http::verb::get;
+    } else if(directory_operation(result.operation)) {
+        if(!root.contains("token")) invalid();
+        result.token = text(root.at("token"), 43);
+        if(!ascii_word(result.token, 43, 43)) invalid();
+        if(result.operation == "areas") fields(body, {"after"});
+        else if(result.operation == "teams") fields(body, {"area_id", "after"});
+        else if(result.operation == "my_team") fields(body, {});
+        else if(result.operation == "create_team") fields(body, {"name", "area_id"});
+        else fields(body, {"team_id"});
+        if(body.contains("after")) {
+            const auto after = text(body.at("after"), 64);
+            if(!after.empty() && !(result.operation == "areas" ? ascii_word(after, 1, 64) : uuid(after))) invalid();
+        }
+        if(body.contains("area_id") && !ascii_word(text(body.at("area_id"), 64), 1, 64)) invalid();
+        if(body.contains("team_id") && !uuid(text(body.at("team_id"), 36))) invalid();
+        if(body.contains("name")) directory_name(text(body.at("name"), 64));
     } else invalid();
     result.body = json::serialize(body);
+    result.target = directory_operation(result.operation)
+        ? "/internal/v1/team-directory/" + result.operation : "/internal/v1/" + result.operation;
     return result;
 }
 json::object safe_error(const std::string& id, unsigned status) {
@@ -248,14 +291,137 @@ json::object public_account(const json::value& value) {
     }
     return {{"id", id}, {"username", username}, {"leader", std::move(result_leader)}};
 }
+std::int64_t directory_integer(const json::object& object, const char* key,
+                               std::int64_t minimum, std::int64_t maximum = 2147483647) {
+    const auto& value = object.at(key);
+    if(!value.is_int64() || value.as_int64() < minimum || value.as_int64() > maximum) invalid();
+    return value.as_int64();
+}
+std::string directory_identifier(const json::value& value, bool is_uuid = false) {
+    const auto result = text(value, 64);
+    if(is_uuid ? !uuid(result) : !ascii_word(result, 1, 64)) invalid();
+    return result;
+}
+std::string directory_display_name(const json::value& value) {
+    const auto result = text(value, 40);
+    if(directory_name(result) != result) invalid();
+    return result;
+}
+json::object public_team_summary(const json::object& team, bool detail) {
+    if(detail) fields(team, {"id", "name", "area_id", "area_name", "captain_id", "level",
+                            "experience", "rating", "capacity", "members"});
+    else fields(team, {"id", "name", "area_id", "captain_id", "level", "experience", "rating", "member_count"});
+    json::object result{{"id", directory_identifier(team.at("id"), true)},
+                        {"name", directory_display_name(team.at("name"))},
+                        {"area_id", directory_identifier(team.at("area_id"))},
+                        {"captain_id", directory_identifier(team.at("captain_id"), true)},
+                        {"level", directory_integer(team, "level", 1)},
+                        {"experience", directory_integer(team, "experience", 0)},
+                        {"rating", directory_integer(team, "rating", -2147483647 - 1LL)}};
+    if(!detail) result["member_count"] = directory_integer(team, "member_count", 1, 8);
+    return result;
+}
+json::object public_team_detail(const json::value& value) {
+    if(!value.is_object()) invalid();
+    const auto& team = value.as_object();
+    auto result = public_team_summary(team, true);
+    result["area_name"] = directory_display_name(team.at("area_name"));
+    result["capacity"] = directory_integer(team, "capacity", 8, 8);
+    if(!team.at("members").is_array()) invalid();
+    const auto& source = team.at("members").as_array();
+    if(source.empty() || source.size() > 8) invalid();
+    std::set<std::string> ids;
+    json::array members;
+    for(const auto& item : source) {
+        if(!item.is_object()) invalid();
+        const auto& member = item.as_object();
+        fields(member, {"id", "username", "unit_type", "level"});
+        const auto id = directory_identifier(member.at("id"), true);
+        if(!ids.insert(id).second) invalid();
+        const auto username = text(member.at("username"), 24);
+        if(!ascii_word(username, 3, 24) || username.find('-') != std::string::npos) invalid();
+        const auto unit = text(member.at("unit_type"), 64);
+        if(unit.empty()) invalid();
+        for(char c : unit) if(!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == ' ')) invalid();
+        members.emplace_back(json::object{{"id", id}, {"username", username}, {"unit_type", unit},
+                                          {"level", directory_integer(member, "level", 1, 3)}});
+    }
+    if(!ids.count(text(result.at("captain_id"), 36))) invalid();
+    result["members"] = std::move(members);
+    return result;
+}
+json::object directory_error(const Request& request, unsigned status, const std::string& body) {
+    const char* code = "service_unavailable";
+    const char* message = "The Alliance service is unavailable. Check the server, then view My team before retrying creation.";
+    if(status == 401) { code = "invalid_session"; message = "Your session has expired. Please log in again."; }
+    else if(status == 403) { code = "forbidden"; message = "This team operation is not permitted."; }
+    else if(status == 404) { code = "not_found"; message = "The selected team or area is no longer available. Refresh the list."; }
+    else if(status == 400) { code = "invalid_input"; message = "Check the selected area and team name."; }
+    else if(status == 429) { code = "rate_limited"; message = "Too many requests. Wait before trying again."; }
+    else if(status == 409) {
+        // Read only a known error code. Never relay backend messages, details,
+        // connection strings, secrets or arbitrary exception content.
+        const auto value = parse_json(body);
+        if(!value.is_object() || !value.as_object().at("error").is_object()) invalid();
+        const auto source = text(value.as_object().at("error").as_object().at("code"), 64);
+        if(source == "already_member") { code = "already_member"; message = "You already belong to a team. Open My team."; }
+        else if(source == "busy") { code = "busy"; message = "Finish your active progression game before creating a team."; }
+        else if(source == "invalid_input") { code = "invalid_input"; message = "Use a team name of 3-40 letters, digits, spaces, underscores or hyphens, starting with a letter or digit."; }
+        else if(source == "conflict") { code = "conflict"; message = "That team name or membership is already in use. Check My team before retrying."; }
+        else status = 503;
+    } else status = 503;
+    return {{"v", 1}, {"id", request.id}, {"ok", false}, {"status", status},
+            {"data", {{"code", code}, {"message", message}}}};
+}
+json::object directory_data(const Request& request, const json::object& root) {
+    const auto body = parse_json(request.body).as_object();
+    if(request.operation == "areas" || request.operation == "teams") {
+        const bool areas = request.operation == "areas";
+        const char* key = areas ? "areas" : "teams";
+        fields(root, {key, "next"});
+        if(!root.at(key).is_array() || root.at(key).as_array().size() > 20) invalid();
+        std::string previous = text(body.at("after"), 64);
+        json::array records;
+        for(const auto& item : root.at(key).as_array()) {
+            if(!item.is_object()) invalid();
+            const auto& source = item.as_object();
+            json::object entry;
+            if(areas) {
+                fields(source, {"id", "name"});
+                entry = {{"id", directory_identifier(source.at("id"))},
+                         {"name", directory_display_name(source.at("name"))}};
+            } else {
+                entry = public_team_summary(source, false);
+                if(entry.at("area_id") != body.at("area_id")) invalid();
+            }
+            const auto id = text(entry.at("id"), 64);
+            if(id <= previous) invalid();
+            previous = id;
+            records.emplace_back(std::move(entry));
+        }
+        const auto next = text(root.at("next"), 64);
+        if(!next.empty() && (records.size() != 20 || next != previous)) invalid();
+        return {{key, std::move(records)}, {"next", next}};
+    }
+    fields(root, {"team"});
+    if(request.operation == "my_team" && root.at("team").is_null()) return {{"team", nullptr}};
+    auto team = public_team_detail(root.at("team"));
+    if(request.operation == "team_detail" && team.at("id") != body.at("team_id")) invalid();
+    if(request.operation == "create_team" && (team.at("area_id") != body.at("area_id") ||
+       text(team.at("name"), 40) != directory_name(text(body.at("name"), 64)))) invalid();
+    return {{"team", std::move(team)}};
+}
 json::value account_response(const Request& request, unsigned status, const std::string& body) {
-    const unsigned expected = request.operation == "register" ? 201 : 200;
-    if(status != expected) return safe_error(request.id, status);
+    const unsigned expected = request.operation == "register" || request.operation == "create_team" ? 201 : 200;
+    if(status != expected) return directory_operation(request.operation)
+        ? directory_error(request, status, body) : safe_error(request.id, status);
     const auto value = parse_json(body);
     if(!value.is_object()) invalid();
     const auto& root = value.as_object();
     json::object data;
-    if(request.operation == "logout") {
+    if(directory_operation(request.operation)) {
+        data = directory_data(request, root);
+    } else if(request.operation == "logout") {
         if(text(root.at("status"), 32) != "logged_out") invalid();
         data["status"] = "logged_out";
     } else {
@@ -416,7 +582,7 @@ class Session : public std::enable_shared_from_this<Session> {
         try {
             request_ = account_request(incoming_);
             backend_request_.method(request_.method);
-            backend_request_.target("/internal/v1/" + request_.operation);
+            backend_request_.target(request_.target);
             backend_request_.version(11);
             backend_request_.set(http::field::host, "127.0.0.1:18765");
             backend_request_.set(http::field::authorization, "Bearer " + secret_);

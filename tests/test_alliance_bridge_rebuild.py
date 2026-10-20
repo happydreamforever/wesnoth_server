@@ -81,7 +81,7 @@ exit $LASTEXITCODE
         process = subprocess.run([str(PWSH), '-NoProfile', '-File', str(wrapper)], env=env, capture_output=True, text=True, timeout=15)
         self.output = process.stdout + process.stderr
         self.invocations = [json.loads(x) for x in self.calls.read_text().splitlines()] if self.calls.exists() else []
-        self.backups = [x for x in (self.repo / 'build').glob('alliance-account-bridge-before-identity-fix-*') if not x.name.endswith('-old')]
+        self.backups = [x for x in (self.repo / 'build').glob('alliance-account-bridge-before-update-*') if not x.name.endswith('-old')]
         self.assertNotIn('PRIVATE_SENTINEL_', self.output)
         for path, data in self.sent.items(): self.assertEqual(path.read_bytes(), data)
         self.logs = list((self.repo / 'diagnostics').glob('alliance-bridge-rebuild-*.txt'))
@@ -138,7 +138,7 @@ exit $LASTEXITCODE
     def test_native_build_failure_preserves_backup_and_partial_stage(self):
         self.assertEqual(self.invoke(build_exit=1), 1); self.assertEqual(len(self.backups), 1); self.assertEqual(len(self.invocations), 1)
         self.assertEqual({p.name:p.read_bytes() for p in self.backups[0].iterdir()}, self.before)
-        self.assertTrue(self.stage.is_dir()); self.assertIn('corrected bridge build failed', self.logs[0].read_text())
+        self.assertTrue(self.stage.is_dir()); self.assertIn('updated bridge build failed', self.logs[0].read_text())
         self.assertNotIn('ALLIANCE ACCOUNT BRIDGE REBUILD PASSED', self.output)
     def test_zero_exit_without_completed_receipt_cannot_pass(self):
         self.assertEqual(self.invoke(partial=True), 1); self.assertEqual(len(self.backups), 1)
