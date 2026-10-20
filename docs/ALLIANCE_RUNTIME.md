@@ -4,13 +4,13 @@ This delivery implements the persistent game rules and a local operator website.
 
 The user now prioritizes local MongoDB setup. We use **MongoDB Community Edition8.0.32**, the free self-managed edition that can run offline ([official overview](https://www.mongodb.com/products/self-managed/community-edition)). The pinned portable MongoDB and17 Python packages already passed Windows installation. Reuse them. The previous failure was database startup, not a missing paid product or installer.
 
-Current action: [NEXT_TEST.md](NEXT_TEST.md) runs a separate disposable-data startup/write/read/restart check. It preserves the partial game runtime and original crash evidence. All24 Windows transport checks remain passed with user-confirmed WAN disconnection; there is no repeated transport/game build in this step. Android component execution and account integration follow the database work.
+Current action: [NEXT_TEST.md](NEXT_TEST.md) requests the existing MongoDB/process logs from the failed disposable startup test. MongoDB exited14 before the first ping; its installed pins passed, but the cause is not yet present in the returned summary. Preserve the partial game runtime and original crash evidence; do not repeat startup yet. All24 Windows transport checks remain passed with user-confirmed WAN disconnection; there is no repeated transport/game build in this step. Android component execution and account integration follow the database work.
 
 | Stage | Current state |
 | --- | --- |
 | Download pinned MongoDB and Python wheels while connected | Complete on Windows; cache retained |
 | Install from the local cache | Complete on Windows; installation itself was performed while internet remained available |
-| Verify MongoDB startup and clean-restart persistence with WAN disconnected | Current isolated test; Windows result pending |
+| Verify MongoDB startup and clean-restart persistence with WAN disconnected | Fresh-data startup failed with exit14; MongoDB/process logs requested |
 | Initialize/resume the authenticated game replica set, schema and administrator | Pending; original partial runtime preserved |
 | Start database and local admin website; check transactions and saved changes | Pending |
 | Connect Android accounts, progression and Alliance Battle | Pending integration |
@@ -46,7 +46,7 @@ All website assets are local. Neither the website nor MongoDB binds to the LAN. 
 
 ## Windows sequence
 
-Follow only the current step in NEXT_TEST.md. The sequence below is a reference for the later authenticated game deployment, not an instruction to rerun installation or reopen the failed data now.
+Follow only the current read-only log handoff in NEXT_TEST.md; the initial disposable startup attempt has already failed. The sequence below is a reference for the later authenticated game deployment, not an instruction to rerun installation or reopen the failed data now.
 
 The original Windows initialization log identified a WiredTiger metadata sharing violation followed by WT_PANIC. Later scratch tracing identified a file holder, while the exact relationship to the production crash and a safe system remedy remained unverified. The user deferred the malware investigation; this request resumes database setup without service/security changes. Keep runtime/alliance, its logs, operation-lock evidence and the crash dump in the installation directory. Do not delete files, use repair or rerun the installer to remove that evidence.
 
