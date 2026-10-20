@@ -4,7 +4,7 @@ This delivery implements the persistent game rules and a local operator website.
 
 The user now prioritizes local MongoDB setup. We use **MongoDB Community Edition8.0.32**, the free self-managed edition that can run offline ([official overview](https://www.mongodb.com/products/self-managed/community-edition)). The pinned portable MongoDB and17 Python packages already passed Windows installation. Reuse them. The previous failure was database startup, not a missing paid product or installer.
 
-Current action: [NEXT_TEST.md](NEXT_TEST.md) collects read-only launcher-lock/process/listener metadata after the first restart was blocked. The latest MongoDB log records completed storage shutdown after Ctrl-C; our existence-only operation.lock marker blocks the retry. Current owner liveness is unknown. Do not remove locks, stop additional processes or repeat initialization. Startup, authenticated transaction checks, browser login and Area 1 previously passed. New-area/audit/sign-out/restart acceptance remains pending.
+Current action: [NEXT_TEST.md](NEXT_TEST.md) updates the launcher, preserves the confirmed stale legacy marker with fresh safety checks, then tests database start/stop/restart and the existing administrator website. The returned report confirms old owner7400 was absent and both application ports had no listeners. The new permanent operation.guard uses an OS-held lock; its file remains after shutdown and must not be deleted. Recovery uses the same guard, preserves the old marker backup and never changes credentials or database contents. Windows recovery/restart remains pending. No rebuild, reinstall or initialization is needed.
 
 | Stage | Current state |
 | --- | --- |
@@ -13,7 +13,8 @@ Current action: [NEXT_TEST.md](NEXT_TEST.md) collects read-only launcher-lock/pr
 | Verify MongoDB startup and clean-restart persistence | Complete on Windows under LOCALAPPDATA; user confirms WAN disconnected and local Ethernet connected |
 | Initialize the authenticated game replica set, schema and administrator | Complete on Windows; username Uni; selected profile runtime; internet access was available during initialization |
 | Start database and local admin website; check transactions and login | Complete on Windows; console checks pass; browser login/Area 1/WAN disconnection user-confirmed |
-| Create an area, check audit and sign-out, verify records after restart | Restart blocked by launcher marker; inspect current owner first; browser mutation results not yet supplied |
+| Recover launcher marker and verify updated stop/restart | Stale owner confirmed; guarded recovery and OS-lock fix ready for Windows acceptance |
+| Create an area, check audit and sign-out, verify records after restart | Pending; check any existing area after recovery before creating another |
 | Connect Android accounts, progression and Alliance Battle | Pending integration |
 
 The final database binds to127.0.0.1:27018 and the administrator website to127.0.0.1:18765. The Windows game service will use the database locally; Android clients will communicate with the game service. The internet database URL in `.env` is not used.
@@ -47,7 +48,7 @@ All website assets are local. Neither the website nor MongoDB binds to the LAN. 
 
 ## Windows sequence
 
-Follow [NEXT_TEST.md](NEXT_TEST.md) for the current read-only lock inspection. The full launch/persistence reference below is paused at restart until current lock ownership is known. Do not run those commands again yet. Initialization, startup and first login remain complete.
+Follow [NEXT_TEST.md](NEXT_TEST.md) for the current update/recovery/restart sequence. Keep old launcher sessions stopped during migration and use the updated code only. The existing credentials and profile data remain authoritative. Do not initialize again or delete either MongoDB storage locks or the new operation.guard.
 
 The profile standalone fixture passed startup, journaled write/read, both clean shutdowns and a persisted read after restart. This does not prove recovery of the old repository database or the disappearance of the earlier sharing conflict. Keep `runtime/alliance`, its logs/lock evidence, all disposable test directories and crash dumps. The user deferred the malware investigation; no service/security changes are part of this step.
 
