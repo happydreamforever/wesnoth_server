@@ -1,43 +1,12 @@
-# Next test: build the account-enabled Android game
+# Next test: install the account-enabled Android game
 
-The Windows account listener now reports READY on `100.99.99.14:15001`. Its native startup and backend check are accepted. The next visible game milestone is the Android update containing account registration, login, personal-leader profile and logout. Team gameplay and custom campaign rewards remain later work.
+The Windows account listener reports READY on `100.99.99.14:15001`. The returned Android account build log now passes all six native steps, 33 Gradle tasks and final artifact checks. The user confirms internet was available during this build; Gradle used `--offline`, but a WAN-disconnected build is not established. The next visible game milestone is the setup screen for this completed APK. Team gameplay and custom campaign rewards remain later work.
 
-**Current step: build the Android update only.** This uses the previously delivered helper; no new implementation pull is required. Keep the running database/admin/bridge, their credentials/identity, all completed game stages and OBB. If the helper is absent, return the error before choosing a client-only update. Do not reinstall dependencies or rebuild the server.
+**Current step: install the completed Android update and confirm its setup screen.** Use the previously delivered installer; no pull or rebuild is needed. Keep the running database/admin/bridge, their credentials/identity, all completed game stages and OBB. Stop after this step and return its result before continuing to profile import or account testing.
 
-## 1. Build the account-enabled Android game
+## 1. Install the completed APK in LDPlayer
 
-Keep local Ethernet connected and internet/WAN disconnected. Keep the database, admin-service and account-bridge windows open. In a **new PowerShell window**, run:
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client' -ErrorAction Stop
-
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Build-WindowsAndroidAccountGame.ps1'
-
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Android account game build failed. Send the saved build log.'
-    }
-}
-```
-
-The builder reuses 567 completed engine objects, compiles the account/title-screen changes, and links a new engine in `build\android-account-engine`. It packages an APK in `build\android-account-game`, checks its native payloads and verifies that its signer matches the original game. Gradle runs offline using the existing cache.
-
-Expected first-build markers include:
-
-```text
-ANDROID ACCOUNT ENGINE BUILD PASS
-ANDROID ACCOUNT GAME BUILD PASS
-ANDROID ACCOUNT GAME BUILD COMPLETE: ...\build\android-account-game\receipt.json
-Saved log: ...\diagnostics\android-account-build-<timestamp>-<id>.txt
-```
-
-The package remains `org.wesnoth.offline`, now versionCode `1192601`, with x86_64/minAPI23. The existing completed engine, original APK and OBB are preserved. **Stop after this build and send the saved `android-account-build-*.txt` log**, including any error. Confirm whether WAN was disconnected during the build. A build success is not yet an Android account-runtime pass; installation comes after this result is accepted.
-
-## 2. Update the app and import the public server profile
-
-After the Android build is accepted, leave LDPlayer open and run:
+Keep local Ethernet connected and internet/WAN disconnected. Leave LDPlayer and the database, admin-service and account-bridge windows open. In a **new PowerShell window**, run:
 
 ```powershell
 & {
@@ -55,11 +24,17 @@ After the Android build is accepted, leave LDPlayer open and run:
 }
 ```
 
-The helper verifies the APK before Android changes, updates the existing installation using `adb install -r`, and transfers only a validated public profile to a unique file in LDPlayer's Downloads folder. It performs no uninstall, app-data reset or OBB transfer. Existing saved games remain in the same app storage.
+The helper verifies the completed APK, its receipt and matching signer before Android changes, updates the existing installation using `adb install -r`, and transfers only a validated public profile to a unique file in LDPlayer's Downloads folder. The package remains `org.wesnoth.offline`, now versionCode `1192601`, with x86_64/minAPI23. It performs no uninstall, app-data reset or OBB transfer. Existing saved games remain in the same app storage. Verification may take a few minutes; let it finish.
 
 Expected console marker: `ANDROID ACCOUNT GAME INSTALL COMPLETE`. The log is `wesnoth_client\diagnostics\android-account-install-*.txt`. This marker confirms the update and a fresh setup-activity marker; it does not confirm account registration or login.
 
 Expected LDPlayer screen: **Wesnoth Alliance**, with **Import server profile** and **Start game**.
+
+**Stop here and send the saved `android-account-install-*.txt` log**, including any error, and confirm which screen appears in LDPlayer. Report whether WAN was disconnected during installation. The helper also prints later import instructions; wait for setup acceptance before following them. Installation alone does not test LAN account reachability.
+
+## 2. Import the public profile after installation is accepted
+
+Use the address, fingerprint and Downloads filename from the successful install log:
 
 1. Choose **Import server profile**.
 2. In the Android file picker, open **Downloads** and select the `wesnoth-alliance-public-profile-<id>.json` filename printed by the install helper.
@@ -67,7 +42,7 @@ Expected LDPlayer screen: **Wesnoth Alliance**, with **Import server profile** a
 4. If they match, choose **Trust server**. The setup screen should display the saved trusted server.
 5. Choose **Start game**. Existing game data is checked and reused. At the main menu, the former Add-ons entry is now **Alliance**.
 
-Return the install log and confirm that the setup screen, profile import and Alliance menu appear. If connection later fails, return the displayed error and account-listener log; the old guest connection on 15000 does not establish reachability on 15001.
+Confirm that profile import succeeds and the Alliance menu appears. If connection later fails, return the displayed error and account-listener log; the old guest connection on 15000 does not establish reachability on 15001.
 
 ## 3. Manual account acceptance with WAN disconnected
 

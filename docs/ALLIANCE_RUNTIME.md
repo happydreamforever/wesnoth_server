@@ -4,7 +4,7 @@ This delivery implements the persistent game rules and a local operator website.
 
 The user now prioritizes local MongoDB setup. We use **MongoDB Community Edition8.0.32**, the free self-managed edition that can run offline ([official overview](https://www.mongodb.com/products/self-managed/community-edition)). The pinned portable MongoDB and17 Python packages already passed Windows installation. Reuse them. The previous failure was database startup, not a missing paid product or installer.
 
-Current action: the Windows database/admin acceptance and standalone Android transport acceptance are complete at their delivered scopes. The latest device-only rerun passes all 22 cases with WAN disconnected according to the user's corrected report. Preserve all applications and data. [NEXT_TEST.md](NEXT_TEST.md) describes the next implementation milestone: a real Android-to-Windows player account flow using the existing local MongoDB. No further unchanged transport test is requested.
+Current action: the Windows database/admin acceptance, standalone Android transport acceptance and account-enabled APK build are complete at their tested scopes. The user confirms internet was available during the APK build; its Gradle command used --offline. The native Windows account bridge reports READY. [NEXT_TEST.md](NEXT_TEST.md) now installs the completed APK in LDPlayer and stops for setup-screen confirmation. Preserve existing applications and data. Public-profile import and real Android-to-Windows account acceptance follow; no unchanged build or transport rerun is requested.
 
 | Stage | Current state |
 | --- | --- |
@@ -16,7 +16,7 @@ Current action: the Windows database/admin acceptance and standalone Android tra
 | Verify database and website restart | Re-launches succeed in returned Windows output; user confirms WAN disconnected. Recovery-helper backup report and shutdown exit codes not supplied |
 | Create an area, check audit and sign-out, verify records after restart | Passed by user report: same area name, matching audit identifier, login required after sign-out; WAN disconnected during restarts |
 | Native Android transport fixture | Windows build and 22 LDPlayer loopback cases pass; later device-only rerun also passes with WAN disconnected by corrected user report |
-| Connect Android accounts | Implemented and VPS-tested; Windows bridge build and READY startup pass; Android account APK build/install and LDPlayer acceptance pending in NEXT_TEST.md |
+| Connect Android accounts | Implemented and VPS-tested; Windows bridge READY and account APK build pass; APK installation/setup, public-profile import and LDPlayer account acceptance pending in NEXT_TEST.md |
 | Connect progression and Alliance Battle | Pending gameplay integration |
 
 The final database binds to127.0.0.1:27018 and the administrator website to127.0.0.1:18765. The Windows game service will use the database locally; Android clients will communicate with the game service. The internet database URL in `.env` is not used.
@@ -38,7 +38,7 @@ The new `alliance-account-bridge.exe` listens on the numeric address/port in the
 
 The Android update adds a public-profile import screen and an Alliance main-menu entry. Only the public JSON is copied to LDPlayer; private keys/runtime credentials stay on Windows. Compare the printed address/fingerprint and approve it explicitly in the app. Create a separate player account; administrator Uni remains an administrator. Closing the app loses the in-memory session, so log in again. Successful logout revokes the server token. Existing campaigns and guest multiplayer still use their original rules and do not award permanent account XP.
 
-VPS integration uses a new disposable authenticated MongoDB replica set; it does not touch the user's database. Registration, Unicode credentials, duplicate rejection, login/profile/logout and restart persistence pass. The corrected Windows bridge now reports READY on100.99.99.14:15001 after the healthy backend diagnostic. Native startup is accepted; the prior failure cause remains unproven. NEXT_TEST.md builds the previously delivered Android account update, preserving existing server/runtime/identity and original game stages. Actual Windows account APK build and LDPlayer account acceptance remain pending. Follow [NEXT_TEST.md](NEXT_TEST.md) for exact commands and expected results.
+VPS integration uses a new disposable authenticated MongoDB replica set; it does not touch the user's database. Registration, Unicode credentials, duplicate rejection, login/profile/logout and restart persistence pass. The corrected Windows bridge now reports READY on100.99.99.14:15001 after the healthy backend diagnostic. Native startup is accepted; the prior failure cause remains unproven. The returned Windows account APK build now passes six native steps and 33 Gradle tasks, including artifact/signature checks, with internet available by user report. NEXT_TEST.md installs this completed update and asks for its setup-screen result. It preserves existing server/runtime/identity and original game stages. Actual LDPlayer account acceptance remains pending. Follow [NEXT_TEST.md](NEXT_TEST.md) for exact commands and expected results.
 
 ## Local components
 
