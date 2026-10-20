@@ -6,13 +6,17 @@ tests do not assert Windows, Android UI or real MongoDB acceptance.
 from __future__ import annotations
 
 import concurrent.futures
+import contextlib
 import gzip
+import hashlib
 import http.server
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
 import secrets
+import shutil
 import signal
 import socket
 import ssl
@@ -39,6 +43,195 @@ ACCOUNT = {
 class Backend(http.server.ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
+
+
+@unittest.skipUnless(BRIDGE.is_file(), "Build the native account bridge first")
+class BridgeIdentityTests(unittest.TestCase):
+    """Exercise the Windows PEM newline representation without changing keys."""
+    @classmethod
+    def setUpClass(cls):
+        cls.temporary = tempfile.TemporaryDirectory(prefix="alliance identity newline ")
+        cls.scratch = Path(cls.temporary.name)
+        cls.original = cls.scratch / "original-identity"
+        with contextlib.redirect_stdout(io.StringIO()):
+            cls.profile, _ = IDENTITY.prepare_identity(cls.original, "127.0.0.1", 15001, Path("/usr/bin/openssl"))
+        cls.secret = secrets.token_urlsafe(32)
+        cls.calls = []
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            protocol_version = "HTTP/1.1"
+            def log_message(self, *_):
+                pass
+            def do_GET(self):
+                if self.headers.get("Authorization") != "Bearer " + cls.secret:
+                    self.send_error(401)
+                    return
+                cls.calls.append(self.path)
+                if self.path == "/internal/v1/health":
+                    value = {"status": "ok", "service": "alliance", "api_version": 1}
+                else:
+                    value = {"account": ACCOUNT}
+                data = json.dumps(value).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Connection", "close")
+                self.end_headers()
+                self.wfile.write(data)
+        cls.backend = Backend(("127.0.0.1", 18765), Handler)
+        cls.backend_thread = threading.Thread(target=cls.backend.serve_forever, daemon=True)
+        cls.backend_thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.backend.shutdown()
+        cls.backend.server_close()
+        cls.backend_thread.join(timeout=3)
+        cls.temporary.cleanup()
+
+    def setUp(self):
+        self.case = Path(tempfile.mkdtemp(dir=self.scratch, prefix="case-"))
+        self.identity = self.case / "identity"
+        shutil.copytree(self.original, self.identity)
+        self.runtime = self.case / "runtime"
+        self.runtime.mkdir()
+        (self.runtime / "config.json").write_text(json.dumps({
+            "format": 1, "purpose": "wesnoth-alliance-local",
+            "service": {"host": "127.0.0.1", "port": 18765, "bridge_secret": self.secret},
+        }))
+        self.process = None
+        self.log_path = self.case / "bridge.log"
+        self.log = self.log_path.open("wb")
+        self.addCleanup(self.log.close)
+        self.addCleanup(self.stop_process)
+
+    def stop_process(self):
+        if self.process is not None and self.process.poll() is None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait(timeout=5)
+
+    def fixture_receipt(self):
+        # Model the receipt produced with native Windows OpenSSL output. Only
+        # disposable fixture metadata is updated, never a real identity.
+        receipt = self.identity / "prepared.json"
+        value = json.loads(receipt.read_text())
+        value["files"] = {
+            name: hashlib.sha256((self.identity / name).read_bytes()).hexdigest()
+            for name in IDENTITY.FILES
+        }
+        receipt.write_text(json.dumps(value))
+
+    def snapshot(self):
+        return {
+            str(path.relative_to(self.case)): path.read_bytes()
+            for root in (self.identity, self.runtime) for path in root.rglob("*") if path.is_file()
+        }
+
+    def launch(self, *, accepted, stage=None):
+        before = self.snapshot()
+        count = len(self.calls)
+        self.process = subprocess.Popen(
+            [str(BRIDGE), "--runtime", str(self.runtime), "--identity", str(self.identity)],
+            stdout=self.log, stderr=subprocess.STDOUT)
+        if not accepted:
+            self.assertEqual(self.process.wait(timeout=8), 1)
+            self.assertNotIn("ALLIANCE ACCOUNT BRIDGE READY", self.log_path.read_text())
+            self.assertEqual(len(self.calls), count, "Invalid identity reached the backend")
+        else:
+            limit = time.monotonic() + 8
+            while time.monotonic() < limit:
+                if self.process.poll() is not None:
+                    self.fail("Valid identity rejected: " + self.log_path.read_text())
+                if "ALLIANCE ACCOUNT BRIDGE READY" in self.log_path.read_text():
+                    break
+                time.sleep(.02)
+            else:
+                self.fail("Valid identity did not become ready")
+            # Confirm actual TLS and a bounded application response, rather
+            # than treating a startup marker as certificate acceptance.
+            raw = socket.create_connection(("127.0.0.1", 15001), timeout=3)
+            raw.sendall(b"\0\0\0\1")
+            self.assertEqual(BridgeTests.read_exact(raw, 4), b"\0\0\0\0")
+            context = ssl.create_default_context(cadata=self.profile["certificate_pem"])
+            with context.wrap_socket(raw, server_hostname="127.0.0.1") as peer:
+                value = {"v": 1, "id": "b" * 32, "op": "me", "body": {},
+                         "token": secrets.token_urlsafe(32)}
+                encoded = gzip.compress(json.dumps(value).encode())
+                peer.sendall(struct.pack("!I", len(encoded)) + encoded)
+                size, = struct.unpack("!I", BridgeTests.read_exact(peer, 4))
+                self.assertLessEqual(size, 65536)
+                response = json.loads(gzip.decompress(BridgeTests.read_exact(peer, size)))
+                self.assertTrue(response["ok"])
+                self.assertEqual(response["data"]["account"]["username"], "BridgePlayer")
+            self.stop_process()
+        self.assertEqual(self.snapshot(), before, "Identity or runtime files changed")
+        output = self.log_path.read_text()
+        self.assertNotIn(self.secret, output)
+        self.assertNotIn("PRIVATE KEY", output)
+        if stage is not None:
+            self.assertRegex(output, rf"stage={stage}(?:; error_code=\d+)?\.")
+
+    def test_lf_certificate_still_accepted(self):
+        self.assertEqual(IDENTITY.verify_identity(self.identity), self.profile)
+        self.launch(accepted=True)
+
+    def test_crlf_certificate_and_key_match_lf_public_profile(self):
+        for name in ("server-cert.pem", "server-key.pem"):
+            path = self.identity / name
+            path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
+        self.fixture_receipt()
+        # This is already supported by the identity preparation/verification
+        # helper, which canonicalizes the public profile only.
+        self.assertEqual(IDENTITY.verify_identity(self.identity), self.profile)
+        self.launch(accepted=True)
+
+    def test_certificate_content_mismatch_is_not_hidden_by_normalization(self):
+        path = self.identity / "server-cert.pem"
+        value = path.read_bytes().replace(b"\n", b"\r\n")
+        lines = value.split(b"\r\n")
+        lines[1] = (b"A" if lines[1][:1] != b"A" else b"B") + lines[1][1:]
+        path.write_bytes(b"\r\n".join(lines))
+        self.fixture_receipt()
+        self.launch(accepted=False, stage="certificate-profile")
+
+    def test_wrong_certificate_pin_is_rejected(self):
+        path = self.identity / "public-profile.json"
+        value = json.loads(path.read_text())
+        value["certificate_sha256"] = "0" * 64
+        path.write_text(json.dumps(value))
+        self.fixture_receipt()
+        self.launch(accepted=False, stage="certificate-validation")
+
+    def test_bare_carriage_returns_are_not_valid_pem_newlines(self):
+        path = self.identity / "server-cert.pem"
+        path.write_bytes(path.read_bytes().replace(b"\n", b"\r"))
+        self.fixture_receipt()
+        self.launch(accepted=False, stage="certificate-profile")
+
+    def test_missing_certificate_has_safe_file_stage(self):
+        (self.identity / "server-cert.pem").unlink()
+        self.launch(accepted=False, stage="certificate-file")
+
+    def test_missing_private_key_has_safe_file_stage(self):
+        (self.identity / "server-key.pem").unlink()
+        self.launch(accepted=False, stage="private-key-file")
+
+    def test_invalid_private_key_does_not_leak_bytes(self):
+        (self.identity / "server-key.pem").write_text(
+            "-----BEGIN PRIVATE KEY-----\n" + self.secret + "\n-----END PRIVATE KEY-----\n")
+        self.launch(accepted=False, stage="tls-context")
+
+    def test_malformed_runtime_does_not_leak_private_input(self):
+        (self.runtime / "config.json").write_text('{"private_input":"' + self.secret)
+        self.launch(accepted=False, stage="runtime-config")
+
+    def test_malformed_profile_has_safe_stage(self):
+        (self.identity / "public-profile.json").write_text('{"format":')
+        self.launch(accepted=False, stage="public-profile")
 
 
 @unittest.skipUnless(BRIDGE.is_file(), "Build the native account bridge first")
@@ -266,6 +459,7 @@ class BridgeTests(unittest.TestCase):
                                 capture_output=True, timeout=8)
         self.assertEqual(result.returncode, 1)
         self.assertNotIn(self.secret.encode(), result.stdout + result.stderr)
+        self.assertRegex(result.stderr, rb"stage=listener-bind; error_code=\d+\.")
         self.assertTrue(self.exchange(self.request())["ok"])
 
     def test_startup_rejects_incompatible_backend(self):
@@ -275,6 +469,7 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertNotIn(b"ALLIANCE ACCOUNT BRIDGE READY", result.stdout)
         self.assertNotIn(self.secret.encode(), result.stdout + result.stderr)
+        self.assertIn(b"stage=backend-health.", result.stderr)
 
     def test_connection_capacity_recovers_after_peers_close(self):
         peers = []

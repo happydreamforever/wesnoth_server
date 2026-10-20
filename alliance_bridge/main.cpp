@@ -273,7 +273,21 @@ struct Settings {
     unsigned short port;
     std::string certificate, key;
 };
-Settings settings(const std::filesystem::path& runtime, const std::filesystem::path& identity) {
+std::string canonical_pem_newlines(const std::string& pem) {
+    // The identity generator preserves OpenSSL's file bytes but writes LF in
+    // the public profile. Native Windows OpenSSL can write CRLF in the file.
+    // Compare those representations without changing either original file.
+    std::string result;
+    result.reserve(pem.size());
+    for(std::size_t i = 0; i < pem.size(); ++i) {
+        if(pem[i] == '\r' && i + 1 < pem.size() && pem[i + 1] == '\n') continue;
+        result += pem[i];
+    }
+    return result;
+}
+Settings settings(const std::filesystem::path& runtime, const std::filesystem::path& identity,
+                  const char*& phase) {
+    phase = "runtime-config";
     const auto configuration = parse_json(regular_file(runtime / "config.json", max_json));
     if(!configuration.is_object()) invalid();
     const auto& root = configuration.as_object();
@@ -283,6 +297,7 @@ Settings settings(const std::filesystem::path& runtime, const std::filesystem::p
     Settings result;
     result.secret = text(service.at("bridge_secret"), 128);
     if(!ascii_word(result.secret, 43, 128)) invalid();
+    phase = "public-profile";
     const auto profile_value = parse_json(regular_file(identity / "public-profile.json", max_json));
     if(!profile_value.is_object()) invalid();
     const auto& profile = profile_value.as_object();
@@ -296,9 +311,11 @@ Settings settings(const std::filesystem::path& runtime, const std::filesystem::p
        result.address == "255.255.255.255" || result.address.find('%') != std::string::npos) invalid();
     if(!profile.at("port").is_int64() || profile.at("port").as_int64() != 15001) invalid();
     result.port = 15001;
+    phase = "certificate-file";
     result.certificate = regular_file(identity / "server-cert.pem", 16384);
-    result.key = regular_file(identity / "server-key.pem", 16384);
-    if(result.certificate != text(profile.at("certificate_pem"), 16384)) invalid();
+    phase = "certificate-profile";
+    if(canonical_pem_newlines(result.certificate) != text(profile.at("certificate_pem"), 16384)) invalid();
+    phase = "certificate-validation";
     auto bio = std::unique_ptr<BIO, decltype(&BIO_free)>(BIO_new_mem_buf(result.certificate.data(), result.certificate.size()), BIO_free);
     auto cert = std::unique_ptr<X509, decltype(&X509_free)>(PEM_read_bio_X509(bio.get(), nullptr, nullptr, nullptr), X509_free);
     if(!cert || X509_check_ip_asc(cert.get(), result.address.c_str(), 0) != 1 ||
@@ -312,6 +329,8 @@ Settings settings(const std::filesystem::path& runtime, const std::filesystem::p
         fingerprint += "0123456789abcdef"[digest[i] & 15];
     }
     if(fingerprint != text(profile.at("certificate_sha256"), 64)) invalid();
+    phase = "private-key-file";
+    result.key = regular_file(identity / "server-key.pem", 16384);
     return result;
 }
 
@@ -491,6 +510,7 @@ public:
 } // namespace
 
 int main(int argc, char** argv) {
+    const char* phase = "arguments";
     try {
         if(argc == 2 && std::string(argv[1]) == "--version") {
             std::cout << "WESNOTH_ALLIANCE_ACCOUNT_BRIDGE protocol=1 max_connections=32 timeout_seconds=10\n";
@@ -502,7 +522,8 @@ int main(int argc, char** argv) {
             if((key != "--runtime" && key != "--identity") || ++i == argc || !args.emplace(key, argv[i]).second) invalid();
         }
         if(args.size() != 2) invalid();
-        const auto config = settings(std::filesystem::absolute(args.at("--runtime")), std::filesystem::absolute(args.at("--identity")));
+        const auto config = settings(std::filesystem::absolute(args.at("--runtime")), std::filesystem::absolute(args.at("--identity")), phase);
+        phase = "tls-context";
         asio::io_context io;
         ssl::context context(ssl::context::tls_server);
         context.set_options(ssl::context::no_compression);
@@ -510,19 +531,31 @@ int main(int argc, char** argv) {
         context.use_certificate_chain(asio::buffer(config.certificate));
         context.use_private_key(asio::buffer(config.key), ssl::context::pem);
         if(SSL_CTX_check_private_key(context.native_handle()) != 1) invalid();
+        phase = "backend-health";
         check_backend(config.secret);
+        phase = "listener-bind";
         Listener listener(io, context, config);
+        phase = "listener-start";
         listener.accept();
         asio::signal_set signals(io, SIGINT, SIGTERM);
         signals.async_wait([&io](Error, int) { io.stop(); });
         std::cout << "ALLIANCE ACCOUNT BRIDGE READY " << config.address << ':' << config.port
                   << " -> local account service\nKeep this window open. Ctrl+C stops the bridge.\n" << std::flush;
+        phase = "serving";
         io.run();
         std::cout << "Alliance account bridge stopped.\n";
         return 0;
+    } catch(const boost::system::system_error& error) {
+        // A fixed phase and numeric OS/library code are safe; what() may
+        // contain private input or library diagnostics and is never printed.
+        std::cerr << "ERROR: Alliance account bridge failed; stage=" << phase
+                  << "; error_code=" << error.code().value()
+                  << ". Existing files were preserved.\n";
+        return 1;
     } catch(...) {
         // Driver/JSON/SSL exceptions can embed private configuration or bytes.
-        std::cerr << "ERROR: Alliance account bridge could not start or continue. Check the selected runtime, identity, address and port. Existing files were preserved.\n";
+        std::cerr << "ERROR: Alliance account bridge failed; stage=" << phase
+                  << ". Check this startup stage. Existing files were preserved.\n";
         return 1;
     }
 }
