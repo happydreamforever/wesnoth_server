@@ -1,45 +1,41 @@
-# Next test: local account-service health
+# Next test: start the existing account bridge after backend health passed
 
-The corrected Windows bridge rebuild passed, including preservation of the old build. Startup now reaches `stage=backend-health`: certificate validation and TLS key matching have completed, but the local account service has not passed its check. The generic stage does not distinguish a missing listener, timeout, rejected authentication or a database/response error.
+The Windows backend diagnostic now passes: MongoDB and the Python service are listening on their expected loopback ports, the selected runtime credential authenticates, and the HTTP200 response contains all expected health fields. The native bridge has not yet reported READY. Its earlier failure cause remains unconfirmed.
 
-**Current step: collect the local service result.** Keep the existing MongoDB and admin-service windows open. Preserve the newly built bridge and its backup. No native/Android rebuild, database initialization, identity change or service restart is requested.
+**Current step: retry the already-built account bridge once.** Keep the database and admin-service windows open. No pull, rebuild, database initialization, certificate change or service restart is needed. This update records the result and the next command only.
 
-## 1. Update only the server diagnostic while connected to GitHub
+## 1. Run the existing bridge
 
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
-    & $bash --noprofile --norc -c 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server pull --ff-only origin main'
-    if ($LASTEXITCODE -ne 0) { throw 'Server pull failed. Stop and send the output.' }
-}
-```
-
-The client receives mirrored project records only; its application is unchanged. Disconnect WAN after this pull while retaining Ethernet.
-
-## 2. Run one read-only backend diagnostic
-
-In an ordinary PowerShell window:
+Keep local Ethernet connected and internet/WAN disconnected for the test. In the PowerShell window where the failed bridge command returned to the prompt, run:
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
+
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Test-WindowsAllianceBackend.ps1' `
-        -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
+        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAllianceBridge.ps1' `
+        -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime') `
+        -MsysRoot 'D:\Test\wesnoth-setup\msys64'
+
     if ($LASTEXITCODE -ne 0) {
-        throw 'Backend check reported a failure. Send the saved text and JSON reports.'
+        throw 'Bridge retry failed. Send the complete console output and new saved run log.'
     }
 }
 ```
 
-Expected: current listener metadata for TCP18765 and27018, followed by a safe health-check result. A healthy response prints `outcome=healthy; http_status=200`, all four checks `True`, and `ALLIANCE BACKEND CHECK PASSED`. A failed result should distinguish the HTTP status or connection/timeout/configuration problem. This is a diagnostic result, not account login or Android connectivity acceptance.
+Expected:
 
-Send the complete console output and printed diagnostics/alliance-backend-*.txt and*.json reports, including a failure result. Confirm whether WAN was disconnected during the diagnostic. The helper reads the existing bridge credential locally but never prints it. Do not send config.json, credentials.json, .env, private keys or passwords.
+```text
+ALLIANCE ACCOUNT BRIDGE ARTIFACT VERIFIED
+ALLIANCE ACCOUNT BRIDGE READY 100.99.99.14:15001 -> local account service
+Keep this window open. Ctrl+C stops the bridge.
+```
 
-**Stop after this check.** The remaining sections describe later steps after the backend check and actual bridge READY marker pass.
+**Stop here and send the console output, leaving successful processes running.** If it fails, include the new `stage=...` line and the printed diagnostics/alliance-bridge-run-*.txt log. Do not repeat the rebuild or restart services. If the same backend-health failure repeats despite the healthy Python check, the next investigation must distinguish native connect/write/read/HTTP/validation failure without exposing credentials. Do not send config.json, .env, private keys, passwords or tokens.
 
-## 3. Build the account-enabled Android game
+Report whether WAN was disconnected during this retry. Native startup success alone will not establish Android reachability or login. The remaining sections are future steps after the READY marker is accepted.
+
+## 2. Build the account-enabled Android game
 
 After the listener starts successfully, use another PowerShell window:
 
@@ -70,7 +66,7 @@ Saved log: ...\diagnostics\android-account-build-<timestamp>-<id>.txt
 
 The package remains `org.wesnoth.offline`, now versionCode `1192601`, with x86_64/minAPI23. The existing completed engine, original APK and OBB are preserved. Return `android-account-build-*.txt`; a build success is not yet an Android account-runtime pass.
 
-## 4. Update the app and import the public server profile
+## 3. Update the app and import the public server profile
 
 After the Android build is accepted, leave LDPlayer open and run:
 
@@ -104,7 +100,7 @@ Expected LDPlayer screen: **Wesnoth Alliance**, with **Import server profile** a
 
 Return the install log and confirm that the setup screen, profile import and Alliance menu appear. If connection later fails, return the displayed error and account-listener log; the old guest connection on 15000 does not establish reachability on 15001.
 
-## 5. Manual account acceptance with WAN disconnected
+## 4. Manual account acceptance with WAN disconnected
 
 Keep local Ethernet connected, WAN disconnected, and all three Windows backend windows running.
 
