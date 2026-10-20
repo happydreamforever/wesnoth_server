@@ -4,7 +4,7 @@ This delivery implements the persistent game rules and a local operator website.
 
 The user now prioritizes local MongoDB setup. We use **MongoDB Community Edition8.0.32**, the free self-managed edition that can run offline ([official overview](https://www.mongodb.com/products/self-managed/community-edition)). The pinned portable MongoDB and17 Python packages already passed Windows installation. Reuse them. The previous failure was database startup, not a missing paid product or installer.
 
-Current action: [NEXT_TEST.md](NEXT_TEST.md) starts the existing profile database and administrator website in two PowerShell windows, then checks Windows-browser login as `Uni` and the seeded Area 1. Actual administrator initialization now passes with correct username-first prompt order, authenticated setup and owned database shutdown. The user confirms internet access was available during that initialization; it is not a disconnected-WAN initialization test. Preserve the profile credentials/configuration/data; no repeated initialization, pull, build or reinstall is needed for this documentation update. The earlier standalone startup/persistence test passed all8 checks with user-confirmed WAN disconnection.
+Current action: [NEXT_TEST.md](NEXT_TEST.md) creates an area through the already-running local website, checks its audit record and sign-out, then verifies the same records after restarting website and database. Actual Windows database/service startup and transaction checks now pass; the user confirms login as `Uni`, Area 1 and WAN-disconnected operation. Browser/connectivity results are user-observed. Earlier administrator initialization had internet available. Preserve the profile credentials/configuration/data; no repeated initialization, pull, build or reinstall is needed for this documentation update. The earlier standalone startup/persistence test also passed with user-confirmed WAN disconnection.
 
 | Stage | Current state |
 | --- | --- |
@@ -12,7 +12,8 @@ Current action: [NEXT_TEST.md](NEXT_TEST.md) starts the existing profile databas
 | Install from the local cache | Complete on Windows; installation itself was performed while internet remained available |
 | Verify MongoDB startup and clean-restart persistence | Complete on Windows under LOCALAPPDATA; user confirms WAN disconnected and local Ethernet connected |
 | Initialize the authenticated game replica set, schema and administrator | Complete on Windows; username Uni; selected profile runtime; internet access was available during initialization |
-| Start database and local admin website; check transactions and saved changes | Next: start both and confirm login; saved-area/restart test follows |
+| Start database and local admin website; check transactions and login | Complete on Windows; console checks pass; browser login/Area 1/WAN disconnection user-confirmed |
+| Create an area, check audit and sign-out, verify records after restart | Next acceptance using the existing installation |
 | Connect Android accounts, progression and Alliance Battle | Pending integration |
 
 The final database binds to127.0.0.1:27018 and the administrator website to127.0.0.1:18765. The Windows game service will use the database locally; Android clients will communicate with the game service. The internet database URL in `.env` is not used.
@@ -46,7 +47,7 @@ All website assets are local. Neither the website nor MongoDB binds to the LAN. 
 
 ## Windows sequence
 
-Follow [NEXT_TEST.md](NEXT_TEST.md) for the current handoff: with WAN disconnected, start the existing profile database, start the administration service and sign in on Windows as Uni. Initialization is complete. The service performs the database/transaction check automatically. Defer changes and restart testing until login is confirmed. The reference below retains the full sequence.
+Follow [NEXT_TEST.md](NEXT_TEST.md) for the current handoff: with WAN disconnected, create one area and check audit/sign-out, stop website then database, restart database then website with the same profile runtime, and confirm the saved records. Initialization, startup and first login are complete. The website launcher performs the database/transaction check automatically; no extra check command is needed.
 
 The profile standalone fixture passed startup, journaled write/read, both clean shutdowns and a persisted read after restart. This does not prove recovery of the old repository database or the disappearance of the earlier sharing conflict. Keep `runtime/alliance`, its logs/lock evidence, all disposable test directories and crash dumps. The user deferred the malware investigation; no service/security changes are part of this step.
 
@@ -78,18 +79,9 @@ Keep both open. Expected: database running on `127.0.0.1:27018`, then the admin 
 
 ### 3. Test persistence and permissions
 
-The website launcher already performs the database check. After the first browser result, a separate check can also be run in a third PowerShell window:
+In **Areas**, create `Area 2` once (or another unused name if it exists). Expect **Area created.**, and note its identifier. In **Audit log**, match the `create_area` row's Target to that identifier; Reason is `Create an area`. Actor and Target are identifiers, not display names. Sign out, then request `http://127.0.0.1:18765/` afresh and confirm login is required.
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Test-WindowsAlliance.ps1' `
-    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
-if ($LASTEXITCODE -ne 0) { throw 'Alliance database check failed. Send the saved log.' }
-```
-
-Expected: `ALLIANCE DATABASE CHECK PASSED`. The helper checks version, authenticated primary, supported schema, administrator and an explicitly aborted transaction. It does not simulate Android gameplay.
-
-In the website, create `Area 2`. Confirm it appears under Areas and the creation appears under Audit. Sign out; the dashboard must require login again. Stop the website with Ctrl+C, then the database with Ctrl+C. Restart database then website, sign in, and confirm Area 2 still exists. Report these observations along with `diagnostics\alliance-check-*.txt`. The captured local check cannot substitute for these browser/restart observations.
+Stop the website with Ctrl+C once and wait for its PowerShell prompt, then do the same for the database. If an error appears or shutdown does not return, stop and report it instead of forcing a process or deleting locks. Restart database then website using the commands above and wait for each ready message. Sign in and confirm the same area name/identifier and matching audit record still exist. Keep WAN disconnected throughout. Return the observations and both restart outputs; scripts save `diagnostics\alliance-database-*.txt` and `diagnostics\alliance-serve-*.txt` when they exit. The website's automatic check cannot substitute for these browser/restart observations.
 
 ## Recovery boundaries
 
@@ -107,7 +99,7 @@ The verification environment uses Python 3.14.3 and MongoDB 8.0.32. Linux and Wi
 
 `tools/Dockerfile.alliance-verify` records the container image digests and matching Python package versions. Build its small context from that file and `tools/alliance-dependencies/requirements-verify.txt`; never send `.env` or runtime data as a build context. Use `--ulimit nofile=65536:65536` for the Linux test container: repeated fixture collection creation exhausted the default 1024 descriptors in an earlier run. That infrastructure failure was corrected before the final passing run.
 
-Real-database checks cover concurrent team membership/start claims, repeat settlement, transaction rollback, changed leaders/captains, schema uniqueness, admin authorization, CSRF, session expiry/revocation, local-only HTTP, initialization and clean restart. PowerShell helpers are exercised with simulated native tools under Linux PowerShell7.4.6. Actual Windows standalone MongoDB startup/persistence now passes; profile administrator initialization also passes. Authenticated service startup/transaction checks and visual browser behavior still await the user's reports.
+Real-database checks cover concurrent team membership/start claims, repeat settlement, transaction rollback, changed leaders/captains, schema uniqueness, admin authorization, CSRF, session expiry/revocation, local-only HTTP, initialization and clean restart. PowerShell helpers are exercised with simulated native tools under Linux PowerShell7.4.6. Actual Windows standalone MongoDB startup/persistence now passes; profile administrator initialization also passes. Authenticated service startup/transaction checks now pass in the returned Windows console; browser login, Area 1 and WAN-disconnected operation are user-confirmed. New-area/audit/sign-out/restart acceptance remains pending.
 
 
 ## Completed Windows Python identity fixture
@@ -125,6 +117,6 @@ Client `alliance_native/transport.hpp/.cpp` is a new reusable component, outside
 
 Its worker-thread API separates connect/send/receive, supports server-push frames, has no outgoing queue, bounds compressed frames to64KiB, and supports monotonic deadlines/cancellation. It does not decompress or interpret WML. Future callers must bound decompression and validate account message schemas. Operations are serialized, accept at most10seconds and close on timeout; future UI integration must provide a network worker and deliberate idle/reconnect behavior. This is an account transport component, not a replacement for the full game relay or its large scenario payloads.
 
-`Test-WindowsAllianceNative.ps1` builds two C++ files into a new owned directory with existing MINGW64 dependencies and runs24 real native checks through `test_alliance_native.py`. It reads the existing public profile only; original private identity and MongoDB runtime remain untouched. Disposable test identities are created in a separate restricted fixture directory. Reports contain version/case/phase/error metadata, not keys or account payloads. Both success and failure preserve reports and build state. This Windows native check is complete; retain its reports. NEXT_TEST.md now covers the separate MongoDB startup milestone.
+`Test-WindowsAllianceNative.ps1` builds two C++ files into a new owned directory with existing MINGW64 dependencies and runs24 real native checks through `test_alliance_native.py`. It reads the existing public profile only; original private identity and MongoDB runtime remain untouched. Disposable test identities are created in a separate restricted fixture directory. Reports contain version/case/phase/error metadata, not keys or account payloads. Both success and failure preserve reports and build state. This Windows native check is complete; retain its reports. NEXT_TEST.md now covers the separate local administrator persistence milestone.
 
-Actual Windows native component acceptance is complete; LDPlayer execution of that component remains pending. No changed APK/menu is delivered yet. Trusted profile import, selection of this component by Alliance login/team screens, the backend bridge and local database acceptance remain unchecked integration tasks.
+Actual Windows native component acceptance is complete; LDPlayer execution of that component remains pending. No changed APK/menu is delivered yet. Trusted profile import, selection of this component by Alliance login/team screens, the backend bridge and administrator saved-change/restart acceptance remain unchecked integration tasks.

@@ -1,6 +1,6 @@
 # Alliance Battle implementation checklist
 
-Implementation authorized on 2026-10-19. Backend implementation and VPS verification are complete for the checked items. Windows cache preparation and isolated package installation pass. Actual MongoDB profile-location startup, journaled write/read and clean-restart persistence now pass; the user confirms WAN was disconnected while local Ethernet stayed connected for that run. The corrected profile initialization now passes with administrator Uni and owned database stopped. NEXT_TEST.md starts the same LOCALAPPDATA/WesnothAlliance/runtime database and local website for browser login; the original partial repository runtime remains preserved. Administrator website and Android account/team integration remain pending. See [the runtime handoff](ALLIANCE_RUNTIME.md). This is the working specification and delivery checklist; unchecked items are not available in the installed game. Test only with LDPlayer. Preserve the completed1.19.26 game, OBB, native dependencies and guest LAN server.
+Implementation authorized on 2026-10-19. Backend implementation and VPS verification are complete for the checked items. Windows cache preparation and isolated package installation pass. Actual MongoDB profile-location startup, journaled write/read and clean-restart persistence now pass; the user confirms WAN was disconnected while local Ethernet stayed connected for that run. The corrected profile initialization now passes with administrator Uni and owned database stopped. The returned Windows console now confirms profile database/service startup and transaction checks; the user confirms browser login as Uni, seeded Area 1 and WAN-disconnected operation. NEXT_TEST.md checks new-area creation, audit, sign-out and persistence after restart using the same LOCALAPPDATA/WesnothAlliance/runtime. The original partial repository runtime remains preserved. New-area/restart acceptance and Android account/team integration remain pending. See [the runtime handoff](ALLIANCE_RUNTIME.md). This is the working specification and delivery checklist; unchecked items are not available in the installed game. Test only with LDPlayer. Preserve the completed1.19.26 game, OBB, native dependencies and guest LAN server.
 
 ## Player experience and first-release rules
 
@@ -60,14 +60,15 @@ The admin website and internal bridge bind to loopback only. Native game account
 - [x] Confirm WAN was disconnected during the successful profile-storage fixture: user explicitly confirms WAN disconnected and local Ethernet connected. This is user-observed connectivity; the reports do not contain an independent network trace.
 - [x] Confirm actual Windows profile initialization with authenticated MongoDB8.0.32 replica set, schema, scoped application user and first administrator. Returned console shows corrected username-first ordering, Uni and ALLIANCE INITIALIZATION PASSED, with owned database stopped.
 - [x] Record connectivity during successful administrator initialization: user confirms internet access was available. This is setup acceptance, not a disconnected-WAN initialization test; do not repeat initialization solely to change that evidence. Earlier offline standalone acceptance remains recorded separately.
-- [ ] Confirm authenticated service startup and transaction rollback on Windows with WAN disconnected; the website launcher performs this check before serving.
+- [x] Confirm authenticated service startup and transaction rollback on Windows: returned console passes MongoDB8.0.32/authenticated replica set/schema/administrator/rollback checks before serving; the user confirms WAN was disconnected with local Ethernet connected.
 
 ### 2. Accounts and operator website
 
 - [x] Password hashing, revocable scoped sessions, expiry and login throttling.
 - [x] Local admin login, player/team/area/run views and audited state changes with CSRF and authorization checks.
 - [x] Explicit first-admin bootstrap; no default shared password or raw database editor.
-- [ ] Confirm admin startup, login, state persistence across restart and offline operation on Windows.
+- [x] Confirm admin startup and login on Windows: returned console supplies the local URL; user confirms Uni login, Area 1 visible and WAN-disconnected operation. Browser/connectivity observations are user-reported.
+- [ ] Confirm a newly created area and matching audit entry, sign-out requiring fresh login, and persistence of those records after website/database restart with WAN disconnected.
 
 ### 3. Native account integration
 
