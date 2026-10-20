@@ -32,7 +32,7 @@ else:
     action = 'ninja-version' if name == 'ninja.exe' else 'openssl-version'
 with open(os.environ['NATIVE_CALLS'], 'a') as output:
     output.write(json.dumps({'name': name, 'action': action, 'args': args, 'path': os.environ['PATH']}) + '\n')
-if os.environ.get('NATIVE_FAIL') == action:
+if os.environ.get('NATIVE_FAIL') == action and action != 'fixture':
     print('Injected native failure')
     sys.exit(9)
 versions = {
@@ -54,7 +54,10 @@ elif action == 'fixture':
     scratch.mkdir()
     (scratch / 'fixture-sentinel').write_bytes(b'new scratch only')
     with pathlib.Path(args[args.index('--report') + 1]).open('x') as output:
-        json.dump({'simulated': True, 'status': 'passed'}, output)
+        json.dump({'simulated': True, 'status': 'failed' if os.environ.get('NATIVE_FAIL') == action else 'passed'}, output)
+    if os.environ.get('NATIVE_FAIL') == action:
+        print('Injected fixture failure after partial report')
+        sys.exit(9)
 else:
     print('Simulated Python 3.14.3 check')
 '''
@@ -183,7 +186,7 @@ class NativePowerShellTests(unittest.TestCase):
         self.assertEqual(calls[6]["args"], [
             "-S", str(self.source), "-B", str(stage), "-G", "Ninja",
             "-DCMAKE_CXX_COMPILER=" + str(self.compiler), "-DCMAKE_MAKE_PROGRAM=" + str(self.ninja),
-            "-DCMAKE_PREFIX_PATH=" + str(self.msys / "mingw64"), "-DBoost_ROOT=" + str(self.msys / "mingw64"),
+            "-DCMAKE_PREFIX_PATH=" + str(self.msys / "mingw64"),
             "-DBOOST_INCLUDE_DIR=" + str(self.msys / "mingw64/include"),
             "-DOPENSSL_ROOT_DIR=" + str(self.msys / "mingw64"),
             "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_SUPPRESS_REGENERATION=ON",
@@ -211,6 +214,94 @@ class NativePowerShellTests(unittest.TestCase):
         self.parameters.update(ClientRoot=str(custom_client), PythonPath=str(custom_python))
         self.run_helper()
         self.assertEqual(self.read_calls()[6]["args"][1], str(custom_source))
+
+    def select_existing_probe(self):
+        probe = self.repo / "build/alliance-native-previous/alliance-native-probe [checked] & literal $.exe"
+        probe.write_bytes(b"EXISTING_NATIVE_PROBE")
+        self.protected[probe] = hashlib.sha256(probe.read_bytes()).hexdigest()
+        self.parameters["ProbePath"] = str(probe)
+        return probe
+
+    def test_existing_probe_skips_build_tools_and_client_source_and_uses_fresh_scratch(self):
+        probe = self.select_existing_probe()
+        for path in (self.compiler, self.ninja, self.cmake, self.source / "CMakeLists.txt"):
+            self.protected.pop(path, None)
+            path.unlink()
+        self.parameters["ClientRoot"] = str(self.root / "missing client checkout")
+        _, report = self.run_helper()
+        calls = self.read_calls()
+        self.assertEqual([call["action"] for call in calls], ["check-python", "openssl-version", "fixture"])
+        arguments = calls[-1]["args"]
+        self.assertEqual(arguments[arguments.index("--probe") + 1], str(probe))
+        self.assertEqual(arguments[arguments.index("--profile") + 1], str(self.profile))
+        self.assertEqual(arguments[arguments.index("--require-openssl-version") + 1], "3.6.3")
+        scratch = Path(arguments[arguments.index("--scratch") + 1])
+        self.assertNotEqual(scratch.parent, probe.parent)
+        self.assertEqual(scratch.name, "fixtures")
+        self.assertEqual(scratch.parent.parent, self.repo / "build")
+        self.assertEqual((scratch / "fixture-sentinel").read_bytes(), b"new scratch only")
+        self.assertFalse((scratch.parent / "alliance-native-probe.exe").exists())
+        self.assertTrue(all(call["path"] == str(self.compiler.parent) + ";" + self.environment["PATH"] for call in calls))
+        self.assertIn("Reusing existing native Alliance probe without rebuilding:", report)
+        self.assertNotIn("Building the small native", report)
+
+    def test_invalid_selected_probe_stops_without_silent_build_fallback(self):
+        probe = self.select_existing_probe()
+        del self.protected[probe]
+        for index, state in enumerate(("empty-parameter", "empty-file", "missing", "directory"), 1):
+            with self.subTest(state=state):
+                if state == "empty-parameter":
+                    self.parameters["ProbePath"] = ""
+                else:
+                    self.parameters["ProbePath"] = str(probe)
+                    if state == "empty-file":
+                        probe.write_bytes(b"")
+                    elif state == "missing":
+                        probe.unlink()
+                    else:
+                        probe.mkdir()
+                _, report = self.run_helper(success=False, expected_logs=index)
+                self.assertIn("selected existing probe is missing or empty", report)
+                self.assertEqual(self.read_calls(), [])
+                self.assertEqual({path.name for path in (self.repo / "build").iterdir()},
+                                 {"windows-mingw64", "alliance-native-previous"})
+
+    def test_reuse_python_pin_failure_stops_before_fixture(self):
+        self.select_existing_probe()
+        self.run_helper(success=False, failure="check-python")
+        self.assertEqual([call["action"] for call in self.read_calls()], ["check-python"])
+
+    def test_reuse_openssl_pin_and_command_failure_stop_before_fixture(self):
+        self.select_existing_probe()
+        self.run_helper(success=False, bad_version="openssl-version")
+        self.assertEqual([call["action"] for call in self.read_calls()], ["check-python", "openssl-version"])
+        self.calls.unlink()
+        self.run_helper(success=False, failure="openssl-version", expected_logs=2)
+        self.assertEqual([call["action"] for call in self.read_calls()], ["check-python", "openssl-version"])
+
+    def test_reuse_fixture_failure_keeps_partial_report_and_preserves_existing_stage(self):
+        probe = self.select_existing_probe()
+        _, report = self.run_helper(success=False, failure="fixture")
+        calls = self.read_calls()
+        self.assertEqual([call["action"] for call in calls], ["check-python", "openssl-version", "fixture"])
+        arguments = calls[-1]["args"]
+        scratch = Path(arguments[arguments.index("--scratch") + 1])
+        partial = Path(arguments[arguments.index("--report") + 1])
+        self.assertEqual(json.loads(partial.read_text())["status"], "failed")
+        self.assertEqual((scratch / "fixture-sentinel").read_bytes(), b"new scratch only")
+        self.assertEqual(arguments[arguments.index("--probe") + 1], str(probe))
+        self.assertIn("fixture failed with exit 9", report)
+
+    def test_repeated_reuse_preserves_old_probe_scratch_and_reports(self):
+        probe = self.select_existing_probe()
+        self.run_helper()
+        first = {path: path.read_bytes() for path in self.repo.rglob("*") if path.is_file()}
+        self.run_helper(expected_logs=2)
+        for path, content in first.items():
+            self.assertEqual(path.read_bytes(), content, str(path))
+        self.assertEqual(len(list((self.repo / "diagnostics").glob("*.json"))), 2)
+        self.assertEqual(len(list((self.repo / "build").glob("alliance-native-*/fixtures/fixture-sentinel"))), 2)
+        self.assertEqual([path for path in (self.repo / "build").rglob("alliance-native-probe*.exe")], [probe])
 
     def test_python_pin_failure_stops_before_any_build(self):
         _, report = self.run_helper(success=False, failure="check-python")

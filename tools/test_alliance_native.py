@@ -208,20 +208,19 @@ def probe_metadata(binary, flag):
 
 
 def expired_certificate(scratch, identity, openssl):
+    """Self-sign one expired leaf using only the disposable fixture identity.
+
+    No CA database/serial rotation is needed for this single test certificate.
+    Explicit dates require the selected OpenSSL 3.6.3 (VPS checks use 3.5.7).
+    """
     directory = scratch / "expired"
     directory.mkdir()
-    for name, text in (("index.txt", ""), ("serial", "01\n"), ("ca.cnf",
-        "[ca]\ndefault_ca=local\n[local]\ndatabase=index.txt\nserial=serial\n"
-        "new_certs_dir=.\ndefault_md=sha256\npolicy=any_name\n"
-        "[any_name]\ncommonName=supplied\n")):
-        T.write_new(directory / name, text)
     T.openssl_run(openssl, ["req", "-new", "-key", str(identity / "server-key.pem"),
         "-out", "request.pem", "-config", str(identity / "openssl.cnf")], cwd=directory)
-    T.openssl_run(openssl, ["ca", "-batch", "-selfsign", "-keyfile", str(identity / "server-key.pem"),
-        "-in", "request.pem", "-out", "expired.pem", "-config", "ca.cnf",
+    data = T.openssl_run(openssl, ["x509", "-req", "-in", "request.pem",
+        "-signkey", str(identity / "server-key.pem"), "-sha256", "-set_serial", "1",
         "-extfile", str(identity / "openssl.cnf"), "-extensions", "server",
-        "-startdate", "20000101000000Z", "-enddate", "20010101000000Z"], cwd=directory)
-    data = T.openssl_run(openssl, ["x509", "-in", str(directory / "expired.pem")])
+        "-not_before", "20000101000000Z", "-not_after", "20010101000000Z"], cwd=directory)
     path = directory / "public.pem"
     T.write_new(path, data)
     return path, data.decode("ascii")
@@ -306,6 +305,7 @@ def run(args, report):
         print("RUN " + name + " (no socket)", flush=True)
         checked(name, probe_run(args.probe, changed, cert, extra=("--validate-only",)),
                 ok=False, errors=(error,))
+    print("PREPARE expired fixture certificate (disposable identity)", flush=True)
     expired_path, expired_pem = expired_certificate(args.scratch, identity, args.openssl)
     changed = copy.deepcopy(loopback)
     changed["certificate_sha256"] = hashlib.sha256(ssl.PEM_cert_to_DER_cert(expired_pem)).hexdigest()

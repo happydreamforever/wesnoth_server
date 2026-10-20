@@ -67,14 +67,15 @@ The admin website and internal bridge bind to loopback only. Native game account
 
 ### 3. Native account integration
 
-The 2026-10-20 delivery implements the portable server identity/public profile foundation and a Python loopback fixture; all five cases now pass on Windows by returned console evidence. A separate reusable C++ component now provides verified numeric-IP TLS, mandatory native TLS negotiation and bounded frames; VPS checks pass, while Windows execution is the next handoff. The installed game does not select this component yet. Preserve guest behavior and send no password/session token until server identity verification succeeds. The Python fixture does not complete native game integration.
+The 2026-10-20 delivery implements the portable server identity/public profile foundation and a Python loopback fixture; all five cases now pass on Windows by returned console evidence. A separate reusable C++ component now provides verified numeric-IP TLS, mandatory native TLS negotiation and bounded frames; VPS checks pass; Windows compilation and the first six native checks now pass. Expired-certificate fixture preparation failed, so the corrected fixture must complete the remaining cases using the existing executable. The installed game does not select this component yet. Preserve guest behavior and send no password/session token until server identity verification succeeds. The Python fixture does not complete native game integration.
 
 - [x] Implement offline server TLS identity/public connection profile preparation, preservation and validation; VPS-tested.
 - [x] Confirm Windows identity creation for100.99.99.14 with Python3.14.3/OpenSSL3.6.3; user console output passes creation/validation.
 - [x] Confirm all five Windows Python loopback fixture cases. The corrected run reuses the identity and passes TLS1.2/TLS1.3 payloads and all three rejection checks; physical WAN status for this run remains unconfirmed.
 - [ ] Import the public profile through a trusted route into the native client; private keys stay on the server.
 - [x] Implement a standalone native account transport component with numeric-IP certificate/pin verification, no plaintext fallback, bounded send/receive, deadlines and cancellation; VPS and Android cross-build verified.
-- [ ] Confirm the native component Windows build and24 loopback cases using the existing public identity.
+- [x] Confirm the native component Windows build and first six checks using the existing public identity (returned console, 2026-10-20).
+- [ ] Complete all24 native Windows checks after the expired-certificate fixture correction; use the successful existing probe without rebuilding.
 - [ ] Route the actual custom account screens through this strict component; stock guest fallback/allow_insecure must not affect Alliance mode.
 - [ ] Add a bounded asynchronous native-server bridge; backend outage must not freeze the guest relay.
 - [ ] Add Android registration/login/logout and leader/team screens using existing engine UI.

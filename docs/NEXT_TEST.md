@@ -1,8 +1,8 @@
-# Next Windows test: native Alliance account transport
+# Next Windows test: retry the native Alliance fixture
 
-The returned Windows result completes the Python identity fixture: the existing identity was reused and all five TLS cases passed. Keep `runtime\alliance-transport` and all completed game/OBB/native stages. Do not repeat that check or initialize MongoDB now. WAN status for that returned run was not supplied; this is actual Windows loopback evidence, not a new physically disconnected acceptance claim.
+Your native C++ build and first six checks passed. The next step failed while OpenSSL `ca` prepared the disposable expired certificate, before `RUN expired` or any socket cases. The console does not include OpenSSL stderr; the original cause is unknown. The unused `Boost_ROOT` warning did not prevent compilation.
 
-Next test compiles the new C++ Alliance connection component with the already installed Windows compiler and runs temporary loopback peers. This is the code intended for the later Alliance account screens; the installed APK and guest server still use their existing code. Native game integration, profile import UI, account login, MongoDB startup and team gameplay remain pending. No game rebuild, reinstall or service change is required.
+The correction creates the expired leaf directly with `openssl x509`, preserving the same key, IP and server-purpose constraints in the disposable identity. It needs no CA database/index/serial rotation. The original server identity is unchanged. The installed game, MongoDB and all completed build/data stages remain as they are.
 
 ## 1. Pull while temporarily connected
 
@@ -22,35 +22,34 @@ In a normal Windows PowerShell window:
 }
 ```
 
-## 2. Disconnect WAN, then build and check the small component
+## 2. Disconnect WAN, then retry using your compiled probe
 
-Keep local Ethernet connected. Run:
+Keep local Ethernet connected. This selects the exact successful build from your report:
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
     Set-Location 'D:\Test\wesnoth-setup\wesnoth_server' -ErrorAction Stop
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Test-WindowsAllianceNative.ps1'
+        -File '.\tools\Test-WindowsAllianceNative.ps1' `
+        -ProbePath '.\build\alliance-native-20261019-212254-918-022ffd1f78ce4b3eaae6f60c30abc11e\alliance-native-probe.exe'
     if ($LASTEXITCODE -ne 0) {
-        throw 'Native Alliance check failed. Send the saved log and JSON report if present.'
+        throw 'Native Alliance retry failed. Send the new saved log and JSON report if present.'
     }
 }
 ```
 
-The helper uses the existing Python3.14.3, CMake4.3.0, Ninja1.13.2, MINGW64 GCC16.2.0, Boost1.91 and OpenSSL3.6.3 from the current MSYS root. It builds only two C++ source files into a new `build\alliance-native-<runid>` directory. It never downloads dependencies or touches the completed server/Android builds.
+`-ProbePath` uses that executable without CMake, Ninja or compiler invocation. It verifies Python3.14.3/OpenSSL3.6.3 and the compiled native versions, sets the selected MINGW64 DLL path, and runs the fixture in a fresh uniquely named directory. If the selected executable is missing/empty it stops; it does not rebuild. Keep the old build, old fixture directory and old diagnostics.
 
-It reads only the existing public profile, checks it with native C++, and leaves the original certificate/private key/receipt unchanged. Socket tests use newly generated disposable loopback identities inside the new restricted fixture directory. All sockets bind/connect to `127.0.0.1` on temporary ports. No connection to100.99.99.14 or port15001 occurs. No production account credentials are entered or sent.
+The fixture reads the existing public profile and uses newly generated disposable loopback identities for its socket cases. The original private identity and MongoDB runtime are not accessed. All test sockets use127.0.0.1 and temporary ports; no production account credentials are sent. This checks the C++ transport component, not installed-game login or team gameplay.
 
 ## Expected result and report
 
-The build should finish four steps. Then24 checks pass: existing public identity, disconnected-send guards, wrong IP/pin, hostname/broadcast refusal, expired certificate, TLS1.2/TLS1.3 encrypted frames, server-push receive, untrusted peer, downgrade/unexpected/closed/reset/stalled negotiation, plaintext, stalled TLS, cancellation, oversized/empty/truncated frames and stalled receive. The result ends with:
+First expect `Reusing existing native Alliance probe without rebuilding:`. There should be no build steps. All24 checks should pass, including `PASS expired`, `PASS TLS1.2` and `PASS TLS1.3`. The final lines include:
 
 ```text
 ALLIANCE NATIVE TRANSPORT CHECK PASSED
 ALLIANCE NATIVE FIXTURE COMPLETE
 ```
 
-Return the matching **`diagnostics\alliance-native-*.txt` and `.json`** reports, even on failure, plus whether WAN was disconnected. If compilation fails before JSON creation, send the text log. Do not send the disposable fixture directory or any private key. Keep any failed build directory for diagnosis; the helper uses a new one for a later explicit rerun.
-
-The game menu does not change during this test. A pass establishes Windows C++ component behavior, not Android execution, LAN reachability or authenticated team gameplay. Next integration work will add trusted public-profile import and explicitly route Alliance account screens through this component, with the local backend bridge. Local MongoDB startup remains a separate unresolved acceptance item; its investigation is deferred at the user's request.
+Return the **new matching `diagnostics\alliance-native-*.txt` and `.json`** reports, even on failure, and tell us whether WAN was disconnected. Do not send the fixture directory or private key files. The previous Windows console proves compilation/early validation only; native socket completion and Android account integration are still pending.
