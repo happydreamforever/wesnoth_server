@@ -4,14 +4,14 @@ This delivery implements the persistent game rules and a local operator website.
 
 The user now prioritizes local MongoDB setup. We use **MongoDB Community Edition8.0.32**, the free self-managed edition that can run offline ([official overview](https://www.mongodb.com/products/self-managed/community-edition)). The pinned portable MongoDB and17 Python packages already passed Windows installation. Reuse them. The previous failure was database startup, not a missing paid product or installer.
 
-Current action: [NEXT_TEST.md](NEXT_TEST.md) initializes a new permanent game runtime under LOCALAPPDATA/WesnothAlliance/runtime. The actual profile-location MongoDB startup, journaled write/read and clean-restart fixture now passes all8 checks, with both processes exiting0. The user confirms WAN was disconnected while local Ethernet stayed connected; no independent network trace is claimed. The earlier D:\Test sharing failure and original partial runtime remain preserved. Installed binaries stay in the repository. All24 Windows transport checks remain passed with user-confirmed WAN disconnection; there is no repeated transport/game build in this step.
+Current action: [NEXT_TEST.md](NEXT_TEST.md) resumes administrator setup in the existing profile runtime after a prompt-order/username-validation correction. The latest Windows initialization reached password entry but rejected the username; its username prompt was delayed. A VPS PowerShell reproduction confirms buffering of the non-newline stdout prompt. The correction prints a full flushed username line and validates before password entry; invalid interactive usernames can be re-entered. Keep the existing profile credentials/configuration/data. The earlier standalone MongoDB startup/persistence test passed all8 checks, with user-confirmed WAN disconnection. Authenticated game initialization has not yet completed on Windows.
 
 | Stage | Current state |
 | --- | --- |
 | Download pinned MongoDB and Python wheels while connected | Complete on Windows; cache retained |
 | Install from the local cache | Complete on Windows; installation itself was performed while internet remained available |
 | Verify MongoDB startup and clean-restart persistence | Complete on Windows under LOCALAPPDATA; user confirms WAN disconnected and local Ethernet connected |
-| Initialize the authenticated game replica set, schema and administrator | Next: a new persistent profile runtime; original partial runtime preserved |
+| Initialize the authenticated game replica set, schema and administrator | Profile runtime reaches admin input; next retry fixes prompt order and validates username first |
 | Start database and local admin website; check transactions and saved changes | Pending |
 | Connect Android accounts, progression and Alliance Battle | Pending integration |
 
@@ -46,7 +46,7 @@ All website assets are local. Neither the website nor MongoDB binds to the LAN. 
 
 ## Windows sequence
 
-Follow [NEXT_TEST.md](NEXT_TEST.md) for the current one-step handoff: pull, disconnect WAN and initialize at `%LOCALAPPDATA%\WesnothAlliance\runtime`. Preparation and installation already passed; do not repeat them. The following launch/check instructions are reference for after initialization passes.
+Follow [NEXT_TEST.md](NEXT_TEST.md) for the current one-step handoff: pull, disconnect WAN and initialize at `%LOCALAPPDATA%\WesnothAlliance\runtime`. Preparation and installation already passed; do not repeat them. The current retry uses the same profile runtime and retains its credentials/configuration. The following launch/check instructions are reference for after initialization passes.
 
 The profile standalone fixture passed startup, journaled write/read, both clean shutdowns and a persisted read after restart. This does not prove recovery of the old repository database or the disappearance of the earlier sharing conflict. Keep `runtime/alliance`, its logs/lock evidence, all disposable test directories and crash dumps. The user deferred the malware investigation; no service/security changes are part of this step.
 
@@ -54,7 +54,7 @@ The profile standalone fixture passed startup, journaled write/read, both clean 
 
 Use the guarded block in NEXT_TEST.md. All four runtime helpers now accept `-RuntimeRoot`. The normal selected path is `C:\Users\Uni\AppData\Local\WesnothAlliance\runtime`; always pass the same value when initializing, starting or testing this database. Omission retains the old repository default for compatibility, so it does not select the new profile database automatically. Invalid or redirected paths stop without fallback. A new selected runtime is created with restricted access; an existing directory without its ownership marker is preserved and refused. No old data or secret is copied into the new runtime.
 
-Choose an administrator username (3–24 letters, digits or underscores) and a password of12–128 characters entered twice. Password input is hidden; initialization deliberately creates no transcript. Expected: `ALLIANCE INITIALIZATION PASSED`, printed after the owned database has exited successfully. Rerunning with the same owned runtime preserves credentials/accounts. Do not send private runtime files; a startup error identifies the selected `logs/mongodb.log` to inspect.
+Enter an administrator username at the first full-line prompt (3–24 ASCII letters, digits or underscores; for example `UniAdmin`). Invalid usernames are rejected and requested again before password input. Then enter a password of12–128 characters twice. Password input is hidden; initialization deliberately creates no transcript. Expected: `ALLIANCE INITIALIZATION PASSED`, printed after the owned database has exited successfully. Rerunning with the same owned runtime preserves credentials/accounts. Do not send private runtime files; a startup error identifies the selected `logs/mongodb.log` to inspect.
 
 ### 2. Run the database and website in two PowerShell windows
 
