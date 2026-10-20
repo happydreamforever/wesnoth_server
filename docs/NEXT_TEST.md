@@ -1,14 +1,10 @@
-# Next test: corrected Windows account bridge startup
+# Next test: local account-service health
 
-The latest Windows run verified the executable but failed before its ready marker. The console's generic error does not identify the failing check. An old-binary VPS fixture reproduces a concrete incompatibility: the existing identity generator keeps Windows CRLF certificate-file bytes, while its public profile uses LF. The bridge incorrectly required a raw byte match. The corrected comparison accepts that newline representation, while retaining certificate identity, validity, pin and private-key checks. No identity file is rewritten.
+The corrected Windows bridge rebuild passed, including preservation of the old build. Startup now reaches `stage=backend-health`: certificate validation and TLS key matching have completed, but the local account service has not passed its check. The generic stage does not distinguish a missing listener, timeout, rejected authentication or a database/response error.
 
-Startup errors now include a fixed stage such as `certificate-profile`, `backend-health` or `listener-bind`, and sometimes a numeric system error code. Private keys, runtime JSON, credentials and arbitrary exception strings are not printed. The user's actual failure cause and corrected Windows startup still require the new result.
+**Current step: collect the local service result.** Keep the existing MongoDB and admin-service windows open. Preserve the newly built bridge and its backup. No native/Android rebuild, database initialization, identity change or service restart is requested.
 
-**Current step: update, preserve/rebuild only the bridge, then launch it.** Keep the already-running MongoDB and admin-service windows open. Do not initialize MongoDB, replace certificates, restart healthy services or build Android yet. All previous game/dependency stages and OBB remain in place.
-
-## 1. Update the server while temporarily connected to GitHub
-
-Run in ordinary PowerShell:
+## 1. Update only the server diagnostic while connected to GitHub
 
 ```powershell
 & {
@@ -16,53 +12,32 @@ Run in ordinary PowerShell:
     $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
     & $bash --noprofile --norc -c 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server pull --ff-only origin main'
     if ($LASTEXITCODE -ne 0) { throw 'Server pull failed. Stop and send the output.' }
-    & $bash --noprofile --norc -c 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server rev-parse --short HEAD'
-    if ($LASTEXITCODE -ne 0) { throw 'Could not read the server commit.' }
 }
 ```
 
-The client executable/source is unchanged by this fix; the client repository receives mirrored records only. If the server pull encounters local edits, preserve them and return its output.
+The client receives mirrored project records only; its application is unchanged. Disconnect WAN after this pull while retaining Ethernet.
 
-Disconnect internet/WAN after the pull, keeping local Ethernet connected.
+## 2. Run one read-only backend diagnostic
 
-## 2. Preserve and rebuild the small bridge, then run it
-
-Use the window where the failed bridge command returned to the prompt. Leave the database and admin windows running.
+In an ordinary PowerShell window:
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_server' -ErrorAction Stop
-
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Rebuild-WindowsAllianceBridge.ps1' `
-        -MsysRoot 'D:\Test\wesnoth-setup\msys64'
+        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Test-WindowsAllianceBackend.ps1' `
+        -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
     if ($LASTEXITCODE -ne 0) {
-        throw 'Bridge rebuild stopped. Send the saved rebuild/build logs.'
-    }
-
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Run-WindowsAllianceBridge.ps1' `
-        -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime') `
-        -MsysRoot 'D:\Test\wesnoth-setup\msys64'
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Bridge startup failed. Send the complete new console output and saved run log.'
+        throw 'Backend check reported a failure. Send the saved text and JSON reports.'
     }
 }
 ```
 
-The rebuild helper verifies ownership/receipt and executable hash of the old completed stage, checks that no bridge process is running, and moves only `build\alliance-account-bridge` to a unique backup before building the corrected executable. It does not stop any process or touch runtime/identity/database files. Missing/incomplete/unrecognized stages, a running bridge, or backup failure stop the helper without launching a new build. Preserve all backup folders and report the error instead of deleting them.
+Expected: current listener metadata for TCP18765 and27018, followed by a safe health-check result. A healthy response prints `outcome=healthy; http_status=200`, all four checks `True`, and `ALLIANCE BACKEND CHECK PASSED`. A failed result should distinguish the HTTP status or connection/timeout/configuration problem. This is a diagnostic result, not account login or Android connectivity acceptance.
 
-Expected sequence: a printed backup path, `ALLIANCE ACCOUNT BRIDGE ARTIFACT VERIFIED`, `ALLIANCE ACCOUNT BRIDGE BUILD PASSED`, then:
+Send the complete console output and printed diagnostics/alliance-backend-*.txt and*.json reports, including a failure result. Confirm whether WAN was disconnected during the diagnostic. The helper reads the existing bridge credential locally but never prints it. Do not send config.json, credentials.json, .env, private keys or passwords.
 
-```text
-ALLIANCE ACCOUNT BRIDGE READY 100.99.99.14:15001 -> local account service
-Keep this window open. Ctrl+C stops the bridge.
-```
-
-**Stop here and send the live console output, leaving successful processes running.** Confirm whether WAN was disconnected during this rebuild/startup. If it fails, include the new `stage=...` line and saved diagnostics logs. Do not send private identity files, `.env`, runtime configuration, passwords or tokens. Startup success does not yet establish Android reachability or account login.
-
-The remaining sections are future steps after corrected listener startup is accepted.
+**Stop after this check.** The remaining sections describe later steps after the backend check and actual bridge READY marker pass.
 
 ## 3. Build the account-enabled Android game
 
