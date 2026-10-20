@@ -1,41 +1,33 @@
-# Next test: Android player account through the Windows server
+# Next test: corrected Windows account bridge startup
 
-The new account integration provides a separate native TLS listener and an in-game Alliance menu for registration, login, a personal leader and logout. Existing MongoDB/admin acceptance and the completed standalone Android transport checks remain valid. Windows account-bridge compilation and artifact verification now pass in the returned console. Listener startup and LDPlayer account acceptance remain pending.
+The latest Windows run verified the executable but failed before its ready marker. The console's generic error does not identify the failing check. An old-binary VPS fixture reproduces a concrete incompatibility: the existing identity generator keeps Windows CRLF certificate-file bytes, while its public profile uses LF. The bridge incorrectly required a raw byte match. The corrected comparison accepts that newline representation, while retaining certificate identity, validity, pin and private-key checks. No identity file is rewritten.
 
-The returned build completes section 2. **The current handoff is section 3 only: start the account listener alongside the existing database and admin service, then return the live console output.** No new pull or rebuild is needed. Keep internet/WAN disconnected and local Ethernet connected for this next run. Sections 1–2 below are completed delivery references; sections 4–6 remain later steps. WAN status for the returned build was not reported.
+Startup errors now include a fixed stage such as `certificate-profile`, `backend-health` or `listener-bind`, and sometimes a numeric system error code. Private keys, runtime JSON, credentials and arbitrary exception strings are not printed. The user's actual failure cause and corrected Windows startup still require the new result.
 
-Keep the existing game, native dependency stages, game-data OBB, profile database and administrator data. Use `D:\Test\wesnoth-setup\msys64` and the selected LDPlayer instance `127.0.0.1:5555` (API28/x86_64). This delivery adds no dependency download or MongoDB initialization step.
+**Current step: update, preserve/rebuild only the bridge, then launch it.** Keep the already-running MongoDB and admin-service windows open. Do not initialize MongoDB, replace certificates, restart healthy services or build Android yet. All previous game/dependency stages and OBB remain in place.
 
-## 1. Previous delivery reference — do not repeat now
+## 1. Update the server while temporarily connected to GitHub
 
-Run in ordinary Windows PowerShell:
+Run in ordinary PowerShell:
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
     $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
-
-    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
-        $repo = '/d/Test/wesnoth-setup/' + $name
-        Write-Host "Updating $name"
-        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
-        if ($LASTEXITCODE -ne 0) {
-            throw "Pull failed for $name. Stop here and send the output."
-        }
-        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
-        if ($LASTEXITCODE -ne 0) {
-            throw "Could not read $name commit. Send the output."
-        }
-    }
-    'Both updates completed successfully.'
+    & $bash --noprofile --norc -c 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server pull --ff-only origin main'
+    if ($LASTEXITCODE -ne 0) { throw 'Server pull failed. Stop and send the output.' }
+    & $bash --noprofile --norc -c 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server rev-parse --short HEAD'
+    if ($LASTEXITCODE -ne 0) { throw 'Could not read the server commit.' }
 }
 ```
 
-Expected: both fast-forward pulls succeed, followed by their commit IDs and `Both updates completed successfully.` If Git reports local edits, retain them and return the error.
+The client executable/source is unchanged by this fix; the client repository receives mirrored records only. If the server pull encounters local edits, preserve them and return its output.
 
-Disconnect internet/WAN now, while keeping local Ethernet and LDPlayer available.
+Disconnect internet/WAN after the pull, keeping local Ethernet connected.
 
-## 2. Windows account listener build — passed
+## 2. Preserve and rebuild the small bridge, then run it
+
+Use the window where the failed bridge command returned to the prompt. Leave the database and admin windows running.
 
 ```powershell
 & {
@@ -43,79 +35,36 @@ Disconnect internet/WAN now, while keeping local Ethernet and LDPlayer available
     Set-Location 'D:\Test\wesnoth-setup\wesnoth_server' -ErrorAction Stop
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Build-WindowsAllianceBridge.ps1' `
+        -File '.\tools\Rebuild-WindowsAllianceBridge.ps1' `
         -MsysRoot 'D:\Test\wesnoth-setup\msys64'
-
     if ($LASTEXITCODE -ne 0) {
-        throw 'Account bridge build failed. Send the saved build log.'
+        throw 'Bridge rebuild stopped. Send the saved rebuild/build logs.'
+    }
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File '.\tools\Run-WindowsAllianceBridge.ps1' `
+        -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime') `
+        -MsysRoot 'D:\Test\wesnoth-setup\msys64'
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Bridge startup failed. Send the complete new console output and saved run log.'
     }
 }
 ```
 
-This builds a small, separate executable at `wesnoth_server\build\alliance-account-bridge\alliance-account-bridge.exe` using the existing MINGW64 tools. It does not rebuild the guest server or any Android dependency.
+The rebuild helper verifies ownership/receipt and executable hash of the old completed stage, checks that no bridge process is running, and moves only `build\alliance-account-bridge` to a unique backup before building the corrected executable. It does not stop any process or touch runtime/identity/database files. Missing/incomplete/unrecognized stages, a running bridge, or backup failure stop the helper without launching a new build. Preserve all backup folders and report the error instead of deleting them.
 
-Expected first-build markers:
-
-```text
-ALLIANCE ACCOUNT BRIDGE ARTIFACT VERIFIED
-ALLIANCE ACCOUNT BRIDGE BUILD PASSED
-Saved log: ...\wesnoth_server\diagnostics\alliance-bridge-build-<timestamp>-<id>.txt
-```
-
-An unchanged completed build instead reports `Completed native account bridge reused; no build was run.` and verifies its receipt.
-
-The returned console confirms both success markers and saves diagnostics/alliance-bridge-build-20261020-101034-914-4f9607a9e56445d4a9e8df9db469ca65.txt. No rebuild or duplicate build log is required. This proves the executable builds and verifies, not its listener or Android connection. Proceed to section 3.
-
-## 3. Start the existing backend, then the new listener — current step
-
-The latest returned console confirms both MongoDB on127.0.0.1:27018 and the administrator service on127.0.0.1:18765 are running successfully. **Keep those two windows open and run only the account-listener command below in a third window.** No listener ready marker has been returned yet. WAN status for this startup is unreported.
-
-The existing backend's 'native game account bridge is a later milestone' line predates the new separate listener; it is not an error. The database/admin commands below are recovery references only if those windows have subsequently been closed. Do not run duplicate instances or restart healthy processes.
-
-Database window:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAllianceDatabase.ps1' `
-    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
-```
-
-Expected: `Alliance MongoDB running on 127.0.0.1:27018.` Keep the window open.
-
-Administrator-service window:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAlliance.ps1' `
-    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
-```
-
-Expected: `ALLIANCE DATABASE CHECK PASSED` and `Alliance admin: http://127.0.0.1:18765/`. Keep this window open too.
-
-In a third PowerShell window, start the new account listener:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAllianceBridge.ps1' `
-    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime') `
-    -MsysRoot 'D:\Test\wesnoth-setup\msys64'
-```
-
-Expected:
+Expected sequence: a printed backup path, `ALLIANCE ACCOUNT BRIDGE ARTIFACT VERIFIED`, `ALLIANCE ACCOUNT BRIDGE BUILD PASSED`, then:
 
 ```text
-ALLIANCE ACCOUNT BRIDGE ARTIFACT VERIFIED
 ALLIANCE ACCOUNT BRIDGE READY 100.99.99.14:15001 -> local account service
 Keep this window open. Ctrl+C stops the bridge.
 ```
 
-The listener uses the existing identity in `wesnoth_server\runtime\alliance-transport`, validates the local backend and binds the IP address recorded in that identity. It keeps its private key and backend credential on Windows. Its log is `wesnoth_server\diagnostics\alliance-bridge-run-*.txt`; the final saved-log line appears when the launcher exits.
+**Stop here and send the live console output, leaving successful processes running.** Confirm whether WAN was disconnected during this rebuild/startup. If it fails, include the new `stage=...` line and saved diagnostics logs. Do not send private identity files, `.env`, runtime configuration, passwords or tokens. Startup success does not yet establish Android reachability or account login.
 
-**Stop at the ready marker, keep all running windows open, and send the live console output. Do not stop the listener just to obtain its final saved-log line.** Also report whether WAN was disconnected during this startup; the prior build's WAN status remains unknown.
+The remaining sections are future steps after corrected listener startup is accepted.
 
-The guest server on port 15000 is unchanged and is not needed for this account-only test. If the listener fails, return its console output and saved log before proceeding. An address change requires reviewing the existing public identity; do not overwrite it or initialize the database again.
-
-## 4. Build the account-enabled Android game
+## 3. Build the account-enabled Android game
 
 After the listener starts successfully, use another PowerShell window:
 
@@ -146,7 +95,7 @@ Saved log: ...\diagnostics\android-account-build-<timestamp>-<id>.txt
 
 The package remains `org.wesnoth.offline`, now versionCode `1192601`, with x86_64/minAPI23. The existing completed engine, original APK and OBB are preserved. Return `android-account-build-*.txt`; a build success is not yet an Android account-runtime pass.
 
-## 5. Update the app and import the public server profile
+## 4. Update the app and import the public server profile
 
 After the Android build is accepted, leave LDPlayer open and run:
 
@@ -180,7 +129,7 @@ Expected LDPlayer screen: **Wesnoth Alliance**, with **Import server profile** a
 
 Return the install log and confirm that the setup screen, profile import and Alliance menu appear. If connection later fails, return the displayed error and account-listener log; the old guest connection on 15000 does not establish reachability on 15001.
 
-## 6. Manual account acceptance with WAN disconnected
+## 5. Manual account acceptance with WAN disconnected
 
 Keep local Ethernet connected, WAN disconnected, and all three Windows backend windows running.
 

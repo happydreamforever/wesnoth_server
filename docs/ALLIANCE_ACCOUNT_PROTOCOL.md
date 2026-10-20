@@ -6,6 +6,8 @@ Scope: player registration, login, personal-leader retrieval and logout. This co
 
 The native Windows listener binds the existing numeric IP and port15001 from its public profile. Before any credentials, the client sends big-endian uint32 `1`, requires uint32 `0`, then completes TLS1.2 or TLS1.3 with certificate validity, numeric-IP SAN and SHA-256 DER certificate pin verification. There is no plaintext fallback. The app imports exactly the existing seven public-profile fields and requires explicit address/pin confirmation; private server keys and database/backend credentials are never transferred.
 
+The server compares the public profile with an in-memory CRLF-to-LF representation of its certificate file, matching the identity generator. The original file bytes are preserved, and DER pin, numeric-IP identity, certificate validity and key matching still apply. Startup diagnostics use fixed stage labels and numeric error codes only.
+
 The bridge forwards only to `127.0.0.1:18765`, using the local protected runtime's bridge secret. MongoDB remains private on127.0.0.1:27018. This listener does not change guest `wesnothd` on15000.
 
 ## Bounded messages

@@ -38,7 +38,7 @@ The new `alliance-account-bridge.exe` listens on the numeric address/port in the
 
 The Android update adds a public-profile import screen and an Alliance main-menu entry. Only the public JSON is copied to LDPlayer; private keys/runtime credentials stay on Windows. Compare the printed address/fingerprint and approve it explicitly in the app. Create a separate player account; administrator Uni remains an administrator. Closing the app loses the in-memory session, so log in again. Successful logout revokes the server token. Existing campaigns and guest multiplayer still use their original rules and do not award permanent account XP.
 
-VPS integration uses a new disposable authenticated MongoDB replica set; it does not touch the user's database. Registration, Unicode credentials, duplicate rejection, login/profile/logout and restart persistence pass. The Windows bridge build now passes; listener startup and LDPlayer account acceptance are pending. Follow [NEXT_TEST.md](NEXT_TEST.md) for exact commands and expected results.
+VPS integration uses a new disposable authenticated MongoDB replica set; it does not touch the user's database. Registration, Unicode credentials, duplicate rejection, login/profile/logout and restart persistence pass. The Windows bridge build passes, but its first startup failed before READY. The certificate newline compatibility fix and guarded bridge-only rebuild are now in NEXT_TEST.md; corrected Windows startup and LDPlayer acceptance remain pending. Follow [NEXT_TEST.md](NEXT_TEST.md) for exact commands and expected results.
 
 ## Local components
 
