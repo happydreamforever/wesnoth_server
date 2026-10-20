@@ -1,55 +1,22 @@
-# Next Windows test: retry the native Alliance fixture
+# Windows native transport accepted; next milestone is Android execution
 
-Your native C++ build and first six checks passed. The next step failed while OpenSSL `ca` prepared the disposable expired certificate, before `RUN expired` or any socket cases. The console does not include OpenSSL stderr; the original cause is unknown. The unused `Boost_ROOT` warning did not prevent compilation.
+Both returned files `alliance-native-20261019-213954-440-8912eeea6d884f23a2a3ff882192259c.txt` and `.json` confirm all 24 native transport cases passed. The existing Windows executable was reused; no compilation occurred. The user explicitly confirms internet/WAN was disconnected while local Ethernet remained connected. This is user-observed offline operation, not an independent network trace.
 
-The correction creates the expired leaf directly with `openssl x509`, preserving the same key, IP and server-purpose constraints in the disposable identity. It needs no CA database/index/serial rotation. The original server identity is unchanged. The installed game, MongoDB and all completed build/data stages remain as they are.
+## Completed scope
 
-## 1. Pull while temporarily connected
+- The existing public profile and disconnected-send guards pass.
+- TLS1.2 and TLS1.3 echo the exact 66-byte test frame; unsolicited server-push receives a 66-byte gzip-prefixed frame without sending client application bytes.
+- Incorrect IP/pin, invalid addresses, expired/untrusted certificates, plaintext and downgrade attempts are rejected as expected.
+- Cancellation, deadlines, frame limits and truncated responses produce the expected errors. Each socket case uses one connection and the required TLS preamble.
 
-In a normal Windows PowerShell window:
+Expected negative-case errors in the JSON are successful rejection checks. For example, the untrusted peer's TLSV1_ALERT_UNKNOWN_CA is expected; it is not a new failure.
 
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
-    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
-        $repo = '/d/Test/wesnoth-setup/' + $name
-        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
-        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Stop and send the output." }
-        & $bash --noprofile --norc -c ('/usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
-        if ($LASTEXITCODE -ne 0) { throw "Could not read $name commit. Stop and send the output." }
-    }
-}
-```
+## Current Windows action
 
-## 2. Disconnect WAN, then retry using your compiled probe
+No command is needed for this acceptance checkpoint. Keep the existing executable, old and new fixture directories, diagnostics, original TLS identity, installed game, OBB and completed dependency stages. Do not rerun the passed fixture or initialize MongoDB for this report review. The documentation updates can be pulled with the next implementation delivery.
 
-Keep local Ethernet connected. This selects the exact successful build from your report:
+## Next development and test delivery
 
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_server' -ErrorAction Stop
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Test-WindowsAllianceNative.ps1' `
-        -ProbePath '.\build\alliance-native-20261019-212254-918-022ffd1f78ce4b3eaae6f60c30abc11e\alliance-native-probe.exe'
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Native Alliance retry failed. Send the new saved log and JSON report if present.'
-    }
-}
-```
+The next milestone is to build and execute the Android version of this transport component in LDPlayer. Prepare a small independent test using the existing Android x86_64/API23 NDK, Boost1.88/OpenSSL3.4.1 prefixes and selected LDPlayer API28 instance. Preserve completed engine/library/APK stages. Supply and verify the exact Windows build/test commands before asking the user to run them; that Android handoff has not been delivered yet.
 
-`-ProbePath` uses that executable without CMake, Ninja or compiler invocation. It verifies Python3.14.3/OpenSSL3.6.3 and the compiled native versions, sets the selected MINGW64 DLL path, and runs the fixture in a fresh uniquely named directory. If the selected executable is missing/empty it stops; it does not rebuild. Keep the old build, old fixture directory and old diagnostics.
-
-The fixture reads the existing public profile and uses newly generated disposable loopback identities for its socket cases. The original private identity and MongoDB runtime are not accessed. All test sockets use127.0.0.1 and temporary ports; no production account credentials are sent. This checks the C++ transport component, not installed-game login or team gameplay.
-
-## Expected result and report
-
-First expect `Reusing existing native Alliance probe without rebuilding:`. There should be no build steps. All24 checks should pass, including `PASS expired`, `PASS TLS1.2` and `PASS TLS1.3`. The final lines include:
-
-```text
-ALLIANCE NATIVE TRANSPORT CHECK PASSED
-ALLIANCE NATIVE FIXTURE COMPLETE
-```
-
-Return the **new matching `diagnostics\alliance-native-*.txt` and `.json`** reports, even on failure, and tell us whether WAN was disconnected. Do not send the fixture directory or private key files. The previous Windows console proves compilation/early validation only; native socket completion and Android account integration are still pending.
+The earlier VPS Android cross-build confirms compilation only. Current Windows loopback success does not establish Android transport execution, account login, native backend bridge integration, MongoDB startup or Alliance gameplay. Those remain explicit checklist items. No physical-phone test or repeated environment inventory is requested.
