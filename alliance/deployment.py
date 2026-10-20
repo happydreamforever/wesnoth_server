@@ -1,6 +1,4 @@
 """Owned local MongoDB lifecycle; no global installation or existing-DB migration."""
-from contextlib import contextmanager
-from datetime import datetime, timezone
 import getpass
 import json
 import os
@@ -16,6 +14,7 @@ from pymongo import MongoClient
 from pymongo.errors import OperationFailure, PyMongoError
 
 from .config import Settings, ConfigurationError
+from .runtime_lock import runtime_lock
 
 PURPOSE = "wesnoth-alliance-local"
 MONGO_VERSION = "8.0.32"
@@ -67,23 +66,11 @@ def owned_runtime(runtime, create=False):
         valid = False
     if not valid:
         raise ConfigurationError("Runtime is not an owned Alliance directory; existing files were preserved.")
-    for name in ("config.json", "root.json", "keyfile", "mongo.json", "data", "logs", "operation.lock"):
+    for name in ("config.json", "root.json", "keyfile", "mongo.json", "data", "logs",
+                 "operation.lock", "operation.guard"):
         if redirected(path / name):
             raise ConfigurationError("A managed runtime path is a link or junction; refusing to follow it.")
     return path.resolve()
-
-
-@contextmanager
-def runtime_lock(path):
-    lock = path / "operation.lock"
-    try:
-        _write_new(lock, json.dumps({"pid": os.getpid(), "started_at": datetime.now(timezone.utc).isoformat()}))
-    except FileExistsError:
-        raise ConfigurationError("Another database operation holds the runtime lock. Keep its window open; do not delete the lock while it runs.") from None
-    try:
-        yield
-    finally:
-        lock.unlink()
 
 
 def _credentials(path):
