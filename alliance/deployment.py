@@ -345,7 +345,7 @@ def check_database(runtime):
             session.abort_transaction()
         print("PASS MongoDB 8.0.32 / authenticated replica set / schema / administrator / transaction rollback")
         print("ALLIANCE DATABASE CHECK PASSED")
-        print("This checks the new backend only; the installed Android game is not yet integrated.")
+        print("Database checks only; Android connectivity and gameplay are tested separately.")
 
 
 def serve(runtime):
@@ -357,6 +357,6 @@ def serve(runtime):
     with _client(settings.mongo_uri) as client:
         app = create_app(settings, client.wesnoth_game)
         print("Alliance admin: http://127.0.0.1:18765/", flush=True)
-        print("Keep this window open. The native game account bridge is a later milestone.", flush=True)
+        print("Keep this window open. Run the Alliance account bridge in a separate window.", flush=True)
         waitress_serve(app, host=settings.host, port=settings.port, threads=4,
                        max_request_body_size=65536, channel_timeout=30, clear_untrusted_proxy_headers=True)
