@@ -1,16 +1,16 @@
-# Next test: retrieve the saved Koichi team
+# Next test: find Koichi in Yama and check the personal leader
 
-The user confirms the initial **You do not belong to a team yet.** message and successful creation of **Koichi** in **Yama**. The returned roster shows UniPlayer as captain, Spearman at leader level 1, team level 1, team experience 0, rating 1000 and members 1/8. The user explicitly confirms WAN was disconnected while local Ethernet stayed connected during the no-team check and creation.
+The user confirms all requested results from the separate **My team** lookup: Koichi's saved ID and team values match. The confirmation includes keeping WAN disconnected and local Ethernet connected. Creation and later own-team retrieval are accepted at user-observed scope; neither proves team persistence after a restart.
 
-These are the actual team and area; the earlier UniAlliance/Area 1 names were examples. Keep Koichi and its membership. The creation reply is accepted; a separate post-creation lookup has not yet been reported.
+Keep the current UniPlayer session and all three Windows backend windows (MongoDB, admin service and account bridge) running. Keep WAN disconnected and local Ethernet connected. Use the installed app; no PowerShell command or new delivery is needed.
 
-## Current step: read My team again
+## 1. Find the team through its area
 
-Keep the game and all three Windows backend windows (MongoDB, admin service and account bridge) running. Keep WAN disconnected and local Ethernet connected. Use the current UniPlayer session. No PowerShell command or new delivery is needed.
-
-1. Press **OK** on the team details dialog to return to the Teams menu.
-2. Select **My team** and press **Open**.
-3. Compare the returned details with this saved reference:
+1. Press **OK** on the My team details dialog to return to the Teams menu.
+2. Select **Browse areas and teams**, then press **Open**.
+3. Select **Yama**, then press **Open**.
+4. Select the **Koichi — team level 1, 1/8 members** row, then press **Open**.
+5. Expect the same details:
 
 | Field | Expected value |
 | --- | --- |
@@ -18,18 +18,19 @@ Keep the game and all three Windows backend windows (MongoDB, admin service and 
 | Team ID | `4cd736d3-dc6c-4c3d-a816-e7682b56db30` |
 | Area | Yama |
 | Area ID | `ff010e4d-af74-4906-8ba6-5f096aaf90ec` |
-| Team level | 1 |
-| Team experience | 0 |
-| Rating | 1000 |
+| Team level / experience / rating | 1 / 0 / 1000 |
 | Members | 1/8 |
 | Roster | UniPlayer (captain) — Spearman, leader level 1 |
 
-**Stop at that dialog.** Return whether the team ID and every value match, plus whether WAN stayed disconnected. If an error or no-team message appears, send its exact text and keep the existing team, session and services intact. Do not create another team or reinitialize the database.
+If the list has more than one page, select **More areas** or **More teams** and press **Open** to reach the next page; **Previous page** returns to the preceding page. If the team is absent after checking the available pages, or an error appears, send the exact result and stop. Preserve the existing team rather than creating another.
 
-My team sends a new authenticated request and reads the saved account/team/roster. It does not reuse the creation reply, create a team or award experience. This checks subsequent retrieval with the current services running; it does not establish persistence through a restart.
+## 2. Check the personal leader
 
-## Later checks after this result
+1. Press **OK** on the team details.
+2. Press **Back** from the team list, then **Back** from the area list, then **Back** from the Teams menu. This returns to the Alliance menu.
+3. Select **View personal leader** and press **Open**.
+4. Expect the same player ID, **Spearman**, **Level 1**, **Experience 0** and **Total experience 0**.
 
-Use **Browse areas and teams → Open → Yama → Open**, then select **Koichi → Open**, and compare the same team ID and roster. Return through **Back** to Alliance and use **View personal leader → Open** to check the same player ID, Spearman, level 1, Experience 0 and Total experience 0. Team creation is not intended to award personal XP. A later team-persistence phase can verify the same stored team after a controlled restart; the earlier account-only restart test predates this team.
+**Stop at the personal-leader dialog.** Return whether Koichi appeared under Yama with the same team ID/roster, whether the player/leader/experience values match, and whether WAN stayed disconnected. This checks the public directory/detail path and that team creation did not change the personal leader's displayed experience. It does not create a team, award XP or test a battle.
 
-Joining teams, captain-management actions, custom campaign rewards and team battles remain later implementation slices. Preserve the installed APK, OBB/data, saved server profile, identity, runtime and build backups. Do not repeat creation, pulls, builds or installation for this manual check. Keep passwords, session tokens and private runtime files private.
+After this result, team persistence across a controlled restart remains to be checked; the accepted account-only restart test predates Koichi. Joining teams, captain management, custom campaign rewards and team battles remain later implementation slices. Preserve the installed APK, OBB/data, trusted profile, server identity, runtime and build backups. Keep passwords, session tokens and private runtime files private.

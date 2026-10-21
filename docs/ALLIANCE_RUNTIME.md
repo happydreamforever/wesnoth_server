@@ -4,7 +4,7 @@ This delivery implements the persistent game rules, a local operator website and
 
 The user now prioritizes local MongoDB setup. We use **MongoDB Community Edition8.0.32**, the free self-managed edition that can run offline ([official overview](https://www.mongodb.com/products/self-managed/community-edition)). The pinned portable MongoDB and17 Python packages already passed Windows installation. Reuse them. The previous failure was database startup, not a missing paid product or installer.
 
-Current action: Koichi creation in Yama and the initial no-team lookup are accepted in LDPlayer; the user confirms WAN disconnected and local Ethernet connected. Follow [NEXT_TEST.md](NEXT_TEST.md): dismiss the creation details with OK, then select My team and Open. Compare the same team ID, captain and starting values from a new server request. Keep the game and all services running. Post-creation retrieval, directory lookup, personal XP comparison and team restart persistence remain pending. No command, pull, rebuild, installation or new team creation is needed.
+Current action: Koichi creation and a separate My team lookup are accepted in LDPlayer, with WAN disconnected/local Ethernet retained by user confirmation. Follow [NEXT_TEST.md](NEXT_TEST.md): browse Yama -> Koichi and compare the same team, then return to Alliance -> View personal leader to check the same player and zero personal experience. Keep the game and all services running. Directory retrieval, post-creation personal XP and team restart persistence remain pending. No command, pull, rebuild, installation or new team creation is needed.
 
 | Stage | Current state |
 | --- | --- |
@@ -17,7 +17,7 @@ Current action: Koichi creation in Yama and the initial no-team lookup are accep
 | Create an area, check audit and sign-out, verify records after restart | Passed by user report: same area name, matching audit identifier, login required after sign-out; WAN disconnected during restarts |
 | Native Android transport fixture | Windows build and 22 LDPlayer loopback cases pass; later device-only rerun also passes with WAN disconnected by corrected user report |
 | Connect Android accounts | Registration, password rejection, login/profile, server logout/relogin and app restart accepted with WAN disconnected by user report; bridge outage/recovery accepted with WAN disconnected; player persistence after all three backend processes restart accepted with WAN disconnected by user report |
-| First team UI | Windows bridge and Android 1192602 accepted; LDPlayer initial no-team lookup and Koichi creation in Yama pass with WAN disconnected by user report. Separate saved-team/directory retrieval, personal XP comparison and team restart persistence pending |
+| First team UI | Windows bridge and Android 1192602 accepted; LDPlayer initial no-team lookup, Koichi creation in Yama and separate My team retrieval pass with WAN disconnected by user confirmation. Directory lookup, personal XP comparison and team restart persistence pending |
 | Connect progression and Alliance Battle | Pending gameplay integration |
 
 The final database binds to127.0.0.1:27018 and the administrator website to127.0.0.1:18765. The Windows game service will use the database locally; Android clients will communicate with the game service. The internet database URL in `.env` is not used.
