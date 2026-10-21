@@ -4,7 +4,7 @@ This delivery implements the persistent game rules, a local operator website and
 
 The user now prioritizes local MongoDB setup. We use **MongoDB Community Edition8.0.32**, the free self-managed edition that can run offline ([official overview](https://www.mongodb.com/products/self-managed/community-edition)). The pinned portable MongoDB and17 Python packages already passed Windows installation. Reuse them. The previous failure was database startup, not a missing paid product or installer.
 
-Current action: the rebuilt team bridge now reports READY100.99.99.14:15001 after artifact verification and authenticated backend health. Keep all three services open and follow [NEXT_TEST.md](NEXT_TEST.md) to build APK1192602 using Rebuild-WindowsAndroidAccountGame.ps1. It preserves both completed account build stages and the installed game. Return its logs before installation. A fresh updated admin process is required for later team routes; confirmation of that restart is pending. No new pull, server rebuild or database initialization is needed.
+Current action: the rebuilt team bridge now reports READY100.99.99.14:15001 after artifact verification and authenticated backend health. Keep all three services open and follow [NEXT_TEST.md](NEXT_TEST.md) to build APK1192602 using Rebuild-WindowsAndroidAccountGame.ps1. It preserves both completed account build stages and the installed game. Return its logs before installation. The user confirms the admin service was restarted after the team update and before the bridge, so no further service restart is needed. No new pull, server rebuild or database initialization is needed.
 
 | Stage | Current state |
 | --- | --- |
