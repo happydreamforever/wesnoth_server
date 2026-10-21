@@ -1,6 +1,6 @@
 # Next Windows test: install the Android membership update
 
-The Windows1192603 build passed: earlier1192602 stages were preserved, all six native steps and33 Gradle tasks completed, and final artifact/build/rebuild checks succeeded. Physical WAN status during that build awaits separate confirmation; Gradle ran with --offline. The existing bridge is READY, the fresh admin restart is confirmed and Koichi's earlier offline persistence acceptance remains valid.
+The Windows1192603 build passed: earlier1192602 stages were preserved, all six native steps and33 Gradle tasks completed, and final artifact/build/rebuild checks succeeded. The user confirms WAN was disconnected while Ethernet stayed connected during that build; Gradle also ran with --offline. The existing bridge is READY, the fresh admin restart is confirmed and Koichi's earlier offline persistence acceptance remains valid.
 
 **Immediate action: phase 4 below.** Keep the game closed, LDPlayer running and all three server windows open. Disconnect WAN while retaining local Ethernet. No new pull, rebuild, database initialization, profile import or OBB copy is needed.
 
