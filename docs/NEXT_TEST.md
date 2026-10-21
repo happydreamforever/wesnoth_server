@@ -1,47 +1,12 @@
-# Next Windows/LDPlayer update: application decision notifications
+# Next Windows step: start the updated admin service and bridge
 
-APK1192604 adds saved approval/rejection notices for the applicant. Login and My applications offer unread decisions. A new Application decisions menu retains the latest 50 decisions, including read entries. Opening a detail and choosing OK marks only that notice read; Back leaves unopened notices unread. Old1192603 rejections cannot be reconstructed. The first notification test must use a new captain decision after this update.
+The application-decision bridge rebuild passed on Windows, preserving its previous build. The user explicitly confirms WAN was disconnected while local Ethernet stayed connected. Keep those conditions for this phase. No further pull or bridge rebuild is needed.
 
-Use the existing Koichi team, Yama area, captain UniPlayer and applicant UniRecruit. Current team ID is 4cd736d3-dc6c-4c3d-a816-e7682b56db30; current Yama ID is fb010e4d-af74-4906-8ba6-5f096aaf90ec. The latest reapplication is accepted from the user's “All are good”; confirm its pending entry before the next decision. No new account/team, database initialization, dependency download, OBB copy or profile import is needed.
+The next step starts a fresh admin service to load the new routes, followed by the rebuilt bridge. Keep the existing MongoDB window running and the game closed. If the old admin process is still running, press Ctrl+C in its own window and wait for its prompt before starting the new one. Do not start a second copy. Use the existing runtime, accounts, team and identity.
 
-Follow one phase at a time and report its result. A VPS build/test is not Windows/LDPlayer acceptance.
+Return both startup results before the later Android build/install phases below. APK1192604 adds private approval/rejection notices, login/My applications unread checks and retained Application decisions history. Notification acceptance still requires the Android update and a new captain decision: earlier1192603 rejections were not saved and cannot be reconstructed.
 
-## Phase 1: pull and rebuild the Windows bridge
-
-Quit the game. In the **bridge window**, press Ctrl+C and wait for its PowerShell prompt. Then stop the **admin service window** the same way. Keep the MongoDB window running. Temporarily connect WAN for the pulls, then run this in a separate normal PowerShell window:
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
-    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
-        $repo = '/d/Test/wesnoth-setup/' + $name
-        Write-Host "Updating $name"
-        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
-        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Stop and send the output." }
-        & $bash --noprofile --norc -c ('/usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
-        if ($LASTEXITCODE -ne 0) { throw "Could not read $name commit. Stop and send the output." }
-    }
-    'Both updates completed successfully.'
-}
-```
-
-Disconnect WAN while retaining local Ethernet. Rebuild only the account bridge:
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_server' -ErrorAction Stop
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Rebuild-WindowsAllianceBridge.ps1' `
-        -MsysRoot 'D:\Test\wesnoth-setup\msys64'
-    if ($LASTEXITCODE -ne 0) { throw 'Bridge rebuild failed. Send the saved rebuild and build logs.' }
-}
-```
-
-Expected: the completed bridge is preserved, then ALLIANCE ACCOUNT BRIDGE BUILD PASSED and ALLIANCE ACCOUNT BRIDGE REBUILD PASSED. Return the output before Phase2. Logs: server diagnostics/alliance-bridge-rebuild-*.txt and alliance-bridge-build-*.txt.
-
-## Phase 2: load the new backend and bridge
+## Current phase: load the new backend and bridge
 
 Keep the existing database window running. In the stopped admin window:
 
