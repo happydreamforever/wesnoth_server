@@ -1,31 +1,10 @@
-# Next Windows test: start the updated membership services
+# Next Windows test: build the Android membership update
 
-The membership bridge rebuild is accepted: both native steps and all artifact/build/rebuild markers pass. The previous bridge was preserved. The user confirms WAN disconnected with local Ethernet retained during the build. The existing Koichi team and its earlier offline restart acceptance remain valid.
+The membership bridge now reports READY100.99.99.14:15001. The user confirms the admin service was freshly started after pulling the membership update and before the bridge. The previous Windows bridge rebuild passed with WAN disconnected; startup WAN status was not separately supplied. The existing Koichi team and its offline persistence acceptance remain valid.
 
-**Immediate action: phase 2 below.** Keep WAN disconnected, Ethernet connected and the existing MongoDB window running. No pull, repeat build, database initialization, profile import or OBB copy is needed. Start a fresh admin process to load the new routes, then the updated bridge. If an old admin process is still open, stop it with Ctrl+C and wait for its prompt before launching the new one. Do not start duplicate processes.
+**Immediate action: phase 3 below.** Keep MongoDB, admin service and bridge windows open; keep the game closed. Disconnect WAN while retaining local Ethernet before the Android build. No new pull, bridge rebuild, database initialization, profile import or OBB copy is required.
 
-Use one phase at a time and return its result before proceeding. APK1192603 adds My applications, application/withdrawal and captain review/approve/reject; its Windows build/install and LDPlayer interaction remain pending. Approval should add a second member without changing XP. Battles, campaign rewards, leaving and captain transfer follow later. Later phases are retained below for continuity.
-
-## Phase 2 — start the updated services after build acceptance
-
-The MongoDB window should still be running on 127.0.0.1:27018. Start a fresh admin process so the new Python routes load:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAlliance.ps1' `
-    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
-```
-
-Expect database checks to pass and `Alliance admin: http://127.0.0.1:18765/`. Keep this window open. In another PowerShell window:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAllianceBridge.ps1' `
-    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime') `
-    -MsysRoot 'D:\Test\wesnoth-setup\msys64'
-```
-
-Expect `ALLIANCE ACCOUNT BRIDGE READY 100.99.99.14:15001 -> local account service`. Keep all three windows open and return readiness output. Do not start a second copy of an already running service. If the database window was closed, use its existing Run-WindowsAllianceDatabase.ps1 launcher with the same RuntimeRoot first; do not initialize it again.
+Use one phase at a time and return its result before proceeding. APK1192603 adds My applications, application/withdrawal and captain review/approve/reject; its Windows build/install and LDPlayer interaction remain pending. Approval should add a second member without changing XP. Battles, campaign rewards, leaving and captain transfer follow later. Installation and manual-test phases are retained below for continuity; do not run them before build acceptance.
 
 ## Phase 3 — build the membership APK after service acceptance
 
