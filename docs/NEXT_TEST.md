@@ -1,4 +1,28 @@
-# Battle planning 1192606: combined Windows/LDPlayer acceptance
+# Alliance login rejection: inspect existing accounts and service health
+
+The user reports that all attempted accounts receive Invalid username or password in main menu -> Alliance -> Log in. Current cause is unconfirmed. Keep all three service windows open and pause planning A–H and further player login attempts. The completed1192606 build/install and earlier service-ready consoles remain valid; no pull, rebuild, reinstall or database initialization is required. Do not create replacements, reset passwords, change account access or clear app data during diagnosis.
+
+## 1. Inspect account presence and status in the existing admin website
+
+In a Windows browser open http://127.0.0.1:18765/accounts. If prompted, sign in once with administrator username Uni and its administrator password. Player accounts do not sign in to this website. Do not send any password. If administrator login also fails, record its exact message and do not keep retrying; still collect the health report below.
+
+The Accounts page should list UniPlayer and UniRecruit with Role player and Status active. Open their usernames to read the Account ID if available. Report presence, role and status, and whether the IDs match the known players. Do not use Change account access or submit its form. This read distinguishes missing/suspended/wrong-role records from other login causes; it does not verify player passwords.
+
+## 2. Collect current authenticated backend health
+
+In a separate PowerShell window:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Test-WindowsAllianceBackend.ps1' `
+    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
+```
+
+A healthy result is outcome=healthy, http_status=200, all four flags True, network_error=None and ALLIANCE BACKEND CHECK PASSED. It creates only new diagnostic reports, without resetting accounts or starting/stopping services. Return the console and its matching server diagnostics/alliance-backend-*.txt and.json, whether passed or failed. A healthy result verifies the selected runtime credential against the currently running backend and a MongoDB ping; it does not validate a player's password or the bridge's in-memory credential. HTTP401 from either player authentication or internal authorization can produce the game's generic message, so do not infer a typing error from it.
+
+Return both the Accounts-page observation (or admin-login error) and this health result. Do not share runtime files, stored hashes, passwords, tokens, keys or request bodies. The pending asynchronous question covers the same account-status observation; no duplicate attempt is required. Stop before the planning sequence below until the login cause is resolved.
+
+## Paused planning acceptance — resume after login recovery
 
 The returned Windows output now confirms all three services ready: MongoDB127.0.0.1:27018, authenticated database/schema/transaction checks and admin127.0.0.1:18765, and bridge100.99.99.14:15001. Keep those three PowerShell windows and LDPlayer open. The bridge/Android build and installed1192606 are already accepted. No pull, rebuild, reinstall, database initialization, repeated backend diagnostic or initial service restart is required. The intentional restart occurs only at check F.
 
