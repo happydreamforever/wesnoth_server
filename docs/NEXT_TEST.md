@@ -1,4 +1,22 @@
-# Battle planning 1192606: one combined offline delivery and test
+# Battle planning 1192606: diagnose backend startup
+
+The returned Windows report confirms the bridge rebuild, Android build and in-place installation of1192606. Both subsequent bridge launches fail at `stage=backend-health`, before opening the LAN listener. The current database/admin process state and failure cause are unknown. Keep the successful build/install and all saved data; no pull, rebuild, reinstall or database initialization is needed for this diagnostic.
+
+Leave any existing MongoDB/admin windows open and unchanged. In a separate PowerShell window, run the existing helper once:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Test-WindowsAllianceBackend.ps1' `
+    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
+```
+
+When healthy, expect listeners on127.0.0.1:27018 (mongod) and127.0.0.1:18765 (Python), `outcome=healthy; http_status=200`, all four health flags True, `network_error=None` and `ALLIANCE BACKEND CHECK PASSED`. Listener metadata alone does not prove service health. Failure output identifies a connection error, timeout, HTTP rejection or unexpected response; preserve that result for diagnosis instead of retrying the bridge or changing configuration.
+
+Return the console output and the matching `wesnoth_server\diagnostics\alliance-backend-*.txt` and `.json` reports, even if the check passes. Include any current error in the admin-service window. No password, private runtime/configuration file or certificate key is needed. This is read-only service diagnosis apart from its new reports. A passing check establishes current local backend health only, not the earlier cause or Android reachability. WAN status for this latest build/install remains unreported; the earlier1192605 offline acceptance is retained.
+
+## Batch reference — completed delivery and pending acceptance
+
+The original batch below is retained for continuation after startup recovery. **Do not repeat sections1–2 or run the later mutations during the current diagnostic.** The four-player planning checks and full-service restart remain pending. The existing installed app and completed stages will be reused.
 
 The user confirms the previous 1192605 management A–H checks with WAN disconnected. Keep that acceptance; do not repeat the old checklist. Its separate final full-service restart was not explicitly confirmed. This 1192606 batch adds saved battle planning only: approved maps, fixed lineups, both captains' explicit approval, selected-player readiness and cancellation. It cannot start combat or award XP/rating. Use one LDPlayer with sequential logins for four players; no phone or eight-account setup is required.
 
