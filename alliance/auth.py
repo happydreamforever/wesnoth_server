@@ -107,11 +107,12 @@ class AuthService:
         expires = now + timedelta(hours=1 if scope == "admin" else 8)
         def issue(session):
             current = self.db.accounts.find_one({"_id": account["_id"], "status": "active",
-                "role": scope, "password_hash": encoded}, session=session)
+                "role": scope, "password_hash": encoded,
+                "username_key": account["username_key"]}, session=session)
             if current is None:
                 observe("session_state_changed")
                 raise AuthError("invalid_credentials", "Invalid username or password.")
-            # Conflict with simultaneous suspension/password changes so a session
+            # Conflict with simultaneous rename/suspension/password changes so a session
             # cannot appear after an administrator revoked that account's access.
             self.db.accounts.update_one({"_id": current["_id"]}, {
                 "$set": {"password_hash": replacement_hash}, "$inc": {"revision": 1}}, session=session)

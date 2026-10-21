@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime, timezone
+import hashlib
 import re
 from uuid import uuid4
 
@@ -1067,6 +1068,92 @@ class AllianceService:
                 self.db.auth_sessions.delete_many({'account_id': account_id}, session=session)
             self._audit(actor_id, 'set_account_status', account_id, reason,
                         {'status': account['status']}, {'status': status}, session)
+            return public_account(self._account(account_id, session, active=False))
+        return self._tx(write)
+
+    def _admin_account_revision(self, actor_id, account_id, expected_revision, session):
+        """Authorize and serialize one submitted account form, including self edits."""
+        self._admin(actor_id, session)
+        account = self._account(account_id, session, active=False)
+        # _admin already touched the actor in this transaction. The submitted
+        # revision describes the account before that privileged-operation guard.
+        original_revision = account['revision'] - (1 if actor_id == account_id else 0)
+        if original_revision != expected_revision:
+            raise DomainError('stale_account', 'This account changed. Reload the page before trying again.')
+        return account
+
+    @staticmethod
+    def _expected_account_revision(value):
+        if type(value) is not int or not 0 <= value <= 9223372036854775806:
+            raise DomainError('invalid_input', 'A valid account revision is required.')
+
+    def _clear_account_attempts(self, account, username_keys, session):
+        # Login uses fixed fifteen-minute buckets. Clear only this role/name's
+        # current and preceding buckets; never erase unrelated login counters.
+        bucket = int(_now().timestamp()) // 900
+        ids = [hashlib.sha256(f"{account['role']}:{key}:{number}".encode()).hexdigest()
+               for key in set(username_keys) for number in (bucket - 1, bucket)]
+        self.db.auth_attempts.delete_many({'_id': {'$in': ids}}, session=session)
+
+    def admin_edit_account(self, actor_id, account_id, username, status, reason, expected_revision):
+        """Edit only login name/status; identity and all game-owned fields stay intact."""
+        username, key = validate_username(username)
+        reason = _reason(reason)
+        self._expected_account_revision(expected_revision)
+        if status not in ('active', 'suspended'):
+            raise DomainError('invalid_input', 'Account status must be active or suspended.')
+
+        def write(session):
+            account = self._admin_account_revision(actor_id, account_id, expected_revision, session)
+            self._idle(account)
+            if actor_id == account_id and status == 'suspended':
+                raise DomainError('forbidden', 'An administrator cannot suspend their own account.')
+            if account['role'] == 'admin' and status == 'suspended':
+                if self.db.accounts.count_documents({'role': 'admin', 'status': 'active'}, session=session) <= 1:
+                    raise DomainError('last_admin', 'The last active administrator cannot be suspended.')
+            before = {'username': account['username'], 'status': account['status']}
+            after = {'username': username, 'status': status}
+            update = {'$set': {'username': username, 'username_key': key, 'status': status}}
+            if actor_id != account_id:
+                update['$inc'] = {'revision': 1}
+            self.db.accounts.update_one({'_id': account_id}, update, session=session)
+            if before != after:
+                self.db.auth_sessions.delete_many({'account_id': account_id}, session=session)
+            if account['username'] != username:
+                self._clear_account_attempts(account, (account['username_key'], key), session)
+            self._audit(actor_id, 'edit_account', account_id, reason, before, after, session)
+            return public_account(self._account(account_id, session, active=False))
+        return self._tx(write)
+
+    def admin_reset_password(self, actor_id, account_id, password, confirmation, reason, expected_revision):
+        """Set a new exact password and revoke every target session atomically."""
+        from .auth import hash_password
+        reason = _reason(reason)
+        self._expected_account_revision(expected_revision)
+        if (not isinstance(password, str) or not 12 <= len(password) <= 128
+                or '\x00' in password or any(0xD800 <= ord(char) <= 0xDFFF for char in password)):
+            raise DomainError('invalid_input', 'Use a password of 12 to 128 valid Unicode characters without NUL.')
+        if not isinstance(confirmation, str) or password != confirmation:
+            raise DomainError('invalid_input', 'The password confirmation must match exactly.')
+        # Avoid expensive hashing for an unauthorized caller, while rechecking
+        # authorization inside the transaction before changing any records.
+        actor = self._account(actor_id)
+        if actor['role'] != 'admin':
+            raise DomainError('forbidden', 'Administrator access is required.')
+        encoded = hash_password(password)
+
+        def write(session):
+            account = self._admin_account_revision(actor_id, account_id, expected_revision, session)
+            # Password recovery is allowed during an active run. It never
+            # releases or changes a game reservation, leader, team or reward.
+            update = {'$set': {'password_hash': encoded}}
+            if actor_id != account_id:
+                update['$inc'] = {'revision': 1}
+            self.db.accounts.update_one({'_id': account_id}, update, session=session)
+            self.db.auth_sessions.delete_many({'account_id': account_id}, session=session)
+            self._clear_account_attempts(account, (account['username_key'],), session)
+            self._audit(actor_id, 'reset_password', account_id, reason, None,
+                        {'password_reset': True, 'sessions_revoked': True}, session)
             return public_account(self._account(account_id, session, active=False))
         return self._tx(write)
 

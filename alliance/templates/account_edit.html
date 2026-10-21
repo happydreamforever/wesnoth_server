@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="eyebrow">Account management</p><h1>Edit {{ account.username }}</h1>
+<p><a href="{{ url_for('account_detail', account_id=account._id) }}">Back to account</a></p>
+<section class="panel">
+<dl class="inline-details"><dt>Account ID</dt><dd class="identifier">{{ account._id }}</dd><dt>Role</dt><dd>{{ account.role }}</dd></dl>
+<p>Change the username or sign-in access. Changing either ends all sessions for this account. Its identity, leader, experience and team membership stay the same.</p>
+{% if account._id == g.admin._id %}<p>Changing your own username signs you out. You cannot suspend your own administrator account.</p>{% endif %}
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% if stale %}
+<p>The account changed after this form was opened. Review the current record before submitting a new change.</p>
+<a class="button" href="{{ url_for('account_edit', account_id=account._id) }}">Reload account form</a>
+{% else %}
+<form class="compact-form" method="post" action="{{ url_for('account_edit', account_id=account._id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="revision" value="{{ values.revision }}">
+<label for="username">Username</label>
+<input id="username" name="username" type="text" value="{{ values.username }}" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" autocomplete="off" required aria-describedby="username-help">
+<p id="username-help">3–24 ASCII letters, digits or underscores. Usernames must be unique.</p>
+<label for="status">Status</label>
+<select id="status" name="status" required><option value="active"{% if values.status == 'active' %} selected{% endif %}>Active</option><option value="suspended"{% if values.status == 'suspended' %} selected{% endif %}>Suspended</option></select>
+<label for="reason">Reason for the audit log</label>
+<textarea id="reason" name="reason" maxlength="500" required aria-describedby="reason-help">{{ values.reason }}</textarea>
+<p id="reason-help">Describe why the account needs this change. Do not enter passwords or other credentials.</p>
+<button type="submit">Save account</button>
+</form>
+{% endif %}
+</section>
+{% endblock %}

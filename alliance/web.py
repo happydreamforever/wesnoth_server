@@ -191,6 +191,31 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     def form_text(key, maximum=200):
         return text_field(request.form, key, maximum=maximum)
 
+    def account_form(*keys):
+        # Account administration accepts one complete form, never query-string
+        # values, extra properties, file uploads or duplicate field values.
+        expected = {"csrf_token", "revision", *keys}
+        if request.args or request.files or set(request.form) != expected:
+            abort(400)
+        if any(len(request.form.getlist(key)) != 1 for key in expected):
+            abort(400)
+        revision = request.form["revision"]
+        if (not revision or len(revision) > 19 or not revision.isascii()
+                or not revision.isdecimal() or (revision != "0" and revision.startswith("0"))):
+            abort(400)
+        value = int(revision)
+        if value > 9223372036854775807:
+            abort(400)
+        return value
+
+    def account_form_text(key, maximum):
+        # Empty values receive the domain's usable validation message. Grossly
+        # oversized/malformed forms stop before they can be reflected back.
+        value = request.form[key]
+        if len(value) > maximum:
+            abort(400)
+        return value
+
     @app.route("/login", methods=["GET", "POST"])
     def login():
         if request.method == "POST":
@@ -229,6 +254,59 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     @admin_required
     def account_detail(account_id):
         return render_template("account.html", account=domain.get_account(account_id))
+
+    @app.route("/accounts/<account_id>/edit", methods=["GET", "POST"])
+    @admin_required
+    def account_edit(account_id):
+        account = domain.get_account(account_id)
+        values = {"username": account["username"], "status": account["status"],
+                  "reason": "", "revision": account["revision"]}
+        if request.method == "POST":
+            revision = account_form("username", "status", "reason")
+            values = {"username": account_form_text("username", 64), "status": account_form_text("status", 20),
+                      "reason": account_form_text("reason", 500), "revision": revision}
+            try:
+                updated = domain.admin_edit_account(g.admin["_id"], account_id,
+                    values["username"], values["status"], values["reason"], revision)
+            except DomainError as error:
+                status = {"not_found": 404, "forbidden": 403}.get(error.code, 409)
+                return render_template("account_edit.html", account=account, values=values,
+                    error=error.message, stale=error.code == "stale_account"), status
+            if account_id == g.admin["_id"] and (updated["username"] != account["username"]
+                    or updated["status"] != account["status"]):
+                session.clear()
+                flash("Your account was updated and its sessions ended. Sign in with your current username and password.")
+                return redirect(url_for("login"))
+            flash("Account saved. Changed usernames or access settings end that account's sessions. The action was recorded in the audit log.")
+            return redirect(url_for("account_detail", account_id=account_id))
+        return render_template("account_edit.html", account=account, values=values)
+
+    @app.route("/accounts/<account_id>/password", methods=["GET", "POST"])
+    @admin_required
+    def account_password(account_id):
+        account = domain.get_account(account_id)
+        revision, reason = account["revision"], ""
+        if request.method == "POST":
+            revision = account_form("password", "confirmation", "reason")
+            reason = account_form_text("reason", 500)
+            try:
+                domain.admin_reset_password(g.admin["_id"], account_id,
+                    request.form["password"], request.form["confirmation"], reason, revision)
+            except DomainError as error:
+                status = {"not_found": 404, "forbidden": 403}.get(error.code, 409)
+                # Only nonsecret fields return to the form. Passwords must not
+                # reach templates, flashes, cookies, URLs or diagnostic text.
+                return render_template("account_password.html", account=account,
+                    revision=revision, reason=reason, error=error.message,
+                    stale=error.code == "stale_account"), status
+            if account_id == g.admin["_id"]:
+                session.clear()
+                flash("Your password was reset and all your sessions ended. Sign in with the new password.")
+                return redirect(url_for("login"))
+            flash("Password reset. All sessions for this account ended; use the new password to sign in. Account status is unchanged. The action was recorded in the audit log.")
+            return redirect(url_for("account_detail", account_id=account_id))
+        return render_template("account_password.html", account=account,
+            revision=revision, reason=reason)
 
     @app.post("/accounts/<account_id>/status")
     @admin_required
