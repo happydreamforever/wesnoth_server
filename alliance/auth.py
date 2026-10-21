@@ -112,7 +112,8 @@ class AuthService:
 
     @staticmethod
     def _public(account):
-        return {key: value for key, value in account.items() if key != "password_hash"}
+        return {key: value for key, value in account.items()
+                if key not in ("password_hash", "application_decisions")}
 
     def validate_token(self, raw_token, scope):
         if scope not in ("admin", "player"):

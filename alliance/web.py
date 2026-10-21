@@ -358,6 +358,16 @@ def create_app(settings, db):
         data = directory_payload("team_id", "account_id")
         return jsonify(domain.directory_reject_application(g.player["_id"], data["team_id"], data["account_id"]))
 
+    @internal_route("/team-directory/application_decisions")
+    def directory_application_decisions():
+        directory_payload()
+        return jsonify(domain.directory_application_decisions(g.player["_id"]))
+
+    @internal_route("/team-directory/ack_decision")
+    def directory_ack_decision():
+        data = directory_payload("decision_id")
+        return jsonify(domain.directory_ack_decision(g.player["_id"], data["decision_id"]))
+
     @internal_route("/areas", methods=("GET",))
     def player_areas():
         return jsonify(areas=domain.list_areas())

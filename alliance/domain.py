@@ -71,6 +71,8 @@ def _reason(value):
 def public_account(document):
     result = deepcopy(document)
     result.pop('password_hash', None)
+    # Decision history has its own owner-only, bounded response contract.
+    result.pop('application_decisions', None)
     return result
 
 
@@ -202,6 +204,7 @@ class AllianceService:
         account = self._account(actor_id)
         if account['role'] != 'player':
             raise DomainError('forbidden', 'Player access is required.')
+        return account
 
     def directory_areas(self, actor_id, after=''):
         """Twenty public area names per request; no full-area or unbounded response."""
@@ -313,6 +316,35 @@ class AllianceService:
         self.reject_member(actor_id, team_id, account_id)
         return {'team_id': team_id, 'account_id': account_id, 'status': 'rejected'}
 
+    def directory_application_decisions(self, actor_id):
+        account = self._directory_player(actor_id)
+        # Older accounts have no history. Never infer decisions from missing
+        # applications or synthesize notices for changes made before this feature.
+        return {'decisions': [{key: notice[key] for key in
+            ('id', 'team_id', 'team_name', 'status', 'created_at', 'unread')}
+            for notice in account.get('application_decisions', [])[:50]]}
+
+    def directory_ack_decision(self, actor_id, decision_id):
+        _directory_id(decision_id, uuid=True)
+        def write(session):
+            self._player(actor_id, session)
+            result = self.db.accounts.update_one(
+                {'_id': actor_id, 'application_decisions.id': decision_id},
+                {'$set': {'application_decisions.$.unread': False}}, session=session)
+            if result.matched_count != 1:
+                raise DomainError('not_found', 'This application decision is no longer available.')
+            return {'decision_id': decision_id, 'status': 'read'}
+        return self._tx(write)
+
+    def _record_application_decision(self, account_id, team, status, session):
+        notice = {'id': _id(), 'team_id': team['_id'], 'team_name': team['name'],
+                  'status': status, 'created_at': _now().strftime('%Y-%m-%dT%H:%M:%SZ'), 'unread': True}
+        result = self.db.accounts.update_one({'_id': account_id}, {
+            '$push': {'application_decisions': {'$each': [notice], '$position': 0, '$slice': 50}},
+            '$inc': {'revision': 1}}, session=session)
+        if result.matched_count != 1:
+            raise DomainError('not_found', 'The applicant account is unavailable.')
+
     def get_team(self, actor_id, team_id):
         """Public roster and leader previews; application IDs only for its captain."""
         self._account(actor_id)
@@ -393,7 +425,7 @@ class AllianceService:
             self.db.teams.update_one({'_id': team_id}, {
                 '$push': {'members': {'account_id': account_id, 'joined_at': _now()}},
                 '$pull': {'join_requests': account_id}, '$inc': {'revision': 1}}, session=session)
-            self.db.accounts.update_one({'_id': account_id}, {'$inc': {'revision': 1}}, session=session)
+            self._record_application_decision(account_id, team, 'approved', session)
             return self._team(team_id, session)
         return self._tx(write)
 
@@ -405,8 +437,11 @@ class AllianceService:
             team = self._team(team_id, session)
             self._captain(captain_id, team, session)
             self._idle(team)
+            if account_id not in team['join_requests']:
+                return {'team_id': team_id, 'account_id': account_id, 'requested': False}
             self.db.teams.update_one({'_id': team_id}, {'$pull': {'join_requests': account_id},
                                                      '$inc': {'revision': 1}}, session=session)
+            self._record_application_decision(account_id, team, 'rejected', session)
             return {'team_id': team_id, 'account_id': account_id, 'requested': False}
         return self._tx(write)
 

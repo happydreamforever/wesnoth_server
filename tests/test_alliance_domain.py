@@ -15,6 +15,7 @@ from pathlib import Path
 import re
 import sys
 import unittest
+from unittest.mock import patch
 from urllib.parse import urlsplit
 from uuid import uuid4
 
@@ -353,6 +354,119 @@ class MongoDomainTests(unittest.TestCase):
         self.service.directory_withdraw_application(applicant, team)
         self.assertEqual(self.service._team(team)['join_requests'], [])
         self.assertEqual(self.service.get_account(applicant)['leader']['total_experience'], 0)
+
+    def test_application_decisions_owner_read_ack_and_unchanged_legacy_profile(self):
+        captain, applicant, stranger = self.player(), self.player(), self.player()
+        team = self.service.create_team(captain, 'Decision Snapshot')['_id']
+        self.assertNotIn('application_decisions', self.db.accounts.find_one({'_id': applicant}))
+        self.assertEqual(self.service.directory_application_decisions(applicant), {'decisions': []})
+        self.service.request_join(applicant, team)
+        self.service.withdraw_join(applicant, team)
+        self.service.reject_member(captain, team, applicant)
+        self.assertEqual(self.service.directory_application_decisions(applicant), {'decisions': []})
+        self.service.request_join(applicant, team)
+        self.service.reject_member(captain, team, applicant)
+        first = self.service.directory_application_decisions(applicant)['decisions'][0]
+        self.assertEqual(set(first), {'id', 'team_id', 'team_name', 'status', 'created_at', 'unread'})
+        self.assertEqual((first['team_id'], first['team_name'], first['status'], first['unread']),
+                         (team, 'Decision Snapshot', 'rejected', True))
+        datetime.strptime(first['created_at'], '%Y-%m-%dT%H:%M:%SZ')
+        # Refreshing never acknowledges a decision, and repeated rejection adds nothing.
+        before = self.db.accounts.find_one({'_id': applicant})
+        self.assertEqual(self.service.directory_application_decisions(applicant)['decisions'], [first])
+        self.assertEqual(self.db.accounts.find_one({'_id': applicant}), before)
+        self.service.reject_member(captain, team, applicant)
+        self.assertEqual(self.service.directory_application_decisions(applicant)['decisions'], [first])
+        self.assertEqual(self.service.directory_application_decisions(captain), {'decisions': []})
+        self.assertDomain('not_found', self.service.directory_ack_decision, stranger, first['id'])
+        self.assertDomain('invalid_input', self.service.directory_ack_decision, applicant, {'$ne': ''})
+        self.assertNotIn('application_decisions', self.service.get_account(applicant))
+        for _ in range(2):
+            self.assertEqual(self.service.directory_ack_decision(applicant, first['id']),
+                             {'decision_id': first['id'], 'status': 'read'})
+        self.assertFalse(self.service.directory_application_decisions(applicant)['decisions'][0]['unread'])
+        self.db.teams.update_one({'_id': team}, {'$set': {'name': 'Renamed Team', 'name_key': 'renamed team'}})
+        self.service.request_join(applicant, team)
+        self.service.approve_member(captain, team, applicant)
+        decisions = self.service.directory_application_decisions(applicant)['decisions']
+        self.assertEqual([item['status'] for item in decisions], ['approved', 'rejected'])
+        self.assertEqual([item['team_name'] for item in decisions], ['Renamed Team', 'Decision Snapshot'])
+        self.assertEqual([item['unread'] for item in decisions], [True, False])
+        self.assertEqual(self.service.get_account(applicant)['leader']['total_experience'], 0)
+        self.assertEqual(self.service._team(team)['experience'], 0)
+
+    def test_application_decisions_retain_only_latest_fifty(self):
+        captain, applicant = self.player(), self.player()
+        team = self.service.create_team(captain, 'Bounded Decisions')['_id']
+        created = []
+        for _ in range(52):
+            self.service.request_join(applicant, team)
+            self.service.reject_member(captain, team, applicant)
+            created.append(self.service.directory_application_decisions(applicant)['decisions'][0]['id'])
+        stored = self.db.accounts.find_one({'_id': applicant})['application_decisions']
+        self.assertEqual(len(stored), 50)
+        self.assertEqual([item['id'] for item in stored], list(reversed(created[-50:])))
+        self.assertEqual(self.service.directory_application_decisions(applicant)['decisions'], stored)
+        self.assertDomain('not_found', self.service.directory_ack_decision, applicant, created[0])
+
+    def test_application_decision_and_team_mutation_rollback_together(self):
+        captain, applicant = self.player(), self.player()
+        team = self.service.create_team(captain, 'Atomic Decisions')['_id']
+        self.service.request_join(applicant, team)
+        record = self.service._record_application_decision
+        def fail_after_record(*args):
+            record(*args)
+            raise RuntimeError('Injected fixture failure after decision write')
+        for action in (self.service.approve_member, self.service.reject_member):
+            before_team = self.db.teams.find_one({'_id': team})
+            before_account = self.db.accounts.find_one({'_id': applicant})
+            with patch.object(self.service, '_record_application_decision', side_effect=fail_after_record):
+                with self.assertRaises(RuntimeError):
+                    action(captain, team, applicant)
+            self.assertEqual(self.db.teams.find_one({'_id': team}), before_team)
+            self.assertEqual(self.db.accounts.find_one({'_id': applicant}), before_account)
+
+    def test_application_decision_races_never_duplicate_or_contradict(self):
+        captain, applicant = self.player(), self.player()
+        team = self.service.create_team(captain, 'Decision Races')['_id']
+        self.service.request_join(applicant, team)
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            list(pool.map(lambda _: self.service.reject_member(captain, team, applicant), range(2)))
+        self.assertEqual(len(self.service.directory_application_decisions(applicant)['decisions']), 1)
+        self.service.request_join(applicant, team)
+        def decide(action):
+            try:
+                action(captain, team, applicant)
+                return 'done'
+            except DomainError as error:
+                return error.code
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            outcomes = list(pool.map(decide, (self.service.approve_member, self.service.reject_member)))
+        self.assertTrue(all(item in ('done', 'not_requested') for item in outcomes))
+        decisions = self.service.directory_application_decisions(applicant)['decisions']
+        self.assertEqual(len(decisions), 2)
+        roster = [item['account_id'] for item in self.service._team(team)['members']]
+        self.assertEqual(applicant in roster, decisions[0]['status'] == 'approved')
+        self.assertNotIn(applicant, self.service._team(team)['join_requests'])
+
+    def test_decision_ack_racing_new_notice_marks_only_selected_notice(self):
+        captain, applicant = self.player(), self.player()
+        team = self.service.create_team(captain, 'Read Notice Race')['_id']
+        self.service.request_join(applicant, team)
+        self.service.reject_member(captain, team, applicant)
+        selected = self.service.directory_application_decisions(applicant)['decisions'][0]['id']
+        self.service.request_join(applicant, team)
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            acknowledged = pool.submit(self.service.directory_ack_decision, applicant, selected)
+            rejected = pool.submit(self.service.reject_member, captain, team, applicant)
+            self.assertEqual(acknowledged.result()['status'], 'read')
+            rejected.result()
+        notices = self.service.directory_application_decisions(applicant)['decisions']
+        self.assertEqual(len(notices), 2)
+        self.assertNotEqual(notices[0]['id'], selected)
+        self.assertTrue(notices[0]['unread'])
+        self.assertEqual(notices[1]['id'], selected)
+        self.assertFalse(notices[1]['unread'])
 
     def test_team_join_requires_request_captain_and_capacity(self):
         captain, outsider, applicant = self.player(), self.player(), self.player()

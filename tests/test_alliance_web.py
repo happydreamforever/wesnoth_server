@@ -288,6 +288,52 @@ class AllianceWebTests(unittest.TestCase):
         self.assertEqual(self.domain.get_account(self.player['_id'])['leader']['total_experience'], 0)
         self.assertEqual(self.domain._team(team)['experience'], 0)
 
+    def test_native_application_decisions_are_owner_only_and_explicitly_acknowledged(self):
+        captain = self.domain.register('DecisionCaptain', self.password_hash)
+        team = self.domain.create_team(captain['_id'], 'Decision Team')['_id']
+        headers = self.player_headers()
+        captain_headers = {**self.bridge, 'X-Player-Token': self.auth.authenticate(
+            'DecisionCaptain', self.password, 'player')['token']}
+        base = '/internal/v1/team-directory/'
+        def post(operation, data, supplied=headers):
+            return self.client.post(base + operation, headers=supplied, json=data)
+        self.assertEqual(post('application_decisions', {}).json, {'decisions': []})
+        post('apply_team', {'team_id': team})
+        self.assertEqual(post('reject_application', {'team_id': team, 'account_id': self.player['_id']},
+                              captain_headers).status_code, 200)
+        response = post('application_decisions', {})
+        self.assertEqual(response.status_code, 200)
+        notice = response.json['decisions'][0]
+        self.assertEqual(set(notice), {'id', 'team_id', 'team_name', 'status', 'created_at', 'unread'})
+        self.assertEqual(notice['status'], 'rejected')
+        self.assertTrue(notice['unread'])
+        self.assertEqual(post('application_decisions', {}).json, response.json)
+        self.assertEqual(post('application_decisions', {}, captain_headers).json, {'decisions': []})
+        denied = post('ack_decision', {'decision_id': notice['id']}, captain_headers)
+        self.assertEqual(denied.status_code, 404)
+        self.assertEqual(denied.json['error']['code'], 'not_found')
+        self.assertTrue(post('application_decisions', {}).json['decisions'][0]['unread'])
+        for _ in range(2):
+            marked = post('ack_decision', {'decision_id': notice['id']})
+            self.assertEqual(marked.status_code, 200)
+            self.assertEqual(marked.json, {'decision_id': notice['id'], 'status': 'read'})
+        self.assertFalse(post('application_decisions', {}).json['decisions'][0]['unread'])
+        post('apply_team', {'team_id': team})
+        post('approve_application', {'team_id': team, 'account_id': self.player['_id']}, captain_headers)
+        decisions = post('application_decisions', {}).json['decisions']
+        self.assertEqual([item['status'] for item in decisions], ['approved', 'rejected'])
+        self.assertEqual([item['unread'] for item in decisions], [True, False])
+        self.assertNotIn('application_decisions', self.client.get('/internal/v1/me', headers=headers).json['account'])
+        login = self.client.post('/internal/v1/login', headers=self.bridge,
+                                 json={'username': 'PlayerOne', 'password': self.password})
+        self.assertEqual(login.status_code, 200)
+        self.assertNotIn('application_decisions', login.json['account'])
+        self.assertNotIn(self.password_hash, str(decisions))
+        self.auth.revoke_token(headers['X-Player-Token'])
+        self.assertEqual(post('application_decisions', {}).status_code, 401)
+        self.assertEqual(post('ack_decision', {'decision_id': decisions[0]['id']}).status_code, 401)
+        self.assertTrue(self.domain.directory_application_decisions(self.player['_id'])['decisions'][0]['unread'])
+
     def test_native_directory_rejects_extra_identity_rewards_selectors_and_query(self):
         headers = self.player_headers()
         base = '/internal/v1/team-directory/'
@@ -305,7 +351,11 @@ class AllianceWebTests(unittest.TestCase):
             ('apply_team', {'team_id': self.player['_id'], 'account_id': self.admin['_id']}),
             ('withdraw_application', {'team_id': self.player['_id'], 'account_id': self.admin['_id']}),
             ('approve_application', {'team_id': self.player['_id']}),
-            ('reject_application', {'team_id': self.player['_id'], 'account_id': {'$ne': ''}})):
+            ('reject_application', {'team_id': self.player['_id'], 'account_id': {'$ne': ''}}),
+            ('application_decisions', {'account_id': self.admin['_id']}),
+            ('application_decisions', {'after': ''}),
+            ('ack_decision', {'decision_id': {'$ne': ''}}),
+            ('ack_decision', {'decision_id': self.player['_id'], 'account_id': self.admin['_id']})):
             with self.subTest(operation=operation, data=data):
                 response = self.client.post(base + operation, headers=headers, json=data)
                 self.assertIn(response.status_code, (400, 409))
@@ -324,7 +374,8 @@ class AllianceWebTests(unittest.TestCase):
             'apply_team': {'team_id': self.player['_id']},
             'withdraw_application': {'team_id': self.player['_id']},
             'approve_application': {'team_id': self.player['_id'], 'account_id': self.player['_id']},
-            'reject_application': {'team_id': self.player['_id'], 'account_id': self.player['_id']}}
+            'reject_application': {'team_id': self.player['_id'], 'account_id': self.player['_id']},
+            'application_decisions': {}, 'ack_decision': {'decision_id': self.player['_id']}}
         headers = self.player_headers()
         admin = self.auth.authenticate('Operator', self.password, 'admin')
         wrong_scope = {**self.bridge, 'X-Player-Token': admin['token']}

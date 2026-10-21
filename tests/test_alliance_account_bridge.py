@@ -49,6 +49,8 @@ TEAM = {
 TEAM_SUMMARY = {key: TEAM[key] for key in
                 ("id", "name", "area_id", "captain_id", "level", "experience", "rating")}
 TEAM_SUMMARY["member_count"] = 1
+DECISION = {'id': '32345678-1234-1234-1234-123456789abc', 'team_id': TEAM['id'],
+    'team_name': TEAM['name'], 'status': 'rejected', 'created_at': '2026-10-21T12:34:56Z', 'unread': True}
 
 
 class Backend(http.server.ThreadingHTTPServer):
@@ -305,6 +307,18 @@ class BridgeTests(unittest.TestCase):
                         elif operation == "team_applicants":
                             code, response = 200, {"team_id": TEAM['id'],
                                 "applicants": TEAM['members'] if parent.application_pending else [], "next": ""}
+                        elif operation == 'application_decisions':
+                            code, response = 200, {'decisions': parent.decisions}
+                        elif operation == 'ack_decision':
+                            decision_id = json.loads(raw)['decision_id']
+                            matched = next((item for item in parent.decisions if item['id'] == decision_id), None)
+                            if matched is None:
+                                code, response = 404, {'error': {'code': 'not_found'}}
+                            else:
+                                matched['unread'] = False
+                                code, response = 200, {'decision_id': decision_id, 'status': 'read'}
+                                if parent.mode == 'decision_uncertain':
+                                    code, response = 503, {'error': {'code': 'private_error', 'message': parent.secret}}
                         elif operation in ("apply_team", "withdraw_application", "approve_application", "reject_application"):
                             body = json.loads(raw)
                             parent.application_pending = operation == "apply_team"
@@ -382,6 +396,7 @@ class BridgeTests(unittest.TestCase):
         type(self).directory_override = None
         type(self).directory_created = False
         type(self).application_pending = False
+        type(self).decisions = []
 
     def connect(self):
         raw = socket.create_connection(("127.0.0.1", 15001), timeout=12)
@@ -404,7 +419,7 @@ class BridgeTests(unittest.TestCase):
         value = {"v": 1, "id": "a" * 32, "op": operation, "body": body or {}}
         if operation in ("me", "logout", "areas", "teams", "my_team", "create_team", "team_detail",
                          "my_applications", "team_applicants", "apply_team", "withdraw_application",
-                         "approve_application", "reject_application"):
+                         "approve_application", "reject_application", "application_decisions", "ack_decision"):
             value["token"] = token or self.token
         return value
 
@@ -576,6 +591,59 @@ class BridgeTests(unittest.TestCase):
             type(self).directory_override = (200, response)
             self.assertEqual(self.exchange(self.request(operation, body))['data'], response)
 
+    def test_decision_read_ack_and_uncertain_ack_recovery(self):
+        start = len(self.calls)
+        self.assertEqual(self.exchange(self.request('application_decisions'))['data'], {'decisions': []})
+        type(self).decisions = [deepcopy(DECISION)]
+        for _ in range(2):
+            result = self.exchange(self.request('application_decisions'))
+            self.assertEqual(result['data'], {'decisions': [DECISION]})
+            self.assertTrue(type(self).decisions[0]['unread'])
+        type(self).mode = 'decision_uncertain'
+        marked = self.exchange(self.request('ack_decision', {'decision_id': DECISION['id']}))
+        self.assertEqual(marked['status'], 503)
+        self.assertFalse(self.exchange(self.request('application_decisions'))['data']['decisions'][0]['unread'])
+        self.assertEqual(sum(path.endswith('/ack_decision') for _, path, _, _ in self.calls[start:]), 1)
+        type(self).mode = 'normal'
+        marked = self.exchange(self.request('ack_decision', {'decision_id': DECISION['id']}))
+        self.assertEqual(marked['data'], {'decision_id': DECISION['id'], 'status': 'read'})
+        missing = self.exchange(self.request('ack_decision', {'decision_id': TEAM['id']}))
+        self.assertEqual((missing['status'], missing['data']['code']), (404, 'not_found'))
+        for method, path, headers, _body in self.calls[start:]:
+            self.assertEqual(method, 'POST')
+            self.assertTrue(path.startswith('/internal/v1/team-directory/'))
+            self.assertEqual(headers['X-Player-Token'], self.token)
+        type(self).revoked = True
+        for operation, body in (('application_decisions', {}), ('ack_decision', {'decision_id': DECISION['id']})):
+            result = self.exchange(self.request(operation, body))
+            self.assertEqual((result['status'], result['data']['code']), (401, 'invalid_session'))
+
+    def test_decision_responses_reject_private_fields_wrong_types_dates_and_overflow(self):
+        cases = [('application_decisions', {}, {'decisions': [DECISION] * 51}),
+                 ('application_decisions', {}, {'decisions': [DECISION] * 2}),
+                 ('application_decisions', {}, {'decisions': [], 'account_id': ACCOUNT['_id']}),
+                 ('ack_decision', {'decision_id': DECISION['id']}, {'decision_id': TEAM['id'], 'status': 'read'}),
+                 ('ack_decision', {'decision_id': DECISION['id']}, {'decision_id': DECISION['id'], 'status': 'unread'}),
+                 ('ack_decision', {'decision_id': DECISION['id']},
+                  {'decision_id': DECISION['id'], 'status': 'read', 'private': self.secret})]
+        for key, value in (('id', 'not-a-uuid'), ('team_id', {'$ne': ''}), ('team_name', '<Team>'),
+            ('status', 'pending'), ('unread', 1), ('created_at', '2026-02-29T12:34:56Z'),
+            ('created_at', '0000-01-01T12:34:56Z'), ('created_at', '2026-01-01T24:34:56Z'),
+            ('created_at', '2026-01-01T12:34:56+00:00'), ('created_at', '2026-13-01T12:34:56Z'),
+            ('password_hash', self.secret)):
+            cases.append(('application_decisions', {}, {'decisions': [{**DECISION, key: value}]}))
+        for operation, body, response in cases:
+            with self.subTest(operation=operation, response=response):
+                type(self).directory_override = (200, response)
+                result = self.exchange(self.request(operation, body))
+                self.assertEqual(result['status'], 503)
+                self.assertNotIn(self.secret, json.dumps(result))
+        # Fifty unique notices fit the unchanged32KiB frame; preserve insertion order.
+        records = [{**DECISION, 'id': f'{index:08x}-1234-1234-1234-123456789abc',
+                    'created_at': '2024-02-29T12:34:56Z', 'unread': bool(index % 2)} for index in range(50)]
+        type(self).directory_override = (200, {'decisions': records})
+        self.assertEqual(self.exchange(self.request('application_decisions'))['data'], {'decisions': records})
+
     def test_directory_invalid_requests_are_rejected_before_forwarding(self):
         cases = [self.request("areas", {"after": {"$gt": ""}}),
                  self.request("teams", {"area_id": "../server/finish", "after": ""}),
@@ -590,7 +658,11 @@ class BridgeTests(unittest.TestCase):
                  self.request('apply_team', {'team_id': TEAM['id'], 'account_id': ACCOUNT['_id']}),
                  self.request('withdraw_application', {'team_id': TEAM['id'], 'account_id': ACCOUNT['_id']}),
                  self.request('approve_application', {'team_id': TEAM['id'], 'account_id': {'$ne': ''}}),
-                 self.request('reject_application', {'team_id': TEAM['id'], 'account_id': '../admin'})]
+                 self.request('reject_application', {'team_id': TEAM['id'], 'account_id': '../admin'}),
+                 self.request('application_decisions', {'account_id': ACCOUNT['_id']}),
+                 self.request('application_decisions', {'after': ''}),
+                 self.request('ack_decision', {'decision_id': {'$ne': ''}}),
+                 self.request('ack_decision', {'decision_id': DECISION['id'], 'account_id': ACCOUNT['_id']})]
         missing_token = self.request("areas", {"after": ""})
         missing_token.pop("token")
         cases.append(missing_token)

@@ -71,7 +71,8 @@ bool directory_operation(const std::string& operation) {
            operation == "create_team" || operation == "team_detail" ||
            operation == "my_applications" || operation == "team_applicants" ||
            operation == "apply_team" || operation == "withdraw_application" ||
-           operation == "approve_application" || operation == "reject_application";
+           operation == "approve_application" || operation == "reject_application" ||
+           operation == "application_decisions" || operation == "ack_decision";
 }
 bool request_id(const std::string& value) {
     if(value.size() != 32) return false;
@@ -245,7 +246,8 @@ Request account_request(const std::vector<unsigned char>& bytes) {
         if(!ascii_word(result.token, 43, 43)) invalid();
         if(result.operation == "areas" || result.operation == "my_applications") fields(body, {"after"});
         else if(result.operation == "teams") fields(body, {"area_id", "after"});
-        else if(result.operation == "my_team") fields(body, {});
+        else if(result.operation == "my_team" || result.operation == "application_decisions") fields(body, {});
+        else if(result.operation == "ack_decision") fields(body, {"decision_id"});
         else if(result.operation == "create_team") fields(body, {"name", "area_id"});
         else if(result.operation == "team_applicants") fields(body, {"team_id", "after"});
         else if(result.operation == "approve_application" || result.operation == "reject_application")
@@ -258,6 +260,7 @@ Request account_request(const std::vector<unsigned char>& bytes) {
         if(body.contains("area_id") && !ascii_word(text(body.at("area_id"), 64), 1, 64)) invalid();
         if(body.contains("team_id") && !uuid(text(body.at("team_id"), 36))) invalid();
         if(body.contains("account_id") && !uuid(text(body.at("account_id"), 36))) invalid();
+        if(body.contains("decision_id") && !uuid(text(body.at("decision_id"), 36))) invalid();
         if(body.contains("name")) directory_name(text(body.at("name"), 64));
     } else invalid();
     result.body = json::serialize(body);
@@ -314,6 +317,23 @@ std::string directory_display_name(const json::value& value) {
     if(directory_name(result) != result) invalid();
     return result;
 }
+std::string decision_timestamp(const json::value& value) {
+    const auto stamp = text(value, 20);
+    if(stamp.size() != 20) invalid();
+    const std::string shape = "0000-00-00T00:00:00Z";
+    for(std::size_t i = 0; i < shape.size(); ++i) {
+        if(shape[i] == '0') { if(stamp[i] < '0' || stamp[i] > '9') invalid(); }
+        else if(stamp[i] != shape[i]) invalid();
+    }
+    const int year = std::stoi(stamp.substr(0, 4)), month = std::stoi(stamp.substr(5, 2)),
+              day = std::stoi(stamp.substr(8, 2));
+    if(year < 1 || month < 1 || month > 12 || std::stoi(stamp.substr(11, 2)) > 23 ||
+       std::stoi(stamp.substr(14, 2)) > 59 || std::stoi(stamp.substr(17, 2)) > 59) invalid();
+    const int days[] = {31, 28 + (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)),
+                        31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    if(day < 1 || day > days[month - 1]) invalid();
+    return stamp;
+}
 json::object public_team_summary(const json::object& team, bool detail) {
     if(detail) fields(team, {"id", "name", "area_id", "area_name", "captain_id", "level",
                             "experience", "rating", "capacity", "members"});
@@ -367,7 +387,7 @@ json::object directory_error(const Request& request, unsigned status, const std:
     const char* message = "The Alliance service is unavailable. Refresh your team or application list before retrying a change.";
     if(status == 401) { code = "invalid_session"; message = "Your session has expired. Please log in again."; }
     else if(status == 403) { code = "forbidden"; message = "This team operation is not permitted."; }
-    else if(status == 404) { code = "not_found"; message = "The selected team or area is no longer available. Refresh the list."; }
+    else if(status == 404) { code = "not_found"; message = "The selected team, area or application decision is no longer available. Refresh the list."; }
     else if(status == 400) { code = "invalid_input"; message = "Check the selected area, team or player."; }
     else if(status == 429) { code = "rate_limited"; message = "Too many requests. Wait before trying again."; }
     else if(status == 409) {
@@ -389,6 +409,32 @@ json::object directory_error(const Request& request, unsigned status, const std:
 }
 json::object directory_data(const Request& request, const json::object& root) {
     const auto body = parse_json(request.body).as_object();
+    if(request.operation == "application_decisions") {
+        fields(root, {"decisions"});
+        if(!root.at("decisions").is_array() || root.at("decisions").as_array().size() > 50) invalid();
+        std::set<std::string> ids;
+        json::array decisions;
+        for(const auto& value : root.at("decisions").as_array()) {
+            if(!value.is_object()) invalid();
+            const auto& notice = value.as_object();
+            fields(notice, {"id", "team_id", "team_name", "status", "created_at", "unread"});
+            const auto id = directory_identifier(notice.at("id"), true);
+            const auto status = text(notice.at("status"), 8);
+            if(!ids.insert(id).second || (status != "approved" && status != "rejected") ||
+               !notice.at("unread").is_bool()) invalid();
+            decisions.emplace_back(json::object{{"id", id},
+                {"team_id", directory_identifier(notice.at("team_id"), true)},
+                {"team_name", directory_display_name(notice.at("team_name"))}, {"status", status},
+                {"created_at", decision_timestamp(notice.at("created_at"))}, {"unread", notice.at("unread")}});
+        }
+        return {{"decisions", std::move(decisions)}};
+    }
+    if(request.operation == "ack_decision") {
+        fields(root, {"decision_id", "status"});
+        const auto id = directory_identifier(root.at("decision_id"), true);
+        if(id != text(body.at("decision_id"), 36) || text(root.at("status"), 4) != "read") invalid();
+        return {{"decision_id", id}, {"status", "read"}};
+    }
     if(request.operation == "areas" || request.operation == "teams" || request.operation == "my_applications" ||
        request.operation == "team_applicants") {
         const bool areas = request.operation == "areas";

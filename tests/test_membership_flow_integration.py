@@ -134,6 +134,14 @@ class RealMembershipFlow(unittest.TestCase):
                         self.assertEqual(account["leader"]["experience"], 0)
                         self.assertEqual(account["leader"]["total_experience"], 0)
                     self.assertEqual((team["experience"], team["level"], team["rating"]), (0, 1, 1000))
+                    decisions_before_restart = member["application_decisions"]
+                    self.assertEqual(len(decisions_before_restart), 2)
+                    self.assertEqual([item["status"] for item in decisions_before_restart],
+                                     ["approved", "rejected"])
+                    self.assertEqual([item["unread"] for item in decisions_before_restart], [True, False])
+                    self.assertTrue(all(item["team_id"] == team["_id"] and item["team_name"] == team_name
+                                        for item in decisions_before_restart))
+                    self.assertEqual(captain.get("application_decisions", []), [])
                     stable = dict(base, mode="restart", captain_id=captain["_id"],
                                   applicant_id=member["_id"], team_id=team["_id"])
                     # Commit one more application, consume its encrypted reply
@@ -187,7 +195,10 @@ class RealMembershipFlow(unittest.TestCase):
                     for key in ("captain_id", "applicant_id"):
                         self.assertEqual(db.teams.count_documents({"members.account_id": stable[key]}), 1)
                     self.assertEqual(saved["join_requests"].count(pending["_id"]), 1)
+                    member = db.accounts.find_one({"_id": stable["applicant_id"]})
+                    self.assertEqual(member["application_decisions"], decisions_before_restart)
             print("PASS real MongoDB/backend restart preserves approved membership and pending application", flush=True)
+            print("PASS real restart preserves decision IDs, history and independent read/unread state", flush=True)
 
 
 if __name__ == "__main__":
