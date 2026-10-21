@@ -1,22 +1,43 @@
-# Battle planning 1192606: diagnose backend startup
+# Battle planning 1192606: start the existing local services
 
-The returned Windows report confirms the bridge rebuild, Android build and in-place installation of1192606. Both subsequent bridge launches fail at `stage=backend-health`, before opening the LAN listener. The current database/admin process state and failure cause are unknown. Keep the successful build/install and all saved data; no pull, rebuild, reinstall or database initialization is needed for this diagnostic.
+The returned diagnostic reports no listeners on TCP18765 or27018 and connection_refused from127.0.0.1:18765. The required endpoints were unavailable at that check. The reason they were absent is not established; the false health flags reflect no HTTP response. The1192606 Windows bridge build, Android build and in-place installation remain accepted.
 
-Leave any existing MongoDB/admin windows open and unchanged. In a separate PowerShell window, run the existing helper once:
+Use three separate PowerShell windows and run the following in order. Keep each window open after its readiness message. If any command fails, exits unexpectedly or reports a held lock, stop before the next step and send that output/log. Do not delete locks or initialize a new database. No pull, build, reinstall, dependency update or repeated backend diagnostic is needed. Keep WAN disconnected and local Ethernet/LDPlayer connected for the test.
+
+**Window 1 — MongoDB:**
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Test-WindowsAllianceBackend.ps1' `
+    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAllianceDatabase.ps1' `
     -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
 ```
 
-When healthy, expect listeners on127.0.0.1:27018 (mongod) and127.0.0.1:18765 (Python), `outcome=healthy; http_status=200`, all four health flags True, `network_error=None` and `ALLIANCE BACKEND CHECK PASSED`. Listener metadata alone does not prove service health. Failure output identifies a connection error, timeout, HTTP rejection or unexpected response; preserve that result for diagnosis instead of retrying the bridge or changing configuration.
+Wait for `Alliance MongoDB running on 127.0.0.1:27018` and leave this window open.
 
-Return the console output and the matching `wesnoth_server\diagnostics\alliance-backend-*.txt` and `.json` reports, even if the check passes. Include any current error in the admin-service window. No password, private runtime/configuration file or certificate key is needed. This is read-only service diagnosis apart from its new reports. A passing check establishes current local backend health only, not the earlier cause or Android reachability. WAN status for this latest build/install remains unreported; the earlier1192605 offline acceptance is retained.
+**Window 2 — Alliance admin service:**
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAlliance.ps1' `
+    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
+```
+
+Wait for `ALLIANCE DATABASE CHECK PASSED` and `Alliance admin: http://127.0.0.1:18765/`. Leave this window open. This startup already checks the existing authenticated database; it does not initialize another database.
+
+**Window 3 — account bridge:**
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAllianceBridge.ps1' `
+    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime') `
+    -MsysRoot 'D:\Test\wesnoth-setup\msys64'
+```
+
+Wait for `ALLIANCE ACCOUNT BRIDGE READY 100.99.99.14:15001`. Keep all three windows open. After all markers appear, resume the existing planning A–H checklist in sections4–6 below, starting with the saved Trusted server display and game login. Return one combined result including service readiness, planning results and WAN status. If startup fails, send the first failing console and its saved log instead of proceeding; do not retry unrelated build/install stages. Saved logs use server diagnostics/alliance-database-*.txt, alliance-serve-*.txt and alliance-bridge-run-*.txt.
 
 ## Batch reference — completed delivery and pending acceptance
 
-The original batch below is retained for continuation after startup recovery. **Do not repeat sections1–2 or run the later mutations during the current diagnostic.** The four-player planning checks and full-service restart remain pending. The existing installed app and completed stages will be reused.
+The original batch below is retained for continuation after startup recovery. **Do not repeat sections1–2. Resume planning checks only after all three services are ready.** The four-player planning checks and full-service restart remain pending. The existing installed app and completed stages will be reused.
 
 The user confirms the previous 1192605 management A–H checks with WAN disconnected. Keep that acceptance; do not repeat the old checklist. Its separate final full-service restart was not explicitly confirmed. This 1192606 batch adds saved battle planning only: approved maps, fixed lineups, both captains' explicit approval, selected-player readiness and cancellation. It cannot start combat or award XP/rating. Use one LDPlayer with sequential logins for four players; no phone or eight-account setup is required.
 
