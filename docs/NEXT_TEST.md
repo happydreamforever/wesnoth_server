@@ -1,56 +1,10 @@
-# Next Windows test: team membership update
+# Next Windows test: start the updated membership services
 
-The first team slice is accepted with WAN disconnected by user report, including Koichi surviving the full game/database/admin/bridge restart. Koichi remains in Yama, with UniPlayer as captain, members 1/8, team level 1, XP 0 and rating 1000. Personal Spearman remains level 1 with both XP values 0.
+The membership bridge rebuild is accepted: both native steps and all artifact/build/rebuild markers pass. The previous bridge was preserved. The user confirms WAN disconnected with local Ethernet retained during the build. The existing Koichi team and its earlier offline restart acceptance remain valid.
 
-The new slice lets another player apply to Koichi, withdraw an application, and be rejected or approved by its captain. APK 1192603 adds My applications and Review applications. Approval should produce two members of eight without changing XP. It does not add battles, campaign rewards, leaving or captain transfer. No schema migration or database initialization is required.
+**Immediate action: phase 2 below.** Keep WAN disconnected, Ethernet connected and the existing MongoDB window running. No pull, repeat build, database initialization, profile import or OBB copy is needed. Start a fresh admin process to load the new routes, then the updated bridge. If an old admin process is still open, stop it with Ctrl+C and wait for its prompt before launching the new one. Do not start duplicate processes.
 
-Use one phase at a time and return its result before proceeding. The immediate action is phase 1 only. Later phases are recorded here for continuity. Do not reimport the profile, copy the OBB, rebuild dependencies or create another team.
-
-## Phase 1 — update sources and rebuild the bridge
-
-Quit the game. In the account bridge window, press Ctrl+C and wait for the PowerShell prompt. Then stop the admin service window the same way. Keep the existing MongoDB window running. These are the account services on ports 15001 and 18765; the guest wesnothd server is separate.
-
-Temporarily connect WAN for the GitHub pulls. Run in PowerShell:
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
-
-    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
-        $repo = '/d/Test/wesnoth-setup/' + $name
-        Write-Host "Updating $name"
-        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
-        if ($LASTEXITCODE -ne 0) {
-            throw "Pull failed for $name. Stop and send the output."
-        }
-        & $bash --noprofile --norc -c ('/usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
-        if ($LASTEXITCODE -ne 0) {
-            throw "Could not read $name commit. Stop and send the output."
-        }
-    }
-    'Both updates completed successfully.'
-}
-```
-
-Disconnect WAN again while keeping local Ethernet connected. Run:
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_server' -ErrorAction Stop
-
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Rebuild-WindowsAllianceBridge.ps1' `
-        -MsysRoot 'D:\Test\wesnoth-setup\msys64'
-
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Bridge rebuild failed. Send the saved rebuild and build logs.'
-    }
-}
-```
-
-Expected: `Completed bridge build preserved`, `ALLIANCE ACCOUNT BRIDGE ARTIFACT VERIFIED`, `ALLIANCE ACCOUNT BRIDGE BUILD PASSED`, then `ALLIANCE ACCOUNT BRIDGE REBUILD PASSED`. Return the console output or saved `wesnoth_server\diagnostics\alliance-bridge-rebuild-*.txt` and nested `alliance-bridge-build-*.txt`. Report whether WAN was disconnected during the build. Stop here for review. On failure, preserve the stage and backups; do not reset or rerun a different build helper.
+Use one phase at a time and return its result before proceeding. APK1192603 adds My applications, application/withdrawal and captain review/approve/reject; its Windows build/install and LDPlayer interaction remain pending. Approval should add a second member without changing XP. Battles, campaign rewards, leaving and captain transfer follow later. Later phases are retained below for continuity.
 
 ## Phase 2 — start the updated services after build acceptance
 

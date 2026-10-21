@@ -4,7 +4,7 @@ This delivery implements the persistent game rules, a local operator website and
 
 The user now prioritizes local MongoDB setup. We use **MongoDB Community Edition8.0.32**, the free self-managed edition that can run offline ([official overview](https://www.mongodb.com/products/self-managed/community-edition)). The pinned portable MongoDB and17 Python packages already passed Windows installation. Reuse them. The previous failure was database startup, not a missing paid product or installer.
 
-Current action: the first team creation/directory/profile/restart sequence is accepted with WAN disconnected by user report. APK1192603 now implements application/withdrawal and captain review/approval/rejection; VPS verification passes, actual Windows/LDPlayer acceptance is pending. Follow [NEXT_TEST.md](NEXT_TEST.md), beginning only with stopping the game/bridge/admin, keeping MongoDB running, pulling both repositories and rebuilding the bridge offline. The existing team/runtime/profile remain authoritative; no initialization or OBB copy is needed.
+Current action: the membership bridge now rebuilds successfully on Windows with WAN disconnected by user confirmation. Follow [NEXT_TEST.md](NEXT_TEST.md) to start a fresh admin service and then the updated bridge using the same profile runtime; keep MongoDB running. No pull or repeated build is needed. APK1192603 Windows build/install and membership interaction remain pending. The existing Koichi team, runtime and trusted profile are preserved.
 
 | Stage | Current state |
 | --- | --- |
@@ -18,7 +18,7 @@ Current action: the first team creation/directory/profile/restart sequence is ac
 | Native Android transport fixture | Windows build and 22 LDPlayer loopback cases pass; later device-only rerun also passes with WAN disconnected by corrected user report |
 | Connect Android accounts | Registration, password rejection, login/profile, server logout/relogin and app restart accepted with WAN disconnected by user report; bridge outage/recovery accepted with WAN disconnected; player persistence after all three backend processes restart accepted with WAN disconnected by user report |
 | First team UI | Windows bridge and Android 1192602 accepted; LDPlayer initial no-team lookup, Koichi creation in Yama and separate My team retrieval pass with WAN disconnected by user confirmation. Yama directory lookup and unchanged personal XP also accepted; controlled team restart persistence accepted with WAN disconnected by user report |
-| Team membership UI | Six operations and APK1192603 implemented and VPS-tested; Windows rebuild/install and LDPlayer application/approval acceptance pending |
+| Team membership UI | Six operations and APK1192603 implemented and VPS-tested; Windows bridge rebuild accepted with WAN disconnected; updated service readiness, Android build/install and LDPlayer application/approval acceptance pending |
 | Connect progression and Alliance Battle | Pending gameplay integration |
 
 The final database binds to127.0.0.1:27018 and the administrator website to127.0.0.1:18765. The Windows game service will use the database locally; Android clients will communicate with the game service. The internet database URL in `.env` is not used.
