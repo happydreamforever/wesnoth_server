@@ -1,20 +1,19 @@
-# Next LDPlayer test: UniRecruit receives the approval notice
+# Next LDPlayer test: approval read status, pending list and personal experience
 
-The user approved UniRecruit instead of rejecting the request. The captain's successful reply and subsequent Koichi roster show 2/8 members: UniPlayer (captain) and UniRecruit, both Spearman level 1. Team level 1, experience 0 and rating 1000 remain displayed. Preserve this valid membership and use its new approval decision for notification testing. The user explicitly confirms WAN stayed disconnected while local Ethernet remained connected throughout the approval and 2/8 roster check. Fresh rejection notification testing remains pending.
+UniRecruit's unread approval list and opened detail now pass by user report, including matching Koichi team ID. The subsequent My team view matches the captain's 2/8 roster, team level 1, experience 0 and rating 1000. The user explicitly confirms a date/time is visible in the actual detail and WAN stayed disconnected while local Ethernet stayed connected. Missing timestamp text in the pasted report does not establish a rendering defect. Opening the detail alone does not confirm read acknowledgement; Back preserving unread was not reported and remains unconfirmed.
 
-Keep MongoDB, admin service and account bridge windows running. Keep WAN disconnected while local Ethernet stays connected. Use the existing installed APK1192604, trusted profile and both existing accounts. No pull, build, installation, profile import, OBB copy or database initialization is needed.
+Keep the existing UniRecruit session, installed APK1192604, trusted profile and all three backend windows running. Keep WAN disconnected and local Ethernet connected. No pull, rebuild, installation, profile import, OBB transfer, database initialization or new application is needed.
 
-## Current phase: receive the unread approval at login
+## Current phase: inspect saved read status and unchanged personal progression
 
-1. Close the Koichi roster with OK. The captain queue refreshes automatically. If it says **There are no pending applications for Koichi.**, choose OK. If the application list is shown, choose Back without acting on another request.
-2. From **Alliance teams**, choose Back to return to **Alliance**. Select **Log out -> Open**. Expect **Logged out. The server has revoked this session.** Choose OK.
-3. Select **Log in -> Open**, enter the existing **UniRecruit** credentials and choose Log in. Dismiss the **Logged in.** player-profile dialog with OK.
-4. Expect **Unread application decisions** containing **Unread — Approved — Koichi — <UTC time>**.
+1. Close the current My team roster with **OK**. In **Alliance teams**, select **Application decisions -> Open**.
+2. Inspect the list without opening the detail. Expect **Read — Approved — Koichi — <UTC time>**. If it is still Unread, absent, or an error appears, stop and report the screen. Do not reopen/acknowledge it again before reporting; this check should establish the saved outcome of the earlier detail interaction.
+3. If the notice is Read, choose **Back**, then **My applications -> Open**. Expect **You have no pending team applications.** If an unread notice appears instead, stop/report without opening it. This verifies that the read approval is not offered again in this path.
+4. Choose **OK**, then **Back** from Alliance teams to Alliance. Confirm **Logged in as UniRecruit**, then select **View personal leader -> Open**.
+5. Expect **Player: UniRecruit**, the same existing player ID, **Personal leader: Spearman**, **Level: 1**, **Experience: 0**, **Total experience: 0**.
 
-Stop on this list and report what appears, including whether WAN remained disconnected. Do not open/acknowledge the notice yet. If no notice appears, report the screen instead of creating another request or changing membership. This phase checks applicant delivery only; an approval message to the captain does not prove this notification appeared for UniRecruit.
+Stop at the profile and return the read/unread label, pending-list result and personal leader values, with whether WAN stayed disconnected. This bounded phase does not restart any service or modify membership. A displayed team experience of zero does not substitute for a personal experience check.
 
-## Following phases after the login notice is confirmed
+## Later phases
 
-Choose Back to leave the notice unread. Teams -> My applications should offer the same unread approval again. Open that notice, verify **Application approved.** and **The captain approved your application to join Koichi.**, then choose OK to acknowledge only it. Once unread notices are exhausted, My applications reports no pending requests. Teams -> Application decisions should retain **Read — Approved — Koichi**. My team should show the same Koichi ID and 2/8 roster. Separately inspect personal leader and both experience values; the captain roster alone does not establish personal XP.
-
-Later check read-history and membership persistence through logout/app restart and full service restart. Fresh rejection notice acceptance requires a later separately planned nonmember request; do not remove UniRecruit or alter the existing membership to force that test. Keep Koichi ID 4cd736d3-dc6c-4c3d-a816-e7682b56db30 and the previously confirmed Yama reference fb010e4d-af74-4906-8ba6-5f096aaf90ec. The latest pasted area prefix contains a non-hex r and is not new verified ID evidence. Campaign rewards and Alliance Battle integration remain later milestones.
+After these checks pass, verify read history and membership through logout/login, app restart and a controlled full backend restart. A fresh rejection notice and Back preserving unread need a separately planned pending request later; keep UniRecruit's approved membership. Do not remove a member, reapply or fabricate old history to recreate the earlier rejected request. Preserve Koichi ID 4cd736d3-dc6c-4c3d-a816-e7682b56db30 and the previously confirmed Yama reference fb010e4d-af74-4906-8ba6-5f096aaf90ec. The repeated pasted fr010e4d prefix is not a valid UUID and does not establish a database mutation. Campaign rewards and Alliance Battle integration remain later milestones.
