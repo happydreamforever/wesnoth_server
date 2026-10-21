@@ -72,7 +72,8 @@ bool directory_operation(const std::string& operation) {
            operation == "my_applications" || operation == "team_applicants" ||
            operation == "apply_team" || operation == "withdraw_application" ||
            operation == "approve_application" || operation == "reject_application" ||
-           operation == "application_decisions" || operation == "ack_decision";
+           operation == "application_decisions" || operation == "ack_decision" ||
+           operation == "leave_team" || operation == "transfer_captain" || operation == "standings";
 }
 bool request_id(const std::string& value) {
     if(value.size() != 32) return false;
@@ -246,11 +247,14 @@ Request account_request(const std::vector<unsigned char>& bytes) {
         if(!ascii_word(result.token, 43, 43)) invalid();
         if(result.operation == "areas" || result.operation == "my_applications") fields(body, {"after"});
         else if(result.operation == "teams") fields(body, {"area_id", "after"});
+        else if(result.operation == "standings") fields(body, {"area_id"});
+        else if(result.operation == "leave_team") fields(body, {"team_id", "allow_archive"});
         else if(result.operation == "my_team" || result.operation == "application_decisions") fields(body, {});
         else if(result.operation == "ack_decision") fields(body, {"decision_id"});
         else if(result.operation == "create_team") fields(body, {"name", "area_id"});
         else if(result.operation == "team_applicants") fields(body, {"team_id", "after"});
-        else if(result.operation == "approve_application" || result.operation == "reject_application")
+        else if(result.operation == "approve_application" || result.operation == "reject_application" ||
+                result.operation == "transfer_captain")
             fields(body, {"team_id", "account_id"});
         else fields(body, {"team_id"});
         if(body.contains("after")) {
@@ -259,6 +263,7 @@ Request account_request(const std::vector<unsigned char>& bytes) {
         }
         if(body.contains("area_id") && !ascii_word(text(body.at("area_id"), 64), 1, 64)) invalid();
         if(body.contains("team_id") && !uuid(text(body.at("team_id"), 36))) invalid();
+        if(body.contains("allow_archive") && !body.at("allow_archive").is_bool()) invalid();
         if(body.contains("account_id") && !uuid(text(body.at("account_id"), 36))) invalid();
         if(body.contains("decision_id") && !uuid(text(body.at("decision_id"), 36))) invalid();
         if(body.contains("name")) directory_name(text(body.at("name"), 64));
@@ -401,7 +406,9 @@ json::object directory_error(const Request& request, unsigned status, const std:
         else if(source == "invalid_input") { code = "invalid_input"; message = "Check the team name and selected area, team or player."; }
         else if(source == "capacity") { code = "capacity"; message = "The team or its application list is full."; }
         else if(source == "not_requested") { code = "not_requested"; message = "This application is no longer pending. Refresh the applications."; }
-        else if(source == "conflict") { code = "conflict"; message = "That team name or membership is already in use. Check My team before retrying."; }
+        else if(source == "captain_transfer_required") { code = "captain_transfer_required"; message = "Transfer captaincy to another member before leaving the team."; }
+        else if(source == "not_member") { code = "not_member"; message = "The selected player is no longer a member. Refresh My team."; }
+        else if(source == "conflict") { code = "conflict"; message = "The team name or membership changed. Refresh My team before another change."; }
         else status = 503;
     } else status = 503;
     return {{"v", 1}, {"id", request.id}, {"ok", false}, {"status", status},
@@ -409,6 +416,40 @@ json::object directory_error(const Request& request, unsigned status, const std:
 }
 json::object directory_data(const Request& request, const json::object& root) {
     const auto body = parse_json(request.body).as_object();
+    if(request.operation == "standings") {
+        fields(root, {"area_id", "teams", "has_more"});
+        const auto area_id = directory_identifier(root.at("area_id"));
+        if(area_id != text(body.at("area_id"), 64) || !root.at("has_more").is_bool() ||
+           !root.at("teams").is_array() || root.at("teams").as_array().size() > 20) invalid();
+        json::array teams;
+        std::set<std::string> ids;
+        std::string previous_id;
+        std::int64_t previous_rating = 0;
+        for(const auto& value : root.at("teams").as_array()) {
+            if(!value.is_object()) invalid();
+            auto team = public_team_summary(value.as_object(), false);
+            const auto id = text(team.at("id"), 36);
+            const auto rating = directory_integer(team, "rating", -2147483647 - 1LL);
+            if(team.at("area_id") != root.at("area_id") || !ids.insert(id).second ||
+               (!teams.empty() && (rating > previous_rating ||
+                  (rating == previous_rating && id <= previous_id)))) invalid();
+            previous_id = id;
+            previous_rating = rating;
+            teams.emplace_back(std::move(team));
+        }
+        if(root.at("has_more").as_bool() && teams.size() != 20) invalid();
+        return {{"area_id", area_id}, {"teams", std::move(teams)}, {"has_more", root.at("has_more")}};
+    }
+    if(request.operation == "leave_team") {
+        fields(root, {"team_id", "account_id", "status", "archived"});
+        const auto team_id = directory_identifier(root.at("team_id"), true);
+        const auto account_id = directory_identifier(root.at("account_id"), true);
+        if(team_id != text(body.at("team_id"), 36) || text(root.at("status"), 4) != "left" ||
+           !root.at("archived").is_bool() ||
+           (root.at("archived").as_bool() && !body.at("allow_archive").as_bool())) invalid();
+        return {{"team_id", team_id}, {"account_id", account_id}, {"status", "left"},
+                {"archived", root.at("archived")}};
+    }
     if(request.operation == "application_decisions") {
         fields(root, {"decisions"});
         if(!root.at("decisions").is_array() || root.at("decisions").as_array().size() > 50) invalid();
@@ -475,6 +516,7 @@ json::object directory_data(const Request& request, const json::object& root) {
     const char* acknowledgment = request.operation == "apply_team" ? "applied" :
         request.operation == "withdraw_application" ? "withdrawn" :
         request.operation == "approve_application" ? "approved" :
+        request.operation == "transfer_captain" ? "transferred" :
         request.operation == "reject_application" ? "rejected" : nullptr;
     if(acknowledgment) {
         fields(root, {"team_id", "account_id", "status"});

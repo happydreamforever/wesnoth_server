@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import threading
 import unittest
 from unittest.mock import patch
 from urllib.parse import urlsplit
@@ -491,6 +492,225 @@ class MongoDomainTests(unittest.TestCase):
         self.service.leave_team(teammate)
         self.assertEqual(self.db.teams.find_one({'_id': team})['status'], 'archived')
         self.service.create_team(captain, 'New Team')
+
+    def test_management_standings_are_bounded_ordered_and_public(self):
+        actor = self.player()
+        self.assertEqual(self.service.directory_standings(actor, 'area-1'),
+                         {'area_id': 'area-1', 'teams': [], 'has_more': False})
+        for index in range(23):
+            captain = self.player()
+            team = self.service.create_team(captain, f'Ranked Team {index:02}')
+            self.db.teams.update_one({'_id': team['_id']}, {'$set': {'rating': 900 + index % 4 * 100}})
+        expected = list(self.db.teams.find({'status': 'active'}).sort([('rating', -1), ('_id', 1)]))
+        result = self.service.directory_standings(actor, 'area-1')
+        self.assertEqual(set(result), {'area_id', 'teams', 'has_more'})
+        self.assertTrue(result['has_more'])
+        self.assertEqual([item['id'] for item in result['teams']], [item['_id'] for item in expected[:20]])
+        fields = {'id', 'name', 'area_id', 'captain_id', 'level', 'experience', 'rating', 'member_count'}
+        self.assertTrue(all(set(item) == fields for item in result['teams']))
+        for item in expected[20:]:
+            self.service.leave_team(item['captain_id'])
+        twenty = self.service.directory_standings(actor, 'area-1')
+        self.assertEqual(len(twenty['teams']), 20)
+        self.assertFalse(twenty['has_more'])
+        self.service.leave_team(expected[19]['captain_id'])
+        self.assertEqual(len(self.service.directory_standings(actor, 'area-1')['teams']), 19)
+        self.assertFalse(self.service.directory_standings(actor, 'area-1')['has_more'])
+        self.db.areas.update_one({'_id': 'area-1'}, {'$set': {'enabled': False}})
+        self.assertDomain('not_found', self.service.directory_standings, actor, 'area-1')
+
+    def test_management_transfer_leave_archive_preserve_progress(self):
+        teams, members = self.teams()
+        team, (captain, member) = teams[0], members[0]
+        before = self.service._team(team)
+        leaders = {actor: self.service.get_account(actor)['leader'] for actor in (captain, member)}
+        result = self.service.directory_transfer_captain(captain, team, member)
+        self.assertEqual(result, {'team_id': team, 'account_id': member, 'status': 'transferred'})
+        changed = self.service._team(team)
+        for key in ('members', 'experience', 'level', 'rating'):
+            self.assertEqual(changed[key], before[key])
+        self.assertDomain('forbidden', self.service.directory_transfer_captain, captain, team, member)
+        self.assertEqual(self.service.directory_leave_team(captain, team, False),
+                         {'team_id': team, 'account_id': captain, 'status': 'left', 'archived': False})
+        self.assertIsNone(self.service.directory_my_team(captain))
+        self.assertEqual(self.service.directory_leave_team(member, team, True),
+                         {'team_id': team, 'account_id': member, 'status': 'left', 'archived': True})
+        archived = self.db.teams.find_one({'_id': team})
+        self.assertEqual((archived['status'], archived['members'], archived['captain_id'], archived['join_requests']),
+                         ('archived', [], None, []))
+        for actor, leader in leaders.items():
+            self.assertEqual(self.service.get_account(actor)['leader'], leader)
+        self.assertDomain('not_found', self.service.directory_team, captain, team)
+        self.assertDomain('not_found', self.service.directory_leave_team, member, team, False)
+
+    def test_management_authority_selectors_and_stale_team_fail_without_writes(self):
+        teams, members = self.teams()
+        team, (captain, member) = teams[0], members[0]
+        outsider, admin = self.player(), self.admin()
+        cases = [('captain_transfer_required', self.service.directory_leave_team, (captain, team, True)),
+            ('conflict', self.service.directory_leave_team, (member, teams[1], False)),
+            ('forbidden', self.service.directory_transfer_captain, (member, team, captain)),
+            ('invalid_input', self.service.directory_transfer_captain, (captain, team, captain)),
+            ('not_member', self.service.directory_transfer_captain, (captain, team, outsider)),
+            ('forbidden', self.service.directory_leave_team, (admin, team, False)),
+            ('forbidden', self.service.directory_standings, (admin, 'area-1')),
+            ('invalid_input', self.service.directory_leave_team, (member, {'$ne': ''}, False)),
+            ('invalid_input', self.service.directory_leave_team, (member, team, 1)),
+            ('invalid_input', self.service.directory_leave_team, (member, team, 'false')),
+            ('invalid_input', self.service.directory_transfer_captain, (captain, team, {'$ne': ''})),
+            ('invalid_input', self.service.directory_standings, (member, {'$ne': ''}))]
+        before = {name: list(self.db[name].find({}).sort('_id', 1)) for name in ('teams', 'accounts')}
+        for code, method, args in cases:
+            self.assertDomain(code, method, *args)
+        self.assertEqual(before, {name: list(self.db[name].find({}).sort('_id', 1)) for name in before})
+        self.db.accounts.update_one({'_id': member}, {'$set': {'status': 'suspended'}})
+        self.assertDomain('forbidden', self.service.directory_transfer_captain, captain, team, member)
+        self.assertDomain('suspended', self.service.transfer_captain, captain, team, member)
+
+    def test_stale_leave_preview_requires_explicit_archive_consent(self):
+        teams, members = self.teams()
+        team, (captain, member) = teams[0], members[0]
+        # The member previewed an ordinary two-member leave. Before submit,
+        # captaincy changes and the former captain leaves the team.
+        self.service.directory_transfer_captain(captain, team, member)
+        self.service.directory_leave_team(captain, team, False)
+        before = self.service._team(team)
+        self.assertDomain('conflict', self.service.directory_leave_team, member, team, False)
+        self.assertEqual(self.service._team(team), before)
+        self.assertEqual(self.service.directory_leave_team(member, team, True)['archived'], True)
+
+    def test_management_blocks_busy_actor_team_and_target(self):
+        teams, members = self.teams()
+        team, (captain, member) = teams[0], members[0]
+        for collection, identifier in ((self.db.accounts, captain), (self.db.accounts, member), (self.db.teams, team)):
+            collection.update_one({'_id': identifier}, {'$set': {'active_run_id': str(uuid4())}})
+            self.assertDomain('busy', self.service.directory_transfer_captain, captain, team, member)
+            collection.update_one({'_id': identifier}, {'$set': {'active_run_id': None}})
+        for collection, identifier in ((self.db.accounts, member), (self.db.teams, team)):
+            collection.update_one({'_id': identifier}, {'$set': {'active_run_id': str(uuid4())}})
+            self.assertDomain('busy', self.service.directory_leave_team, member, team, False)
+            collection.update_one({'_id': identifier}, {'$set': {'active_run_id': None}})
+
+    def test_management_rolls_back_team_and_account_writes(self):
+        teams, members = self.teams()
+        team, (captain, member) = teams[0], members[0]
+        original_tx = self.service._tx
+        def abort_after_callback(callback):
+            def abort(session):
+                callback(session)
+                raise RuntimeError('Injected failure before transaction commit')
+            return original_tx(abort)
+        for operation, args in ((self.service.directory_transfer_captain, (captain, team, member)),
+                                (self.service.directory_leave_team, (member, team, False))):
+            before = {name: list(self.db[name].find({}).sort('_id', 1)) for name in ('teams', 'accounts')}
+            with patch.object(self.service, '_tx', side_effect=abort_after_callback):
+                with self.assertRaises(RuntimeError):
+                    operation(*args)
+            self.assertEqual(before, {name: list(self.db[name].find({}).sort('_id', 1)) for name in before})
+
+    def test_transfer_retries_account_races_and_rejects_new_campaign(self):
+        teams, members = self.teams()
+        team, (captain, member) = teams[0], members[0]
+        other_service = AllianceService(self.db)
+        for target in (captain, member):
+            read, resume = threading.Event(), threading.Event()
+            original_account = self.service._account
+            def held_account(account_id, session=None, active=True):
+                result = original_account(account_id, session, active)
+                if account_id == target and not read.is_set():
+                    read.set()
+                    if not resume.wait(10):
+                        raise RuntimeError('Race fixture did not resume')
+                return result
+            with patch.object(self.service, '_account', side_effect=held_account), ThreadPoolExecutor(max_workers=1) as pool:
+                pending = pool.submit(self.service.directory_transfer_captain, captain, team, member)
+                try:
+                    self.assertTrue(read.wait(5))
+                    other_service.start_campaign(target, rules.MISSIONS[0])
+                finally:
+                    resume.set()
+                with self.assertRaises(DomainError) as raised:
+                    pending.result(timeout=10)
+                self.assertEqual(raised.exception.code, 'busy')
+            self.assertEqual(self.service._team(team)['captain_id'], captain)
+            self.db.accounts.update_one({'_id': target}, {'$set': {'active_run_id': None}})
+
+    def test_stale_leave_retries_then_preserves_new_membership(self):
+        teams, members = self.teams()
+        old_team, new_team = teams
+        captain, member = members[0]
+        other_service = AllianceService(self.db)
+        read, resume = threading.Event(), threading.Event()
+        original_account = self.service._account
+        def held_account(account_id, session=None, active=True):
+            result = original_account(account_id, session, active)
+            if account_id == member and not read.is_set():
+                read.set()
+                if not resume.wait(10):
+                    raise RuntimeError('Race fixture did not resume')
+            return result
+        with patch.object(self.service, '_account', side_effect=held_account), ThreadPoolExecutor(max_workers=1) as pool:
+            pending = pool.submit(self.service.directory_leave_team, member, old_team, False)
+            try:
+                self.assertTrue(read.wait(5))
+                other_service.leave_team(member)
+                other_service.request_join(member, new_team)
+                other_service.approve_member(members[1][0], new_team, member)
+            finally:
+                resume.set()
+            with self.assertRaises(DomainError) as raised:
+                pending.result(timeout=10)
+            self.assertEqual(raised.exception.code, 'conflict')
+        self.assertEqual(self.service.directory_my_team(member)['id'], new_team)
+
+    def test_transfer_retries_team_race_and_rejects_started_battle(self):
+        run, teams, members = self.battle(start=False)
+        team, (captain, member) = teams[0], members[0]
+        other_service = AllianceService(self.db)
+        read, resume = threading.Event(), threading.Event()
+        original_team = self.service._team
+        def held_team(team_id, session=None):
+            result = original_team(team_id, session)
+            if team_id == team and not read.is_set():
+                read.set()
+                if not resume.wait(10):
+                    raise RuntimeError('Race fixture did not resume')
+            return result
+        with patch.object(self.service, '_team', side_effect=held_team), ThreadPoolExecutor(max_workers=1) as pool:
+            pending = pool.submit(self.service.directory_transfer_captain, captain, team, member)
+            try:
+                self.assertTrue(read.wait(5))
+                other_service.start_battle(captain, run['_id'])
+            finally:
+                resume.set()
+            with self.assertRaises(DomainError) as raised:
+                pending.result(timeout=10)
+            self.assertEqual(raised.exception.code, 'busy')
+        saved = self.service._team(team)
+        self.assertEqual(saved['captain_id'], captain)
+        self.assertEqual(saved['active_run_id'], run['_id'])
+
+    def test_competing_transfers_and_target_leave_preserve_captain_membership(self):
+        teams, members = self.teams(size=3)
+        team, (captain, first, second) = teams[0], members[0]
+        def invoke(method, *args):
+            try:
+                return method(*args)['status']
+            except DomainError as error:
+                return error.code
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            outcomes = list(pool.map(lambda target: invoke(self.service.directory_transfer_captain,
+                                                         captain, team, target), (first, second)))
+        self.assertEqual(sorted(outcomes), ['forbidden', 'transferred'])
+        current = self.service._team(team)['captain_id']
+        target = second if current == first else first
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            transfer = pool.submit(invoke, self.service.directory_transfer_captain, current, team, target)
+            leave = pool.submit(invoke, self.service.directory_leave_team, target, team, False)
+            outcomes = (transfer.result(), leave.result())
+        self.assertIn(outcomes, (('transferred', 'captain_transfer_required'), ('not_member', 'left')))
+        saved = self.service._team(team)
+        self.assertIn(saved['captain_id'], [item['account_id'] for item in saved['members']])
 
     def test_unique_member_index_and_same_array_validator(self):
         teams, members = self.teams()

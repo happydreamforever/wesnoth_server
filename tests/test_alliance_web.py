@@ -334,6 +334,70 @@ class AllianceWebTests(unittest.TestCase):
         self.assertEqual(post('ack_decision', {'decision_id': decisions[0]['id']}).status_code, 401)
         self.assertTrue(self.domain.directory_application_decisions(self.player['_id'])['decisions'][0]['unread'])
 
+    def test_native_management_authorization_stale_selection_and_archive_contract(self):
+        base = '/internal/v1/team-directory/'
+        captain = self.domain.register('ManageCaptain', self.password_hash)
+        stranger = self.domain.register('ManageStranger', self.password_hash)
+        team = self.domain.create_team(captain['_id'], 'Managed Team')['_id']
+        self.domain.request_join(self.player['_id'], team)
+        self.domain.approve_member(captain['_id'], team, self.player['_id'])
+        player_headers = self.player_headers()
+        captain_headers = {**self.bridge, 'X-Player-Token': self.auth.authenticate(
+            'ManageCaptain', self.password, 'player')['token']}
+        def post(operation, body, headers=captain_headers):
+            return self.client.post(base + operation, json=body, headers=headers)
+        blocked = post('leave_team', {'team_id': team, 'allow_archive': False})
+        self.assertEqual((blocked.status_code, blocked.json['error']['code']), (409, 'captain_transfer_required'))
+        self.assertEqual(post('transfer_captain', {'team_id': team, 'account_id': captain['_id']},
+                              player_headers).status_code, 403)
+        nonmember = post('transfer_captain', {'team_id': team, 'account_id': stranger['_id']})
+        self.assertEqual((nonmember.status_code, nonmember.json['error']['code']), (409, 'not_member'))
+        transfer = post('transfer_captain', {'team_id': team, 'account_id': self.player['_id']})
+        self.assertEqual(transfer.status_code, 200)
+        self.assertEqual(transfer.json, {'team_id': team, 'account_id': self.player['_id'], 'status': 'transferred'})
+        self.assertEqual(post('transfer_captain', {'team_id': team, 'account_id': captain['_id']}).status_code, 403)
+        stale = post('leave_team', {'team_id': str(uuid4()), 'allow_archive': False})
+        self.assertEqual((stale.status_code, stale.json['error']['code']), (409, 'conflict'))
+        left = post('leave_team', {'team_id': team, 'allow_archive': False})
+        self.assertEqual(left.status_code, 200)
+        self.assertEqual(left.json, {'team_id': team, 'account_id': captain['_id'], 'status': 'left', 'archived': False})
+        standings = post('standings', {'area_id': 'area-1'})
+        self.assertEqual(standings.status_code, 200)
+        self.assertEqual(set(standings.json), {'area_id', 'teams', 'has_more'})
+        self.assertEqual(standings.json['area_id'], 'area-1')
+        self.assertEqual(standings.json['teams'][0]['member_count'], 1)
+        self.assertFalse(standings.json['has_more'])
+        self.assertNotIn('join_requests', str(standings.json))
+        self.assertNotIn('password_hash', str(standings.json))
+        unconfirmed = post('leave_team', {'team_id': team, 'allow_archive': False}, player_headers)
+        self.assertEqual((unconfirmed.status_code, unconfirmed.json['error']['code']), (409, 'conflict'))
+        archived = post('leave_team', {'team_id': team, 'allow_archive': True}, player_headers)
+        self.assertEqual(archived.json, {'team_id': team, 'account_id': self.player['_id'], 'status': 'left', 'archived': True})
+        self.assertEqual(post('standings', {'area_id': 'area-1'}).json,
+                         {'area_id': 'area-1', 'teams': [], 'has_more': False})
+        self.assertEqual(self.domain.get_account(self.player['_id'])['leader']['total_experience'], 0)
+
+    def test_native_management_busy_and_suspended_target_leave_membership_unchanged(self):
+        captain = self.player['_id']
+        member = self.domain.register('ManageTarget', self.password_hash)['_id']
+        team = self.domain.create_team(captain, 'Busy Management')['_id']
+        self.domain.request_join(member, team)
+        self.domain.approve_member(captain, team, member)
+        headers = self.player_headers()
+        base = '/internal/v1/team-directory/'
+        before = self.domain._team(team)
+        for collection, identifier in ((self.db.accounts, captain), (self.db.accounts, member), (self.db.teams, team)):
+            collection.update_one({'_id': identifier}, {'$set': {'active_run_id': str(uuid4())}})
+            response = self.client.post(base + 'transfer_captain', headers=headers,
+                                        json={'team_id': team, 'account_id': member})
+            self.assertEqual((response.status_code, response.json['error']['code']), (409, 'busy'))
+            collection.update_one({'_id': identifier}, {'$set': {'active_run_id': None}})
+        self.db.accounts.update_one({'_id': member}, {'$set': {'status': 'suspended'}})
+        suspended = self.client.post(base + 'transfer_captain', headers=headers,
+                                    json={'team_id': team, 'account_id': member})
+        self.assertEqual((suspended.status_code, suspended.json['error']['code']), (403, 'forbidden'))
+        self.assertEqual(self.domain._team(team), before)
+
     def test_native_directory_rejects_extra_identity_rewards_selectors_and_query(self):
         headers = self.player_headers()
         base = '/internal/v1/team-directory/'
@@ -355,6 +419,15 @@ class AllianceWebTests(unittest.TestCase):
             ('application_decisions', {'account_id': self.admin['_id']}),
             ('application_decisions', {'after': ''}),
             ('ack_decision', {'decision_id': {'$ne': ''}}),
+            ('leave_team', {'team_id': self.player['_id'], 'account_id': self.admin['_id']}),
+            ('leave_team', {'team_id': {'$ne': ''}}),
+            ('leave_team', {'team_id': self.player['_id']}),
+            ('leave_team', {'team_id': self.player['_id'], 'allow_archive': 1}),
+            ('leave_team', {'team_id': self.player['_id'], 'allow_archive': 'false'}),
+            ('transfer_captain', {'team_id': self.player['_id']}),
+            ('transfer_captain', {'team_id': self.player['_id'], 'account_id': {'$ne': ''}}),
+            ('standings', {'area_id': {'$ne': ''}}),
+            ('standings', {'area_id': 'area-1', 'after': ''}),
             ('ack_decision', {'decision_id': self.player['_id'], 'account_id': self.admin['_id']})):
             with self.subTest(operation=operation, data=data):
                 response = self.client.post(base + operation, headers=headers, json=data)
@@ -375,7 +448,10 @@ class AllianceWebTests(unittest.TestCase):
             'withdraw_application': {'team_id': self.player['_id']},
             'approve_application': {'team_id': self.player['_id'], 'account_id': self.player['_id']},
             'reject_application': {'team_id': self.player['_id'], 'account_id': self.player['_id']},
-            'application_decisions': {}, 'ack_decision': {'decision_id': self.player['_id']}}
+            'application_decisions': {}, 'ack_decision': {'decision_id': self.player['_id']},
+            'leave_team': {'team_id': self.player['_id'], 'allow_archive': False},
+            'transfer_captain': {'team_id': self.player['_id'], 'account_id': self.player['_id']},
+            'standings': {'area_id': 'area-1'}}
         headers = self.player_headers()
         admin = self.auth.authenticate('Operator', self.password, 'admin')
         wrong_scope = {**self.bridge, 'X-Player-Token': admin['token']}

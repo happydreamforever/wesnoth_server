@@ -419,7 +419,8 @@ class BridgeTests(unittest.TestCase):
         value = {"v": 1, "id": "a" * 32, "op": operation, "body": body or {}}
         if operation in ("me", "logout", "areas", "teams", "my_team", "create_team", "team_detail",
                          "my_applications", "team_applicants", "apply_team", "withdraw_application",
-                         "approve_application", "reject_application", "application_decisions", "ack_decision"):
+                         "approve_application", "reject_application", "application_decisions", "ack_decision",
+                         "leave_team", "transfer_captain", "standings"):
             value["token"] = token or self.token
         return value
 
@@ -662,6 +663,15 @@ class BridgeTests(unittest.TestCase):
                  self.request('application_decisions', {'account_id': ACCOUNT['_id']}),
                  self.request('application_decisions', {'after': ''}),
                  self.request('ack_decision', {'decision_id': {'$ne': ''}}),
+                 self.request('leave_team', {'team_id': TEAM['id'], 'account_id': ACCOUNT['_id']}),
+                 self.request('leave_team', {'team_id': {'$ne': ''}}),
+                 self.request('leave_team', {'team_id': TEAM['id']}),
+                 self.request('leave_team', {'team_id': TEAM['id'], 'allow_archive': 1}),
+                 self.request('leave_team', {'team_id': TEAM['id'], 'allow_archive': 'false'}),
+                 self.request('transfer_captain', {'team_id': TEAM['id']}),
+                 self.request('transfer_captain', {'team_id': TEAM['id'], 'account_id': {'$ne': ''}}),
+                 self.request('standings', {'area_id': 'area-1', 'after': ''}),
+                 self.request('standings', {'area_id': {'$ne': ''}}),
                  self.request('ack_decision', {'decision_id': DECISION['id'], 'account_id': ACCOUNT['_id']})]
         missing_token = self.request("areas", {"after": ""})
         missing_token.pop("token")
@@ -705,7 +715,9 @@ class BridgeTests(unittest.TestCase):
                 (403, "private_permission_detail", "forbidden"), (404, "not_found", "not_found"),
                 (409, "already_member", "already_member"), (409, "conflict", "conflict"),
                 (409, "invalid_input", "invalid_input"), (409, "busy", "busy"),
-                (409, "capacity", "capacity"), (409, "not_requested", "not_requested")):
+                (409, "capacity", "capacity"), (409, "not_requested", "not_requested"),
+                (409, "captain_transfer_required", "captain_transfer_required"),
+                (409, "not_member", "not_member")):
             with self.subTest(status=status, code=backend):
                 type(self).directory_override = (status, {"error": {"code": backend, "message": self.secret}})
                 result = self.exchange(self.request("my_team"))
@@ -715,6 +727,71 @@ class BridgeTests(unittest.TestCase):
         type(self).directory_override = None
         type(self).revoked = True
         self.assertEqual(self.exchange(self.request("my_team"))["data"]["code"], "invalid_session")
+
+    def test_management_fixed_routes_exact_responses_and_no_mutation_retry(self):
+        leave = {'team_id': TEAM['id'], 'account_id': ACCOUNT['_id'], 'status': 'left', 'archived': False}
+        transfer = {'team_id': TEAM['id'], 'account_id': ACCOUNT['_id'], 'status': 'transferred'}
+        ranking = {'area_id': 'area-1', 'teams': [TEAM_SUMMARY], 'has_more': False}
+        for operation, body, response in (
+            ('leave_team', {'team_id': TEAM['id'], 'allow_archive': False}, leave),
+            ('leave_team', {'team_id': TEAM['id'], 'allow_archive': True}, {**leave, 'archived': True}),
+            ('transfer_captain', {'team_id': TEAM['id'], 'account_id': ACCOUNT['_id']}, transfer),
+            ('standings', {'area_id': 'area-1'}, ranking),
+            ('standings', {'area_id': 'area-1'}, {**ranking, 'teams': []})):
+            with self.subTest(operation=operation, response=response):
+                type(self).directory_override = (200, response)
+                before = len(self.calls)
+                result = self.exchange(self.request(operation, body))
+                self.assertEqual(result['data'], response)
+                self.assertTrue(result['ok'])
+                self.assertEqual(len(self.calls), before + 1)
+                method, path, headers, sent = self.calls[-1]
+                self.assertEqual((method, path), ('POST', '/internal/v1/team-directory/' + operation))
+                self.assertEqual(json.loads(sent), body)
+        for operation, body in (('leave_team', {'team_id': TEAM['id'], 'allow_archive': False}),
+                                ('transfer_captain', {'team_id': TEAM['id'], 'account_id': ACCOUNT['_id']})):
+            type(self).directory_override = (503, {'error': {'code': 'private', 'message': self.secret}})
+            before = len(self.calls)
+            result = self.exchange(self.request(operation, body))
+            self.assertEqual(result['status'], 503)
+            self.assertNotIn(self.secret, json.dumps(result))
+            self.assertEqual(len(self.calls), before + 1)
+
+    def test_management_rejects_unbound_acknowledgements_and_malformed_rankings(self):
+        leave = {'team_id': TEAM['id'], 'account_id': ACCOUNT['_id'], 'status': 'left', 'archived': False}
+        transfer = {'team_id': TEAM['id'], 'account_id': ACCOUNT['_id'], 'status': 'transferred'}
+        cases = []
+        for key, value in (('team_id', DECISION['id']), ('account_id', 'bad'), ('status', 'withdrawn'),
+                           ('archived', 1), ('archived', 'false'), ('archived', True), ('password_hash', 'secret')):
+            cases.append(('leave_team', {'team_id': TEAM['id'], 'allow_archive': False}, {**leave, key: value}))
+        for key, value in (('team_id', DECISION['id']), ('account_id', DECISION['id']),
+                           ('status', 'approved'), ('members', [])):
+            cases.append(('transfer_captain', {'team_id': TEAM['id'], 'account_id': ACCOUNT['_id']},
+                          {**transfer, key: value}))
+        ranked = [dict(TEAM_SUMMARY, id=f'{index:08x}-1234-1234-1234-123456789abc', rating=1000-index//2)
+                  for index in range(20)]
+        ranking = {'area_id': 'area-1', 'teams': ranked, 'has_more': True}
+        for has_more in (True, False):
+            type(self).directory_override = (200, {**ranking, 'has_more': has_more})
+            result = self.exchange(self.request('standings', {'area_id': 'area-1'}))
+            self.assertEqual(result['data'], {**ranking, 'has_more': has_more})
+        variants = [{**ranking, 'area_id': 'area-2'}, {**ranking, 'has_more': 1},
+                    {**ranking, 'next': ''}, {**ranking, 'teams': ranked[:19]},
+                    {**ranking, 'teams': ranked + [ranked[-1]]},
+                    {**ranking, 'teams': list(reversed(ranked))},
+                    {**ranking, 'teams': [ranked[1], ranked[0]] + ranked[2:]},
+                    {**ranking, 'teams': [ranked[0], ranked[0]] + ranked[2:]},
+                    {**ranking, 'teams': [dict(ranked[0], area_id='area-2')] + ranked[1:]},
+                    {**ranking, 'teams': [dict(ranked[0], join_requests=[])] + ranked[1:]},
+                    {**ranking, 'teams': [dict(ranked[0], rating=True)] + ranked[1:]}]
+        cases.extend(('standings', {'area_id': 'area-1'}, response) for response in variants)
+        for operation, body, response in cases:
+            with self.subTest(operation=operation, response=response):
+                type(self).directory_override = (200, response)
+                result = self.exchange(self.request(operation, body))
+                self.assertEqual(result['status'], 503)
+                self.assertNotIn('password_hash', json.dumps(result))
+                self.assertNotIn('"secret"', json.dumps(result))
 
     def test_stalled_backend_does_not_block_other_connection(self):
         slow = self.request("register", {"username": "SlowPlayer", "password": "example-pass-1234", "starter_id": "spearman"})

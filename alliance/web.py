@@ -368,6 +368,21 @@ def create_app(settings, db):
         data = directory_payload("decision_id")
         return jsonify(domain.directory_ack_decision(g.player["_id"], data["decision_id"]))
 
+    @internal_route("/team-directory/leave_team")
+    def directory_leave_team():
+        data = directory_payload("team_id", "allow_archive")
+        return jsonify(domain.directory_leave_team(g.player["_id"], data["team_id"], data["allow_archive"]))
+
+    @internal_route("/team-directory/transfer_captain")
+    def directory_transfer_captain():
+        data = directory_payload("team_id", "account_id")
+        return jsonify(domain.directory_transfer_captain(g.player["_id"], data["team_id"], data["account_id"]))
+
+    @internal_route("/team-directory/standings")
+    def directory_standings():
+        data = directory_payload("area_id")
+        return jsonify(domain.directory_standings(g.player["_id"], data["area_id"]))
+
     @internal_route("/areas", methods=("GET",))
     def player_areas():
         return jsonify(areas=domain.list_areas())

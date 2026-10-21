@@ -137,9 +137,10 @@ class AllianceService:
             raise DomainError('busy', 'An active progression game must finish or be cancelled first.')
 
     def _captain(self, actor_id, team, session):
-        self._player(actor_id, session)
+        actor = self._player(actor_id, session)
         if team['captain_id'] != actor_id:
             raise DomainError('forbidden', 'Only the team captain can do this.')
+        return actor
 
     def _admin(self, actor_id, session):
         actor = self._account(actor_id, session)
@@ -225,16 +226,32 @@ class AllianceService:
         query = {'area_id': area_id, 'status': 'active'}
         return self._directory_team_page(query, after)
 
+    def directory_standings(self, actor_id, area_id):
+        """A fixed top twenty, with stable UUID ordering for equal ratings."""
+        self._directory_player(actor_id)
+        _directory_id(area_id)
+        self._area(area_id)
+        projection = {name: 1 for name in ('_id', 'name', 'area_id', 'captain_id',
+                                         'level', 'experience', 'rating', 'members.account_id')}
+        records = list(self.db.teams.find({'area_id': area_id, 'status': 'active'}, projection)
+                       .sort([('rating', -1), ('_id', 1)]).limit(21))
+        return {'area_id': area_id, 'teams': [self._directory_summary(item) for item in records[:20]],
+                'has_more': len(records) > 20}
+
+    @staticmethod
+    def _directory_summary(item):
+        return dict(id=item['_id'], name=item['name'], area_id=item['area_id'],
+                    captain_id=item['captain_id'], level=item['level'],
+                    experience=item['experience'], rating=item['rating'],
+                    member_count=len(item['members']))
+
     def _directory_team_page(self, query, after):
         if after:
             query['_id'] = {'$gt': after}
         projection = {name: 1 for name in ('_id', 'name', 'area_id', 'captain_id',
                                          'level', 'experience', 'rating', 'members.account_id')}
         records = list(self.db.teams.find(query, projection).sort('_id', 1).limit(21))
-        return {'teams': [dict(id=item['_id'], name=item['name'], area_id=item['area_id'],
-                              captain_id=item['captain_id'], level=item['level'],
-                              experience=item['experience'], rating=item['rating'],
-                              member_count=len(item['members'])) for item in records[:20]],
+        return {'teams': [self._directory_summary(item) for item in records[:20]],
                 'next': records[19]['_id'] if len(records) > 20 else ''}
 
     def _directory_team_record(self, team):
@@ -315,6 +332,23 @@ class AllianceService:
         _directory_id(account_id, uuid=True)
         self.reject_member(actor_id, team_id, account_id)
         return {'team_id': team_id, 'account_id': account_id, 'status': 'rejected'}
+
+    def directory_leave_team(self, actor_id, team_id, allow_archive):
+        _directory_id(team_id, uuid=True)
+        if type(allow_archive) is not bool:
+            raise DomainError('invalid_input', 'Archive consent must be a boolean.')
+        return self._leave_team(actor_id, expected_team_id=team_id, allow_archive=allow_archive)
+
+    def directory_transfer_captain(self, actor_id, team_id, account_id):
+        _directory_id(team_id, uuid=True)
+        _directory_id(account_id, uuid=True)
+        try:
+            self.transfer_captain(actor_id, team_id, account_id)
+        except DomainError as error:
+            if error.code == 'suspended':
+                raise DomainError('forbidden', 'Captaincy cannot be transferred to that player.') from error
+            raise
+        return {'team_id': team_id, 'account_id': account_id, 'status': 'transferred'}
 
     def directory_application_decisions(self, actor_id):
         account = self._directory_player(actor_id)
@@ -455,31 +489,44 @@ class AllianceService:
         return self._tx(write)
 
     def leave_team(self, actor_id):
+        result = self._leave_team(actor_id)
+        return {'team_id': result['team_id'], 'left': True}
+
+    def _leave_team(self, actor_id, expected_team_id=None, allow_archive=True):
         def write(session):
             actor = self._player(actor_id, session)
             self._idle(actor)
             team = self.db.teams.find_one({'members.account_id': actor_id, 'status': 'active'}, session=session)
             if team is None:
                 raise DomainError('not_found', 'This account has no team.')
+            # The comparison belongs inside the transaction, including retries:
+            # a stale confirmation must never remove a newly joined membership.
+            if expected_team_id is not None and team['_id'] != expected_team_id:
+                raise DomainError('conflict', 'The current team differs from the selected team.')
             self._idle(team)
             if team['captain_id'] == actor_id and len(team['members']) > 1:
                 raise DomainError('captain_transfer_required', 'Transfer captaincy before leaving the team.')
+            if len(team['members']) == 1 and not allow_archive:
+                raise DomainError('conflict', 'The last member must explicitly confirm archiving the team.')
             update = {'$pull': {'members': {'account_id': actor_id}}, '$inc': {'revision': 1}}
             if len(team['members']) == 1:
                 update['$set'] = {'status': 'archived', 'captain_id': None, 'join_requests': []}
             self.db.teams.update_one({'_id': team['_id']}, update, session=session)
             self.db.accounts.update_one({'_id': actor_id}, {'$inc': {'revision': 1}}, session=session)
-            return {'team_id': team['_id'], 'left': True}
+            return {'team_id': team['_id'], 'account_id': actor_id, 'status': 'left',
+                    'archived': len(team['members']) == 1}
         return self._tx(write)
 
     def transfer_captain(self, actor_id, team_id, new_captain_id):
         def write(session):
             team = self._team(team_id, session)
-            self._captain(actor_id, team, session)
+            self._idle(self._captain(actor_id, team, session))
             self._idle(team)
-            self._player(new_captain_id, session)
+            if new_captain_id == actor_id:
+                raise DomainError('invalid_input', 'Select another member as captain.')
             if new_captain_id not in [m['account_id'] for m in team['members']]:
                 raise DomainError('not_member', 'The new captain must belong to this team.')
+            self._idle(self._player(new_captain_id, session))
             self.db.teams.update_one({'_id': team_id}, {'$set': {'captain_id': new_captain_id},
                                                      '$inc': {'revision': 1}}, session=session)
             return self._team(team_id, session)
