@@ -1,23 +1,20 @@
-# Next LDPlayer test: create a fresh rejection for the notification test
+# Next LDPlayer test: UniRecruit receives the approval notice
 
-APK1192604 installation and setup startup passed. The user confirms Wesnoth Alliance, the existing Trusted server100.99.99.14:15001 and Start game are visible. The new notification behavior still needs game testing. Earlier1192603 rejection events were not saved, so this test requires one new captain decision.
+The user approved UniRecruit instead of rejecting the request. The captain's successful reply and subsequent Koichi roster show 2/8 members: UniPlayer (captain) and UniRecruit, both Spearman level 1. Team level 1, experience 0 and rating 1000 remain displayed. Preserve this valid membership and use its new approval decision for notification testing. The latest approval's WAN status has been asked but is not yet supplied. Fresh rejection notification testing remains pending.
 
-Keep MongoDB, admin service and account bridge windows running. Keep WAN disconnected while local Ethernet stays connected. Use the existing app, Koichi team, captain UniPlayer and applicant UniRecruit. No pull, build, installation, profile import, OBB copy or database initialization is needed.
+Keep MongoDB, admin service and account bridge windows running. Keep WAN disconnected while local Ethernet stays connected. Use the existing installed APK1192604, trusted profile and both existing accounts. No pull, build, installation, profile import, OBB copy or database initialization is needed.
 
-## Current phase: captain rejects the existing UniRecruit request
+## Current phase: receive the unread approval at login
 
-1. Choose Start game, then Alliance. Select Log in -> Open, enter the existing UniPlayer credentials, and choose Log in. Dismiss Logged in with OK.
-2. Select Teams -> Open, then Review applications -> Open. Expect the Koichi application list containing UniRecruit. If the queue is empty or UniRecruit is missing, stop and report that screen; do not create a new account, submit another application or repeat a previous decision.
-3. Select UniRecruit -> Open. In Review application, select **Reject application** -> Open. The first/default option is Approve application; choose the rejection option deliberately.
-4. In Confirm rejection, verify UniRecruit and Koichi (team ID4cd736d3-dc6c-4c3d-a816-e7682b56db30). Select **Reject this application** -> Open.
-5. Expect **Application rejected. The application list will now refresh.** Choose OK. Expect **There are no pending applications for Koichi.** If other applicants are present, report that result and leave them untouched.
+1. Close the Koichi roster with OK. The captain queue refreshes automatically. If it says **There are no pending applications for Koichi.**, choose OK. If the application list is shown, choose Back without acting on another request.
+2. From **Alliance teams**, choose Back to return to **Alliance**. Select **Log out -> Open**. Expect **Logged out. The server has revoked this session.** Choose OK.
+3. Select **Log in -> Open**, enter the existing **UniRecruit** credentials and choose Log in. Dismiss the **Logged in.** player-profile dialog with OK.
+4. Expect **Unread application decisions** containing **Unread — Approved — Koichi — <UTC time>**.
 
-Stop here and report the acknowledgement and refreshed queue, plus whether WAN remained disconnected. This phase creates the saved decision; it does not yet prove applicant notification delivery. If an error makes the mutation outcome uncertain, report it rather than repeating rejection.
+Stop on this list and report what appears, including whether WAN remained disconnected. Do not open/acknowledge the notice yet. If no notice appears, report the screen instead of creating another request or changing membership. This phase checks applicant delivery only; an approval message to the captain does not prove this notification appeared for UniRecruit.
 
-## Following phase after captain confirmation: applicant notification
+## Following phases after the login notice is confirmed
 
-After dismissing the captain queue message, Back leaves Teams for Alliance. Log out, dismiss the server-revoked message, then log in as the existing UniRecruit. After Logged in -> OK, expect Unread application decisions with Unread — Rejected — Koichi and a UTC time. Choose Back without opening the notice.
+Choose Back to leave the notice unread. Teams -> My applications should offer the same unread approval again. Open that notice, verify **Application approved.** and **The captain approved your application to join Koichi.**, then choose OK to acknowledge only it. Once unread notices are exhausted, My applications reports no pending requests. Teams -> Application decisions should retain **Read — Approved — Koichi**. My team should show the same Koichi ID and 2/8 roster. Separately inspect personal leader and both experience values; the captain roster alone does not establish personal XP.
 
-From Alliance, Teams -> My applications must offer that unread notice again. Select it -> Open, verify Application rejected / The captain rejected your application to join Koichi, then choose OK to acknowledge only that decision. My applications then reports no pending requests. Teams -> Application decisions must retain Read — Rejected — Koichi. My team must still report no team. Opening a read detail requires OK before Back exits history.
-
-Later acceptance checks logout/relogin and full restart history, then a new application/approval, matching2/8 roster and unchanged XP. These are separate handoffs. Preserve the current Yama reference fb010e4d-af74-4906-8ba6-5f096aaf90ec, both accounts, team, trusted profile and all completed stages/backups. Campaign rewards and Alliance Battle integration remain later milestones.
+Later check read-history and membership persistence through logout/app restart and full service restart. Fresh rejection notice acceptance requires a later separately planned nonmember request; do not remove UniRecruit or alter the existing membership to force that test. Keep Koichi ID 4cd736d3-dc6c-4c3d-a816-e7682b56db30 and the previously confirmed Yama reference fb010e4d-af74-4906-8ba6-5f096aaf90ec. The latest pasted area prefix contains a non-hex r and is not new verified ID evidence. Campaign rewards and Alliance Battle integration remain later milestones.
