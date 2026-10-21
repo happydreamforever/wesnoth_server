@@ -1,29 +1,48 @@
-# UniPlayer password matches: restart only the bridge and test once
+# Trace one Android login against the existing backend
 
-The actual Windows diagnostic reports `outcome=password_match; password_check=match`, `ALLIANCE LOGIN DIAGNOSTIC COMPLETE` and `ALLIANCE LOGIN DIAGNOSTIC REPORT VERIFIED`. Accept the hidden-input verification against the selected local account. This does not prove an Android login or verify other players' passwords. The earlier authenticated backend health and player-presence checks remain accepted. The saved JSON has not been supplied, so account ID and attempt-window details remain unverified. Do not repeat the diagnostic, reset credentials or recreate accounts.
+UniPlayer still receives “Invalid username or password” after a confirmed bridge restart and fresh READY. The local password match, healthy backend and active player records are already accepted. The cause remains unproven. This update records the actual rejection branch during one ordinary Android login, without recording credentials or changing the response shown in the game. Do not reset accounts or repeat the earlier diagnostics.
 
-## 1. Reload the existing bridge's service credential
+## 1. Stop only the admin service and pull
 
-Keep MongoDB and the admin service windows running. In the window running `ALLIANCE ACCOUNT BRIDGE READY 100.99.99.14:15001`, press Ctrl+C once and wait for the PowerShell prompt. Stop only that bridge window. Then run:
+In the PowerShell window showing `Alliance admin: http://127.0.0.1:18765/`, press Ctrl+C once and wait for the prompt. Keep MongoDB and the existing READY account bridge running. Leave the game at its main menu; do not attempt login during the update. Temporarily reconnect Windows to GitHub, then run:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
+    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
+        $repo = '/d/Test/wesnoth-setup/' + $name
+        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
+        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Stop and send the output." }
+    }
+    'Both updates completed successfully.'
+}
+```
+
+Expected: both fast-forwards or Already up to date, followed by the completion message. If Git reports local changes, stop and send the error; do not reset or discard files. No native build, Android installation, profile import, database initialization or package download is needed. Disconnect WAN again while retaining local Ethernet.
+
+## 2. Start the backend with a one-request trace
+
+Use the stopped admin-service window:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAllianceBridge.ps1' `
+    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Trace-WindowsAllianceLogin.ps1' `
     -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime') `
-    -MsysRoot 'D:\Test\wesnoth-setup\msys64'
+    -Username 'UniPlayer'
 ```
 
-Expected: `ALLIANCE ACCOUNT BRIDGE ARTIFACT VERIFIED`, then `ALLIANCE ACCOUNT BRIDGE READY 100.99.99.14:15001`. Keep the new bridge running. A fresh READY means this bridge instance authenticated its loaded service credential before opening the listener. If it fails or does not return to the prompt when stopping, preserve the windows and return that output; do not force-kill unrelated processes or start duplicate bridges. No pull, rebuild, reinstall, app reset, profile import or database initialization is required.
+This starts the regular local account/admin backend with a temporary diagnostic observer. Keep this window open along with MongoDB and the existing bridge. It uses the same runtime, accounts, port18765 and admin website. Do not also run Run-WindowsAlliance.ps1 while this backend is serving.
 
-## 2. Make one controlled Android login attempt
+Wait for `ALLIANCE DATABASE CHECK PASSED`, the admin URL and `ALLIANCE LOGIN TRACE READY` before proceeding. The capture lasts five minutes and accepts only one internal player-login request. No password is entered in PowerShell. If startup reports an error or an occupied port, stop and return that fixed error without killing processes or retrying Android login.
 
-The JSON's current attempt count is not yet available. Ensure at least15 minutes have passed since the last Android login attempt, with no attempts in between; this moves into a later attempt window without resetting stored counters. The hidden-input diagnostic did not count as a login attempt. If15 minutes have already passed, no additional wait is needed.
+## 3. Make one Android attempt and return the report
 
-Keep WAN disconnected and local Ethernet connected. In the existing LDPlayer game open Main menu -> Alliance -> Log in. Clear both fields, enter username `UniPlayer` and the same password that just matched locally, then submit once. Do not send or display the password. Expected: `Logged in.` with the existing UniPlayer profile. If successful, open View personal leader and My team: expect unchanged Spearman/level1/Experience0/Total experience0 and Koichi with UniPlayer captain/UniRecruit,2/8. Report whether those values still match; do not resume planning A–H yet.
+Within five minutes of READY, open Main menu -> Alliance -> Log in, clear both fields, enter UniPlayer and the password that matched the earlier local diagnostic, and submit once. Do not send or display the password. Return the exact game result and the new sanitized `diagnostics\alliance-login-trace-*.json` named in the PowerShell window. Expected in PowerShell: `ALLIANCE LOGIN TRACE COMPLETE: outcome=...; http_status=...`. The capture completes even when the game reports invalid credentials; this marker is not a successful-login claim.
 
-If any error occurs, send its exact text and stop further login attempts. A rate-limited response is a separate condition, not evidence that the stored password is wrong. A successful retry establishes recovery after this controlled restart/reentry, not proof of the original cause.
+The report contains only fixed diagnostic outcomes and HTTP status, not submitted password, password hash, token, request body, secret or fingerprint. The ordinary login retains its normal attempt-counter/session behavior; this is not the previous read-only password check. Do not make repeated attempts. If no request reaches the backend before the deadline, return the timeout report and game result; do not restart other services speculatively.
 
-Return the new bridge READY or error, the single login result, and the already saved sanitized report `wesnoth_server\diagnostics\alliance-login-20261021-103824-396-59a8262a10c84560b2a82ddc172b7d5f.json`. Do not rerun the password diagnostic just to obtain the file. Its account ID/role/status and sampled attempt count help interpret the result; it contains no password/hash/credential. Never share private runtime files. If the bridge fails, use its printed diagnostics/alliance-bridge-run-*.txt log. Report actual WAN state with the combined result.
+After capture or timeout, the diagnostic observer turns off and this window continues serving the normal backend. Leave it running while returning the report. Do not wait for the PowerShell prompt or stop it merely to obtain the report. Report whether WAN was disconnected during this attempt. The older sanitized password-check JSON is optional supporting evidence if available; no rerun is needed. Planning A–H stays paused until the login failure is resolved.
 
 ## Paused planning acceptance — resume after login recovery
 
