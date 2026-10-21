@@ -1,35 +1,28 @@
-# Next Windows test: install the Android membership update
+# Next LDPlayer check: existing captain and new team menu
 
-The Windows1192603 build passed: earlier1192602 stages were preserved, all six native steps and33 Gradle tasks completed, and final artifact/build/rebuild checks succeeded. The user confirms WAN was disconnected while Ethernet stayed connected during that build; Gradle also ran with --offline. The existing bridge is READY, the fresh admin restart is confirmed and Koichi's earlier offline persistence acceptance remains valid.
+Android1192603 installation and setup startup passed. The user confirms Wesnoth Alliance, the existing Trusted server100.99.99.14:15001 and Start game are visible. Installation WAN status was not separately supplied; the preceding Windows build was explicitly WAN-disconnected. Koichi's earlier offline persistence acceptance remains valid.
 
-**Immediate action: phase 4 below.** Keep the game closed, LDPlayer running and all three server windows open. Disconnect WAN while retaining local Ethernet. No new pull, rebuild, database initialization, profile import or OBB copy is needed.
+**Current step: verify the existing captain in the updated game.** Keep MongoDB, admin service and bridge windows open. Disconnect WAN while retaining Ethernet and LDPlayer. No pull, build, reinstall, profile import, OBB copy or database initialization is needed.
 
-Use one phase at a time. Install with KeepSavedProfile, then report the console result and visible trusted-server setup before proceeding to membership actions. APK1192603 adds My applications, application/withdrawal and captain review/approve/reject. Its Android installation/runtime remain pending. The later manual-test checklist is retained for continuity.
+1. Choose **Start game**.
+2. On the main menu, open **Alliance**, select **Log in**, then **Open**. Log in as the existing **UniPlayer** using the private password.
+3. Dismiss the Logged in profile dialog. Open **Alliance -> Teams** (select Teams and Open).
+4. Confirm the Teams menu includes **My applications** and **Review applications**.
+5. Select **My team** and confirm the existing Koichi details.
 
-## Phase 4 — update the existing installed app
+Expected:
 
-Keep the game closed and LDPlayer running. After build acceptance:
+- Team **Koichi**, ID **4cd736d3-dc6c-4c3d-a816-e7682b56db30**, area **Yama**.
+- **Members: 1/8**; **UniPlayer (captain)**; **Spearman, leader level 1**.
+- **Team level: 1**, **Team experience: 0**, **Rating: 1000**.
 
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client' -ErrorAction Stop
+Return the team values and whether both new menu entries are present. Compare saved IDs on screen; earlier pasted player/area IDs had transcription ambiguities. Stop on an unexpected error or changed team data and send that message. Do not create another team/account or apply/approve/reject/withdraw yet. The current check reads existing data only.
 
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Install-AndroidAccountGame.ps1' `
-        -KeepSavedProfile
-
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Membership APK installation failed. Send the saved install log.'
-    }
-}
-```
-
-Expect `ANDROID ACCOUNT GAME INSTALL COMPLETE`, version 1192603, and the existing `Trusted server: 100.99.99.14:15001` with Start game. The helper accepts an installed 1192602 or 1192603, preserves app data/profile and does not transfer the OBB. If the profile is missing or unusable, stop and report the message; do not reset or reimport. Return the saved `diagnostics\android-account-install-*.txt` summary and visible setup result.
+The remaining checklist below is for continuity; it is not a request to run every step now.
 
 ## Phase 5 — manual membership acceptance in the same LDPlayer
 
-These checks will be handed off one at a time after installation. Keep WAN disconnected and Ethernet connected. Use the same LDPlayer by signing out and switching player accounts; another emulator is unnecessary for membership testing.
+Installation and retained trusted-server display are accepted. The remaining checks will be handed off one at a time after the current existing-captain check. Keep WAN disconnected and Ethernet connected. Use the same LDPlayer by signing out and switching player accounts; another emulator is unnecessary for membership testing.
 
 1. Start game -> Alliance -> Log in as existing UniPlayer. Teams -> My team must retain Koichi/Yama and its captain/values. Teams now includes My applications and Review applications. An empty application list is expected initially.
 2. Log out with the server-revoked acknowledgement. Create one separate player, for example UniRecruit if available, with a private password and Spearman. Log in. Do not share the password and do not create another team.
