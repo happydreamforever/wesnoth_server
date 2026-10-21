@@ -1,5 +1,22 @@
 # Test admin account editing and password reset
 
+## Current connection check — use the existing services
+
+The latest returned output confirms MongoDB and the admin service started successfully, but Android says the Alliance service is unavailable. Bridge status is not shown. Keep both working windows open. If no account-bridge window is running, open a third PowerShell window and run:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAllianceBridge.ps1' `
+    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime') `
+    -MsysRoot 'D:\Test\wesnoth-setup\msys64'
+```
+
+Expected: `ALLIANCE ACCOUNT BRIDGE READY 100.99.99.14:15001 -> local account service`. Keep all three windows open. If a bridge is already running, return its current console output instead of starting another. If startup fails, return the error and saved diagnostics/alliance-bridge-run-*.txt. Do not rebuild or initialize anything for this step.
+
+Once READY appears, try the existing Android Alliance login once; use the new password if the admin reset was completed. Return the bridge output and exact game result. If unavailable persists, stop repeated attempts. The two healthy-service logs do not prove that the admin reset occurred or that the new admin pages were tested. The edit/reset checklist below remains pending; do not repeat a password reset that already succeeded. No pull is required to run this existing launcher. The earlier update instructions below apply only if the feature has not yet been pulled.
+
+## Admin-feature delivery and acceptance reference
+
 The user requested these features explicitly. This update adds Edit and Reset password to the local admin Accounts page. No live account has been reset by VPS development. The original Android input mismatch is still unexplained; password reset provides the requested recovery action and does not establish its cause.
 
 ## 1. Update the existing repositories
