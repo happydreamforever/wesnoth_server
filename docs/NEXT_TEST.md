@@ -1,22 +1,20 @@
-# Next LDPlayer test: a second player applies to Koichi
+# Next LDPlayer test: withdraw and reapply as UniRecruit
 
-The updated1192603 My applications and captain Review applications empty-list checks pass. My team returns the unchanged Koichi/Yama IDs, UniPlayer captain,1/8 members, team level1/XP0/rating1000 and Spearman leader level1. The user explicitly confirms WAN disconnected with local Ethernet retained during these reads.
+UniRecruit successfully applied to Koichi. My applications shows Koichi — 1/8 members, while My team still reports no team. The applicant also sees the expected captain-only review message. The user explicitly confirms WAN was disconnected while local Ethernet stayed connected during these checks. No captain has approved this request.
 
-**Current step: submit one second-player application.** Keep MongoDB, admin service and bridge windows open. Keep WAN disconnected and Ethernet/LDPlayer connected. Use the same LDPlayer by switching accounts. No pull, build, installation, profile import, OBB copy or database initialization is required.
+**Current step: withdraw, verify removal, then reapply.** Stay logged in as **UniRecruit** in the same LDPlayer. Keep MongoDB, admin service and bridge windows running, WAN disconnected and local Ethernet connected. No pull, build, installation, profile import, OBB copy or database initialization is required.
 
-1. In **Alliance**, choose **Log out** as UniPlayer. Expect **Logged out. The server has revoked this session.**
-2. Choose **Create player account**. Select **Spearman — Loyalists**, then **Choose leader**. Create one new player, for example **UniRecruit**, using an unused username and a private12–128-character password; follow **Create account** and **Confirm password**. Keep the password private. If you already own a separate second test account, log in to it instead of creating another. Do not create another team.
-3. After **Your player account was created**, choose **Log in** as the new player; registration alone does not log in. Dismiss the profile confirmation.
-4. Open **Alliance -> Teams -> Browse areas and teams -> Yama -> Koichi**. Select **Apply to join**. In **Confirm application**, verify Koichi in Yama and team ID **4cd736d3-dc6c-4c3d-a816-e7682b56db30**, then select **Send application** and **Open**.
-5. Expect **Application submitted. Your captain must approve it before you join.** Dismiss it; the refreshed **My applications** list must include **Koichi**.
-6. Return to **Teams -> My team**. It must still say **You do not belong to a team yet**. Do not use its Create team suggestion.
+1. Open **Alliance -> Teams -> My applications -> Koichi**. Choose **Withdraw application**.
+2. In **Confirm withdrawal**, verify Koichi and team ID **4cd736d3-dc6c-4c3d-a816-e7682b56db30**. Select **Withdraw this application**, then **Open**.
+3. Expect **Application withdrawn. The list will now refresh.** Dismiss it. The automatic refresh must say **You have no pending team applications. Open My team to check whether you are already a member.**
+4. Open **Teams -> My team**. Expect **You do not belong to a team yet**. Do not create a team.
+5. Open **Teams -> Browse areas and teams -> Yama -> Koichi -> Apply to join**. Verify the same team in **Confirm application**, select **Send application**, then **Open**.
+6. Expect **Application submitted. Your captain must approve it before you join.** Dismiss it; the refreshed **My applications** list must again show **Koichi — 1/8 members**.
 
-Stop here and report the new player's username, the submission result, whether Koichi appears in My applications, and the My team result. Do not send the password. The application is pending; Koichi should remain1/8 until a later captain approval. No withdrawal, rejection or approval is requested yet.
-
-If registration is uncertain, try logging in with the same username before registering again. If submission is uncertain, read My applications and My team before resending. On an unexpected error, stop and return its text rather than repeatedly tapping the mutation.
+Stop here and report the withdrawal message, the intermediate empty application list/no-team result and the final pending Koichi entry. Stay logged in as UniRecruit; do not approve or reject anything yet. If any result differs, stop at that point and send the message. If a request's outcome is uncertain, read My applications and My team before repeating it.
 
 ## Later steps — wait for each handoff
 
-After this application is accepted, the sequence will test withdrawal/reapplication as the second player, captain rejection as UniPlayer, another application, then explicit captain approval. Both accounts must retrieve the same two-member roster without XP changes. A later controlled full restart checks persistence. These steps are not requested in the current phase.
+After withdrawal/reapplication is accepted, switch to captain UniPlayer to inspect and reject UniRecruit's request. Then UniRecruit applies again and the captain approves it. Both accounts must retrieve the same two-member roster without XP changes; a later controlled full restart checks persistence. These captain decisions and restart checks are not requested now.
 
-Campaign rewards, leave/captain transfer, team battles and two-human battle synchronization remain later milestones. The accepted original game, saved trusted server, Koichi, UniPlayer, runtime/identity and all completed stages/backups stay in place.
+Campaign rewards, leave/captain transfer, team battles and two-human battle synchronization remain later milestones. Preserve the current app, saved trusted server, Koichi/Yama, both players, runtime/identity and completed stages/backups.
