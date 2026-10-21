@@ -15,6 +15,6 @@ Stop here and report both dialogs. Remain logged in as UniRecruit. Do not create
 
 After this applicant check, UniRecruit will apply again and captain UniPlayer will approve the request. Both accounts must retrieve the same two-member roster without XP changes; a later controlled full restart checks membership persistence. Those steps are not requested now.
 
-The latest pasted Yama area ID begins fb010e4d, whereas the earlier reference begins ff010e4d. Both are valid UUID prefixes, so exact parity is unconfirmed pending an on-screen check. Preserve both evidence strings and the earlier reference; these account-scoped reads do not change or depend on that area ID.
+The user confirms the actual Yama area-ID prefix is fb010e4d. The current reference is fb010e4d-af74-4906-8ba6-5f096aaf90ec, using the latest full dialog and this confirmation. Earlier ff010e4d records are superseded evidence; no database-ID change is established. The applicant checks above remain pending and unchanged.
 
 Campaign rewards, leave/captain transfer, team battles and two-human battle synchronization remain later milestones. Preserve the current app, trusted server, Koichi/Yama, both players, runtime/identity and completed stages/backups.
