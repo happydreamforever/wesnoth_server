@@ -1,10 +1,12 @@
-# Update the Android login screen after the successful admin reset
+# Correct the account dialog and identify the opening failure
 
-Admin tests A–C are confirmed: unchanged Edit saved, mismatched confirmation rejected and UniPlayer password reset succeeded. Do not repeat those tests or reset again. D still returns **Invalid username or password**, and the user confirms **Show password is absent**. The pending1192607 credential-input update is the next step. The exact cause of the login rejection is not yet proven.
+The actual Windows1192607 build and in-place installation passed. The user confirms Trusted server100.99.99.14:15001 remains displayed, but selecting Alliance immediately shows the generic opening error, before the internal account menu or password entry. All three services report ready. This does not establish profile loss or a password failure.
 
-## 1. Pull the existing update
+Code inspection and a failing reproduction found a separate1192607 credential-dialog defect: replacing its password widget through the outer grid cannot cross the stock scrollbar-panel boundary.1192608 uses the field's actual owning grid and verifies replacement. This fixes that proven later failure. It also distinguishes profile-file/format/identity checks from menu/account-screen opening with fixed, non-secret messages. The cause of the reported earlier failure remains unproven until the new Windows result.
 
-Quit the game in LDPlayer. Keep the healthy MongoDB, admin and account-bridge windows open. Temporarily connect Windows to GitHub and run:
+## 1. Pull the correction
+
+Quit the game in LDPlayer. Keep the healthy database, admin service and READY account bridge windows open. Temporarily connect Windows to GitHub and run:
 
 ```powershell
 & {
@@ -19,9 +21,9 @@ Quit the game in LDPlayer. Keep the healthy MongoDB, admin and account-bridge wi
 }
 ```
 
-Expected: both pulls succeed or report Already up to date. Stop on a Git/local-change error without discarding files. Disconnect WAN again and keep local Ethernet connected. This records the accepted reset and supplies the already delivered credential-input update; no server/bridge rebuild, service restart or dependency installation is needed.
+Expected: both pulls succeed. Stop on any Git/local-change error without discarding files. Disconnect WAN again while keeping local Ethernet connected. The server delivery records the evidence and next step; no server/bridge rebuild, service restart or dependency installation is needed.
 
-## 2. Build and install1192607 offline
+## 2. Build and install1192608 offline
 
 ```powershell
 & {
@@ -31,33 +33,31 @@ Expected: both pulls succeed or report Already up to date. Stop on a Git/local-c
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
         -File '.\tools\Rebuild-WindowsAndroidAccountGame.ps1'
     if ($LASTEXITCODE -ne 0) {
-        throw 'Credential update build failed. Send the saved rebuild and build logs.'
+        throw 'Account dialog build failed. Send the saved rebuild and build logs.'
     }
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
         -File '.\tools\Install-AndroidAccountGame.ps1' `
         -KeepSavedProfile
     if ($LASTEXITCODE -ne 0) {
-        throw 'Credential update installation failed. Send the saved install log.'
+        throw 'Account dialog installation failed. Send the saved install log.'
     }
 }
 ```
 
-Expected: original1192606 account engine/APK stages are retained under unique before-credential-input-ui backups; recorded preparations reuse their retained backups. All foundation libraries, original engine objects, OBB, saved profile, user data and database remain intact. The targeted build finishes with ANDROID ACCOUNT GAME REBUILD COMPLETE. Installation finishes with ANDROID ACCOUNT GAME INSTALL COMPLETE and Version1192607. It accepts installed1192606/1192607 and rejects other versions before installing. Do not manually rename/delete stages, remove locks, uninstall the app or initialize anything if a check stops. Return the saved client diagnostics/android-account-{rebuild,build,install}-*.txt on failure.
+Expected: completed1192607 account engine/APK stages are retained under unique before-credential-dialog-fix backups. The new1192608 journal preserves all earlier journals/backups. Recorded preparation resumes the same retained backups. Original engine/library/data/OBB stages remain unchanged. Build ends with ANDROID ACCOUNT GAME REBUILD COMPLETE; install ends with ANDROID ACCOUNT GAME INSTALL COMPLETE and Version1192608. The helper accepts installed1192607/1192608 and preserves app data and the imported profile. If a check stops, preserve the state and return its log; do not manually rename/delete stages, remove locks, uninstall or reinitialize anything.
 
-## 3. Inspect the new password locally, then sign in once
+## 3. One opening and login check
 
-Confirm the setup screen still shows Trusted server100.99.99.14:15001. Choose Start game -> Alliance -> Log in. The Show password checkbox must now be visible and initially off. If it is still absent after the installer reports1192607, stop and return that observation and the install log.
+1. Confirm setup still shows Trusted server100.99.99.14:15001, then Start game -> Alliance. Expected: the internal Alliance menu opens. If an error appears first, stop and send its exact complete text, including any bracketed code. Do not reimport the profile, reset the app or attempt login through another path.
+2. If the menu opens, choose Log in. Expected: the credential dialog opens with Show password initially off. Enter UniPlayer and the NEW password from the already successful admin reset. Check Show password and compare locally, including case and symbols; correct any input discrepancy locally. Toggling must preserve the text. Hide it again and submit once. Never send the password, a visible-password screenshot, hash or token.
+3. Expected: Logged in. Then View personal leader and My team should show the original player ID, Spearman/level1/Experience0/Total experience0, Koichi ID4cd736d3-dc6c-4c3d-a816-e7682b56db30, captain UniPlayer/member UniRecruit2/8, team level1/XP0/rating1000. If login fails, stop repeated attempts and return the exact message plus whether the locally revealed text matched.
 
-Enter UniPlayer and the NEW password saved by the successful admin reset. Check Show password and compare the displayed text locally with that new password, including case and symbols. If the text differs, correct it locally. Toggling masking must preserve the text. Hide it again and submit once. Do not send the password, a visible-password screenshot, hash or token.
-
-Expected: Logged in. Then View personal leader and My team should show the original player ID, Spearman/level1/Experience0/Total experience0, Koichi ID4cd736d3-dc6c-4c3d-a816-e7682b56db30, captain UniPlayer/member UniRecruit2/8, team level1/XP0/rating1000. If login fails, stop repeated attempts and return the exact message, whether the displayed password matched locally, and the install log. The previous local password_match checked the old password; it is not evidence about the new one. No new trace or additional reset is requested now.
-
-Return one combined report: build/install markers and version, retained Trusted server, checkbox visibility/default/toggle behavior, whether the displayed new password matched, login result and unchanged game values on success. Include actual WAN status during build and testing. Planning tests stay paused until login is recovered.
+Return one report: build/install markers and version, retained Trusted server, whether Alliance and Log in opened, checkbox behavior, login result, and unchanged values on success. Include actual WAN status during build and testing. On failure send the relevant client diagnostics/android-account-{rebuild,build,install}-*.txt and exact screen message. The old local password_match predates the reset; it does not validate the new password. No new reset or backend trace is requested. Planning tests remain paused until opening and login recovery are confirmed.
 
 ## Paused planning acceptance — resume after login recovery
 
-The returned Windows output now confirms all three services ready: MongoDB127.0.0.1:27018, authenticated database/schema/transaction checks and admin127.0.0.1:18765, and bridge100.99.99.14:15001. Keep those three PowerShell windows and LDPlayer open. The earlier1192606 battle-planning build/install remains accepted. Resume this checklist only after account recovery and successful Android login have been confirmed. Client1192607 Windows acceptance remains separately pending if it has not been installed. At that point no additional pull/build/install, database initialization, repeated backend diagnostic or initial service restart is required. The intentional restart occurs only at check F.
+The returned Windows output now confirms all three services ready: MongoDB127.0.0.1:27018, authenticated database/schema/transaction checks and admin127.0.0.1:18765, and bridge100.99.99.14:15001. Keep those three PowerShell windows and LDPlayer open. The earlier1192606 battle-planning build/install remains accepted. Resume this checklist only after account recovery and successful Android login have been confirmed. The1192607 Windows build/install is accepted;1192608 opening/login acceptance remains pending. At that point no additional pull/build/install, database initialization, repeated backend diagnostic or initial service restart is required. The intentional restart occurs only at check F.
 
 This update tests saved battle planning: approved maps, fixed lineups, two captain approvals, player readiness, persistence and cancellation. Combat, battle start and XP/rating rewards are later work. Use one LDPlayer and log out/log in to switch between four players. Keep WAN disconnected and local Ethernet connected; report the actual WAN state with the combined results.
 
