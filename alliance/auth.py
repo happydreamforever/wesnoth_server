@@ -5,7 +5,7 @@ import re
 import secrets
 
 from argon2 import PasswordHasher, Type
-from argon2.exceptions import VerificationError, InvalidHashError
+from argon2.exceptions import VerificationError, InvalidHashError, VerifyMismatchError
 from pymongo import ReturnDocument
 
 
@@ -55,12 +55,22 @@ class AuthService:
     def __init__(self, db):
         self.db = db
 
-    def authenticate(self, username, password, scope):
+    def authenticate(self, username, password, scope, *, observer=None):
+        # Only an explicitly armed local diagnostic supplies this per-request
+        # callback. It receives fixed outcomes, never authentication material.
+        def observe(outcome):
+            if observer is not None:
+                try:
+                    observer(outcome)
+                except BaseException:
+                    pass  # Diagnostics must not alter authentication behavior.
         if scope not in ("admin", "player"):
             raise AuthError("invalid_scope", "Invalid session purpose.")
         if not isinstance(username, str) or not 1 <= len(username) <= 32:
+            observe("invalid_input")
             raise AuthError("invalid_credentials", "Invalid username or password.")
         if not isinstance(password, str) or len(password) > 128:
+            observe("invalid_input")
             raise AuthError("invalid_credentials", "Invalid username or password.")
         now = datetime.now(timezone.utc)
         # A fixed fifteen-minute bucket bounds work even under simultaneous requests.
@@ -73,15 +83,24 @@ class AuthService:
                 "expires_at": datetime.fromtimestamp((bucket + 2) * 900, timezone.utc)}},
             upsert=True, return_document=ReturnDocument.AFTER)
         if attempts["count"] > 10:
+            observe("rate_limited")
             raise AuthError("rate_limited", "Too many login attempts. Try again in 15 minutes.")
         account = self.db.accounts.find_one({"username_key": username.casefold()})
         encoded = account.get("password_hash", _DUMMY_HASH) if account else _DUMMY_HASH
+        password_failure = "password_mismatch"
         try:
             verified = _HASHER.verify(encoded, password)
-        except (VerificationError, InvalidHashError):
+        except VerifyMismatchError:
             verified = False
+        except InvalidHashError:
+            verified = False
+            password_failure = "invalid_stored_hash"
+        except VerificationError:
+            verified = False
+            password_failure = "password_verification_failed"
         if (not verified or not account or account.get("status") != "active"
                 or account.get("role") != scope):
+            observe("account_missing" if not account else password_failure if not verified else "account_ineligible")
             raise AuthError("invalid_credentials", "Invalid username or password.")
         replacement_hash = _HASHER.hash(password) if _HASHER.check_needs_rehash(encoded) else encoded
         token = secrets.token_urlsafe(32)
@@ -90,6 +109,7 @@ class AuthService:
             current = self.db.accounts.find_one({"_id": account["_id"], "status": "active",
                 "role": scope, "password_hash": encoded}, session=session)
             if current is None:
+                observe("session_state_changed")
                 raise AuthError("invalid_credentials", "Invalid username or password.")
             # Conflict with simultaneous suspension/password changes so a session
             # cannot appear after an administrator revoked that account's access.
@@ -102,6 +122,7 @@ class AuthService:
         with self.db.client.start_session() as session:
             public = session.with_transaction(issue, max_commit_time_ms=10000)
         self.db.auth_attempts.delete_one({"_id": attempt_id})
+        observe("login_accepted")
         return {"token": token, "account": public, "expires_at": expires}
 
     @staticmethod

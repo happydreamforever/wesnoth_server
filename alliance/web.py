@@ -18,7 +18,7 @@ from .domain import AllianceService, DomainError
 from .rules import CAMPAIGN_CONTENT_READY
 
 
-def create_app(settings, db):
+def create_app(settings, db, *, login_observer=None, login_username=None):
     """Create the production app without opening sockets or modifying schema."""
     if settings.host != "127.0.0.1":
         raise ValueError("The Alliance admin service must bind to 127.0.0.1.")
@@ -49,6 +49,20 @@ def create_app(settings, db):
     def require_loopback():
         if request.remote_addr != "127.0.0.1":
             abort(403)
+        if (login_observer is not None and request.method == "POST"
+                and request.path == "/internal/v1/login"):
+            try:
+                g.login_capture = login_observer.reserve()
+            except BaseException:
+                pass
+
+    def observe_login(outcome):
+        capture = getattr(g, "login_capture", None)
+        if capture is not None:
+            try:
+                capture.observe(outcome)
+            except BaseException:
+                pass
 
     csrf = CSRFProtect(app)
 
@@ -62,6 +76,12 @@ def create_app(settings, db):
             "default-src 'none'; style-src 'self'; img-src 'self'; "
             "form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
         )
+        capture = getattr(g, "login_capture", None)
+        if capture is not None:
+            try:
+                capture.finish(response.status_code)
+            except BaseException:
+                pass
         return response
 
     def is_internal():
@@ -139,6 +159,7 @@ def create_app(settings, db):
                 authorization = request.headers.get("Authorization", "")
                 expected = "Bearer " + settings.bridge_secret
                 if not hmac.compare_digest(authorization.encode("utf-8"), expected.encode("utf-8")):
+                    observe_login("service_authorization_rejected")
                     abort(401)
                 if request.method == "POST" and not request.is_json:
                     abort(415)
@@ -279,7 +300,13 @@ def create_app(settings, db):
     @internal_route("/login", player=False)
     def player_login():
         data = payload("username", "password")
-        return jsonify(auth.authenticate(text_field(data, "username", maximum=64), text_field(data, "password", maximum=1024), "player"))
+        username = text_field(data, "username", maximum=64)
+        password = text_field(data, "password", maximum=1024)
+        if getattr(g, "login_capture", None) is not None:
+            if isinstance(login_username, str) and username.casefold() == login_username.casefold():
+                return jsonify(auth.authenticate(username, password, "player", observer=observe_login))
+            observe_login("different_username")
+        return jsonify(auth.authenticate(username, password, "player"))
 
     @internal_route("/logout")
     def player_logout():
