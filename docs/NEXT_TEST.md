@@ -1,6 +1,6 @@
 # Next LDPlayer test: UniRecruit receives the approval notice
 
-The user approved UniRecruit instead of rejecting the request. The captain's successful reply and subsequent Koichi roster show 2/8 members: UniPlayer (captain) and UniRecruit, both Spearman level 1. Team level 1, experience 0 and rating 1000 remain displayed. Preserve this valid membership and use its new approval decision for notification testing. The latest approval's WAN status has been asked but is not yet supplied. Fresh rejection notification testing remains pending.
+The user approved UniRecruit instead of rejecting the request. The captain's successful reply and subsequent Koichi roster show 2/8 members: UniPlayer (captain) and UniRecruit, both Spearman level 1. Team level 1, experience 0 and rating 1000 remain displayed. Preserve this valid membership and use its new approval decision for notification testing. The user explicitly confirms WAN stayed disconnected while local Ethernet remained connected throughout the approval and 2/8 roster check. Fresh rejection notification testing remains pending.
 
 Keep MongoDB, admin service and account bridge windows running. Keep WAN disconnected while local Ethernet stays connected. Use the existing installed APK1192604, trusted profile and both existing accounts. No pull, build, installation, profile import, OBB copy or database initialization is needed.
 
