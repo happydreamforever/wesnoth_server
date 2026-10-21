@@ -1,9 +1,11 @@
 # Android build checkpoint
 
+**Application decision notifications, APK1192604 (2026-10-21):** The user accepts the latest reapplication step and requests clear applicant rejection notices at login or while checking applications, with missing behavior implemented during testing. This supersedes the earlier plan to defer notifications until membership acceptance finishes. New approvals/rejections are stored atomically with the captain's decision as private per-account history, retaining the latest50 committed decisions. Login and My applications show unread notices; Application decisions opens retained read/unread history. Only opening a detail and choosing OK acknowledges that notice. Existing1192603 decisions cannot be reconstructed. The same Koichi/Yama/UniPlayer/UniRecruit, database, trusted profile and completed game stages are preserved. Delivery requires both repository pulls, bridge rebuild, fresh admin/bridge processes, Android1192604 rebuild and KeepSavedProfile installation. Follow NEXT_TEST.md one phase at a time. Windows/LDPlayer notification and approval/two-member persistence acceptance remain pending. Current Yama ID is fb010e4d-af74-4906-8ba6-5f096aaf90ec. Evidence: client build/audit-application-decisions-20261021/ and server build/audit-application-decisions-server-20261021/.
 
-**Applicant rejection state accepted; reapplication for approval next (2026-10-21):** The user returns UniRecruit My applications with no pending requests and My team with no membership, and reports no rejection notification. Accept the expected applicant state after the prior captain rejection. APK1192603 has no applicant decision notification/history: it lists pending requests only; rejection removes the request and acknowledges only the captain. Record applicant decision notices as a missing follow-up feature, not an accepted notification test. The user explicitly confirms WAN stayed disconnected with Ethernet retained during these latest applicant reads. Next remain UniRecruit and reapply through Yama -> Koichi, require Application submitted and refreshed Koichi1/8 pending, then stop before captain approval. Current Yama reference is fb010e4d-af74-4906-8ba6-5f096aaf90ec; earlier ff010e4d evidence is superseded. Approval/two-member roster/unchanged XP and approved membership restart persistence remain pending. Keep all three service windows running, WAN disconnected and Ethernet connected. No pull/build/install/profile import/OBB copy/initialization is needed. Evidence: client build/audit-membership-applicant-rejection-20261021/.
 
-Current account delivery (2026-10-20): `Build-WindowsAndroidAccountGame.ps1` creates separate `build/android-account-engine` and `build/android-account-game` stages. It verifies all 568 original engine objects and reuses 567, replacing only the title-screen object with an owned overlay and adding the account UI/transport/codec sources. Existing engine source and OBB are unchanged. Same Android package `org.wesnoth.offline`, versionCode1192601, x86_64/API23; OBB version1192600 remains valid. `Install-AndroidAccountGame.ps1` requires the original installed app and matching APK signer, then uses `adb install -r`. It stages only the public server profile, not another OBB. Windows/LDPlayer acceptance is pending; follow NEXT_TEST.md one step at a time.
+Current1192604 delivery: Rebuild-WindowsAndroidAccountGame.ps1 preserves the completed1192603 account stages under before-decisions-ui backups and uses a new update journal. Original engine/OBB/dependencies and earlier backups are preserved. The VPS network-disabled build and standalone artifact/signature verification pass, using six native steps and33 Gradle tasks. Install-AndroidAccountGame.ps1 -KeepSavedProfile updates installed1192603/1192604 to1192604 without importing a profile or copying the OBB. Actual Windows/LDPlayer notification acceptance is pending; follow NEXT_TEST.md.
+
+Historical first account delivery (2026-10-20): `Build-WindowsAndroidAccountGame.ps1` creates separate `build/android-account-engine` and `build/android-account-game` stages. It verifies all 568 original engine objects and reuses 567, replacing only the title-screen object with an owned overlay and adding the account UI/transport/codec sources. Existing engine source and OBB are unchanged. Same Android package `org.wesnoth.offline`, versionCode1192601, x86_64/API23; OBB version1192600 remains valid. `Install-AndroidAccountGame.ps1` requires the original installed app and matching APK signer, then uses `adb install -r`. It stages only the public server profile, not another OBB. Windows/LDPlayer acceptance is pending; follow NEXT_TEST.md one step at a time.
 
 The sole runtime target remains the verified LDPlayer Android9/API28 x86_64 instance at127.0.0.1:5555. Native minimum API23 and compile/target SDK35 remain unchanged. Use the existing NDK26.3.11579264, Java21, Gradle8.9/AGP8.7.3 and cached dependencies. Do not request a phone, upgrade packages or repeat completed native stages.
 
@@ -176,7 +178,6 @@ This uses the already prepared Linux tools and caches; Windows uses its recorded
 
 Current user commands and expected outputs are in NEXT_TEST.md. The SDL diagnostic APK is verified; the actual Wesnoth game APK and OBB integration remain pending.
 
-
 ## VPS cache verification
 
 The real generated project passed dependency resolution with Gradle 8.9, AGP 8.7.3 and Java 21.0.9 while Docker networking was disabled and source was mounted read-only. This matches Windows's Java release number, with Linux Temurin versus Windows JBR still differing. The check resolved 24 unique Java/AAPT2 files and did not compile native code or produce an APK. The image pins official Gradle and Temurin digests in client tools/Dockerfile.android-cache-verify.
@@ -226,7 +227,6 @@ The VPS-only verification image extends wesnoth-server-verify:1.19.26 with host 
 
 The first actual Windows diagnostic confirmed all listed versions, including MSYS Python3.12.13/Meson1.12.0, but rejected their binding because realpath strings differed. Compiler/archive execution was skipped. The helper now accepts actual file identity or byte-identical same-directory copies and additionally compares the shebang interpreter runtime/module identity with the selected Python. It prints both paths on success or failure. Twenty-four shell fixtures, including copied/hardlinked alias and genuine mismatch regressions, and a real network-disabled Linux NDK compile/archive run pass. The subsequent Windows result confirms byte-identical aliases /usr/bin/python3.exe and /usr/bin/python, actual module/runtime identity and the real compile/archive check. No Windows package changes or further diagnostic rerun are needed.
 
-
 ## libiconv/Pixman reusable text foundation
 
 The new independent build/android-text-base stage uses the existing cached libiconv1.17 (bundled libcharset1.5) and Pixman0.42.2 archives. It builds static PIC libraries, public headers, portable pkg-config metadata, license notices and one C executable with NDK r26d for x86_64/API23. libiconv uses its release configure script and Make; Pixman uses Meson with downloads forbidden and MSYS Ninja. The earlier CMake outputs and their receipt inputs remain unchanged.
@@ -255,13 +255,11 @@ The verification image/host-version differences are recorded above. Windows uses
 
 The actual offline Android cross-build, relocated-prefix consumer and separate Linux probe execution pass. The16 installed files contain38 verified static-library objects and a1,758,128-byte C probe. Seventeen driver tests,20 PowerShell fixtures and an actual-receipt integration with simulated ADB pass. Windows library compilation and LDPlayer execution subsequently passed in attachment ec1b82dd-19d0-49d2-bfe9-d420de986ceb. Detailed hashes, host differences, the package-metadata correction and negative-test evidence are recorded in BASELINE.md.
 
-
 ### Windows Libtool standard-input correction
 
 The first Windows text-base run completed release configuration and both libcharset object compilations, then stopped before archive creation: `../libtool: line 3280: 0: Bad file descriptor`. That line saves descriptor0 while inspecting .lo metadata. The Python runner inherited stdin, whereas the PowerShell process launcher redirected stdout/stderr and used CreateNoWindow without establishing an input stream. The exact point at which Windows lost the input descriptor was not traced; the Libtool operation and its invalid-input failure are identified.
 
 The runner now starts all noninteractive child tools with stdin=subprocess.DEVNULL. This supplies readable EOF and avoids depending on the launching terminal. Generated toolchain/source files, build plan, libraries and compiler options are unchanged, so the existing owned Windows stage can be reused without a reset or new directory. Keep the normal two-job Windows setting. The subsequent Windows rerun completed both libraries and passed the actual LDPlayer probe. The stdin correction remains part of the shared runner used by later package stages. See BASELINE.md for the original failure, regression and successful Windows/device evidence.
-
 
 ## Reusable gettext, PCRE2 and libffi prerequisites
 
@@ -286,7 +284,6 @@ python3 -B tests/test_android_glib_deps_windows.py --pwsh /tmp/wesnoth-audit-pws
 ```
 
 Eighteen builder tests and 22 simulated PowerShell/ADB fixtures passed. An independent host build of the pinned libraries and a generated host-only copy of the probe passed catalog conversion/plurals, Unicode regex behavior, structure calls and executable callbacks. Missing/corrupt catalogs and deliberately wrong regex/callback expectations failed correctly. Host execution does not establish Android runtime success. The actual offline Android cross-build and owned-stage reuse passed, followed by complete receipt, static archive and ELF validation. The 18 installed files contain 70 Android relocatable objects and a 1,353,976-byte native probe. A real consumer link from both prefixes copied to paths containing spaces passed; both original prefixes/receipts stayed unchanged. The unchanged device wrapper also passed against real receipts and artifacts in a spaced temporary checkout without MSYS/NDK, with exactly two mocked ADB pushes. These host and simulated-device checks do not establish actual Android execution. BASELINE.md records evidence and host-version differences; NEXT_TEST.md contains exact Windows commands and expected results. Windows compilation and LDPlayer execution of this new batch remain pending.
-
 
 ### Windows LLVM archive-pipe correction
 
@@ -326,7 +323,6 @@ The cache still lacks the FriBidi source required by Pango1.50.14. Its source fa
 
 VPS validation passes: the fresh network-disabled Android cross-build and real receipt verifier;18 builder tests;26 simulated PowerShell fixtures plus the asset-manifest binding regression; corrected same-source host semantics with four negative cases; actual three-prefix relocation/linking under spaces; and the actual-prefix/asset device-helper integration with simulated ADB. The new prefix has24 files and148 target relocatable objects. Earlier108/16-file prefixes, receipts and source helpers remain unchanged. Actual Windows compilation and LDPlayer rendering execution remain pending. Detailed evidence is in BASELINE.md.
 
-
 ### Cairo configure temporary files on Windows
 
 The first Windows TextRender run built Expat and Fontconfig, then Cairo configure stopped at two large here-documents while generating config.status. Bash reported Device or resource busy; the specific Windows operation and responsible process are unknown. The updated driver supplies Cairo configure a fresh private TMPDIR for each attempt, streams and saves all output, and retains failed config.log/config.status snapshots. Only the exact busy-here-document plus config.status write failure permits a retry, with a maximum of three attempts. Other failures stop immediately.
@@ -335,13 +331,11 @@ The recovery changes the runner only. The existing source inventory, package pla
 
 Verification:24 builder tests pass; a real Bash injected-EBUSY test recovers on attempt two; the actual offline Android rebuild reuses the existing stage; and receipt/device-helper verification with actual artifacts passes using mocked ADB. Existing source/toolchain/prefix bytes remain identical, and only the new driver's receipt fingerprint changes. Detailed evidence and the unresolved Windows cause are recorded in BASELINE.md.
 
-
 ### Windows build confirmed; device test startup
 
 The latest log.txt confirms Cairo configuration recovered on attempt3 and the complete Windows TextRender build/receipt passed. The device test stopped before verification or ADB because its parameter default evaluated PSScriptRoot while empty. Test-AndroidTextRender.ps1 now resolves the default sibling data directory in the initialized script body; explicit DataRoot paths remain supported. This helper is outside the native receipt's input list, so updating it does not require rebuilding libraries or the probe. NEXT_TEST.md now runs only the device test and saves its output as a diagnostics file. Actual Android rendering execution remains pending.
 
 Validation:29 helper fixtures pass, including direct -File startup and the reported empty-PSScriptRoot binding condition. Real receipt verification and direct helper integration with actual prefixes/assets pass with mocked ADB. Existing native outputs remain valid without a rebuild. Output-file handoff checks pass for both success and failure. The updated helper still awaits the user's Windows/LDPlayer result.
-
 
 ### TextRender checkpoint complete (2026-10-13)
 
@@ -349,23 +343,19 @@ The latest log.txt confirms the corrected PowerShell helper, full receipt/font v
 
 Next development work is to pin/provision the missing FriBidi source separately, then build/test Pango1.50.14 for full paragraph layout and bidirectional text using the completed libraries. The current checkpoint checks isolated glyphs, fallback and image rendering; it does not yet establish Pango layout or the full game. No new Windows setup/build command is ready in this documentation-only update.
 
-
 ## Offline paragraph-layout source preparation
 
 The TextRender checkpoint has passed on Windows and LDPlayer. The next stage will add Pango 1.50.14 paragraph layout and FriBidi 1.0.17 using completed FreeType/HarfBuzz/GLib/Fontconfig/Cairo libraries. This delivery provides tools/Prepare-WindowsAndroidLayoutSources.ps1 and the separate tools/native-text-layout/sources.json. Run with -Download while connected to fetch the pinned 1,203,284-byte official FriBidi archive; run without that switch offline to check its size/SHA256. The cache is build/android-layout-sources. Valid files are reused; invalid existing files are preserved and rejected. No tool installation or change to the old archive manifest is needed. Current commands and log paths are in NEXT_TEST.md.
 
 Windows preparation awaits the user's result. VPS actual download, read-only verification/reuse with networking disabled and source audit pass. The later Meson builder must handle seven stale generated FriBidi source tables/header through exact checked extraction omissions, preserving the official archive. A network-disabled Android prototype established that the regenerated Unicode 18 tables build/link with NDK r26d; it was not executed on Android. BASELINE.md records the source pin, exact omissions, host-generator requirements and evidence. Pango's managed host glib-mkenums and documentation filename collision also belong to that future stage. No native layout builder or device helper is delivered yet.
 
-
 ### Source cache complete; MSYS2 copy check
 
 The user log confirms the actual Windows FriBidi download/hash check and two default-mode cache verifications. Preserve build/android-layout-sources/fribidi-1.0.17.tar.xz; no further source download is needed. Later pull attempts fail before Git because D:\Test\msys64\usr\bin\bash.exe is unavailable. The user reports a new root at D:\Test\wesnoth-setup\msys64, but all EXEs and DLLs in the supplied VPS copy are empty. NEXT_TEST.md now checks Windows file sizes at both roots using only PowerShell. Native layout build/run is waiting on a usable toolchain; current commands do not execute the supplied copy. Existing helpers support explicit -MsysRoot; keep their completed receipt inputs and native outputs unchanged.
 
-
 ### New Windows MSYS2 root contains real file data
 
 The Windows location report confirms all eight sampled tools are nonempty under D:\Test\wesnoth-setup\msys64, unlike the uploaded VPS equivalents. The next command uses this explicit root with the existing Test-WindowsAndroidTextToolchain.ps1 after collecting Bash/Git/runtime/host-GCC identity. It verifies the temporary MSYS/NDK compile boundary offline and saves diagnostics/msys-runtime-*.txt. No pull, source download, native stage rebuild or helper change is needed. Runtime and versions at the new path await the returned log. Keep completed prefixes/receipts; later build commands can pass -MsysRoot rather than changing historical defaults.
-
 
 ## Offline FriBidi/Pango paragraph-layout checkpoint
 
@@ -377,14 +367,11 @@ Test-AndroidTextLayout.ps1 verifies the receipt and selected font assets before 
 
 The device helper transfers five files: probe, the previously verified libc++_shared.so, two TTFs and their notice. It requires a booted API23-or-later primary-x86_64 device and all six success markers with exit zero. The test draws in memory; no new APK or visible game window is expected. Full game integration, OBB import and gameplay remain pending. See BASELINE.md for verification evidence and NEXT_TEST.md for current saved-log commands.
 
-
 ## Current ICU source preparation
 
 Actual Windows and LDPlayer TextLayout success supersedes the earlier pending-layout notes. The next helper Prepare-WindowsAndroidIcuSources.ps1 prepares the official ICU78.3 source archive separately, matching the installed Windows server release while targeting a future Android build. The compiler remains NDK26.3.11579264/x86_64/API23. Source bytes and published release digests are verified, not Android library compatibility. New cache: build/android-icu-sources. The old manifest, all old recipes and all completed native prefixes/receipts are preserved. No source extraction, package installation or Android execution occurs in this preparation helper. Exact commands and saved-log paths are in NEXT_TEST.md.
 
-
 Both actual Windows ICU source checks now pass: connected preparation in icu-sources-prepare-20261013-013533-502.txt and default cache reuse in icu-sources-offline-20261013-015515-738.txt. Keep the exact pinned archive. No further preparation/download is needed; the new compilation checkpoint follows below.
-
 
 ## Offline ICU core and internationalization libraries
 
@@ -396,21 +383,17 @@ The receipt verifier checks sources/recipe identity, the previous font receipt, 
 
 VPS network-disabled cross-compilation, same-source host semantics and helper fixtures pass; actual Windows ICU compilation and LDPlayer execution remain pending. See BASELINE.md for exact evidence and limitations. NEXT_TEST.md contains the current pull/build/test commands and saved-log path. This supplies reusable ICU libraries; Boost, OpenSSL/curl, the full game APK/assets/OBB, gameplay and MongoDB remain later work.
 
-
 ## ICU checkpoint passed; Boost integration follows
 
 The actual Windows report icu-20261013-020820-611.txt confirms all462 ICU build steps and every native test on LDPlayer Android9/API28/x86_64, including complete embedded data with external data files disabled. Native Windows drive-path assembly now works in the user's installation. CMake unused-variable and ICU deprecated-API warnings did not prevent success. Preserve this stage; no unchanged rebuild/test is requested.
 
 The next stage builds the cached Boost1.88 libraries needed by restored Wesnoth1.19.26 against the verified ICU78.3 prefix. Native Python/CMake/Ninja/NDKr26d drive the Android build directly. This retains the selected Android source versions; Windows server Boost1.91 remains a separately recorded platform version. No installed-package upgrade is part of this checkpoint. Current commands and saved-log path are in NEXT_TEST.md.
 
-
 Build-WindowsAndroidBoost.ps1 creates build/android-boost from the existing Boost/bzip2 cache and verified ICU prefix. It builds twelve Boost libraries plus libbz2, installs all16,010 Boost include files and complete licenses, and provides relocatable wesnoth-boost.pc metadata with ICU as a separate dependency. Downloads and previous-stage rebuilds are not part of the recipe. Native path parameters mirror the ICU helper; the relocated UCRT Ninja default is retained.
 
 Test-AndroidBoost.ps1 performs full receipt verification before ADB, then transfers two files and runs the no-argument probe in a unique directory. The tests cover locale conversion/sorting, scoped file operations and Process lookup, options/random/Charconv/Regex, gzip/bzip2, threading/atomic/chrono, coroutine switching and local asynchronous work. No child application or network service is launched. The test draws no visible window and installs no APK. Logs are saved by the exact NEXT_TEST.md command; report the complete file on success or failure. See BASELINE.md for the measured verification results and remaining platform differences.
 
-
 Latest Windows Boost evidence: boost-20261013-023639-578.txt confirms all 108 build steps, 16,029 installed files/93 Android objects and every LDPlayer native check. Windows probe 69,602,192 bytes and runtime 1,632,144 bytes; no compiler warnings. Actual Boost compilation/runtime is complete. Preserve prior outputs and continue with the OpenSSL/curl checkpoint in NEXT_TEST.md. No full-game or MongoDB success is implied.
-
 
 ## Boost passed; OpenSSL/curl build and local HTTPS test
 
@@ -418,18 +401,13 @@ Actual Windows Boost compilation and every LDPlayer check now pass. The new Netw
 
 The prefix provides static libcrypto/libssl/libcurl, public headers, complete notices and relative pkg-config metadata. OpenSSL retains standard TLS1.2/TLS1.3 with static providers, while assembly and runtime-loaded modules are disabled. curl supports HTTP/HTTPS and explicit certificate trust with no default host CA bundle. Test-AndroidNetwork.ps1 verifies the receipt, transfers only the probe/runtime and tests cryptography plus HTTPS against an ephemeral loopback server inside Android. No game assets, server, visible window, APK installation or internet service is required. Read BASELINE.md for validation scope and NEXT_TEST.md for exact pull/build/test commands and saved logs. The first Windows attempt completed generation and stopped at header verification; use the corrected retry below.
 
-
 The first Windows Network run exposed platform-dependent `*.h` matching: Windows includes two uppercase VMS .H files that Linux excludes. The corrected plan explicitly lists141 OpenSSL and12 curl headers for both verification and CMake installation, retaining all existing hash pins. The two VMS source files are preserved. Follow NEXT_TEST.md to rename the interrupted build/android-network to a unique backup, then build and test only this stage. All earlier completed stages and cached archives stay in place. Windows compilation and LDPlayer execution remain pending; generation alone is not runtime validation.
-
 
 Windows network-20261013-062509-357.txt confirms that the explicit header selection now passes and native CMake configuration completes. The next failure is Ninja deleting an OpenSSL compiler .d file while Windows reports it in use. Both Network build phases now pass -- -d keepdepfile to Ninja. This keeps the .d files inside the owned build directory; Ninja still parses them and records dependencies in .ninja_deps. No global Ninja setting or compiler/source/toolchain change is made. The generated-state binding is unchanged, allowing the existing verified generation and partial objects to be reused. Follow the current NEXT_TEST.md resume commands and retain all existing backups. Windows build completion and device execution still await the new report.
 
-
 The subsequent Windows result network-20261013-065142-325.txt completes both OpenSSL archives and their installation, then fails after curl configuration when CMake invokes Ninja -t restat. Ninja reports failed recompaction: Permission denied while replacing .ninja_log. Since replacement deletes the original before renaming the temporary, another configure must wait until the surviving logs are inspected. Current NEXT_TEST.md runs only inspect_android_network_state.py with native Python, collecting .ninja_log/.restat/.recompact and saved generation/prefix state without invoking build tools. Keep the current compiled stage and backups. No recovery, metadata deletion or package change is delivered at this diagnostic checkpoint.
 
-
 Latest Network checkpoint (2026-10-13): The returned network-state-20261013-092657-266-0a25997b14e74caa908736082192203c.json confirms that .ninja_log is missing and .ninja_log.restat contains exactly all 942 crypto objects, 90 SSL objects and both archives. Saved generation and the 144-file OpenSSL prefix pass. NEXT_TEST.md now verifies that report against current Windows files, preserves a metadata backup, restores the exact reviewed log, then resumes only the Network build and LDPlayer probe. Each configure protects both Ninja logs; completed source generation, objects and earlier stages stay in place. Actual curl build completion, Android Network execution, full game/APK/assets/OBB, playable turns and MongoDB remain pending. The Network builder now uses report-checked recovery and protected explicit configure operations for both .ninja_log and .ninja_deps. It disables automatic CMake regeneration only for this stage; use the normal helper for later builds. Preserve the surviving .restat and metadata transaction backups. Read the final BASELINE.md section for exact evidence and validation.
-
 
 ## Actual Wesnoth engine integration
 
@@ -437,12 +415,9 @@ Network compilation and all LDPlayer crypto/HTTPS checks now pass (see latest BA
 
 The native CMake adapter retains widget registration, bundled Lua configuration, upstream assertions and explicit target dependency paths. Its configuration is immutable for a given source/helper/prerequisite/tool binding; retries reuse it without CMake reconfiguration. Existing dependency builders/receipts and the prior source-preparation/SDL APK stages are untouched. Engine ELF/API/dynamic dependencies and exported `SDL_main` are verified before device transfer. The eventual app needs all five shared libraries and an Android activity implementing the upstream JNI hooks. Game data is an ordinary extracted directory; an OBB transfer/import layer is still to be implemented.
 
-
 The full native recipe now compiles and links offline on the VPS. The six-file prefix and52-input receipt verify;568 actual game/Lua objects were checked, and an unchanged configuration resumes without recompilation.59 helper/artifact/PowerShell tests and6 exact-handoff scenarios pass. The unstripped VPS engine is501,485,056bytes and retains debug information; device pushes have a300-second per-file limit. Windows build and engine execution remain pending. Detailed artifact hashes, preservation evidence and limitations are in BASELINE.md.
 
-
 Current game runtime checkpoint: actual Windows APK build, signing, installation and complete Android OBB import pass. The main menu is now user-confirmed; a completed turn is not. org.wesnoth.offline/versionCode1192600 uses the exact copied gamedata-1.19.26 through main.1192600.org.wesnoth.offline.obb. Preserve the installed app, verified data, source/cache/native/APK stages and receipts. NEXT_TEST.md is now a manual offline first-turn test, using Campaigns -> Heir to the Throne, Classic and its optional Battle Training. This data version has no separate Tutorial button. Documentation-only updates do not require pulling or rebuilding before this test.
-
 
 ## Actual offline game APK and OBB
 
@@ -468,6 +443,5 @@ The already prepared cache and SDK/NDK are prerequisites. The builder refuses an
 Relevant tests: `python3 -B tests/test_android_game.py`, `python3 -B tests/test_android_game_data.py`, and `python3 -B tests/test_android_game_windows.py --pwsh build/host-tools/powershell-7.4.6/pwsh`. Pure-Java importer tests and their harness live in tools/native-game/tests. Full-data import/reuse runs on the host JVM, while actual Android storage, graphics and gameplay require the user's LDPlayer report.
 
 Actual VPS offline game packaging passed: signed debug APK 37,572,492 bytes, SHA256 325e9bdb2fc79cf6b3cb42b986b62fd05eb081c8b5e6787cf37cceeda99d2086. These identify this Linux build, not required Windows output bytes. The receipt binds 74 project inputs, 22 generated project files, Engine/Data receipts and all payloads. Windows signing/tool output can differ. Android runtime is still pending.
-
 
 Current runtime handoff (2026-10-14): the installed x86_64 LDPlayer game has now joined the Windows guest server and completed a turn against AI while internet/WAN was disconnected and Ethernet stayed connected, by explicit user report. The first emulator-based offline gameplay checkpoint passes. Keep existing prefixes/receipts/APK/OBB/imported data; no rebuild/reinstall or new data transfer is needed. Physical-phone API/ABI remains unknown and must be read before selecting a phone target. Two-human synchronization and MongoDB remain future work. Follow NEXT_TEST.md one step at a time.

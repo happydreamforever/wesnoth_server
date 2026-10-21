@@ -1,6 +1,6 @@
 # Alliance account and team protocol 1
 
-The native connection supports player registration/login/profile/logout, public team directory and creation, and private membership application management. It remains separate from stock guest multiplayer. It cannot award XP, start campaigns/battles or settle results. The membership extension is delivered in APK 1192603; existing account and directory message shapes remain compatible.
+The native connection supports player registration/login/profile/logout, public team directory and creation, and private membership application management. It remains separate from stock guest multiplayer. It cannot award XP, start campaigns/battles or settle results. APK1192604 adds private application decisions to the membership extension. Existing account and directory message shapes remain compatible.
 
 ## Connection and identity
 
@@ -48,6 +48,8 @@ All team operations use POST `/internal/v1/team-directory/<operation>` and the a
 | withdraw_application | team_id | team_id, account_id, status="withdrawn" | 200 |
 | approve_application | team_id, account_id | team_id, account_id, status="approved" | 200 |
 | reject_application | team_id, account_id | team_id, account_id, status="rejected" | 200 |
+| application_decisions | Empty object | decisions | 200 |
+| ack_decision | decision_id | decision_id, status="read" | 200 |
 
 Team/account IDs are lowercase UUID strings. Area IDs retain the existing bounded ASCII identifier format, including the seeded `area-1`. `after` is empty for the first page; later pages use the previous response's `next`. Non-area cursors are UUIDs. Pages contain at most 20 strictly increasing unique IDs, with `next` either empty or equal to the final ID of a full page. Neither server nor client automatically follows unbounded pages. There are at most 64 pending applicants per team and eight members.
 
@@ -64,6 +66,16 @@ Team detail must contain one to eight unique members, include its captain and re
 
 Approval reuses the existing transaction: captain authorization, active-player/team checks, pending request, eight-seat capacity and one-team membership are checked together. Concurrent approval and active-run conflicts remain server decisions. Applying does not immediately join a team. Rejection/withdrawal remove pending applications and do not remove members. No membership operation awards personal or team experience. Schema and indexes are unchanged by this extension.
 
+## Persistent application decisions
+
+Each notice contains exactly `id`, `team_id`, `team_name`, `status`, `created_at`, `unread`. IDs are lowercase UUIDs; team names follow the existing3–40-character ASCII team-name rules. Status is `approved` or `rejected`, unread is a JSON boolean, and created_at is a valid UTC calendar timestamp in seconds (`YYYY-MM-DDTHH:MM:SSZ`). At most50 unique notices are returned, newest committed insertion first. Equal or adjusted-clock timestamps do not reorder history. There is no pagination. The oldest entry is evicted when the limit is exceeded, even if it is unread.
+
+The optional accounts.application_decisions array uses the existing schema-v1 allowance for additional properties; existing validators/indexes and initialization remain unchanged. Legacy accounts without the field return an empty history. Every real pending approval/rejection appends a snapshot within the same MongoDB transaction as the membership/request change. Failure rolls back both. A repeated absent rejection does not append another notice; a repeated approval remains not_requested. Withdrawal creates no captain decision. Earlier decisions are not inferred from empty queues or backfilled.
+
+Fetching history does not mark anything read. ack_decision is owner-only and idempotently marks only the selected retained ID read; its response must match the request ID. Another account's, unknown or evicted ID returns not_found. The event remains in history after acknowledgement. History is excluded from generic account/login and public directory responses. Team removal/renaming or subsequent membership does not rewrite a saved decision; My team is the current-membership view.
+
+After successful login and before displaying My applications, the game checks for unread decisions. Back leaves unopened notices unread. Opening a detail and choosing OK sends one acknowledgement, without automatic retry. Application decisions also exposes already-read history. An unconfirmed acknowledgement is reconciled by reading history; it never claims the update succeeded. Fetch/ack failures preserve a valid session except an actual401.
+
 ## Responses, sessions and uncertain outcomes
 
 Responses contain exactly `v`, `id`, `ok`, `status`, `data`. Register/me include `data.account`; login also includes `data.token`; logout returns `data.status="logged_out"`. The account projection is ID, username and leader fields (`starter_id`, `unit_type`, `level`, `experience`, `total_experience`).
@@ -76,6 +88,6 @@ Passwords and tokens remain in memory only; app restart requires fresh login. Su
 
 ## Acceptance limits
 
-The original account and first team directory/creation slice are accepted on Windows/LDPlayer with WAN disconnected by user report, including stored team retrieval after all services restarted. Membership screens and APK 1192603 need their own Windows/LDPlayer acceptance. Current validation and delivery state are in BASELINE.md and NEXT_TEST.md.
+The original account and first team directory/creation slice are accepted on Windows/LDPlayer with WAN disconnected by user report, including stored team retrieval after all services restarted. The1192603 apply/withdraw/reject paths have user-observed offline acceptance. Approval/two-member persistence and1192604 notification behavior still need Windows/LDPlayer acceptance. Current validation and delivery state are in BASELINE.md and NEXT_TEST.md.
 
 Joining through an approved application is this extension's scope. Team leave/captain transfer screens, persistent-leader campaign integration, battle reservation/readiness and reward settlement remain later work. Existing local campaign saves cannot grant account XP; the backend gameplay-integration readiness flags remain false.
