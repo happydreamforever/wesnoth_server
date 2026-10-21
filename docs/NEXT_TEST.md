@@ -1,32 +1,10 @@
-# Next Windows test: build the Android membership update
+# Next Windows test: install the Android membership update
 
-The membership bridge now reports READY100.99.99.14:15001. The user confirms the admin service was freshly started after pulling the membership update and before the bridge. The previous Windows bridge rebuild passed with WAN disconnected; startup WAN status was not separately supplied. The existing Koichi team and its offline persistence acceptance remain valid.
+The Windows1192603 build passed: earlier1192602 stages were preserved, all six native steps and33 Gradle tasks completed, and final artifact/build/rebuild checks succeeded. Physical WAN status during that build awaits separate confirmation; Gradle ran with --offline. The existing bridge is READY, the fresh admin restart is confirmed and Koichi's earlier offline persistence acceptance remains valid.
 
-**Immediate action: phase 3 below.** Keep MongoDB, admin service and bridge windows open; keep the game closed. Disconnect WAN while retaining local Ethernet before the Android build. No new pull, bridge rebuild, database initialization, profile import or OBB copy is required.
+**Immediate action: phase 4 below.** Keep the game closed, LDPlayer running and all three server windows open. Disconnect WAN while retaining local Ethernet. No new pull, rebuild, database initialization, profile import or OBB copy is needed.
 
-Use one phase at a time and return its result before proceeding. APK1192603 adds My applications, application/withdrawal and captain review/approve/reject; its Windows build/install and LDPlayer interaction remain pending. Approval should add a second member without changing XP. Battles, campaign rewards, leaving and captain transfer follow later. Installation and manual-test phases are retained below for continuity; do not run them before build acceptance.
-
-## Phase 3 — build the membership APK after service acceptance
-
-Keep WAN disconnected and the local network connected:
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client' -ErrorAction Stop
-
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Rebuild-WindowsAndroidAccountGame.ps1'
-
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Membership APK build failed. Send the saved rebuild and build logs.'
-    }
-}
-```
-
-This verifies the completed 1192602 account stages, preserves them in uniquely named before-membership-ui directories and builds 1192603 using the original engine objects, native prefixes and cached Gradle inputs. Previous before-team-ui backups and the 1192602 update journal remain intact. The new update journal supports the same-input resume only; do not delete locks/journals or rename stages manually.
-
-Expected: `ANDROID ACCOUNT UPDATE PREPARED`, `ANDROID ACCOUNT GAME BUILD PASS` and `ANDROID ACCOUNT GAME REBUILD COMPLETE`. Return `diagnostics\android-account-rebuild-*.txt` and `android-account-build-*.txt` on failure, or the successful console summary. This build does not install the app.
+Use one phase at a time. Install with KeepSavedProfile, then report the console result and visible trusted-server setup before proceeding to membership actions. APK1192603 adds My applications, application/withdrawal and captain review/approve/reject. Its Android installation/runtime remain pending. The later manual-test checklist is retained for continuity.
 
 ## Phase 4 — update the existing installed app
 
