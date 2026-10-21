@@ -1,33 +1,12 @@
-# Next Windows step: start the updated admin service and bridge
+# Next Windows step: build Android1192604
 
-The application-decision bridge rebuild passed on Windows, preserving its previous build. The user explicitly confirms WAN was disconnected while local Ethernet stayed connected. Keep those conditions for this phase. No further pull or bridge rebuild is needed.
+Both requested Windows service startups passed: ALLIANCE DATABASE CHECK PASSED / admin URL127.0.0.1:18765, and ALLIANCE ACCOUNT BRIDGE READY100.99.99.14:15001. The notification bridge rebuild already passed. No additional pull, server rebuild or service restart is needed now.
 
-The next step starts a fresh admin service to load the new routes, followed by the rebuilt bridge. Keep the existing MongoDB window running and the game closed. If the old admin process is still running, press Ctrl+C in its own window and wait for its prompt before starting the new one. Do not start a second copy. Use the existing runtime, accounts, team and identity.
+Keep MongoDB, admin service and bridge windows running. Keep LDPlayer open and close the game. Disconnect WAN while retaining local Ethernet for this build. Use the existing Windows toolchain and cached dependencies.
 
-Return both startup results before the later Android build/install phases below. APK1192604 adds private approval/rejection notices, login/My applications unread checks and retained Application decisions history. Notification acceptance still requires the Android update and a new captain decision: earlier1192603 rejections were not saved and cannot be reconstructed.
+This step builds the Android notification update and preserves the previous1192603 account stages. Installation and new decision tests are later phases. The existing accounts, Koichi/Yama, trusted profile, OBB and database remain unchanged. Earlier1192603 rejection events cannot be reconstructed; the later test uses a new captain decision after installation.
 
-## Current phase: load the new backend and bridge
-
-Keep the existing database window running. In the stopped admin window:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAlliance.ps1' `
-    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
-```
-
-Expected: ALLIANCE DATABASE CHECK PASSED and Alliance admin: http://127.0.0.1:18765/. Keep that window open. In the stopped bridge window:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAllianceBridge.ps1' `
-    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime') `
-    -MsysRoot 'D:\Test\wesnoth-setup\msys64'
-```
-
-Expected: ALLIANCE ACCOUNT BRIDGE READY 100.99.99.14:15001. Keep all three windows open. Return readiness output; failures save diagnostics/alliance-serve-*.txt or alliance-bridge-run-*.txt. Do not initialize or reset the database.
-
-## Phase 3: build the Android update offline
+## Current phase: build the Android update offline
 
 Use another PowerShell window; keep the game closed and LDPlayer open:
 
