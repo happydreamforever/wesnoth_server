@@ -73,7 +73,16 @@ bool directory_operation(const std::string& operation) {
            operation == "apply_team" || operation == "withdraw_application" ||
            operation == "approve_application" || operation == "reject_application" ||
            operation == "application_decisions" || operation == "ack_decision" ||
-           operation == "leave_team" || operation == "transfer_captain" || operation == "standings";
+           operation == "leave_team" || operation == "transfer_captain" || operation == "standings" ||
+           operation == "battle_maps" || operation == "my_battles" || operation == "battle_detail" ||
+           operation == "propose_battle" || operation == "approve_battle" || operation == "battle_ready" ||
+           operation == "cancel_battle";
+}
+int battle_map_size(const std::string& id) {
+    if(id == "isars-cross") return 2;
+    if(id == "hexcake") return 3;
+    if(id == "mokena-prairie") return 4;
+    invalid();
 }
 bool request_id(const std::string& value) {
     if(value.size() != 32) return false;
@@ -245,9 +254,13 @@ Request account_request(const std::vector<unsigned char>& bytes) {
         if(!root.contains("token")) invalid();
         result.token = text(root.at("token"), 43);
         if(!ascii_word(result.token, 43, 43)) invalid();
-        if(result.operation == "areas" || result.operation == "my_applications") fields(body, {"after"});
+        if(result.operation == "areas" || result.operation == "my_applications" || result.operation == "my_battles") fields(body, {"after"});
         else if(result.operation == "teams") fields(body, {"area_id", "after"});
-        else if(result.operation == "standings") fields(body, {"area_id"});
+        else if(result.operation == "standings" || result.operation == "battle_maps") fields(body, {"area_id"});
+        else if(result.operation == "battle_detail" || result.operation == "approve_battle" ||
+                result.operation == "cancel_battle") fields(body, {"battle_id"});
+        else if(result.operation == "battle_ready") fields(body, {"battle_id", "ready"});
+        else if(result.operation == "propose_battle") fields(body, {"team_id", "opponent_team_id", "map_id", "lineups"});
         else if(result.operation == "leave_team") fields(body, {"team_id", "allow_archive"});
         else if(result.operation == "my_team" || result.operation == "application_decisions") fields(body, {});
         else if(result.operation == "ack_decision") fields(body, {"decision_id"});
@@ -263,6 +276,27 @@ Request account_request(const std::vector<unsigned char>& bytes) {
         }
         if(body.contains("area_id") && !ascii_word(text(body.at("area_id"), 64), 1, 64)) invalid();
         if(body.contains("team_id") && !uuid(text(body.at("team_id"), 36))) invalid();
+        if(body.contains("battle_id") && !uuid(text(body.at("battle_id"), 36))) invalid();
+        if(body.contains("ready") && !body.at("ready").is_bool()) invalid();
+        if(result.operation == "propose_battle") {
+            if(!uuid(text(body.at("opponent_team_id"), 36)) || body.at("team_id") == body.at("opponent_team_id")) invalid();
+            const auto size = battle_map_size(text(body.at("map_id"), 32));
+            if(!body.at("lineups").is_array() || body.at("lineups").as_array().size() != 2) invalid();
+            std::set<std::string> teams, players;
+            for(const auto& value : body.at("lineups").as_array()) {
+                if(!value.is_object()) invalid();
+                const auto& lineup = value.as_object();
+                fields(lineup, {"team_id", "account_ids"});
+                const auto team_id = text(lineup.at("team_id"), 36);
+                if(!uuid(team_id) || !teams.insert(team_id).second ||
+                   (lineup.at("team_id") != body.at("team_id") && lineup.at("team_id") != body.at("opponent_team_id")) ||
+                   !lineup.at("account_ids").is_array() || lineup.at("account_ids").as_array().size() != static_cast<std::size_t>(size)) invalid();
+                for(const auto& player : lineup.at("account_ids").as_array()) {
+                    const auto id = text(player, 36);
+                    if(!uuid(id) || !players.insert(id).second) invalid();
+                }
+            }
+        }
         if(body.contains("allow_archive") && !body.at("allow_archive").is_bool()) invalid();
         if(body.contains("account_id") && !uuid(text(body.at("account_id"), 36))) invalid();
         if(body.contains("decision_id") && !uuid(text(body.at("decision_id"), 36))) invalid();
@@ -408,14 +442,159 @@ json::object directory_error(const Request& request, unsigned status, const std:
         else if(source == "not_requested") { code = "not_requested"; message = "This application is no longer pending. Refresh the applications."; }
         else if(source == "captain_transfer_required") { code = "captain_transfer_required"; message = "Transfer captaincy to another member before leaving the team."; }
         else if(source == "not_member") { code = "not_member"; message = "The selected player is no longer a member. Refresh My team."; }
+        else if(source == "planning_exists") { code = "planning_exists"; message = "One of these teams already has a planned battle. Inspect the plans before proposing another."; }
+        else if(source == "invalid_map") { code = "invalid_map"; message = "Choose a map approved for this area."; }
+        else if(source == "invalid_lineup") { code = "invalid_lineup"; message = "Choose the required distinct current members for each team."; }
+        else if(source == "different_area") { code = "different_area"; message = "Both teams must belong to the same area."; }
+        else if(source == "stale_proposal") { code = "stale_proposal"; message = "This battle plan changed or is unavailable. Inspect it before approving or becoming ready."; }
+        else if(source == "approval_required") { code = "approval_required"; message = "Both current captains must explicitly approve this battle plan first."; }
+        else if(source == "invalid_state") { code = "invalid_state"; message = "This operation requires a planned battle. Refresh the plan."; }
+        else if(source == "suspended") { code = "forbidden"; message = "A required player is unavailable for this operation."; status = 403; }
         else if(source == "conflict") { code = "conflict"; message = "The team name or membership changed. Refresh My team before another change."; }
         else status = 503;
     } else status = 503;
     return {{"v", 1}, {"id", request.id}, {"ok", false}, {"status", status},
             {"data", {{"code", code}, {"message", message}}}};
 }
+json::object public_battle_map(const json::value& value) {
+    if(!value.is_object()) invalid();
+    const auto& source = value.as_object();
+    fields(source, {"id", "name", "scenario_id", "size", "sides"});
+    const auto id = text(source.at("id"), 32);
+    const auto size = battle_map_size(id);
+    const char* name = size == 2 ? "Isar's Cross" : size == 3 ? "Hexcake" : "Mokena Prairie";
+    const char* scenario = size == 2 ? "multiplayer_Isars_Cross" : size == 3 ? "multiplayer_Hexcake" : "multiplayer_8p_Mokena_Prairie";
+    const json::array sides = size == 2 ? json::array{json::array{1, 4}, json::array{2, 3}} :
+        size == 3 ? json::array{json::array{1, 4, 5}, json::array{2, 3, 6}} :
+                    json::array{json::array{1, 3, 5, 8}, json::array{2, 4, 6, 7}};
+    if(text(source.at("name"), 32) != name || text(source.at("scenario_id"), 64) != scenario ||
+       directory_integer(source, "size", 2, 4) != size || source.at("sides") != sides) invalid();
+    return {{"id", id}, {"name", name}, {"scenario_id", scenario}, {"size", size}, {"sides", sides}};
+}
+json::object public_battle(const json::value& value, bool detail) {
+    if(!value.is_object()) invalid();
+    const auto& source = value.as_object();
+    if(detail) fields(source, {"id", "area_id", "state", "created_at", "map", "validity", "teams"});
+    else fields(source, {"id", "area_id", "state", "created_at", "map_id", "teams"});
+    const auto state = text(source.at("state"), 9);
+    if(state != "draft" && state != "running" && state != "completed" && state != "cancelled") invalid();
+    json::object result{{"id", directory_identifier(source.at("id"), true)},
+        {"area_id", directory_identifier(source.at("area_id"))}, {"state", state},
+        {"created_at", decision_timestamp(source.at("created_at"))}};
+    json::object map;
+    if(detail) {
+        map = public_battle_map(source.at("map"));
+        result["map"] = map;
+        const auto validity = text(source.at("validity"), 24);
+        const std::set<std::string> allowed{"valid", "roster_changed", "area_changed", "map_unavailable",
+            "leader_changed", "player_unavailable", "team_unavailable", "busy", "rules_changed"};
+        if(!allowed.count(validity)) invalid();
+        result["validity"] = validity;
+    } else {
+        const auto id = text(source.at("map_id"), 32);
+        battle_map_size(id);
+        result["map_id"] = id;
+    }
+    if(!source.at("teams").is_array() || source.at("teams").as_array().size() != 2) invalid();
+    json::array teams;
+    std::set<std::string> team_ids, player_ids;
+    for(const auto& value : source.at("teams").as_array()) {
+        if(!value.is_object()) invalid();
+        const auto& team = value.as_object();
+        if(detail) fields(team, {"id", "name", "captain_id", "approved", "players"});
+        else fields(team, {"id", "name"});
+        const auto id = directory_identifier(team.at("id"), true);
+        if(!team_ids.insert(id).second) invalid();
+        json::object entry{{"id", id}, {"name", directory_display_name(team.at("name"))}};
+        if(detail) {
+            const auto captain = text(team.at("captain_id"), 36);
+            if((!captain.empty() && !uuid(captain)) || !team.at("approved").is_bool() ||
+               (captain.empty() && team.at("approved").as_bool()) || !team.at("players").is_array() ||
+               team.at("players").as_array().size() != static_cast<std::size_t>(map.at("size").as_int64())) invalid();
+            entry["captain_id"] = captain;
+            entry["approved"] = team.at("approved");
+            json::array players;
+            for(const auto& item : team.at("players").as_array()) {
+                if(!item.is_object()) invalid();
+                const auto& player = item.as_object();
+                fields(player, {"id", "username", "unit_type", "level", "side", "ready"});
+                auto public_player = public_member(json::object{{"id", player.at("id")},
+                    {"username", player.at("username")}, {"unit_type", player.at("unit_type")}, {"level", player.at("level")}});
+                if(!player_ids.insert(text(public_player.at("id"), 36)).second || !player.at("ready").is_bool() ||
+                   directory_integer(player, "side", 1, 8) != map.at("sides").as_array()[teams.size()].as_array()[players.size()].as_int64()) invalid();
+                public_player["side"] = player.at("side");
+                public_player["ready"] = player.at("ready");
+                players.emplace_back(std::move(public_player));
+            }
+            entry["players"] = std::move(players);
+        }
+        teams.emplace_back(std::move(entry));
+    }
+    result["teams"] = std::move(teams);
+    return result;
+}
 json::object directory_data(const Request& request, const json::object& root) {
     const auto body = parse_json(request.body).as_object();
+    if(request.operation == "battle_maps") {
+        fields(root, {"area_id", "maps"});
+        const auto area_id = directory_identifier(root.at("area_id"));
+        if(root.at("area_id") != body.at("area_id") || !root.at("maps").is_array() || root.at("maps").as_array().size() > 3) invalid();
+        json::array maps;
+        std::set<std::string> ids;
+        for(const auto& value : root.at("maps").as_array()) {
+            auto map = public_battle_map(value);
+            if(!ids.insert(text(map.at("id"), 32)).second) invalid();
+            maps.emplace_back(std::move(map));
+        }
+        return {{"area_id", area_id}, {"maps", std::move(maps)}};
+    }
+    if(request.operation == "my_battles") {
+        fields(root, {"battles", "next"});
+        if(!root.at("battles").is_array() || root.at("battles").as_array().size() > 20) invalid();
+        json::array battles;
+        std::string previous = text(body.at("after"), 36);
+        for(const auto& value : root.at("battles").as_array()) {
+            auto battle = public_battle(value, false);
+            const auto id = text(battle.at("id"), 36);
+            if(id <= previous) invalid();
+            previous = id;
+            battles.emplace_back(std::move(battle));
+        }
+        const auto next = text(root.at("next"), 36);
+        if(!next.empty() && (battles.size() != 20 || next != previous)) invalid();
+        return {{"battles", std::move(battles)}, {"next", next}};
+    }
+    if(request.operation == "battle_detail" || request.operation == "propose_battle" ||
+       request.operation == "approve_battle" || request.operation == "battle_ready" || request.operation == "cancel_battle") {
+        fields(root, {"battle"});
+        auto battle = public_battle(root.at("battle"), true);
+        if(request.operation != "propose_battle" && battle.at("id") != body.at("battle_id")) invalid();
+        if((request.operation == "approve_battle" || request.operation == "battle_ready") && battle.at("state") != "draft") invalid();
+        if(request.operation == "approve_battle" && battle.at("validity") != "valid") invalid();
+        if(request.operation == "battle_ready" && body.at("ready").as_bool()) {
+            if(battle.at("validity") != "valid") invalid();
+            for(const auto& team : battle.at("teams").as_array())
+                if(!team.as_object().at("approved").as_bool()) invalid();
+        }
+        if(request.operation == "cancel_battle" && battle.at("state") != "cancelled") invalid();
+        if(request.operation == "propose_battle") {
+            const auto& teams = battle.at("teams").as_array();
+            if(battle.at("state") != "draft" || battle.at("validity") != "valid" ||
+               battle.at("map").as_object().at("id") != body.at("map_id") ||
+               teams[0].as_object().at("id") != body.at("team_id") || teams[1].as_object().at("id") != body.at("opponent_team_id")) invalid();
+            for(const auto& team : teams) {
+                if(team.as_object().at("approved").as_bool()) invalid();
+                for(const auto& lineup : body.at("lineups").as_array()) {
+                    if(lineup.as_object().at("team_id") != team.as_object().at("id")) continue;
+                    const auto& players = team.as_object().at("players").as_array();
+                    const auto& ids = lineup.as_object().at("account_ids").as_array();
+                    for(std::size_t i = 0; i < players.size(); ++i)
+                        if(players[i].as_object().at("id") != ids[i] || players[i].as_object().at("ready").as_bool()) invalid();
+                }
+            }
+        }
+        return {{"battle", std::move(battle)}};
+    }
     if(request.operation == "standings") {
         fields(root, {"area_id", "teams", "has_more"});
         const auto area_id = directory_identifier(root.at("area_id"));
@@ -535,7 +714,8 @@ json::object directory_data(const Request& request, const json::object& root) {
     return {{"team", std::move(team)}};
 }
 json::value account_response(const Request& request, unsigned status, const std::string& body) {
-    const unsigned expected = request.operation == "register" || request.operation == "create_team" ? 201 : 200;
+    const unsigned expected = request.operation == "register" || request.operation == "create_team" ||
+                              request.operation == "propose_battle" ? 201 : 200;
     if(status != expected) return directory_operation(request.operation)
         ? directory_error(request, status, body) : safe_error(request.id, status);
     const auto value = parse_json(body);

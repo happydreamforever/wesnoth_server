@@ -770,6 +770,230 @@ class MongoDomainTests(unittest.TestCase):
             self.assertEqual(len(started['participants']), size * 2)
             self.service.cancel_run(run['_id'], 'Completed fixture check')
 
+    def plan(self, size=2):
+        teams, members = self.teams(size)
+        map_id = {2: 'isars-cross', 3: 'hexcake', 4: 'mokena-prairie'}[size]
+        lineups = [{'team_id': team, 'account_ids': selected} for team, selected in zip(teams, members)]
+        plan = self.service.directory_propose_battle(members[0][0], teams[0], teams[1], map_id, lineups)
+        return plan, teams, members
+
+    def test_planning_all_maps_explicit_approvals_readiness_and_no_gameplay(self):
+        for size in (2, 3, 4):
+            teams, members = self.teams(size) if size == 2 else self._extra_teams(size)
+            map_id = {2: 'isars-cross', 3: 'hexcake', 4: 'mokena-prairie'}[size]
+            plan = self.service.directory_propose_battle(members[0][0], teams[0], teams[1], map_id,
+                        [{'team_id': team, 'account_ids': ids} for team, ids in zip(teams, members)])
+            self.assertEqual(plan['state'], 'draft')
+            self.assertEqual(plan['validity'], 'valid')
+            self.assertEqual([team['approved'] for team in plan['teams']], [False, False])
+            self.assertEqual([[p['side'] for p in team['players']] for team in plan['teams']],
+                             [list(sides) for sides in rules.MAPS[map_id]['sides']])
+            self.assertDomain('approval_required', self.service.directory_battle_ready, members[0][1], plan['id'], True)
+            self.service.directory_approve_battle(members[0][0], plan['id'])
+            self.assertDomain('approval_required', self.service.directory_battle_ready, members[0][1], plan['id'], True)
+            self.service.directory_approve_battle(members[1][0], plan['id'])
+            for member in sum(members, []):
+                final = self.service.directory_battle_ready(member, plan['id'], True)
+            self.assertTrue(all(player['ready'] for team in final['teams'] for player in team['players']))
+            self.assertEqual(final['state'], 'draft')
+            self.assertEqual(self.db.settlements.count_documents({}), 0)
+            for member in sum(members, []):
+                account = self.service.get_account(member)
+                self.assertIsNone(account['active_run_id'])
+                self.assertEqual(account['leader']['total_experience'], 0)
+            for team_id in teams:
+                team = self.service._team(team_id)
+                self.assertIsNone(team['active_run_id'])
+                self.assertEqual((team['experience'], team['rating']), (0, 1000))
+            saved = self.service.get_run(plan['id'])
+            cancelled = self.service.directory_cancel_battle(members[1][0], plan['id'])
+            self.assertEqual(cancelled['state'], 'cancelled')
+            self.assertEqual(self.service.directory_cancel_battle(members[1][0], plan['id']), cancelled)
+            for key in ('participants', 'lineups', 'approvals', 'ready'):
+                self.assertEqual(self.service.get_run(plan['id'])[key], saved[key])
+
+    def test_planning_public_projection_current_members_only_and_readonly(self):
+        plan, teams, members = self.plan()
+        outsider = self.player()
+        self.assertDomain('forbidden', self.service.directory_battle_detail, outsider, plan['id'])
+        self.assertEqual(self.service.directory_my_battles(outsider), {'battles': [], 'next': ''})
+        before = {name: list(self.db[name].find({}).sort('_id', 1)) for name in ('accounts', 'teams', 'game_runs', 'areas')}
+        for actor in sum(members, []):
+            detail = self.service.directory_battle_detail(actor, plan['id'])
+            self.assertEqual(detail, plan)
+            self.assertEqual(set(detail), {'id', 'area_id', 'state', 'created_at', 'map', 'validity', 'teams'})
+            summaries = self.service.directory_my_battles(actor)
+            self.assertEqual(summaries['battles'][0]['id'], plan['id'])
+            self.assertEqual(set(summaries['battles'][0]), {'id', 'area_id', 'map_id', 'state', 'created_at', 'teams'})
+            for team in detail['teams']:
+                self.assertEqual(set(team), {'id', 'name', 'captain_id', 'approved', 'players'})
+                for player in team['players']:
+                    self.assertEqual(set(player), {'id', 'username', 'unit_type', 'level', 'side', 'ready'})
+            self.assertNotIn('password_hash', json.dumps(detail))
+            self.assertNotIn('experience', json.dumps(detail))
+        maps = self.service.directory_battle_maps(members[0][0], 'area-1')
+        self.assertEqual(len(maps['maps']), 3)
+        self.assertEqual(maps['maps'][0]['name'], "Isar's Cross")
+        self.assertEqual(before, {name: list(self.db[name].find({}).sort('_id', 1)) for name in before})
+        self.service.leave_team(members[0][1])
+        self.assertDomain('forbidden', self.service.directory_battle_detail, members[0][1], plan['id'])
+        self.assertDomain('forbidden', self.service.directory_battle_ready, members[0][1], plan['id'], False)
+        stale = self.service.directory_battle_detail(members[1][1], plan['id'])
+        self.assertEqual(stale['validity'], 'roster_changed')
+        self.assertEqual(stale['teams'][0]['players'], plan['teams'][0]['players'])
+
+    def test_planning_stale_validities_reject_approval_but_allow_unready_cancel(self):
+        plan, teams, members = self.plan()
+        for captain in (members[0][0], members[1][0]):
+            self.service.directory_approve_battle(captain, plan['id'])
+        actor = members[0][1]
+        self.service.directory_battle_ready(actor, plan['id'], True)
+        cases = [
+            (self.db.game_runs, plan['id'], 'ruleset_version', 'future-rules', 'rules_changed'),
+            (self.db.teams, teams[1], 'area_id', 'another-area', 'area_changed'),
+            (self.db.areas, 'area-1', 'enabled', False, 'map_unavailable'),
+            (self.db.areas, 'area-1', 'approved_maps', [], 'map_unavailable'),
+            (self.db.accounts, members[1][1], 'status', 'suspended', 'player_unavailable'),
+            (self.db.accounts, members[1][1], 'leader.total_experience', 1, 'leader_changed'),
+            (self.db.accounts, members[1][1], 'active_run_id', str(uuid4()), 'busy'),
+            (self.db.teams, teams[1], 'active_run_id', str(uuid4()), 'busy')]
+        for collection, identifier, key, value, expected in cases:
+            before = collection.find_one({'_id': identifier})
+            collection.update_one({'_id': identifier}, {'$set': {key: value}})
+            self.assertEqual(self.service.directory_battle_detail(actor, plan['id'])['validity'], expected)
+            self.assertDomain('busy' if expected == 'busy' else 'stale_proposal',
+                             self.service.directory_approve_battle, members[0][0], plan['id'])
+            self.service.directory_battle_ready(actor, plan['id'], False)
+            self.assertNotIn(actor, self.service.get_run(plan['id'])['ready'])
+            collection.replace_one({'_id': identifier}, before)
+            self.service.directory_battle_ready(actor, plan['id'], True)
+        self.service.leave_team(members[1][1])
+        self.service.leave_team(members[1][0])
+        stale = self.service.directory_battle_detail(actor, plan['id'])
+        self.assertEqual(stale['validity'], 'team_unavailable')
+        self.assertEqual(stale['teams'][1]['captain_id'], '')
+        self.assertFalse(stale['teams'][1]['approved'])
+        self.assertEqual(stale['teams'][1]['name'], plan['teams'][1]['name'])
+        self.service.directory_battle_ready(actor, plan['id'], False)
+        self.assertEqual(self.service.directory_cancel_battle(members[0][0], plan['id'])['state'], 'cancelled')
+
+    def test_planning_new_captain_must_reapprove_immutable_lineup(self):
+        plan, teams, members = self.plan()
+        for captain in (members[0][0], members[1][0]):
+            self.service.directory_approve_battle(captain, plan['id'])
+        saved = self.service.get_run(plan['id'])
+        self.service.transfer_captain(members[1][0], teams[1], members[1][1])
+        detail = self.service.directory_battle_detail(members[0][0], plan['id'])
+        self.assertEqual(detail['teams'][1]['captain_id'], members[1][1])
+        self.assertFalse(detail['teams'][1]['approved'])
+        self.assertDomain('forbidden', self.service.directory_approve_battle, members[1][0], plan['id'])
+        self.assertDomain('forbidden', self.service.directory_cancel_battle, members[1][0], plan['id'])
+        self.assertDomain('approval_required', self.service.directory_battle_ready, members[1][0], plan['id'], True)
+        self.service.directory_approve_battle(members[1][1], plan['id'])
+        self.service.directory_battle_ready(members[1][0], plan['id'], True)
+        for key in ('lineups', 'participants'):
+            self.assertEqual(self.service.get_run(plan['id'])[key], saved[key])
+
+    def test_planning_cap_serializes_shared_team_and_legacy_cannot_bypass(self):
+        teams, members = self.teams()
+        extra_teams, extra_members = self._extra_teams(2)
+        def propose(opponent, opponents):
+            try:
+                result = self.service.directory_propose_battle(members[0][0], teams[0], opponent, 'isars-cross',
+                    [{'team_id': teams[0], 'account_ids': members[0]}, {'team_id': opponent, 'account_ids': opponents}])
+                return result['id']
+            except DomainError as error:
+                return error.code
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            one = pool.submit(propose, teams[1], members[1])
+            two = pool.submit(propose, extra_teams[0], extra_members[0])
+            results = (one.result(), two.result())
+        self.assertEqual(results.count('planning_exists'), 1)
+        self.assertEqual(self.db.game_runs.count_documents({'state': 'draft'}), 1)
+        self.assertDomain('planning_exists', self.service.create_battle, members[0][0], teams[1],
+                         'isars-cross', dict(zip(teams, members)))
+        created = next(value for value in results if value != 'planning_exists')
+        self.service.directory_cancel_battle(members[0][0], created)
+        self.assertNotEqual(propose(teams[1], members[1]), 'planning_exists')
+
+    def test_planning_invalid_selectors_roles_lineups_and_stale_expected_team(self):
+        teams, members = self.teams()
+        lineups = [{'team_id': team, 'account_ids': ids} for team, ids in zip(teams, members)]
+        captain = members[0][0]
+        self.assertDomain('conflict', self.service.directory_propose_battle, captain, str(uuid4()), teams[1], 'isars-cross', lineups)
+        self.assertDomain('forbidden', self.service.directory_propose_battle, members[0][1], teams[0], teams[1], 'isars-cross', lineups)
+        for bad in ({}, [], lineups + lineups, [lineups[0], lineups[0]],
+                    [{'team_id': teams[0], 'account_ids': members[0], 'experience': 1}, lineups[1]]):
+            self.assertDomain('invalid_lineup', self.service.directory_propose_battle, captain, teams[0], teams[1], 'isars-cross', bad)
+        duplicate = deepcopy(lineups)
+        duplicate[0]['account_ids'] = [captain, captain]
+        self.assertDomain('invalid_lineup', self.service.directory_propose_battle, captain, teams[0], teams[1], 'isars-cross', duplicate)
+        for method, args in ((self.service.directory_my_battles, (captain, {'$ne': ''})),
+            (self.service.directory_battle_maps, (captain, {'$ne': ''})),
+            (self.service.directory_battle_detail, (captain, {'$ne': ''})),
+            (self.service.directory_battle_ready, (captain, str(uuid4()), 1))):
+            self.assertDomain('invalid_input', method, *args)
+        self.assertEqual(self.db.game_runs.count_documents({}), 0)
+
+    def test_planning_lists_are_bounded_private_and_paged(self):
+        plan, teams, members = self.plan()
+        saved = self.service.get_run(plan['id'])
+        self.service.directory_cancel_battle(members[0][0], plan['id'])
+        for _ in range(22):
+            copy = deepcopy(saved)
+            copy.update(_id=str(uuid4()), state='cancelled')
+            self.db.game_runs.insert_one(copy)
+        first = self.service.directory_my_battles(members[0][1])
+        second = self.service.directory_my_battles(members[0][1], first['next'])
+        self.assertEqual((len(first['battles']), len(second['battles']), second['next']), (20, 3, ''))
+        expected = sorted(row['_id'] for row in self.db.game_runs.find({}))
+        self.assertEqual([row['id'] for row in first['battles'] + second['battles']], expected)
+        self.assertLess(len(json.dumps(first)), 32768)
+        self.assertNotIn('players', json.dumps(first))
+
+    def test_planning_mutations_rollback_and_never_cancel_running_game(self):
+        plan, teams, members = self.plan()
+        before = {name: list(self.db[name].find({}).sort('_id', 1)) for name in ('accounts', 'teams', 'game_runs')}
+        project = self.service._planning_record
+        def fail_after_project(*args, **kwargs):
+            project(*args, **kwargs)
+            raise RuntimeError('Injected failure after mutation before commit')
+        with patch.object(self.service, '_planning_record', side_effect=fail_after_project):
+            for operation in (self.service.directory_approve_battle, self.service.directory_cancel_battle):
+                with self.assertRaises(RuntimeError):
+                    operation(members[0][0], plan['id'])
+                self.assertEqual(before, {name: list(self.db[name].find({}).sort('_id', 1)) for name in before})
+        self.db.game_runs.update_one({'_id': plan['id']}, {'$set': {'state': 'running'}})
+        self.assertDomain('invalid_state', self.service.directory_cancel_battle, members[0][0], plan['id'])
+        self.assertDomain('invalid_state', self.service.directory_approve_battle, members[0][0], plan['id'])
+        self.assertDomain('invalid_state', self.service.directory_battle_ready, members[0][1], plan['id'], False)
+
+    def test_planning_ready_race_with_member_leave_never_commits_stale_consent(self):
+        plan, teams, members = self.plan()
+        for captain in (members[0][0], members[1][0]):
+            self.service.directory_approve_battle(captain, plan['id'])
+        actor, leaving = members[0][1], members[1][1]
+        read, resume = threading.Event(), threading.Event()
+        context = self.service._planning_context
+        def hold_context(*args, **kwargs):
+            result = context(*args, **kwargs)
+            if not read.is_set():
+                read.set()
+                if not resume.wait(10):
+                    raise RuntimeError('Race fixture did not resume')
+            return result
+        with patch.object(self.service, '_planning_context', side_effect=hold_context), ThreadPoolExecutor(max_workers=1) as pool:
+            pending = pool.submit(self.service.directory_battle_ready, actor, plan['id'], True)
+            try:
+                self.assertTrue(read.wait(5))
+                AllianceService(self.db).leave_team(leaving)
+            finally:
+                resume.set()
+            with self.assertRaises(DomainError) as raised:
+                pending.result(timeout=10)
+            self.assertEqual(raised.exception.code, 'stale_proposal')
+        self.assertNotIn(actor, self.service.get_run(plan['id'])['ready'])
+
     def _extra_teams(self, size):
         members = [[self.player() for _ in range(size)] for _ in range(2)]
         ids = []

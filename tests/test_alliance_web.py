@@ -398,6 +398,98 @@ class AllianceWebTests(unittest.TestCase):
         self.assertEqual((suspended.status_code, suspended.json['error']['code']), (403, 'forbidden'))
         self.assertEqual(self.domain._team(team), before)
 
+    def planning_fixture(self):
+        players = [self.player] + [self.domain.register(name, self.password_hash)
+                                  for name in ('PlanMember', 'PlanCaptain', 'PlanOpponent')]
+        headers = [{**self.bridge, 'X-Player-Token': self.auth.authenticate(
+            actor['username'], self.password, 'player')['token']} for actor in players]
+        teams = []
+        for index in (0, 2):
+            team = self.domain.create_team(players[index]['_id'], 'Plan Team ' + str(index))['_id']
+            self.domain.request_join(players[index+1]['_id'], team)
+            self.domain.approve_member(players[index]['_id'], team, players[index+1]['_id'])
+            teams.append(team)
+        body = {'team_id': teams[0], 'opponent_team_id': teams[1], 'map_id': 'isars-cross',
+            'lineups': [{'team_id': team, 'account_ids': [actor['_id'] for actor in players[index:index+2]]}
+                       for team, index in zip(teams, (0, 2))]}
+        return players, headers, teams, body
+
+    def test_native_battle_planning_explicit_consent_and_cancel_without_gameplay(self):
+        players, headers, teams, body = self.planning_fixture()
+        base = '/internal/v1/team-directory/'
+        def post(operation, data, actor=0):
+            return self.client.post(base + operation, headers=headers[actor], json=data)
+        maps = post('battle_maps', {'area_id': 'area-1'})
+        self.assertEqual(maps.status_code, 200)
+        self.assertEqual([item['size'] for item in maps.json['maps']], [2, 3, 4])
+        created = post('propose_battle', body)
+        self.assertEqual(created.status_code, 201)
+        battle = created.json['battle']
+        selector = {'battle_id': battle['id']}
+        self.assertEqual([team['approved'] for team in battle['teams']], [False, False])
+        self.assertEqual(post('my_battles', {'after': ''}, 1).json['battles'][0]['id'], battle['id'])
+        self.assertEqual(post('battle_detail', selector, 3).json, created.json)
+        early = post('battle_ready', {**selector, 'ready': True}, 1)
+        self.assertEqual((early.status_code, early.json['error']['code']), (409, 'approval_required'))
+        self.assertEqual(post('approve_battle', selector, 1).status_code, 403)
+        self.assertEqual(post('cancel_battle', selector, 1).status_code, 403)
+        self.assertEqual(post('approve_battle', selector, 0).status_code, 200)
+        self.assertEqual(post('approve_battle', selector, 2).status_code, 200)
+        for index in range(4):
+            ready = post('battle_ready', {**selector, 'ready': True}, index)
+            self.assertEqual(ready.status_code, 200)
+        self.assertEqual(ready.json['battle']['state'], 'draft')
+        self.assertTrue(all(player['ready'] for team in ready.json['battle']['teams'] for player in team['players']))
+        self.assertEqual(post('battle_ready', {**selector, 'ready': False}, 1).status_code, 200)
+        self.assertEqual(post('start_battle', selector).status_code, 404)
+        for player in players:
+            self.assertIsNone(self.domain.get_account(player['_id'])['active_run_id'])
+            self.assertEqual(self.domain.get_account(player['_id'])['leader']['total_experience'], 0)
+        self.assertEqual(self.db.settlements.count_documents({}), 0)
+        cancelled = post('cancel_battle', selector, 2)
+        self.assertEqual(cancelled.status_code, 200)
+        self.assertEqual(cancelled.json['battle']['state'], 'cancelled')
+        self.assertEqual(post('cancel_battle', selector, 2).json, cancelled.json)
+        self.assertEqual(post('battle_ready', {**selector, 'ready': True}, 1).status_code, 409)
+
+    def test_native_battle_planning_hides_former_members_and_cancels_stale(self):
+        players, headers, teams, body = self.planning_fixture()
+        base = '/internal/v1/team-directory/'
+        created = self.client.post(base + 'propose_battle', headers=headers[0], json=body)
+        selector = {'battle_id': created.json['battle']['id']}
+        self.domain.leave_team(players[1]['_id'])
+        for operation, data in (('battle_detail', selector), ('approve_battle', selector),
+                                ('battle_ready', {**selector, 'ready': False}), ('cancel_battle', selector)):
+            self.assertEqual(self.client.post(base + operation, headers=headers[1], json=data).status_code, 403)
+        self.assertEqual(self.client.post(base + 'my_battles', headers=headers[1], json={'after': ''}).json,
+                         {'battles': [], 'next': ''})
+        detail = self.client.post(base + 'battle_detail', headers=headers[2], json=selector)
+        self.assertEqual(detail.json['battle']['validity'], 'roster_changed')
+        self.assertEqual(self.client.post(base + 'approve_battle', headers=headers[2], json=selector).status_code, 409)
+        cancelled = self.client.post(base + 'cancel_battle', headers=headers[0], json=selector)
+        self.assertEqual(cancelled.json['battle']['state'], 'cancelled')
+        self.assertNotIn('password_hash', str(cancelled.json))
+        self.assertNotIn('cancel_reason', str(cancelled.json))
+
+    def test_native_battle_planning_strict_inputs_reject_identity_and_rewards(self):
+        players, headers, teams, body = self.planning_fixture()
+        base = '/internal/v1/team-directory/'
+        cases = [('propose_battle', {**body, 'actor_id': players[1]['_id']}),
+                 ('propose_battle', {**body, 'experience': 20}),
+                 ('propose_battle', {**body, 'lineups': {'team': []}}),
+                 ('battle_maps', {'area_id': {'$ne': ''}}), ('my_battles', {'after': 'bad'}),
+                 ('battle_detail', {'battle_id': {'$ne': ''}}),
+                 ('approve_battle', {'battle_id': str(uuid4()), 'account_id': players[1]['_id']}),
+                 ('battle_ready', {'battle_id': str(uuid4()), 'ready': 1}),
+                 ('battle_ready', {'battle_id': str(uuid4()), 'ready': 'false'}),
+                 ('cancel_battle', {'battle_id': str(uuid4()), 'reason': 'caller detail'})]
+        for operation, data in cases:
+            with self.subTest(operation=operation, data=data):
+                self.assertIn(self.client.post(base + operation, headers=headers[0], json=data).status_code, (400, 409))
+        self.assertEqual(self.client.post(base + 'propose_battle?extra=1', headers=headers[0], json=body).status_code, 400)
+        self.assertEqual(self.client.get(base + 'battle_maps', headers=headers[0]).status_code, 405)
+        self.assertEqual(self.db.game_runs.count_documents({}), 0)
+
     def test_native_directory_rejects_extra_identity_rewards_selectors_and_query(self):
         headers = self.player_headers()
         base = '/internal/v1/team-directory/'
@@ -452,6 +544,13 @@ class AllianceWebTests(unittest.TestCase):
             'leave_team': {'team_id': self.player['_id'], 'allow_archive': False},
             'transfer_captain': {'team_id': self.player['_id'], 'account_id': self.player['_id']},
             'standings': {'area_id': 'area-1'}}
+        operations.update({'battle_maps': {'area_id': 'area-1'}, 'my_battles': {'after': ''},
+            'battle_detail': {'battle_id': self.player['_id']},
+            'propose_battle': {'team_id': self.player['_id'], 'opponent_team_id': self.admin['_id'],
+                               'map_id': 'isars-cross', 'lineups': []},
+            'approve_battle': {'battle_id': self.player['_id']},
+            'battle_ready': {'battle_id': self.player['_id'], 'ready': True},
+            'cancel_battle': {'battle_id': self.player['_id']}})
         headers = self.player_headers()
         admin = self.auth.authenticate('Operator', self.password, 'admin')
         wrong_scope = {**self.bridge, 'X-Player-Token': admin['token']}

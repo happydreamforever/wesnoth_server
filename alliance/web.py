@@ -383,6 +383,42 @@ def create_app(settings, db):
         data = directory_payload("area_id")
         return jsonify(domain.directory_standings(g.player["_id"], data["area_id"]))
 
+    @internal_route("/team-directory/battle_maps")
+    def directory_battle_maps():
+        data = directory_payload("area_id")
+        return jsonify(domain.directory_battle_maps(g.player["_id"], data["area_id"]))
+
+    @internal_route("/team-directory/my_battles")
+    def directory_my_battles():
+        data = directory_payload("after")
+        return jsonify(domain.directory_my_battles(g.player["_id"], data["after"]))
+
+    @internal_route("/team-directory/battle_detail")
+    def directory_battle_detail():
+        data = directory_payload("battle_id")
+        return jsonify(battle=domain.directory_battle_detail(g.player["_id"], data["battle_id"]))
+
+    @internal_route("/team-directory/propose_battle")
+    def directory_propose_battle():
+        data = directory_payload("team_id", "opponent_team_id", "map_id", "lineups")
+        return jsonify(battle=domain.directory_propose_battle(g.player["_id"], data["team_id"],
+            data["opponent_team_id"], data["map_id"], data["lineups"])), 201
+
+    @internal_route("/team-directory/approve_battle")
+    def directory_approve_battle():
+        data = directory_payload("battle_id")
+        return jsonify(battle=domain.directory_approve_battle(g.player["_id"], data["battle_id"]))
+
+    @internal_route("/team-directory/battle_ready")
+    def directory_battle_ready():
+        data = directory_payload("battle_id", "ready")
+        return jsonify(battle=domain.directory_battle_ready(g.player["_id"], data["battle_id"], data["ready"]))
+
+    @internal_route("/team-directory/cancel_battle")
+    def directory_cancel_battle():
+        data = directory_payload("battle_id")
+        return jsonify(battle=domain.directory_cancel_battle(g.player["_id"], data["battle_id"]))
+
     @internal_route("/areas", methods=("GET",))
     def player_areas():
         return jsonify(areas=domain.list_areas())

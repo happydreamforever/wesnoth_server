@@ -350,6 +350,201 @@ class AllianceService:
             raise
         return {'team_id': team_id, 'account_id': account_id, 'status': 'transferred'}
 
+    @staticmethod
+    def _planning_map(map_id):
+        value = MAPS[map_id]
+        return {'id': map_id, 'name': value['name'], 'scenario_id': value['scenario_id'],
+                'size': value['size'], 'sides': [list(sides) for sides in value['sides']]}
+
+    def directory_battle_maps(self, actor_id, area_id):
+        self._directory_player(actor_id)
+        _directory_id(area_id)
+        area = self._area(area_id)
+        return {'area_id': area_id, 'maps': [self._planning_map(key) for key in MAPS
+                                           if key in area['approved_maps']]}
+
+    def _planning_access(self, actor_id, run, session=None):
+        if run['kind'] != 'alliance':
+            raise DomainError('not_found', 'Battle plan not found.')
+        team = self.db.teams.find_one({'_id': {'$in': run['team_ids']}, 'status': 'active',
+                                       'members.account_id': actor_id}, session=session)
+        if team is None:
+            raise DomainError('forbidden', 'Only current members of the participating teams may view this plan.')
+        return team
+
+    def _planning_context(self, run, session=None):
+        teams = [self.db.teams.find_one({'_id': team_id}, session=session) for team_id in run['team_ids']]
+        ids = {player['account_id'] for player in run['participants']}
+        ids.update(team['captain_id'] for team in teams if team and team['captain_id'])
+        accounts = {item['_id']: item for item in self.db.accounts.find({'_id': {'$in': list(ids)}},
+                    {'username': 1, 'leader': 1, 'role': 1, 'status': 1, 'active_run_id': 1}, session=session)}
+        area = self.db.areas.find_one({'_id': run['area_id']}, session=session)
+        return teams, accounts, area
+
+    @staticmethod
+    def _planning_validity(run, teams, accounts, area):
+        if run['ruleset_version'] != RULESET_VERSION:
+            return 'rules_changed'
+        if any(team is None or team['status'] != 'active' for team in teams):
+            return 'team_unavailable'
+        if any(team['area_id'] != run['area_id'] for team in teams):
+            return 'area_changed'
+        if area is None or not area['enabled'] or run['map_id'] not in area['approved_maps']:
+            return 'map_unavailable'
+        if any(not set(run['lineups'][team['_id']]).issubset({m['account_id'] for m in team['members']})
+               for team in teams):
+            return 'roster_changed'
+        ids = {player['account_id'] for player in run['participants']} | {team['captain_id'] for team in teams}
+        if any(key not in accounts or accounts[key]['status'] != 'active' or accounts[key]['role'] != 'player'
+               for key in ids):
+            return 'player_unavailable'
+        if any(accounts[player['account_id']]['leader'] != player.get('leader') for player in run['participants']):
+            return 'leader_changed'
+        allowed_run = run['_id'] if run['state'] == 'running' else None
+        if any(item.get('active_run_id') not in (None, allowed_run) for item in teams) or any(
+                accounts[key].get('active_run_id') not in (None, allowed_run) for key in ids):
+            return 'busy'
+        return 'valid'
+
+    def _planning_names(self, run, session=None):
+        # Native plans retain names even after the selected roster changes.
+        # Legacy plans are readable using existing names, without a migration.
+        if 'planning_teams' in run:
+            return [dict(id=item['id'], name=item['name']) for item in run['planning_teams']]
+        return [{'id': team_id, 'name': self.db.teams.find_one({'_id': team_id}, {'name': 1},
+                                                            session=session)['name']}
+                for team_id in run['team_ids']]
+
+    def _planning_summary(self, run, session=None):
+        return {'id': run['_id'], 'area_id': run['area_id'], 'map_id': run['map_id'], 'state': run['state'],
+                'created_at': run['created_at'].strftime('%Y-%m-%dT%H:%M:%SZ'),
+                'teams': self._planning_names(run, session)}
+
+    def _planning_record(self, run, session=None):
+        teams, accounts, area = self._planning_context(run, session)
+        result = self._planning_summary(run, session)
+        result.pop('map_id')
+        result['map'] = self._planning_map(run['map_id'])
+        result['validity'] = self._planning_validity(run, teams, accounts, area)
+        for display, current in zip(result['teams'], teams):
+            captain_id = current['captain_id'] if current and current['status'] == 'active' else ''
+            display.update(captain_id=captain_id,
+                           approved=bool(captain_id and run['approvals'].get(display['id']) == captain_id),
+                           players=[{'id': player['account_id'],
+                             'username': player.get('username') or accounts[player['account_id']]['username'],
+                             'unit_type': player['leader']['unit_type'], 'level': player['leader']['level'],
+                             'side': player['side'], 'ready': player['account_id'] in run['ready']}
+                             for player in run['participants'] if player['team_id'] == display['id']])
+        return result
+
+    def directory_my_battles(self, actor_id, after=''):
+        self._directory_player(actor_id)
+        _directory_id(after, empty=True, uuid=True)
+        team = self.db.teams.find_one({'members.account_id': actor_id, 'status': 'active'}, {'_id': 1})
+        if team is None:
+            return {'battles': [], 'next': ''}
+        query = {'kind': 'alliance', 'team_ids': team['_id']}
+        if after:
+            query['_id'] = {'$gt': after}
+        records = list(self.db.game_runs.find(query, {'_id': 1, 'area_id': 1, 'map_id': 1, 'state': 1,
+            'created_at': 1, 'team_ids': 1, 'planning_teams': 1}).sort('_id', 1).limit(21))
+        return {'battles': [self._planning_summary(item) for item in records[:20]],
+                'next': records[19]['_id'] if len(records) > 20 else ''}
+
+    def directory_battle_detail(self, actor_id, battle_id):
+        self._directory_player(actor_id)
+        _directory_id(battle_id, uuid=True)
+        def read(session):
+            run = self._run(battle_id, session)
+            self._planning_access(actor_id, run, session)
+            return self._planning_record(run, session)
+        return self._tx(read)
+
+    def directory_propose_battle(self, actor_id, team_id, opponent_team_id, map_id, lineups):
+        _directory_id(team_id, uuid=True)
+        _directory_id(opponent_team_id, uuid=True)
+        if not isinstance(lineups, list) or len(lineups) != 2:
+            raise DomainError('invalid_lineup', 'Choose exactly two fixed lineups.')
+        selected = {}
+        for item in lineups:
+            if not isinstance(item, dict) or set(item) != {'team_id', 'account_ids'}:
+                raise DomainError('invalid_lineup', 'The lineup fields are invalid.')
+            key = _directory_id(item['team_id'], uuid=True)
+            if key in selected or not isinstance(item['account_ids'], list) or not 2 <= len(item['account_ids']) <= 4:
+                raise DomainError('invalid_lineup', 'The fixed lineups are invalid.')
+            selected[key] = [_directory_id(account, uuid=True) for account in item['account_ids']]
+        try:
+            return self.create_battle(actor_id, opponent_team_id, map_id, selected,
+                                      expected_team_id=team_id, native_plan=True)
+        except DomainError as error:
+            if error.code == 'suspended':
+                raise DomainError('forbidden', 'One of the selected players is unavailable.') from error
+            raise
+
+    def _planning_validate_mutation(self, run, session):
+        teams, accounts, area = self._planning_context(run, session)
+        validity = self._planning_validity(run, teams, accounts, area)
+        if validity != 'valid':
+            raise DomainError('busy' if validity == 'busy' else 'stale_proposal',
+                              'This plan is unavailable or changed. Inspect it before creating another plan.')
+        # Serialize validation with membership, captaincy, progression and status
+        # changes. No active-run reservation is made for a proposal.
+        for team in teams:
+            self.db.teams.update_one({'_id': team['_id']}, {'$inc': {'revision': 1}}, session=session)
+        for account_id in accounts:
+            self._player(account_id, session)
+
+    def directory_approve_battle(self, actor_id, battle_id):
+        _directory_id(battle_id, uuid=True)
+        def write(session):
+            self._player(actor_id, session)
+            run = self._run(battle_id, session)
+            own_team = self._planning_access(actor_id, run, session)
+            if own_team['captain_id'] != actor_id:
+                raise DomainError('forbidden', 'Only a participating current captain can approve this plan.')
+            self._draft(run)
+            self._planning_validate_mutation(run, session)
+            self.db.game_runs.update_one({'_id': battle_id}, {'$set': {
+                'approvals.' + own_team['_id']: actor_id}}, session=session)
+            return self._planning_record(self._run(battle_id, session), session)
+        return self._tx(write)
+
+    def directory_battle_ready(self, actor_id, battle_id, ready):
+        _directory_id(battle_id, uuid=True)
+        if type(ready) is not bool:
+            raise DomainError('invalid_input', 'Readiness must be a boolean.')
+        def write(session):
+            self._player(actor_id, session)
+            run = self._run(battle_id, session)
+            self._planning_access(actor_id, run, session)
+            self._draft(run)
+            if actor_id not in [player['account_id'] for player in run['participants']]:
+                raise DomainError('forbidden', 'Only a selected current member can change readiness.')
+            if ready:
+                self._planning_validate_mutation(run, session)
+                teams, _, _ = self._planning_context(run, session)
+                if any(run['approvals'].get(team['_id']) != team['captain_id'] for team in teams):
+                    raise DomainError('approval_required', 'Both current captains must approve this plan first.')
+            self.db.game_runs.update_one({'_id': battle_id}, {
+                '$addToSet' if ready else '$pull': {'ready': actor_id}}, session=session)
+            return self._planning_record(self._run(battle_id, session), session)
+        return self._tx(write)
+
+    def directory_cancel_battle(self, actor_id, battle_id):
+        _directory_id(battle_id, uuid=True)
+        def write(session):
+            self._player(actor_id, session)
+            run = self._run(battle_id, session)
+            own_team = self._planning_access(actor_id, run, session)
+            if own_team['captain_id'] != actor_id:
+                raise DomainError('forbidden', 'Only a participating current captain can cancel this plan.')
+            if run['state'] not in ('draft', 'cancelled'):
+                raise DomainError('invalid_state', 'Only a planned battle can be cancelled here.')
+            self.db.teams.update_one({'_id': own_team['_id']}, {'$inc': {'revision': 1}}, session=session)
+            run = self._cancel(battle_id, 'Cancelled by a team captain before gameplay.', session)
+            return self._planning_record(run, session)
+        return self._tx(write)
+
     def directory_application_decisions(self, actor_id):
         account = self._directory_player(actor_id)
         # Older accounts have no history. Never infer decisions from missing
@@ -574,7 +769,7 @@ class AllianceService:
             return run
         return self._tx(write)
 
-    def create_battle(self, actor_id, opponent_team_id, map_id, lineups):
+    def create_battle(self, actor_id, opponent_team_id, map_id, lineups, *, expected_team_id=None, native_plan=False):
         if not isinstance(map_id, str) or map_id not in MAPS:
             raise DomainError('invalid_map', 'Choose an approved team map.')
         if not isinstance(lineups, dict) or len(lineups) != 2:
@@ -589,21 +784,31 @@ class AllianceService:
             first = self.db.teams.find_one({'captain_id': actor_id, 'status': 'active'}, session=session)
             if first is None:
                 raise DomainError('forbidden', 'Only a team captain can propose a battle.')
+            if expected_team_id is not None and first['_id'] != expected_team_id:
+                raise DomainError('conflict', 'The current team differs from the selected team.')
             second = self._team(opponent_team_id, session)
             if first['_id'] == second['_id'] or set(lineups) != {first['_id'], second['_id']}:
                 raise DomainError('invalid_lineup', 'Choose two different teams and their matching lineups.')
             teams = [first, second]
             self._validate_battle_teams(teams, map_id, lineups, session)
+            if self.db.game_runs.find_one({'kind': 'alliance', 'state': 'draft',
+                    'team_ids': {'$in': [team['_id'] for team in teams]}}, {'_id': 1}, session=session):
+                raise DomainError('planning_exists', 'One of these teams already has a planned battle. Inspect or cancel it first.')
             participants = self._participants(teams, map_id, lineups)
             for participant in participants:
-                participant['leader'] = self._account(participant['account_id'], session)['leader']
+                account = self._account(participant['account_id'], session)
+                participant['leader'] = account['leader']
+                if native_plan:
+                    participant['username'] = account['username']
             run = {'_id': _id(), 'kind': 'alliance', 'state': 'draft',
                 'ruleset_version': RULESET_VERSION, 'map_id': map_id, 'area_id': first['area_id'],
                 'team_ids': [t['_id'] for t in teams], 'lineups': deepcopy(lineups),
-                'approvals': {first['_id']: actor_id}, 'ready': [], 'participants': participants,
+                'approvals': {} if native_plan else {first['_id']: actor_id}, 'ready': [], 'participants': participants,
                 'created_at': _now()}
+            if native_plan:
+                run['planning_teams'] = [{'id': team['_id'], 'name': team['name']} for team in teams]
             self.db.game_runs.insert_one(run, session=session)
-            return run
+            return self._planning_record(run, session) if native_plan else run
         return self._tx(write)
 
     @staticmethod
@@ -620,13 +825,14 @@ class AllianceService:
             raise DomainError('invalid_map', 'This map is not enabled in the area.')
         all_players = []
         for team in teams:
-            self._player(team['captain_id'], session)
+            self._idle(self._player(team['captain_id'], session))
             self._idle(team)
+            self.db.teams.update_one({'_id': team['_id']}, {'$inc': {'revision': 1}}, session=session)
             members = {m['account_id'] for m in team['members']}
             if any(p not in members for p in lineups[team['_id']]):
                 raise DomainError('not_member', 'Every selected player must belong to that team.')
             for player in lineups[team['_id']]:
-                self._player(player, session)
+                self._idle(self._player(player, session))
                 all_players.append(player)
         if len(all_players) != len(set(all_players)):
             raise DomainError('invalid_lineup', 'A player cannot fight on both teams.')

@@ -51,6 +51,23 @@ TEAM_SUMMARY = {key: TEAM[key] for key in
 TEAM_SUMMARY["member_count"] = 1
 DECISION = {'id': '32345678-1234-1234-1234-123456789abc', 'team_id': TEAM['id'],
     'team_name': TEAM['name'], 'status': 'rejected', 'created_at': '2026-10-21T12:34:56Z', 'unread': True}
+BATTLE_MAP = {'id': 'isars-cross', 'name': "Isar's Cross", 'scenario_id': 'multiplayer_Isars_Cross',
+              'size': 2, 'sides': [[1, 4], [2, 3]]}
+BATTLE = {'id': '82345678-1234-1234-1234-123456789abc', 'area_id': 'area-1', 'state': 'draft',
+    'created_at': '2026-10-21T12:34:56Z', 'map': BATTLE_MAP, 'validity': 'valid', 'teams': []}
+for index, (team_id, name, ids) in enumerate((
+    (TEAM['id'], TEAM['name'], [ACCOUNT['_id'], '52345678-1234-1234-1234-123456789abc']),
+    ('42345678-1234-1234-1234-123456789abc', 'Opposing Team',
+     ['62345678-1234-1234-1234-123456789abc', '72345678-1234-1234-1234-123456789abc']))):
+    BATTLE['teams'].append({'id': team_id, 'name': name, 'captain_id': ids[0], 'approved': False,
+        'players': [{'id': identifier, 'username': 'Player_' + str(side), 'unit_type': 'Spearman',
+                     'level': 1, 'side': side, 'ready': False}
+                    for identifier, side in zip(ids, BATTLE_MAP['sides'][index])]})
+BATTLE_PROPOSAL = {'team_id': BATTLE['teams'][0]['id'], 'opponent_team_id': BATTLE['teams'][1]['id'],
+    'map_id': BATTLE_MAP['id'], 'lineups': [{'team_id': team['id'], 'account_ids': [p['id'] for p in team['players']]}
+                                         for team in BATTLE['teams']]}
+BATTLE_SUMMARY = {key: BATTLE[key] for key in ('id', 'area_id', 'state', 'created_at')}
+BATTLE_SUMMARY.update(map_id=BATTLE_MAP['id'], teams=[{key: team[key] for key in ('id', 'name')} for team in BATTLE['teams']])
 
 
 class Backend(http.server.ThreadingHTTPServer):
@@ -420,7 +437,8 @@ class BridgeTests(unittest.TestCase):
         if operation in ("me", "logout", "areas", "teams", "my_team", "create_team", "team_detail",
                          "my_applications", "team_applicants", "apply_team", "withdraw_application",
                          "approve_application", "reject_application", "application_decisions", "ack_decision",
-                         "leave_team", "transfer_captain", "standings"):
+                         "leave_team", "transfer_captain", "standings", "battle_maps", "my_battles",
+                         "battle_detail", "propose_battle", "approve_battle", "battle_ready", "cancel_battle"):
             value["token"] = token or self.token
         return value
 
@@ -792,6 +810,131 @@ class BridgeTests(unittest.TestCase):
                 self.assertEqual(result['status'], 503)
                 self.assertNotIn('password_hash', json.dumps(result))
                 self.assertNotIn('"secret"', json.dumps(result))
+
+    def test_planning_fixed_contracts_safe_mutations_and_all_read_states(self):
+        selector = {'battle_id': BATTLE['id']}
+        approved = deepcopy(BATTLE)
+        for team in approved['teams']:
+            team['approved'] = True
+        ready = deepcopy(approved)
+        ready['teams'][0]['players'][0]['ready'] = True
+        cases = [('battle_maps', {'area_id': 'area-1'}, {'area_id': 'area-1', 'maps': [BATTLE_MAP]}, 200),
+                 ('my_battles', {'after': ''}, {'battles': [BATTLE_SUMMARY], 'next': ''}, 200),
+                 ('propose_battle', BATTLE_PROPOSAL, {'battle': BATTLE}, 201),
+                 ('approve_battle', selector, {'battle': approved}, 200),
+                 ('battle_ready', {**selector, 'ready': True}, {'battle': ready}, 200),
+                 ('battle_ready', {**selector, 'ready': False}, {'battle': {**approved, 'validity': 'leader_changed'}}, 200),
+                 ('cancel_battle', selector, {'battle': {**ready, 'state': 'cancelled'}}, 200)]
+        cases += [('battle_detail', selector, {'battle': {**BATTLE, 'state': state}}, 200)
+                  for state in ('draft', 'running', 'completed', 'cancelled')]
+        archived = deepcopy(BATTLE)
+        archived.update(validity='team_unavailable', state='cancelled')
+        archived['teams'][1]['captain_id'] = ''
+        cases.append(('battle_detail', selector, {'battle': archived}, 200))
+        for operation, body, response, status in cases:
+            with self.subTest(operation=operation, response=response):
+                type(self).directory_override = (status, response)
+                before = len(self.calls)
+                result = self.exchange(self.request(operation, body))
+                self.assertTrue(result['ok'])
+                self.assertEqual(result['data'], response)
+                self.assertEqual(len(self.calls), before + 1)
+                method, path, headers, sent = self.calls[-1]
+                self.assertEqual((method, path), ('POST', '/internal/v1/team-directory/' + operation))
+                self.assertEqual(json.loads(sent), body)
+        for operation, body in (('propose_battle', BATTLE_PROPOSAL), ('approve_battle', selector),
+                                ('battle_ready', {**selector, 'ready': True}), ('cancel_battle', selector)):
+            type(self).directory_override = (503, {'error': {'code': 'private', 'message': self.secret}})
+            before = len(self.calls)
+            response = self.exchange(self.request(operation, body))
+            self.assertEqual(response['status'], 503)
+            self.assertNotIn(self.secret, json.dumps(response))
+            self.assertEqual(len(self.calls), before + 1)
+
+    def test_planning_request_rejection_before_forwarding_including_start(self):
+        cases = [('battle_maps', {'area_id': {'$ne': ''}}), ('my_battles', {'after': 'bad'}),
+            ('battle_detail', {'battle_id': {'$ne': ''}}),
+            ('approve_battle', {'battle_id': BATTLE['id'], 'account_id': ACCOUNT['_id']}),
+            ('battle_ready', {'battle_id': BATTLE['id'], 'ready': 1}),
+            ('battle_ready', {'battle_id': BATTLE['id'], 'ready': 'false'}),
+            ('cancel_battle', {'battle_id': BATTLE['id'], 'reason': 'private'}),
+            ('start_battle', {'battle_id': BATTLE['id']}), ('finish_battle', {'battle_id': BATTLE['id']})]
+        for key, value in (('map_id', 'external-map'), ('lineups', []), ('actor_id', ACCOUNT['_id']),
+                           ('opponent_team_id', TEAM['id']), ('experience', 20)):
+            cases.append(('propose_battle', {**BATTLE_PROPOSAL, key: value}))
+        duplicate = deepcopy(BATTLE_PROPOSAL)
+        duplicate['lineups'][1]['account_ids'][0] = duplicate['lineups'][0]['account_ids'][0]
+        cases.append(('propose_battle', duplicate))
+        extra = deepcopy(BATTLE_PROPOSAL)
+        extra['lineups'][0]['password_hash'] = 'secret'
+        cases.append(('propose_battle', extra))
+        for operation, body in cases:
+            with self.subTest(operation=operation, body=body), self.connect() as peer:
+                value = self.request(operation, body)
+                value['token'] = self.token
+                before = len(self.calls)
+                encoded = gzip.compress(json.dumps(value).encode())
+                peer.sendall(struct.pack('!I', len(encoded)) + encoded)
+                with self.assertRaises((EOFError, ssl.SSLError, ConnectionError)):
+                    self.read_exact(peer, 4)
+                self.assertEqual(len(self.calls), before)
+
+    def test_planning_projection_rejects_private_fields_identity_sides_and_bounds(self):
+        selector = {'battle_id': BATTLE['id']}
+        cases = []
+        for key, value in (('state', 'ready'), ('validity', 'private_error'), ('id', DECISION['id']),
+                           ('password_hash', 'secret'), ('created_at', '2026-02-30T12:34:56Z')):
+            cases.append(('battle_detail', selector, {'battle': {**BATTLE, key: value}}, 200))
+        for key, value in (('name', 'Other Map'), ('scenario_id', 'unknown'), ('size', True),
+                           ('sides', [[1, 2], [3, 4]]), ('id', 'unknown'), ('reward', 100)):
+            changed = deepcopy(BATTLE)
+            changed['map'][key] = value
+            cases.append(('battle_detail', selector, {'battle': changed}, 200))
+        for change in ('duplicate-team', 'duplicate-player', 'wrong-side', 'private-player', 'too-many', 'captain', 'approved', 'ready'):
+            changed = deepcopy(BATTLE)
+            first, second = changed['teams']
+            if change == 'duplicate-team': second['id'] = first['id']
+            elif change == 'duplicate-player': second['players'][0]['id'] = first['players'][0]['id']
+            elif change == 'wrong-side': first['players'][0]['side'] = 4
+            elif change == 'private-player': first['players'][0]['experience'] = 0
+            elif change == 'too-many': first['players'].append(first['players'][0])
+            elif change == 'captain': first.update(captain_id='', approved=True)
+            elif change == 'approved': first['approved'] = 1
+            else: first['players'][0]['ready'] = 1
+            cases.append(('battle_detail', selector, {'battle': changed}, 200))
+        wrong_order = deepcopy(BATTLE)
+        wrong_order['teams'][0]['players'][0]['id'], wrong_order['teams'][0]['players'][1]['id'] = (
+            wrong_order['teams'][0]['players'][1]['id'], wrong_order['teams'][0]['players'][0]['id'])
+        cases.append(('propose_battle', BATTLE_PROPOSAL, {'battle': wrong_order}, 201))
+        autoapproved = deepcopy(BATTLE)
+        autoapproved['teams'][0]['approved'] = True
+        cases.append(('propose_battle', BATTLE_PROPOSAL, {'battle': autoapproved}, 201))
+        cases.extend([
+            ('battle_maps', {'area_id': 'area-1'}, {'area_id': 'area-2', 'maps': [BATTLE_MAP]}, 200),
+            ('battle_maps', {'area_id': 'area-1'}, {'area_id': 'area-1', 'maps': [BATTLE_MAP]*2}, 200),
+            ('my_battles', {'after': ''}, {'battles': [BATTLE_SUMMARY]*21, 'next': ''}, 200),
+            ('my_battles', {'after': ''}, {'battles': [BATTLE_SUMMARY]*2, 'next': ''}, 200),
+            ('my_battles', {'after': ''}, {'battles': [BATTLE_SUMMARY], 'next': BATTLE['id']}, 200),
+            ('my_battles', {'after': BATTLE['id']}, {'battles': [BATTLE_SUMMARY], 'next': ''}, 200),
+            ('cancel_battle', selector, {'battle': BATTLE}, 200),
+            ('approve_battle', selector, {'battle': {**BATTLE, 'state': 'running'}}, 200)])
+        for operation, body, response, status in cases:
+            with self.subTest(operation=operation, response=response):
+                type(self).directory_override = (status, response)
+                result = self.exchange(self.request(operation, body))
+                self.assertEqual(result['status'], 503)
+                self.assertNotIn('password_hash', json.dumps(result))
+                self.assertNotIn('"secret"', json.dumps(result))
+
+    def test_planning_safe_errors_preserve_current_session(self):
+        for code in ('planning_exists', 'invalid_map', 'invalid_lineup', 'different_area', 'stale_proposal',
+                     'approval_required', 'invalid_state'):
+            type(self).directory_override = (409, {'error': {'code': code, 'message': self.secret}})
+            result = self.exchange(self.request('battle_detail', {'battle_id': BATTLE['id']}))
+            self.assertEqual((result['status'], result['data']['code']), (409, code))
+            self.assertNotIn(self.secret, json.dumps(result))
+        type(self).directory_override = (200, {'battle': BATTLE})
+        self.assertTrue(self.exchange(self.request('battle_detail', {'battle_id': BATTLE['id']}))['ok'])
 
     def test_stalled_backend_does_not_block_other_connection(self):
         slow = self.request("register", {"username": "SlowPlayer", "password": "example-pass-1234", "starter_id": "spearman"})
