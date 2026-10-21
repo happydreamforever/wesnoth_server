@@ -1,46 +1,81 @@
-# Alliance account protocol 1
+# Alliance account and team protocol 1
 
-Scope: player registration, login, personal-leader retrieval and logout. This connection is separate from stock guest multiplayer and cannot create games, alter teams, award XP or settle results.
+The native connection supports player registration/login/profile/logout, public team directory and creation, and private membership application management. It remains separate from stock guest multiplayer. It cannot award XP, start campaigns/battles or settle results. The membership extension is delivered in APK 1192603; existing account and directory message shapes remain compatible.
 
 ## Connection and identity
 
-The native Windows listener binds the existing numeric IP and port15001 from its public profile. Before any credentials, the client sends big-endian uint32 `1`, requires uint32 `0`, then completes TLS1.2 or TLS1.3 with certificate validity, numeric-IP SAN and SHA-256 DER certificate pin verification. There is no plaintext fallback. The app imports exactly the existing seven public-profile fields and requires explicit address/pin confirmation; private server keys and database/backend credentials are never transferred.
+The Windows listener uses the numeric address and port in the saved public profile (currently 100.99.99.14:15001). Before credentials, the client sends big-endian uint32 `1`, requires uint32 `0`, then completes TLS 1.2 or 1.3 with certificate validity, numeric-IP SAN and SHA-256 DER certificate pin verification. There is no plaintext fallback. The app imports only the existing seven public-profile fields with explicit address/pin confirmation. Private server keys and database/backend credentials never enter the Android app.
 
-The server compares the public profile with an in-memory CRLF-to-LF representation of its certificate file, matching the identity generator. The original file bytes are preserved, and DER pin, numeric-IP identity, certificate validity and key matching still apply. Startup diagnostics use fixed stage labels and numeric error codes only.
+The bridge compares the public profile with an in-memory CRLF-to-LF representation of the certificate file. Original identity bytes, DER pin, numeric-IP identity, validity and key matching are preserved. Startup diagnostics use fixed stage labels and numeric codes.
 
-The bridge forwards only to `127.0.0.1:18765`, using the local protected runtime's bridge secret. MongoDB remains private on127.0.0.1:27018. This listener does not change guest `wesnothd` on15000.
+The bridge forwards only to `127.0.0.1:18765`, using the existing runtime's private bridge secret. MongoDB remains on `127.0.0.1:27018`. Guest `wesnothd` on port 15000 is unchanged.
 
 ## Bounded messages
 
-Each encrypted frame is a big-endian uint32 byte length followed by one gzip member. Maximum compressed size65536, maximum decompressed UTF-8 JSON32768 bytes, maximum nesting depth8. Empty, truncated, trailing or concatenated gzip, invalid UTF-8, duplicate keys and unknown request fields/operations are rejected. Server responses use compact Boost.JSON serialization; the current client requires the same canonical serialization and exact response fields.
+Each encrypted frame is a big-endian uint32 length followed by one gzip member: at most 65,536 compressed bytes, 32,768 decompressed UTF-8 JSON bytes and nesting depth 8. Empty/truncated/trailing/concatenated gzip, invalid UTF-8, duplicate keys and unknown fields/operations are rejected. Responses use canonical compact Boost.JSON serialization and exact field sets.
 
-Each connection handles one request and one response. Client total deadline10seconds includes connection, TLS, send and receive; cancellation reaches the native worker. Server maximum32 connections, total10seconds per connection and six seconds for the private HTTP backend. No registration retry occurs automatically: after an ambiguous timeout the player is told to try logging in first, because the database may have committed the account already.
+Each connection handles one request/response. The native client's total deadline is 10 seconds and includes connect/TLS/send/receive; cancellation reaches the worker. The server permits at most 32 connections, with 10 seconds per connection and six seconds for the private HTTP backend. No mutation is automatically retried after an uncertain result.
 
-Request fields:
-
-| Field | Contract |
+| Request field | Contract |
 | --- | --- |
-| v | Integer1 |
-| id | Fresh32lowercase-hex random request ID; must match response |
-| op | `register`, `login`, `me` or `logout` |
-| body | Operation-specific object below |
-| token | Present only for `me`/`logout`; 43-character base64url session token |
+| v | Integer 1 |
+| id | Fresh 32 lowercase hexadecimal characters, echoed in the response |
+| op | One exact operation below; maximum 24 bytes |
+| body | Exact operation-specific object |
+| token | Required for profile/logout and every team operation; absent for register/login; 43-character base64url session token |
 
-| Operation | Body | Private backend route | Successful status |
+| Account operation | Body | Private route | Success status |
 | --- | --- | --- | --- |
-| register | username, password, starter_id | POST /internal/v1/register |201 |
-| login | username, password | POST /internal/v1/login |200 |
-| me | Empty object | GET /internal/v1/me |200 |
-| logout | Empty object | POST /internal/v1/logout |200 |
+| register | username, password, starter_id | POST /internal/v1/register | 201 |
+| login | username, password | POST /internal/v1/login | 200 |
+| me | Empty object | GET /internal/v1/me | 200 |
+| logout | Empty object | POST /internal/v1/logout | 200 |
 
-Usernames are3–24ASCII letters/digits/underscores. Registration passwords are12–128Unicode scalar values and at most512UTF-8bytes. The six starters use the existing backend IDs and advancement catalogue; arbitrary unit IDs are refused.
+Usernames contain 3–24 ASCII letters/digits/underscores. Registration passwords contain 12–128 Unicode scalar values and at most 512 UTF-8 bytes. Starter IDs come from the six existing backend choices.
 
-Responses contain exactly `v`, `id`, `ok`, `status`, and `data`. A successful register/me response includes `data.account`; successful login also includes `data.token`; logout includes `data.status="logged_out"`. Public account projection contains ID, username and leader (starter_id, unit_type, level, experience, total_experience). No password hash, role, backend configuration or database connection string is forwarded. Errors contain a bounded code/message projection; the game chooses fixed local messages and never displays arbitrary backend exception text. Authentication failure for an existing session clears that session and asks for login.
+All team operations use POST `/internal/v1/team-directory/<operation>` and the authenticated player's identity. A caller cannot supply its own acting account ID, captain identity, XP, rating or capacity.
 
-## Persistence and limitations
+| Team operation | Exact body | Success data | Status |
+| --- | --- | --- | --- |
+| areas | after | areas, next | 200 |
+| teams | area_id, after | teams, next | 200 |
+| my_team | Empty object | team (detail or null) | 200 |
+| team_detail | team_id | team (detail) | 200 |
+| create_team | name, area_id | team (detail) | 201 |
+| my_applications | after | teams, next | 200 |
+| team_applicants | team_id, after | team_id, applicants, next | 200 |
+| apply_team | team_id | team_id, account_id, status="applied" | 200 |
+| withdraw_application | team_id | team_id, account_id, status="withdrawn" | 200 |
+| approve_application | team_id, account_id | team_id, account_id, status="approved" | 200 |
+| reject_application | team_id, account_id | team_id, account_id, status="rejected" | 200 |
 
-Passwords and session tokens are not written to game preferences, saves, history or diagnostics. The Android session is memory-only; app restart requires login. Successful logout revokes the token in MongoDB. A failed logout clears the local session and reports that server revocation was not confirmed. Registration creates one persistent starter leader at level1/XP0 through the existing transactional backend.
+Team/account IDs are lowercase UUID strings. Area IDs retain the existing bounded ASCII identifier format, including the seeded `area-1`. `after` is empty for the first page; later pages use the previous response's `next`. Non-area cursors are UUIDs. Pages contain at most 20 strictly increasing unique IDs, with `next` either empty or equal to the final ID of a full page. Neither server nor client automatically follows unbounded pages. There are at most 64 pending applicants per team and eight members.
 
-The account bridge does not integrate the persistent leader into campaigns or stock multiplayer. Existing campaign saves cannot grant account XP. Team menus, custom progression missions, match reservation and result settlement require later explicit protocol/game integration. The backend's gameplay integration readiness flags remain false.
+## Explicit public and private projections
 
-VPS tests cover the production codec/client/bridge/backend and real disposable MongoDB, including Unicode credentials, duplicate registration, invalid password, revoked token and account/leader database restart persistence. The Windows bridge compile/link and artifact verification pass; actual listener startup and LDPlayer UI/LAN account tests remain pending in NEXT_TEST.md.
+- Area: `id`, `name`.
+- Team summary: `id`, `name`, `area_id`, `captain_id`, `level`, `experience`, `rating`, `member_count`.
+- Team detail: summary fields except `member_count`, plus `area_name`, `capacity`, `members`.
+- Member/applicant: `id`, `username`, `unit_type`, `level`.
+
+Team detail must contain one to eight unique members, include its captain and report capacity eight. Team and applicant responses are matched to the requested team. Approval/rejection acknowledgements also match the selected applicant. Apply/withdraw acknowledgements identify the authenticated actor; the game checks that ID against its current player profile.
+
+`my_applications` exposes only the current player's pending requests in active teams. A request to another team can remain pending after membership is granted elsewhere; it remains visible for withdrawal. `team_applicants` is available only to that team's current captain. Public directory/detail responses never contain applicants. Private views expose only the bounded display projection, never account hashes, session tokens, audits or arbitrary database documents.
+
+Approval reuses the existing transaction: captain authorization, active-player/team checks, pending request, eight-seat capacity and one-team membership are checked together. Concurrent approval and active-run conflicts remain server decisions. Applying does not immediately join a team. Rejection/withdrawal remove pending applications and do not remove members. No membership operation awards personal or team experience. Schema and indexes are unchanged by this extension.
+
+## Responses, sessions and uncertain outcomes
+
+Responses contain exactly `v`, `id`, `ok`, `status`, `data`. Register/me include `data.account`; login also includes `data.token`; logout returns `data.status="logged_out"`. The account projection is ID, username and leader fields (`starter_id`, `unit_type`, `level`, `experience`, `total_experience`).
+
+Errors use a bounded known code/message projection. The game displays fixed local text rather than arbitrary backend exception text. HTTP 401 invalidates the session; a team-operation 403 denies that action without logging the player out. Membership errors include `capacity`, `already_member`, `not_requested`, `busy`, `not_found` and `conflict` as applicable.
+
+An uncertain registration is reconciled by login, team creation by My team, and membership changes by My applications, My team or Review applications. Mutating UI actions require explicit confirmation and are never automatically repeated. A subsequent read failure cannot undo a committed mutation or justify an automatic retry.
+
+Passwords and tokens remain in memory only; app restart requires fresh login. Successful logout revokes the token in MongoDB. A failed logout clears local state but does not claim server revocation. The saved public trusted profile survives an in-place APK update.
+
+## Acceptance limits
+
+The original account and first team directory/creation slice are accepted on Windows/LDPlayer with WAN disconnected by user report, including stored team retrieval after all services restarted. Membership screens and APK 1192603 need their own Windows/LDPlayer acceptance. Current validation and delivery state are in BASELINE.md and NEXT_TEST.md.
+
+Joining through an approved application is this extension's scope. Team leave/captain transfer screens, persistent-leader campaign integration, battle reservation/readiness and reward settlement remain later work. Existing local campaign saves cannot grant account XP; the backend gameplay-integration readiness flags remain false.
