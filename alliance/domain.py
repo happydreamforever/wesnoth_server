@@ -220,6 +220,9 @@ class AllianceService:
         _directory_id(after, empty=True, uuid=True)
         self._area(area_id)
         query = {'area_id': area_id, 'status': 'active'}
+        return self._directory_team_page(query, after)
+
+    def _directory_team_page(self, query, after):
         if after:
             query['_id'] = {'$gt': after}
         projection = {name: 1 for name in ('_id', 'name', 'area_id', 'captain_id',
@@ -262,6 +265,53 @@ class AllianceService:
         _directory_id(area_id)
         team = self.create_team(actor_id, name, area_id)
         return self.directory_team(actor_id, team['_id'])
+
+    def directory_my_applications(self, actor_id, after=''):
+        self._directory_player(actor_id)
+        _directory_id(after, empty=True, uuid=True)
+        # Keep other pending requests visible after joining a team, so the
+        # player can withdraw them without losing their application history.
+        return self._directory_team_page({'join_requests': actor_id, 'status': 'active'}, after)
+
+    def directory_team_applicants(self, actor_id, team_id, after=''):
+        self._directory_player(actor_id)
+        _directory_id(team_id, uuid=True)
+        _directory_id(after, empty=True, uuid=True)
+        team = self._team(team_id)
+        if team['captain_id'] != actor_id:
+            raise DomainError('forbidden', 'Only the team captain can view applications.')
+        query = {'_id': {'$in': team['join_requests']}}
+        if after:
+            query['_id']['$gt'] = after
+        records = list(self.db.accounts.find(query, {'_id': 1, 'username': 1,
+            'leader.unit_type': 1, 'leader.level': 1}).sort('_id', 1).limit(21))
+        return {'team_id': team_id,
+                'applicants': [dict(id=item['_id'], username=item['username'],
+                    unit_type=item['leader']['unit_type'], level=item['leader']['level'])
+                    for item in records[:20]],
+                'next': records[19]['_id'] if len(records) > 20 else ''}
+
+    def directory_apply_team(self, actor_id, team_id):
+        _directory_id(team_id, uuid=True)
+        self.request_join(actor_id, team_id)
+        return {'team_id': team_id, 'account_id': actor_id, 'status': 'applied'}
+
+    def directory_withdraw_application(self, actor_id, team_id):
+        _directory_id(team_id, uuid=True)
+        self.withdraw_join(actor_id, team_id)
+        return {'team_id': team_id, 'account_id': actor_id, 'status': 'withdrawn'}
+
+    def directory_approve_application(self, actor_id, team_id, account_id):
+        _directory_id(team_id, uuid=True)
+        _directory_id(account_id, uuid=True)
+        self.approve_member(actor_id, team_id, account_id)
+        return {'team_id': team_id, 'account_id': account_id, 'status': 'approved'}
+
+    def directory_reject_application(self, actor_id, team_id, account_id):
+        _directory_id(team_id, uuid=True)
+        _directory_id(account_id, uuid=True)
+        self.reject_member(actor_id, team_id, account_id)
+        return {'team_id': team_id, 'account_id': account_id, 'status': 'rejected'}
 
     def get_team(self, actor_id, team_id):
         """Public roster and leader previews; application IDs only for its captain."""

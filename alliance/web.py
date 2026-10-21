@@ -328,6 +328,36 @@ def create_app(settings, db):
                                             text_field(data, "area_id", maximum=64))
         return jsonify(team=team), 201
 
+    @internal_route("/team-directory/my_applications")
+    def directory_my_applications():
+        data = directory_payload("after")
+        return jsonify(domain.directory_my_applications(g.player["_id"], data["after"]))
+
+    @internal_route("/team-directory/team_applicants")
+    def directory_team_applicants():
+        data = directory_payload("team_id", "after")
+        return jsonify(domain.directory_team_applicants(g.player["_id"], data["team_id"], data["after"]))
+
+    @internal_route("/team-directory/apply_team")
+    def directory_apply_team():
+        data = directory_payload("team_id")
+        return jsonify(domain.directory_apply_team(g.player["_id"], data["team_id"]))
+
+    @internal_route("/team-directory/withdraw_application")
+    def directory_withdraw_application():
+        data = directory_payload("team_id")
+        return jsonify(domain.directory_withdraw_application(g.player["_id"], data["team_id"]))
+
+    @internal_route("/team-directory/approve_application")
+    def directory_approve_application():
+        data = directory_payload("team_id", "account_id")
+        return jsonify(domain.directory_approve_application(g.player["_id"], data["team_id"], data["account_id"]))
+
+    @internal_route("/team-directory/reject_application")
+    def directory_reject_application():
+        data = directory_payload("team_id", "account_id")
+        return jsonify(domain.directory_reject_application(g.player["_id"], data["team_id"], data["account_id"]))
+
     @internal_route("/areas", methods=("GET",))
     def player_areas():
         return jsonify(areas=domain.list_areas())

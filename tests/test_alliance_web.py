@@ -240,6 +240,54 @@ class AllianceWebTests(unittest.TestCase):
         self.assertEqual(repeat.json['error']['code'], 'already_member')
         self.assertEqual(self.db.teams.count_documents({}), 1)
 
+    def test_native_membership_cycle_scopes_projection_and_recovery(self):
+        captain = self.domain.register('CaptainOne', self.password_hash)
+        other = self.domain.register('OtherPlayer', self.password_hash)
+        team = self.domain.create_team(captain['_id'], 'Application Team')['_id']
+        player_headers = self.player_headers()
+        captain_headers = {**self.bridge, 'X-Player-Token': self.auth.authenticate(
+            'CaptainOne', self.password, 'player')['token']}
+        other_headers = {**self.bridge, 'X-Player-Token': self.auth.authenticate(
+            'OtherPlayer', self.password, 'player')['token']}
+        def post(operation, data, headers=player_headers):
+            return self.client.post('/internal/v1/team-directory/' + operation, headers=headers, json=data)
+        apply = post('apply_team', {'team_id': team})
+        expected = {'team_id': team, 'account_id': self.player['_id'], 'status': 'applied'}
+        self.assertEqual(apply.status_code, 200)
+        self.assertEqual(apply.json, expected)
+        self.assertEqual(post('apply_team', {'team_id': team}).json, expected)
+        self.assertEqual(post('my_applications', {'after': ''}).json['teams'][0]['id'], team)
+        self.assertEqual(post('my_applications', {'after': ''}, other_headers).json['teams'], [])
+        for headers in (player_headers, other_headers):
+            self.assertEqual(post('team_applicants', {'team_id': team, 'after': ''}, headers).status_code, 403)
+            self.assertEqual(post('approve_application', {'team_id': team, 'account_id': self.player['_id']}, headers).status_code, 403)
+            self.assertEqual(post('reject_application', {'team_id': team, 'account_id': self.player['_id']}, headers).status_code, 403)
+            self.assertEqual(post('my_applications', {'after': ''}, headers).status_code, 200)
+        applicants = post('team_applicants', {'team_id': team, 'after': ''}, captain_headers)
+        self.assertEqual(applicants.json, {'team_id': team, 'next': '', 'applicants': [{
+            'id': self.player['_id'], 'username': 'PlayerOne', 'unit_type': 'Spearman', 'level': 1}]})
+        self.assertNotIn(self.password_hash, str(applicants.json))
+        # Withdrawal, rejection, and reapplication have distinct acknowledgements.
+        self.assertEqual(post('withdraw_application', {'team_id': team}).json,
+                         {**expected, 'status': 'withdrawn'})
+        post('apply_team', {'team_id': team})
+        self.assertEqual(post('reject_application', {'team_id': team, 'account_id': self.player['_id']},
+                              captain_headers).json, {**expected, 'status': 'rejected'})
+        self.assertEqual(post('my_applications', {'after': ''}).json['teams'], [])
+        missing = post('approve_application', {'team_id': team, 'account_id': self.player['_id']}, captain_headers)
+        self.assertEqual(missing.status_code, 409)
+        self.assertEqual(missing.json['error']['code'], 'not_requested')
+        post('apply_team', {'team_id': team})
+        approved = post('approve_application', {'team_id': team, 'account_id': self.player['_id']}, captain_headers)
+        self.assertEqual(approved.status_code, 200)
+        self.assertEqual(approved.json, {**expected, 'status': 'approved'})
+        # Read-only reconciliation after a lost acknowledgement finds the committed roster.
+        self.assertEqual(post('my_team', {}).json['team']['id'], team)
+        self.assertEqual(post('team_applicants', {'team_id': team, 'after': ''}, captain_headers).json['applicants'], [])
+        self.assertEqual(len(post('team_detail', {'team_id': team}).json['team']['members']), 2)
+        self.assertEqual(self.domain.get_account(self.player['_id'])['leader']['total_experience'], 0)
+        self.assertEqual(self.domain._team(team)['experience'], 0)
+
     def test_native_directory_rejects_extra_identity_rewards_selectors_and_query(self):
         headers = self.player_headers()
         base = '/internal/v1/team-directory/'
@@ -251,7 +299,13 @@ class AllianceWebTests(unittest.TestCase):
             ('team_detail', {'team_id': 'not-a-uuid'}),
             ('create_team', {'name': 'Bad<Name', 'area_id': 'area-1'}),
             ('create_team', {'name': 'Good Name', 'area_id': 'area-1', 'experience': 99}),
-            ('create_team', {'name': 'Good Name', 'area_id': 'area-1', 'captain_id': self.admin['_id']})):
+            ('create_team', {'name': 'Good Name', 'area_id': 'area-1', 'captain_id': self.admin['_id']}),
+            ('my_applications', {'after': {'$gt': ''}}),
+            ('team_applicants', {'team_id': self.player['_id'], 'after': '', 'limit': 1000}),
+            ('apply_team', {'team_id': self.player['_id'], 'account_id': self.admin['_id']}),
+            ('withdraw_application', {'team_id': self.player['_id'], 'account_id': self.admin['_id']}),
+            ('approve_application', {'team_id': self.player['_id']}),
+            ('reject_application', {'team_id': self.player['_id'], 'account_id': {'$ne': ''}})):
             with self.subTest(operation=operation, data=data):
                 response = self.client.post(base + operation, headers=headers, json=data)
                 self.assertIn(response.status_code, (400, 409))
@@ -264,7 +318,13 @@ class AllianceWebTests(unittest.TestCase):
         base = '/internal/v1/team-directory/'
         operations = {'areas': {'after': ''}, 'teams': {'area_id': 'area-1', 'after': ''},
             'my_team': {}, 'create_team': {'name': 'Forbidden Team', 'area_id': 'area-1'},
-            'team_detail': {'team_id': '12345678-1234-1234-1234-123456789abc'}}
+            'team_detail': {'team_id': '12345678-1234-1234-1234-123456789abc'},
+            'my_applications': {'after': ''},
+            'team_applicants': {'team_id': self.player['_id'], 'after': ''},
+            'apply_team': {'team_id': self.player['_id']},
+            'withdraw_application': {'team_id': self.player['_id']},
+            'approve_application': {'team_id': self.player['_id'], 'account_id': self.player['_id']},
+            'reject_application': {'team_id': self.player['_id'], 'account_id': self.player['_id']}}
         headers = self.player_headers()
         admin = self.auth.authenticate('Operator', self.password, 'admin')
         wrong_scope = {**self.bridge, 'X-Player-Token': admin['token']}

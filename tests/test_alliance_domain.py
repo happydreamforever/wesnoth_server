@@ -247,6 +247,113 @@ class MongoDomainTests(unittest.TestCase):
         self.assertEqual(results.count('already_member') + results.count('conflict'), 1)
         self.assertEqual(self.db.teams.count_documents({'members.account_id': actor}), 1)
 
+    def test_directory_applications_are_private_bounded_pages_and_withdrawable_after_join(self):
+        applicant, outsider = self.player(), self.player()
+        ids = []
+        for index in range(22):
+            captain = self.player()
+            team = self.service.create_team(captain, f'Application Team {index}')['_id']
+            self.service.directory_apply_team(applicant, team)
+            ids.append(team)
+        first = self.service.directory_my_applications(applicant)
+        second = self.service.directory_my_applications(applicant, first['next'])
+        self.assertEqual(len(first['teams']), 20)
+        self.assertEqual([item['id'] for item in first['teams'] + second['teams']], sorted(ids))
+        self.assertEqual(second['next'], '')
+        self.assertEqual(self.service.directory_my_applications(outsider), {'teams': [], 'next': ''})
+        self.assertEqual(set(first['teams'][0]), {'id', 'name', 'area_id', 'captain_id',
+            'level', 'experience', 'rating', 'member_count'})
+        selected = self.service._team(ids[0])
+        self.service.directory_approve_application(selected['captain_id'], ids[0], applicant)
+        remaining = self.service.directory_my_applications(applicant)
+        self.assertNotIn(ids[0], [item['id'] for item in remaining['teams']])
+        for _ in range(2):
+            self.assertEqual(self.service.directory_withdraw_application(applicant, ids[1]),
+                {'team_id': ids[1], 'account_id': applicant, 'status': 'withdrawn'})
+        self.assertEqual(self.service.directory_my_team(applicant)['id'], ids[0])
+        self.assertNotIn(applicant, self.service._team(ids[1])['join_requests'])
+        self.assertEqual(self.service.get_account(applicant)['leader']['total_experience'], 0)
+
+    def test_directory_captain_applicants_pages_and_queue_capacity(self):
+        captain, outsider = self.player(), self.player()
+        team = self.service.create_team(captain, 'Applicant Pages')['_id']
+        applicants = [self.player() for _ in range(64)]
+        for applicant in applicants:
+            self.service.directory_apply_team(applicant, team)
+        # The last request can be acknowledged again without adding a duplicate.
+        self.assertEqual(self.service.directory_apply_team(applicants[-1], team)['status'], 'applied')
+        self.assertDomain('capacity', self.service.directory_apply_team, outsider, team)
+        seen, cursor = [], ''
+        for expected_count in (20, 20, 20, 4):
+            page = self.service.directory_team_applicants(captain, team, cursor)
+            self.assertEqual(page['team_id'], team)
+            self.assertEqual(len(page['applicants']), expected_count)
+            for item in page['applicants']:
+                self.assertEqual(set(item), {'id', 'username', 'unit_type', 'level'})
+            seen += [item['id'] for item in page['applicants']]
+            cursor = page['next']
+        self.assertEqual(seen, sorted(applicants))
+        self.assertEqual(cursor, '')
+        self.assertDomain('forbidden', self.service.directory_team_applicants, outsider, team)
+        self.assertDomain('forbidden', self.service.directory_team_applicants, applicants[0], team)
+        self.assertDomain('forbidden', self.service.directory_reject_application, outsider, team, applicants[0])
+        self.assertEqual(self.service.directory_reject_application(captain, team, applicants[0]),
+            {'team_id': team, 'account_id': applicants[0], 'status': 'rejected'})
+        self.assertEqual(self.service.directory_my_applications(applicants[0]), {'teams': [], 'next': ''})
+        self.assertDomain('not_requested', self.service.directory_approve_application, captain, team, applicants[0])
+        self.service.directory_apply_team(outsider, team)
+        self.assertEqual(len(self.service._team(team)['join_requests']), 64)
+
+    def test_directory_membership_serializes_last_slot_and_cross_team_approval(self):
+        teams, members = self.teams(7)
+        team, captain = teams[0], members[0][0]
+        applicants = [self.player(), self.player()]
+        for applicant in applicants:
+            self.service.directory_apply_team(applicant, team)
+        def approve(args):
+            try:
+                return self.service.directory_approve_application(*args)['status']
+            except DomainError as error:
+                return error.code
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(approve, [(captain, team, player) for player in applicants]))
+        self.assertCountEqual(results, ['approved', 'capacity'])
+        self.assertEqual(len(self.service.directory_team(captain, team)['members']), 8)
+        # One applicant pending with two captains can be accepted into only one team.
+        extra_captain, applicant = self.player(), self.player()
+        extra = self.service.create_team(extra_captain, 'Second Approval')['_id']
+        for target in (teams[1], extra):
+            self.service.directory_apply_team(applicant, target)
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(approve, [(members[1][0], teams[1], applicant),
+                                              (extra_captain, extra, applicant)]))
+        self.assertEqual(results.count('approved'), 1)
+        self.assertEqual(results.count('already_member') + results.count('conflict'), 1)
+        self.assertEqual(self.db.teams.count_documents({'members.account_id': applicant}), 1)
+        self.assertEqual(len(self.service.directory_my_applications(applicant)['teams']), 1)
+
+    def test_directory_membership_preserves_busy_roles_and_selector_validation(self):
+        captain, applicant, admin = self.player(), self.player(), self.admin()
+        team = self.service.create_team(captain, 'Membership Rules')['_id']
+        for method, args in ((self.service.directory_apply_team, (applicant, {'$ne': ''})),
+            (self.service.directory_withdraw_application, (applicant, 'not-a-uuid')),
+            (self.service.directory_my_applications, (applicant, {'$gt': ''})),
+            (self.service.directory_team_applicants, (captain, team, 'bad')),
+            (self.service.directory_approve_application, (captain, team, {'$ne': ''})),
+            (self.service.directory_reject_application, (captain, team, 'bad'))):
+            self.assertDomain('invalid_input', method, *args)
+        self.assertDomain('forbidden', self.service.directory_my_applications, admin)
+        self.assertDomain('forbidden', self.service.directory_apply_team, admin, team)
+        run = self.service.start_campaign(applicant, rules.MISSIONS[0])
+        self.assertDomain('busy', self.service.directory_apply_team, applicant, team)
+        self.service.cancel_run(run['_id'], 'Membership fixture complete')
+        self.service.directory_apply_team(applicant, team)
+        run = self.service.start_campaign(applicant, rules.MISSIONS[0])
+        self.assertDomain('busy', self.service.directory_approve_application, captain, team, applicant)
+        self.service.directory_withdraw_application(applicant, team)
+        self.assertEqual(self.service._team(team)['join_requests'], [])
+        self.assertEqual(self.service.get_account(applicant)['leader']['total_experience'], 0)
+
     def test_team_join_requires_request_captain_and_capacity(self):
         captain, outsider, applicant = self.player(), self.player(), self.player()
         team = self.service.create_team(captain, 'Wolves')['_id']

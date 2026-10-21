@@ -300,6 +300,20 @@ class BridgeTests(unittest.TestCase):
                             code, response = 200, {"areas": [{"id": "area-1", "name": "Area 1"}], "next": ""}
                         elif operation == "teams":
                             code, response = 200, {"teams": [TEAM_SUMMARY], "next": ""}
+                        elif operation == "my_applications":
+                            code, response = 200, {"teams": [TEAM_SUMMARY] if parent.application_pending else [], "next": ""}
+                        elif operation == "team_applicants":
+                            code, response = 200, {"team_id": TEAM['id'],
+                                "applicants": TEAM['members'] if parent.application_pending else [], "next": ""}
+                        elif operation in ("apply_team", "withdraw_application", "approve_application", "reject_application"):
+                            body = json.loads(raw)
+                            parent.application_pending = operation == "apply_team"
+                            code, response = 200, {"team_id": body['team_id'],
+                                "account_id": body.get('account_id', ACCOUNT['_id']),
+                                "status": {'apply_team': 'applied', 'withdraw_application': 'withdrawn',
+                                    'approve_application': 'approved', 'reject_application': 'rejected'}[operation]}
+                            if parent.mode == 'application_uncertain':
+                                code, response = 503, {'error': {'code': 'private_error', 'message': parent.secret}}
                         elif operation == "create_team":
                             parent.directory_created = True
                             if parent.mode == "directory_uncertain":
@@ -367,6 +381,7 @@ class BridgeTests(unittest.TestCase):
         type(self).revoked = False
         type(self).directory_override = None
         type(self).directory_created = False
+        type(self).application_pending = False
 
     def connect(self):
         raw = socket.create_connection(("127.0.0.1", 15001), timeout=12)
@@ -387,7 +402,9 @@ class BridgeTests(unittest.TestCase):
 
     def request(self, operation="me", body=None, token=None):
         value = {"v": 1, "id": "a" * 32, "op": operation, "body": body or {}}
-        if operation in ("me", "logout", "areas", "teams", "my_team", "create_team", "team_detail"):
+        if operation in ("me", "logout", "areas", "teams", "my_team", "create_team", "team_detail",
+                         "my_applications", "team_applicants", "apply_team", "withdraw_application",
+                         "approve_application", "reject_application"):
             value["token"] = token or self.token
         return value
 
@@ -487,6 +504,78 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(self.exchange(self.request("my_team"))["data"]["team"], TEAM)
         self.assertEqual(sum(path.endswith("/create_team") for _, path, _, _ in self.calls[start:]), 1)
 
+    def test_membership_cycle_and_uncertain_mutation_never_retried(self):
+        start = len(self.calls)
+        team_id, account_id = TEAM['id'], ACCOUNT['_id']
+        self.assertEqual(self.exchange(self.request('my_applications', {'after': ''}))['data'],
+                         {'teams': [], 'next': ''})
+        for operation, status in (('apply_team', 'applied'), ('withdraw_application', 'withdrawn'),
+                                   ('approve_application', 'approved'), ('reject_application', 'rejected')):
+            body = {'team_id': team_id}
+            if operation in ('approve_application', 'reject_application'):
+                body['account_id'] = account_id
+            response = self.exchange(self.request(operation, body))
+            self.assertEqual(response['status'], 200)
+            self.assertEqual(response['data'], {'team_id': team_id, 'account_id': account_id, 'status': status})
+        type(self).mode = 'application_uncertain'
+        response = self.exchange(self.request('apply_team', {'team_id': team_id}))
+        self.assertEqual(response['status'], 503)
+        self.assertEqual(self.exchange(self.request('my_applications', {'after': ''}))['data'],
+                         {'teams': [TEAM_SUMMARY], 'next': ''})
+        self.assertEqual(self.exchange(self.request('team_applicants', {'team_id': team_id, 'after': ''}))['data'],
+                         {'team_id': team_id, 'applicants': TEAM['members'], 'next': ''})
+        self.assertEqual(sum(path.endswith('/apply_team') for _, path, _, _ in self.calls[start:]), 2)
+        for method, path, headers, _body in self.calls[start:]:
+            self.assertEqual(method, 'POST')
+            self.assertTrue(path.startswith('/internal/v1/team-directory/'))
+            self.assertEqual(headers['X-Player-Token'], self.token)
+
+    def test_membership_page_bounds_identity_and_private_fields_are_rejected(self):
+        team_id, account_id = TEAM['id'], ACCOUNT['_id']
+        applicant = TEAM['members'][0]
+        ack = {'team_id': team_id, 'account_id': account_id, 'status': 'approved'}
+        other_id = '32345678-1234-1234-1234-123456789abc'
+        cases = [
+            ('my_applications', {'after': ''}, {'teams': [TEAM_SUMMARY] * 21, 'next': ''}),
+            ('my_applications', {'after': team_id}, {'teams': [TEAM_SUMMARY], 'next': ''}),
+            ('my_applications', {'after': ''}, {'teams': [TEAM_SUMMARY], 'next': team_id}),
+            ('team_applicants', {'team_id': team_id, 'after': ''},
+             {'team_id': other_id, 'applicants': [], 'next': ''}),
+            ('team_applicants', {'team_id': team_id, 'after': ''},
+             {'team_id': team_id, 'applicants': [applicant] * 21, 'next': ''}),
+            ('team_applicants', {'team_id': team_id, 'after': ''},
+             {'team_id': team_id, 'applicants': [applicant] * 2, 'next': ''}),
+            ('team_applicants', {'team_id': team_id, 'after': account_id},
+             {'team_id': team_id, 'applicants': [applicant], 'next': ''}),
+            ('team_applicants', {'team_id': team_id, 'after': ''},
+             {'team_id': team_id, 'applicants': [{**applicant, 'password_hash': self.secret}], 'next': ''}),
+            ('team_applicants', {'team_id': team_id, 'after': ''},
+             {'team_id': team_id, 'applicants': [{**applicant, 'level': True}], 'next': ''}),
+            ('team_applicants', {'team_id': team_id, 'after': ''},
+             {'team_id': team_id, 'applicants': [applicant], 'next': account_id}),
+            ('approve_application', {'team_id': team_id, 'account_id': account_id}, {**ack, 'team_id': other_id}),
+            ('approve_application', {'team_id': team_id, 'account_id': account_id}, {**ack, 'account_id': other_id}),
+            ('approve_application', {'team_id': team_id, 'account_id': account_id}, {**ack, 'status': 'rejected'}),
+            ('approve_application', {'team_id': team_id, 'account_id': account_id}, {**ack, 'secret': self.secret}),
+            ('apply_team', {'team_id': team_id}, {**ack, 'status': 'applied', 'account_id': 'bad'}),
+        ]
+        for operation, body, response in cases:
+            with self.subTest(operation=operation, response=response):
+                type(self).directory_override = (200, response)
+                result = self.exchange(self.request(operation, body))
+                self.assertEqual(result['status'], 503)
+                self.assertNotIn(self.secret, json.dumps(result))
+        # Valid multi-area summaries and full applicant pages survive unchanged.
+        summaries = [{**TEAM_SUMMARY, 'id': f'{index:08x}-1234-1234-1234-123456789abc',
+                      'area_id': f'area-{index}'} for index in range(1, 21)]
+        applicants = [{**applicant, 'id': item['id']} for item in summaries]
+        for operation, body, response in (
+            ('my_applications', {'after': ''}, {'teams': summaries, 'next': summaries[-1]['id']}),
+            ('team_applicants', {'team_id': team_id, 'after': ''},
+                {'team_id': team_id, 'applicants': applicants, 'next': applicants[-1]['id']})):
+            type(self).directory_override = (200, response)
+            self.assertEqual(self.exchange(self.request(operation, body))['data'], response)
+
     def test_directory_invalid_requests_are_rejected_before_forwarding(self):
         cases = [self.request("areas", {"after": {"$gt": ""}}),
                  self.request("teams", {"area_id": "../server/finish", "after": ""}),
@@ -495,7 +584,13 @@ class BridgeTests(unittest.TestCase):
                  self.request("create_team", {"name": "Bad<Name", "area_id": "area-1"}),
                  self.request("create_team", {"name": "Good Name", "area_id": "area-1", "experience": 99}),
                  self.request("team_detail", {"team_id": "area-1"}),
-                 self.request("settle", {"team_id": TEAM["id"]})]
+                 self.request("settle", {"team_id": TEAM["id"]}),
+                 self.request('my_applications', {'after': {'$gt': ''}}),
+                 self.request('team_applicants', {'team_id': TEAM['id'], 'after': '', 'limit': 64}),
+                 self.request('apply_team', {'team_id': TEAM['id'], 'account_id': ACCOUNT['_id']}),
+                 self.request('withdraw_application', {'team_id': TEAM['id'], 'account_id': ACCOUNT['_id']}),
+                 self.request('approve_application', {'team_id': TEAM['id'], 'account_id': {'$ne': ''}}),
+                 self.request('reject_application', {'team_id': TEAM['id'], 'account_id': '../admin'})]
         missing_token = self.request("areas", {"after": ""})
         missing_token.pop("token")
         cases.append(missing_token)
@@ -537,7 +632,8 @@ class BridgeTests(unittest.TestCase):
         for status, backend, expected in ((401, "expired", "invalid_session"),
                 (403, "private_permission_detail", "forbidden"), (404, "not_found", "not_found"),
                 (409, "already_member", "already_member"), (409, "conflict", "conflict"),
-                (409, "invalid_input", "invalid_input"), (409, "busy", "busy")):
+                (409, "invalid_input", "invalid_input"), (409, "busy", "busy"),
+                (409, "capacity", "capacity"), (409, "not_requested", "not_requested")):
             with self.subTest(status=status, code=backend):
                 type(self).directory_override = (status, {"error": {"code": backend, "message": self.secret}})
                 result = self.exchange(self.request("my_team"))
