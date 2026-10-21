@@ -1,27 +1,10 @@
-# Test admin account editing and password reset
+# Update the Android login screen after the successful admin reset
 
-## Current connection check — use the existing services
+Admin tests A–C are confirmed: unchanged Edit saved, mismatched confirmation rejected and UniPlayer password reset succeeded. Do not repeat those tests or reset again. D still returns **Invalid username or password**, and the user confirms **Show password is absent**. The pending1192607 credential-input update is the next step. The exact cause of the login rejection is not yet proven.
 
-The latest returned output confirms MongoDB and the admin service started successfully, but Android says the Alliance service is unavailable. Bridge status is not shown. Keep both working windows open. If no account-bridge window is running, open a third PowerShell window and run:
+## 1. Pull the existing update
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAllianceBridge.ps1' `
-    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime') `
-    -MsysRoot 'D:\Test\wesnoth-setup\msys64'
-```
-
-Expected: `ALLIANCE ACCOUNT BRIDGE READY 100.99.99.14:15001 -> local account service`. Keep all three windows open. If a bridge is already running, return its current console output instead of starting another. If startup fails, return the error and saved diagnostics/alliance-bridge-run-*.txt. Do not rebuild or initialize anything for this step.
-
-Once READY appears, try the existing Android Alliance login once; use the new password if the admin reset was completed. Return the bridge output and exact game result. If unavailable persists, stop repeated attempts. The two healthy-service logs do not prove that the admin reset occurred or that the new admin pages were tested. The edit/reset checklist below remains pending; do not repeat a password reset that already succeeded. No pull is required to run this existing launcher. The earlier update instructions below apply only if the feature has not yet been pulled.
-
-## Admin-feature delivery and acceptance reference
-
-The user requested these features explicitly. This update adds Edit and Reset password to the local admin Accounts page. No live account has been reset by VPS development. The original Android input mismatch is still unexplained; password reset provides the requested recovery action and does not establish its cause.
-
-## 1. Update the existing repositories
-
-Quit the Android game for this test. In the existing admin-service or completed login-trace window, press Ctrl+C and wait for its PowerShell prompt. Stop only that backend; keep MongoDB and the READY account bridge open. Temporarily connect Windows to GitHub and run:
+Quit the game in LDPlayer. Keep the healthy MongoDB, admin and account-bridge windows open. Temporarily connect Windows to GitHub and run:
 
 ```powershell
 & {
@@ -36,38 +19,9 @@ Quit the Android game for this test. In the existing admin-service or completed 
 }
 ```
 
-Expected: both pulls succeed. Stop on any Git/local-change error and return it without discarding files. Disconnect WAN while retaining local Ethernet. This delivery changes client documentation; pulling may also fetch the pending1192607 sources, but does not build/install them. This feature needs no APK or bridge rebuild, installation, new dependency or database initialization.
+Expected: both pulls succeed or report Already up to date. Stop on a Git/local-change error without discarding files. Disconnect WAN again and keep local Ethernet connected. This records the accepted reset and supplies the already delivered credential-input update; no server/bridge rebuild, service restart or dependency installation is needed.
 
-## 2. Start the updated backend
-
-Run in the now-stopped admin window:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAlliance.ps1' `
-    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
-```
-
-Expected: ALLIANCE DATABASE CHECK PASSED and Alliance admin: http://127.0.0.1:18765/. Keep this window open. The existing bridge reconnects to the backend on requests; no bridge restart is needed. The normal backend replaces the disarmed diagnostic backend. On startup failure, return its console and diagnostics/alliance-serve-*.txt without private runtime files.
-
-## 3. Browser and recovery checks
-
-Open http://127.0.0.1:18765/accounts on Windows. If prompted, sign in with administrator Uni and its administrator password. Use one combined report for this batch; stop on unexpected failure or an uncertain save.
-
-| Check | Action | Expected result |
-| --- | --- | --- |
-| A. Edit page | Open UniPlayer -> Edit account. Verify the account ID and current username/status. Keep UniPlayer and Active unchanged, enter reason "Verify account editor", and Save account. | Account saved; same ID, username, status, role, leader and team. An edit_account audit is recorded. This checks the new form without renaming an original player or changing access. |
-| B. Confirmation guard | Open UniPlayer -> Reset password. Choose a new private password of 12–128 characters; enter a deliberately different confirmation and reason "Player access recovery". Submit once. | Confirmation must match exactly; no reset occurs. Both password controls are empty afterwards. Do not send either entered value. |
-| C. Reset | On the same form enter the chosen new password identically in both fields and the reason, then select Reset password and end sessions once. | Password reset; all UniPlayer sessions ended. UniPlayer remains active with the same ID, role, leader, XP and team. Audit log shows reset_password, the target ID and reason. Keep the new password locally. |
-| D. Android recovery | Reopen the existing game, retain Trusted server100.99.99.14:15001, then Start game -> Alliance -> Log in as UniPlayer with the new password once. | Logged in. View personal leader shows the original player ID, Spearman, level1, Experience0 and Total experience0. My team shows Koichi, original ID4cd736d3-dc6c-4c3d-a816-e7682b56db30, UniPlayer captain and UniRecruit,2/8, team level1/XP0/rating1000. |
-
-On a stale-form message use the explicit Reload link and review the record. On an uncertain save do not repeat the reset; report what happened. Never delete/recreate accounts or initialize the database to recover a password. If login still fails, stop further attempts and report the exact error and installed app version; do not reset repeatedly. Client1192607's Show password can inspect entered text locally if installed; hide it before submitting and never share a screenshot containing it.
-
-Return A–D results, exact errors (if any), whether the displayed IDs/game values remained the same, and actual WAN status. Do not send passwords, hashes, session tokens or private runtime files. Renaming/suspending an account and own-admin reset are implemented and VPS-tested; this first Windows checklist deliberately leaves original player names/status and the administrator credentials intact. For a later deliberate rename, the new username becomes the login name and target sessions end; a suspended account stays suspended after password reset.
-
-## Separate pending Android credential-input update
-
-1192607 was delivered before this admin feature; its Windows build/install has not yet been reported. It adds Show password and corrected field editing. It is not required to open/reset through the admin website. Do not rebuild it solely for this backend update. If1192607 is already installed, report that version; do not rebuild/reinstall. If login still fails on the older1192606 app, return the result first so the remaining input update can be coordinated. Its preserved build/install commands are below for that separate step, not part of A–D:
+## 2. Build and install1192607 offline
 
 ```powershell
 & {
@@ -89,8 +43,17 @@ Return A–D results, exact errors (if any), whether the displayed IDs/game valu
 }
 ```
 
-Expected: original1192606 account engine/APK stages are retained under unique before-credential-input-ui backups. All older journals/backups,all568 original engine objects and completed libraries remain intact; the account relink reuses567 original objects. The targeted build finishes with ANDROID ACCOUNT GAME REBUILD COMPLETE, and installation finishes with ANDROID ACCOUNT GAME INSTALL COMPLETE and Version1192607. No OBB transfer or app-data deletion occurs. Reports are in client diagnostics/android-account-{rebuild,build,install}-*.txt. Stop at the first failure; do not clear locks or rerun initialization.
+Expected: original1192606 account engine/APK stages are retained under unique before-credential-input-ui backups; recorded preparations reuse their retained backups. All foundation libraries, original engine objects, OBB, saved profile, user data and database remain intact. The targeted build finishes with ANDROID ACCOUNT GAME REBUILD COMPLETE. Installation finishes with ANDROID ACCOUNT GAME INSTALL COMPLETE and Version1192607. It accepts installed1192606/1192607 and rejects other versions before installing. Do not manually rename/delete stages, remove locks, uninstall the app or initialize anything if a check stops. Return the saved client diagnostics/android-account-{rebuild,build,install}-*.txt on failure.
 
+## 3. Inspect the new password locally, then sign in once
+
+Confirm the setup screen still shows Trusted server100.99.99.14:15001. Choose Start game -> Alliance -> Log in. The Show password checkbox must now be visible and initially off. If it is still absent after the installer reports1192607, stop and return that observation and the install log.
+
+Enter UniPlayer and the NEW password saved by the successful admin reset. Check Show password and compare the displayed text locally with that new password, including case and symbols. If the text differs, correct it locally. Toggling masking must preserve the text. Hide it again and submit once. Do not send the password, a visible-password screenshot, hash or token.
+
+Expected: Logged in. Then View personal leader and My team should show the original player ID, Spearman/level1/Experience0/Total experience0, Koichi ID4cd736d3-dc6c-4c3d-a816-e7682b56db30, captain UniPlayer/member UniRecruit2/8, team level1/XP0/rating1000. If login fails, stop repeated attempts and return the exact message, whether the displayed password matched locally, and the install log. The previous local password_match checked the old password; it is not evidence about the new one. No new trace or additional reset is requested now.
+
+Return one combined report: build/install markers and version, retained Trusted server, checkbox visibility/default/toggle behavior, whether the displayed new password matched, login result and unchanged game values on success. Include actual WAN status during build and testing. Planning tests stay paused until login is recovered.
 
 ## Paused planning acceptance — resume after login recovery
 
