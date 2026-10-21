@@ -1,24 +1,49 @@
-# Alliance login rejection: inspect existing accounts and service health
+# Alliance login diagnosis: one hidden local password check
 
-The user reports that all attempted accounts receive Invalid username or password in main menu -> Alliance -> Log in. Current cause is unconfirmed. Keep all three service windows open and pause planning A–H and further player login attempts. The completed1192606 build/install and earlier service-ready consoles remain valid; no pull, rebuild, reinstall or database initialization is required. Do not create replacements, reset passwords, change account access or clear app data during diagnosis.
+Both UniPlayer and UniRecruit are present and active on the Windows admin Accounts page. The fresh backend diagnostic now passes HTTP200, all four health flags True and network_error=None, with local MongoDB27018 and Python18765 listeners. The exact login cause remains unconfirmed. Preserve all three service windows, accounts, teams, profile runtime and installed1192606 app. Pause planning A–H and further Android login attempts; no password reset, replacement account, database initialization, rebuild or reinstall is required.
 
-## Account presence and status confirmed
+## 1. Pull the diagnostic using the established MSYS2 Git route
 
-The user confirms both UniPlayer and UniRecruit are present and active on the admin Accounts page, in response to the player-role/status question. Accept this user observation; do not request the same inspection again. It does not verify their passwords, original IDs, a fresh administrator login, the bridge's cached credential or Android input.
+Temporarily connect to GitHub and run in PowerShell:
 
-## Next: collect current authenticated backend health
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
+    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
+        $repo = '/d/Test/wesnoth-setup/' + $name
+        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
+        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Stop and send the output." }
+    }
+}
+```
 
-In a separate PowerShell window:
+Return to WAN-disconnected use while local Ethernet stays connected. The client receives documentation only. Existing game/server sources and completed stages remain unchanged; current services do not need reloading for this separate diagnostic.
+
+## 2. Check UniPlayer's password once, locally
+
+Run directly in a normal Windows PowerShell console. Do not pipe this command, wrap it in Tee-Object/Start-Transcript, redirect input/output or pass a password as an argument. The helper requires inherited console input and deliberately refuses redirected input. It uses the already installed Alliance Python and fixed local database; nothing is downloaded.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Test-WindowsAllianceBackend.ps1' `
-    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
+    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Test-WindowsAllianceLogin.ps1' `
+    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime') `
+    -Username 'UniPlayer'
 ```
 
-A healthy result is outcome=healthy, http_status=200, all four flags True, network_error=None and ALLIANCE BACKEND CHECK PASSED. It creates only new diagnostic reports, without resetting accounts or starting/stopping services. Return the console and its matching server diagnostics/alliance-backend-*.txt and.json, whether passed or failed. A healthy result verifies the selected runtime credential against the currently running backend and a MongoDB ping; it does not validate a player's password or the bridge's in-memory credential. HTTP401 from either player authentication or internal authorization can produce the game's generic message, so do not infer a typing error from it.
+At `Player password (hidden; checked locally once):` type the same UniPlayer password intended for Alliance login, then press Enter. Nothing, including asterisks, should appear as you type. This is the player password, not administrator Uni's password; never send it in chat. Password characters are preserved exactly, including spaces and case. The diagnostic performs no sign-in and does not change accounts, hashes, sessions, failed-attempt counts or team data.
 
-Return the health result; the Accounts-page observation is already accepted. Do not share runtime files, stored hashes, passwords, tokens, keys or request bodies. Stop before the planning sequence below until the login cause is resolved.
+Expected if the entered password matches the stored account:
+
+```text
+outcome=password_match; password_check=match
+ALLIANCE LOGIN DIAGNOSTIC COMPLETE
+ALLIANCE LOGIN DIAGNOSTIC REPORT VERIFIED
+```
+
+`password_mismatch` is also a completed diagnostic; it means these entered characters did not verify against this local record. It does not establish why Android login failed. Missing/ineligible account or invalid/unsupported stored hash also produces an explicit outcome without resetting anything. Input/database/report errors fail safely. COMPLETE and exit0 mean collection completed, not a successful login.
+
+Return the console outcome and the printed `wesnoth_server\diagnostics\alliance-login-*.json` file. This sanitized report contains account ID/role/status, match outcome and the observed current attempt-count window; it excludes passwords, stored hashes, database credentials and runtime secrets. The attempt window is sampled before password entry and may expire while typing, so interpret it with `window_ends_at`. Do not send runtime/config files. Stop here before another Android login. If verification matches, we will use a bridge-only restart and one controlled login attempt to distinguish stale loaded service credentials from remaining input/login-path issues. The existing authenticated backend health cannot inspect the bridge's cached credential.
 
 ## Paused planning acceptance — resume after login recovery
 
