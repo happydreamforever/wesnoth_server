@@ -1,10 +1,12 @@
-# Trace one Android login against the existing backend
+# Update Alliance password entry, then make one controlled login
 
-UniPlayer still receives “Invalid username or password” after a confirmed bridge restart and fresh READY. The local password match, healthy backend and active player records are already accepted. The cause remains unproven. This update records the actual rejection branch during one ordinary Android login, without recording credentials or changing the response shown in the game. Do not reset accounts or repeat the earlier diagnostics.
+The returned Windows trace identifies password_mismatch/HTTP401 after service authorization and account lookup. The user typed with the Windows keyboard in LDPlayer. The earlier Windows local password check matched. The exact cause of the differing received password is still unproven; do not reset or recreate accounts.
 
-## 1. Stop only the admin service and pull
+1192607 adds Show password, off by default, and an Alliance credential field that keeps the displayed text and submitted value consistent through edits, Unicode, selection replacement and the128-character limit. It also prevents temporary preedit text from entering the field. Passwords are not trimmed or normalized. This gives a local inspection method and fixes reproduced editing defects without claiming those defects caused this incident.
 
-In the PowerShell window showing `Alliance admin: http://127.0.0.1:18765/`, press Ctrl+C once and wait for the prompt. Keep MongoDB and the existing READY account bridge running. Leave the game at its main menu; do not attempt login during the update. Temporarily reconnect Windows to GitHub, then run:
+## 1. Pull the update
+
+Quit the Android game. Keep MongoDB, the existing disarmed trace backend and READY account bridge running; do not start another admin service or rerun the trace. Temporarily connect Windows to GitHub and run:
 
 ```powershell
 & {
@@ -19,34 +21,45 @@ In the PowerShell window showing `Alliance admin: http://127.0.0.1:18765/`, pres
 }
 ```
 
-Expected: both fast-forwards or Already up to date, followed by the completion message. If Git reports local changes, stop and send the error; do not reset or discard files. No native build, Android installation, profile import, database initialization or package download is needed. Disconnect WAN again while retaining local Ethernet.
+Expected: both updates succeed. Stop on any local-change or Git error and send it; do not discard files. Disconnect WAN again while leaving local Ethernet connected. No server/bridge rebuild, database initialization or dependency installation is needed.
 
-## 2. Start the backend with a one-request trace
-
-Use the stopped admin-service window:
+## 2. Rebuild and install the account-game update offline
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Trace-WindowsAllianceLogin.ps1' `
-    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime') `
-    -Username 'UniPlayer'
+& {
+    $ErrorActionPreference = 'Stop'
+    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client' -ErrorAction Stop
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File '.\tools\Rebuild-WindowsAndroidAccountGame.ps1'
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Credential update build failed. Send the saved rebuild and build logs.'
+    }
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File '.\tools\Install-AndroidAccountGame.ps1' `
+        -KeepSavedProfile
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Credential update installation failed. Send the saved install log.'
+    }
+}
 ```
 
-This starts the regular local account/admin backend with a temporary diagnostic observer. Keep this window open along with MongoDB and the existing bridge. It uses the same runtime, accounts, port18765 and admin website. Do not also run Run-WindowsAlliance.ps1 while this backend is serving.
+Expected: original1192606 account engine/APK stages are retained under unique before-credential-input-ui backups. All older journals/backups,all568 original engine objects and completed libraries remain intact; the account relink reuses567 original objects. The targeted build finishes with ANDROID ACCOUNT GAME REBUILD COMPLETE, and installation finishes with ANDROID ACCOUNT GAME INSTALL COMPLETE and Version1192607. No OBB transfer or app-data deletion occurs. Reports are in client diagnostics/android-account-{rebuild,build,install}-*.txt. Stop at the first failure; do not clear locks or rerun initialization.
 
-Wait for `ALLIANCE DATABASE CHECK PASSED`, the admin URL and `ALLIANCE LOGIN TRACE READY` before proceeding. The capture lasts five minutes and accepts only one internal player-login request. No password is entered in PowerShell. If startup reports an error or an occupied port, stop and return that fixed error without killing processes or retrying Android login.
+## 3. Inspect entered text locally and submit once
 
-## 3. Make one Android attempt and return the report
+Confirm Wesnoth Alliance still displays Trusted server100.99.99.14:15001, then Start game -> Alliance -> Log in. If the saved profile is missing or unusable, stop and report the message without reimporting or resetting it.
 
-Within five minutes of READY, open Main menu -> Alliance -> Log in, clear both fields, enter UniPlayer and the password that matched the earlier local diagnostic, and submit once. Do not send or display the password. Return the exact game result and the new sanitized `diagnostics\alliance-login-trace-*.json` named in the PowerShell window. Expected in PowerShell: `ALLIANCE LOGIN TRACE COMPLETE: outcome=...; http_status=...`. The capture completes even when the game reports invalid credentials; this marker is not a successful-login claim.
+Enter UniPlayer and the password that matched the earlier Windows local check, using the Windows keyboard. Show password must initially be unchecked and the field masked. Check Show password and compare the displayed text locally with the intended password, including case and symbols. Do not share the visible password or a screenshot containing it. If the text differs, correct it locally and note only whether characters were missing, duplicated or different; do not report the characters themselves. Toggling Show password off and back on should preserve the entered text.
 
-The report contains only fixed diagnostic outcomes and HTTP status, not submitted password, password hash, token, request body, secret or fingerprint. The ordinary login retains its normal attempt-counter/session behavior; this is not the previous read-only password check. Do not make repeated attempts. If no request reaches the backend before the deadline, return the timeout report and game result; do not restart other services speculatively.
+Hide the password, then submit once. Expected: Logged in. If successful, View personal leader and My team must show the existing player ID, Spearman/level1/Experience0/Total experience0 and unchanged Koichi roster (UniPlayer captain, UniRecruit member,2/8). Do not create another player or begin planning tests yet. If it fails, stop further attempts and return the exact error plus whether the revealed text matched the intended password. The old backend capture is already disarmed; another trace is not requested.
 
-After capture or timeout, the diagnostic observer turns off and this window continues serving the normal backend. Leave it running while returning the report. Do not wait for the PowerShell prompt or stop it merely to obtain the report. Report whether WAN was disconnected during this attempt. The older sanitized password-check JSON is optional supporting evidence if available; no rerun is needed. Planning A–H stays paused until the login failure is resolved.
+Return one combined report: build/install result, retained Trusted server, Show password default/toggle behavior, whether the locally inspected text matched, exact login result and unchanged profile/team values if login succeeds. Include actual WAN status during build/test. Never include passwords, hashes, tokens or private runtime files. The full earlier sanitized trace JSON is optional supporting evidence; its supplied outcome line is already accepted.
 
 ## Paused planning acceptance — resume after login recovery
 
-The returned Windows output now confirms all three services ready: MongoDB127.0.0.1:27018, authenticated database/schema/transaction checks and admin127.0.0.1:18765, and bridge100.99.99.14:15001. Keep those three PowerShell windows and LDPlayer open. The bridge/Android build and installed1192606 are already accepted. No pull, rebuild, reinstall, database initialization, repeated backend diagnostic or initial service restart is required. The intentional restart occurs only at check F.
+The returned Windows output now confirms all three services ready: MongoDB127.0.0.1:27018, authenticated database/schema/transaction checks and admin127.0.0.1:18765, and bridge100.99.99.14:15001. Keep those three PowerShell windows and LDPlayer open. The earlier1192606 battle-planning build/install remains accepted. Resume this checklist only after the1192607 credential update and successful login above have been confirmed. At that point no additional pull/build/install, database initialization, repeated backend diagnostic or initial service restart is required. The intentional restart occurs only at check F.
 
 This update tests saved battle planning: approved maps, fixed lineups, two captain approvals, player readiness, persistence and cancellation. Combat, battle start and XP/rating rewards are later work. Use one LDPlayer and log out/log in to switch between four players. Keep WAN disconnected and local Ethernet connected; report the actual WAN state with the combined results.
 
