@@ -1,35 +1,35 @@
-# Next test: create and view the first Alliance team
+# Next test: retrieve the saved Koichi team
 
-The user confirms that MongoDB, the admin service and the account bridge all restarted, followed by reopening the game and logging in again. The same player ID, Spearman, level 1 and both experience values of 0 returned. WAN stayed disconnected while local Ethernet remained connected. Accept account persistence across that restart at user-observed scope; do not repeat the accepted test.
+The user confirms the initial **You do not belong to a team yet.** message and successful creation of **Koichi** in **Yama**. The returned roster shows UniPlayer as captain, Spearman at leader level 1, team level 1, team experience 0, rating 1000 and members 1/8. The user explicitly confirms WAN was disconnected while local Ethernet stayed connected during the no-team check and creation.
 
-This update adds **Teams** inside the existing Alliance menu: enabled areas, team lists, creation and the player's own roster. The creator becomes captain of a team with capacity 8. Joining teams, captain management, campaign rewards and team battles are later updates. Team experience is separate from personal-leader experience.
+These are the actual team and area; the earlier UniAlliance/Area 1 names were examples. Keep Koichi and its membership. The creation reply is accepted; a separate post-creation lookup has not yet been reported.
 
-**The 1192602 installation and saved trusted server are accepted. Perform the manual login/My team check below, then return its result.** The returned installer output confirms artifact verification, successful in-place APK installation, installed version and a fresh setup marker. The user explicitly confirms **Wesnoth Alliance**, **Trusted server: 100.99.99.14:15001** and **Start game** are visible. Installation WAN status was not supplied; the preceding build was explicitly confirmed WAN-disconnected.
+## Current step: read My team again
 
-Keep MongoDB, the admin service and the bridge running in their existing windows. Keep WAN disconnected and local Ethernet connected. Use the current installed app and saved profile. No PowerShell command, new pull, rebuild, installation, profile import, data copy, database initialization or service restart is needed.
+Keep the game and all three Windows backend windows (MongoDB, admin service and account bridge) running. Keep WAN disconnected and local Ethernet connected. Use the current UniPlayer session. No PowerShell command or new delivery is needed.
 
-## 1. Log in and read My team
+1. Press **OK** on the team details dialog to return to the Teams menu.
+2. Select **My team** and press **Open**.
+3. Compare the returned details with this saved reference:
 
-1. In LDPlayer's **Wesnoth Alliance** setup screen, press **Start game** and wait for the game main menu.
-2. Select **Alliance**. Select the **Log in** row and press **Open**, then enter the existing **UniPlayer** username and its private password. Press **Log in**. Do not create another player account.
-3. Expect **Logged in.** with the same player ID, **Spearman**, **Level 1**, **Experience 0** and **Total experience 0**. Press **OK**.
-4. Select **Teams** and press **Open**. The Teams menu should contain **Browse areas and teams**, **Create team** and **My team**.
-5. Select **My team** and press **Open**. Expect **You do not belong to a team yet.** The following text explains that Create team makes you captain and joining another team comes in a later update.
+| Field | Expected value |
+| --- | --- |
+| Team | Koichi |
+| Team ID | `4cd736d3-dc6c-4c3d-a816-e7682b56db30` |
+| Area | Yama |
+| Area ID | `ff010e4d-af74-4906-8ba6-5f096aaf90ec` |
+| Team level | 1 |
+| Team experience | 0 |
+| Rating | 1000 |
+| Members | 1/8 |
+| Roster | UniPlayer (captain) — Spearman, leader level 1 |
 
-**Stop at that message.** Return whether login shows the same player/leader values, whether the Teams menu appeared, the exact My team result and whether WAN stayed disconnected. This read verifies the first authenticated team-directory request; it creates no team and awards no experience. If My team already shows a roster, report its name/ID instead of creating another team. If the menu is missing, login fails or the service returns an error, return that message before changing/reinstalling anything. Keep passwords and session tokens private.
+**Stop at that dialog.** Return whether the team ID and every value match, plus whether WAN stayed disconnected. If an error or no-team message appears, send its exact text and keep the existing team, session and services intact. Do not create another team or reinitialize the database.
 
-## 2. Later: create and retrieve the first team after My team review
+My team sends a new authenticated request and reads the saved account/team/roster. It does not reuse the creation reply, create a team or award experience. This checks subsequent retrieval with the current services running; it does not establish persistence through a restart.
 
-Keep WAN disconnected and local Ethernet connected throughout this manual test. Use the current UniPlayer login and the existing **Area 1**. All selectors below require choosing the named row and pressing **Open**.
+## Later checks after this result
 
-1. After the no-team result above has been reviewed, dismiss that message with **OK** to return to the Teams menu. If a team already exists, record its name and ID and report it before creating another.
-2. Select **Browse areas and teams → Open**. Confirm that **Area 1** appears, select it and press **Open**. Expect **There are no active teams in Area 1 yet.** Dismiss with **OK**, then choose **Back** from the area selector to return to the Teams menu. If teams already appear, report the observation; an empty database is not required for future use.
-3. Select **Create team → Open**, choose **Area 1 → Open**, and enter **UniAlliance** in the team-name field. Press **Continue**. On **Confirm new team**, verify the name and area, then select **Create this team → Open** once.
-4. Expect **Your team was created. You are its captain.** The details should show **UniAlliance**, a new team ID, **Area 1**, **Team level 1**, **Team experience 0**, **Rating 1000**, **Members 1/8**, and roster **UniPlayer (captain) — Spearman, leader level 1**. Record the displayed team ID for comparison.
-5. Dismiss with **OK**, then select **My team → Open**. Expect the same team ID, name, area, captain and values from a new server request. Dismiss with **OK**.
-6. Select **Browse areas and teams → Open → Area 1 → Open**. Select the **UniAlliance** row and press **Open**. Expect the same team and roster. **More areas**, **More teams** and **Previous page** appear only when additional pages exist; select a navigation row and press **Open** to use it.
-7. Dismiss with **OK**, choose **Back** from the team list, **Back** from the area list, then **Back** from the Teams menu. In the Alliance menu, choose **View personal leader → Open**. Expect the same player ID, **Spearman**, **Level 1**, **Experience 0** and **Total experience 0**. Creating a team does not award personal or team experience.
+Use **Browse areas and teams → Open → Yama → Open**, then select **Koichi → Open**, and compare the same team ID and roster. Return through **Back** to Alliance and use **View personal leader → Open** to check the same player ID, Spearman, level 1, Experience 0 and Total experience 0. Team creation is not intended to award personal XP. A later team-persistence phase can verify the same stored team after a controlled restart; the earlier account-only restart test predates this team.
 
-If creation is cancelled, times out or returns an uncertain response, **do not repeat Create team immediately**. Open **My team** first: the server may already have committed the creation. Report the exact message and the own-team result. A team permission/membership error should preserve the current login; an expired session requires a fresh login.
-
-Stop at the personal-leader dialog. Return the team ID comparison, captain/roster/team values, unchanged personal-leader values and whether WAN remained disconnected. These observations establish the first team directory/creation slice only; joining, captain-management actions, campaign rewards and team battles are not implemented by this update. Never send passwords, session tokens, private keys or private runtime configuration. Running launchers finalize their transcripts when stopped; do not stop a healthy component just to finish its log.
+Joining teams, captain-management actions, custom campaign rewards and team battles remain later implementation slices. Preserve the installed APK, OBB/data, saved server profile, identity, runtime and build backups. Do not repeat creation, pulls, builds or installation for this manual check. Keep passwords, session tokens and private runtime files private.
