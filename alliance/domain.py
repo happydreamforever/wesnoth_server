@@ -655,6 +655,9 @@ class AllianceService:
             self.db.teams.update_one({'_id': team_id}, {
                 '$push': {'members': {'account_id': account_id, 'joined_at': _now()}},
                 '$pull': {'join_requests': account_id}, '$inc': {'revision': 1}}, session=session)
+            # A new membership cannot reuse consent from an earlier membership,
+            # including a departure made before draft consent was revoked here.
+            self._revoke_draft_readiness(account_id, session)
             self._record_application_decision(account_id, team, 'approved', session)
             return self._team(team_id, session)
         return self._tx(write)
@@ -688,6 +691,15 @@ class AllianceService:
         result = self._leave_team(actor_id)
         return {'team_id': result['team_id'], 'left': True}
 
+    def _revoke_draft_readiness(self, account_id, session):
+        # Consent belongs to the selected player's continuous membership, not
+        # merely to the saved lineup. Keep cancelled/completed history intact.
+        # The caller changes membership in this same transaction; competing
+        # readiness/start/cancel writes must serialize against that change.
+        self.db.game_runs.update_many({'kind': 'alliance', 'state': 'draft',
+            'participants.account_id': account_id, 'ready': account_id},
+            {'$pull': {'ready': account_id}}, session=session)
+
     def _leave_team(self, actor_id, expected_team_id=None, allow_archive=True):
         def write(session):
             actor = self._player(actor_id, session)
@@ -709,6 +721,7 @@ class AllianceService:
                 update['$set'] = {'status': 'archived', 'captain_id': None, 'join_requests': []}
             self.db.teams.update_one({'_id': team['_id']}, update, session=session)
             self.db.accounts.update_one({'_id': actor_id}, {'$inc': {'revision': 1}}, session=session)
+            self._revoke_draft_readiness(actor_id, session)
             return {'team_id': team['_id'], 'account_id': actor_id, 'status': 'left',
                     'archived': len(team['members']) == 1}
         return self._tx(write)
@@ -880,6 +893,9 @@ class AllianceService:
             self._draft(run)
             if actor_id not in [p['account_id'] for p in run['participants']]:
                 raise DomainError('forbidden', 'Only a selected player can set readiness.')
+            if ready:
+                self._planning_access(actor_id, run, session)
+                self._planning_validate_mutation(run, session)
             self.db.game_runs.update_one({'_id': run_id}, {
                 '$addToSet' if ready else '$pull': {'ready': actor_id}}, session=session)
             return self._run(run_id, session)

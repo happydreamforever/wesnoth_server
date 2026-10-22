@@ -994,6 +994,200 @@ class MongoDomainTests(unittest.TestCase):
             self.assertEqual(raised.exception.code, 'stale_proposal')
         self.assertNotIn(actor, self.service.get_run(plan['id'])['ready'])
 
+    def test_draft_leave_rejoin_requires_new_consent_and_preserves_other_players(self):
+        run, teams, members = self.battle(start=False)
+        leaving = members[1][1]
+        before = self.service.get_run(run['_id'])
+        self.service.directory_leave_team(leaving, teams[1], False)
+        left = self.service.get_run(run['_id'])
+        self.assertEqual(set(left['ready']), set(before['ready']) - {leaving})
+        for field in ('participants', 'lineups', 'approvals', 'state'):
+            self.assertEqual(left[field], before[field])
+        self.assertEqual(self.service.directory_battle_detail(members[0][0], run['_id'])['validity'],
+                         'roster_changed')
+        for action in (self.service.set_ready, self.service.directory_battle_ready):
+            self.assertDomain('forbidden', action, leaving, run['_id'], True)
+        self.service.request_join(leaving, teams[1])
+        self.service.approve_member(members[1][0], teams[1], leaving)
+        detail = self.service.directory_battle_detail(members[0][0], run['_id'])
+        self.assertEqual(detail['validity'], 'valid')
+        self.assertFalse(next(p for t in detail['teams'] for p in t['players'] if p['id'] == leaving)['ready'])
+        self.assertDomain('not_ready', self.service.start_battle, members[0][0], run['_id'])
+        self.service.directory_battle_ready(leaving, run['_id'], True)
+        started = self.service.start_battle(members[0][0], run['_id'])
+        self.assertEqual(started['state'], 'running')
+        self.service.cancel_run(run['_id'], 'Readiness fixture complete')
+
+    def test_admission_revokes_old_consent_after_pre_update_or_external_removal(self):
+        run, teams, members = self.battle(start=False)
+        run = self.service.get_run(run['_id'])
+        leaving = members[1][1]
+        # Simulate a historical/pre-update removal: there is no current kick API.
+        # Fresh admission must not revive the stale flag retained by old code.
+        self.db.teams.update_one({'_id': teams[1]}, {
+            '$pull': {'members': {'account_id': leaving}}, '$inc': {'revision': 1}})
+        self.assertIn(leaving, self.service.get_run(run['_id'])['ready'])
+        self.assertDomain('forbidden', self.service.set_ready, leaving, run['_id'], True)
+        self.service.request_join(leaving, teams[1])
+        self.service.approve_member(members[1][0], teams[1], leaving)
+        fresh = self.service.get_run(run['_id'])
+        self.assertEqual(set(fresh['ready']), set(run['ready']) - {leaving})
+        for field in ('participants', 'lineups', 'approvals', 'state'):
+            self.assertEqual(fresh[field], run[field])
+        self.assertEqual(self.service.directory_battle_detail(members[0][0], run['_id'])['validity'], 'valid')
+        self.assertDomain('not_ready', self.service.start_battle, members[0][0], run['_id'])
+
+    def test_cancelled_consent_history_survives_leave_rejoin_and_captain_transfer(self):
+        run, teams, members = self.battle(start=False)
+        self.service.directory_cancel_battle(members[0][0], run['_id'])
+        cancelled = self.service.get_run(run['_id'])
+        leaving = members[1][1]
+        self.service.leave_team(leaving)
+        self.service.request_join(leaving, teams[1])
+        self.service.approve_member(members[1][0], teams[1], leaving)
+        self.service.transfer_captain(members[1][0], teams[1], leaving)
+        self.assertEqual(cancelled, self.service.get_run(run['_id']))
+        self.assertDomain('invalid_state', self.service.set_ready, leaving, run['_id'], True)
+        self.assertDomain('invalid_state', self.service.directory_battle_ready, leaving, run['_id'], True)
+        self.assertDomain('invalid_state', self.service.start_battle, leaving, run['_id'])
+
+    def test_draft_unselected_leave_failed_membership_and_rejection_preserve_consent(self):
+        run, teams, members = self.battle(start=False)
+        captain, selected = members[0]
+        saved = self.service.get_run(run['_id'])
+        spectator = self.player()
+        self.service.request_join(spectator, teams[0])
+        self.service.approve_member(captain, teams[0], spectator)
+        self.service.directory_leave_team(spectator, teams[0], False)
+        self.assertDomain('captain_transfer_required', self.service.leave_team, captain)
+        self.assertDomain('conflict', self.service.directory_leave_team, selected, teams[1], False)
+        self.assertDomain('not_requested', self.service.approve_member, captain, teams[0], selected)
+        self.service.reject_member(captain, teams[0], selected)
+        self.service.request_join(spectator, teams[0])
+        self.service.reject_member(captain, teams[0], spectator)
+        self.assertEqual(saved, self.service.get_run(run['_id']))
+        # A captain change alone is not a membership change. The new captain
+        # must approve, but unchanged selected players keep their own consent.
+        self.service.transfer_captain(captain, teams[0], selected)
+        self.assertEqual(saved, self.service.get_run(run['_id']))
+        self.assertFalse(self.service.directory_battle_detail(selected, run['_id'])['teams'][0]['approved'])
+
+    def test_draft_consent_revocation_rolls_back_with_membership_transactions(self):
+        run, teams, members = self.battle(start=False)
+        leaving = members[1][1]
+        revoke = self.service._revoke_draft_readiness
+        def fail_after_revocation(*args, **kwargs):
+            revoke(*args, **kwargs)
+            raise RuntimeError('Injected failure after draft consent revocation')
+        def snapshot():
+            return {name: list(self.db[name].find({}).sort('_id', 1))
+                    for name in ('accounts', 'teams', 'game_runs')}
+        before = snapshot()
+        with patch.object(self.service, '_revoke_draft_readiness', side_effect=fail_after_revocation):
+            with self.assertRaises(RuntimeError):
+                self.service.leave_team(leaving)
+        self.assertEqual(before, snapshot())
+        self.db.teams.update_one({'_id': teams[1]}, {
+            '$pull': {'members': {'account_id': leaving}}, '$inc': {'revision': 1}})
+        self.service.request_join(leaving, teams[1])
+        before = snapshot()
+        with patch.object(self.service, '_revoke_draft_readiness', side_effect=fail_after_revocation):
+            with self.assertRaises(RuntimeError):
+                self.service.approve_member(members[1][0], teams[1], leaving)
+        self.assertEqual(before, snapshot())
+
+    def test_legacy_ready_validates_current_roster_but_keeps_preapproval_contract(self):
+        plan, teams, members = self.plan()
+        actor = members[0][1]
+        # The legacy API historically permits readiness before captain approval.
+        self.service.set_ready(actor, plan['id'], True)
+        self.assertIn(actor, self.service.get_run(plan['id'])['ready'])
+        self.service.set_ready(actor, plan['id'], False)
+        self.service.leave_team(members[1][1])
+        self.assertDomain('stale_proposal', self.service.set_ready, actor, plan['id'], True)
+        self.assertNotIn(actor, self.service.get_run(plan['id'])['ready'])
+
+    def test_legacy_ready_race_with_member_leave_rechecks_membership(self):
+        plan, teams, members = self.plan()
+        actor, leaving = members[0][1], members[1][1]
+        read, resume = threading.Event(), threading.Event()
+        context = self.service._planning_context
+        def hold_context(*args, **kwargs):
+            result = context(*args, **kwargs)
+            if not read.is_set():
+                read.set()
+                if not resume.wait(10):
+                    raise RuntimeError('Race fixture did not resume')
+            return result
+        with patch.object(self.service, '_planning_context', side_effect=hold_context), ThreadPoolExecutor(max_workers=1) as pool:
+            pending = pool.submit(self.service.set_ready, actor, plan['id'], True)
+            try:
+                self.assertTrue(read.wait(5))
+                AllianceService(self.db).leave_team(leaving)
+            finally:
+                resume.set()
+            with self.assertRaises(DomainError) as raised:
+                pending.result(timeout=10)
+            self.assertEqual(raised.exception.code, 'stale_proposal')
+        self.assertNotIn(actor, self.service.get_run(plan['id'])['ready'])
+
+    def test_leave_wins_start_race_and_rejoin_cannot_restore_readiness(self):
+        run, teams, members = self.battle(start=False)
+        leaving = members[1][1]
+        read, resume = threading.Event(), threading.Event()
+        get_run = self.service._run
+        def hold_run(*args, **kwargs):
+            result = get_run(*args, **kwargs)
+            if not read.is_set():
+                read.set()
+                if not resume.wait(10):
+                    raise RuntimeError('Race fixture did not resume')
+            return result
+        with patch.object(self.service, '_run', side_effect=hold_run), ThreadPoolExecutor(max_workers=1) as pool:
+            pending = pool.submit(self.service.start_battle, members[0][0], run['_id'])
+            try:
+                self.assertTrue(read.wait(5))
+                AllianceService(self.db).leave_team(leaving)
+            finally:
+                resume.set()
+            with self.assertRaises(DomainError) as raised:
+                pending.result(timeout=10)
+            self.assertEqual(raised.exception.code, 'not_member')
+        current = self.service.get_run(run['_id'])
+        self.assertEqual(current['state'], 'draft')
+        self.assertNotIn(leaving, current['ready'])
+        self.assertEqual(self.db.accounts.count_documents({'active_run_id': {'$ne': None}}), 0)
+        self.assertEqual(self.db.teams.count_documents({'active_run_id': {'$ne': None}}), 0)
+        self.service.request_join(leaving, teams[1])
+        self.service.approve_member(members[1][0], teams[1], leaving)
+        self.assertDomain('not_ready', self.service.start_battle, members[0][0], run['_id'])
+
+    def test_cancel_wins_leave_race_and_keeps_historical_consent(self):
+        run, teams, members = self.battle(start=False)
+        run = self.service.get_run(run['_id'])
+        leaving = members[0][1]
+        read, resume = threading.Event(), threading.Event()
+        revoke = self.service._revoke_draft_readiness
+        def hold_revocation(*args, **kwargs):
+            if not read.is_set():
+                read.set()
+                if not resume.wait(10):
+                    raise RuntimeError('Race fixture did not resume')
+            return revoke(*args, **kwargs)
+        with patch.object(self.service, '_revoke_draft_readiness', side_effect=hold_revocation), ThreadPoolExecutor(max_workers=1) as pool:
+            pending = pool.submit(self.service.leave_team, leaving)
+            try:
+                self.assertTrue(read.wait(5))
+                AllianceService(self.db).directory_cancel_battle(members[1][0], run['_id'])
+                cancelled = self.service.get_run(run['_id'])
+            finally:
+                resume.set()
+            self.assertTrue(pending.result(timeout=10)['left'])
+        self.assertEqual(cancelled, self.service.get_run(run['_id']))
+        self.assertEqual(set(cancelled['ready']), set(run['ready']))
+        self.assertEqual(self.service.directory_battle_detail(members[1][0], run['_id'])['validity'],
+                         'roster_changed')
+
     def _extra_teams(self, size):
         members = [[self.player() for _ in range(size)] for _ in range(2)]
         ids = []

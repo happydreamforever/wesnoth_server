@@ -483,7 +483,7 @@ class RealPlanCheckTests(unittest.TestCase):
                     for player in people:
                         service.directory_battle_ready(player, planned["id"], True)
 
-                    def inspect(expected_state, expected_validity):
+                    def inspect(expected_state, expected_validity, expected_ready):
                         before = {name: list(db[name].find({}).sort("_id", 1)) for name in db.list_collection_names()}
                         report = CHECK.collect(runtime, "UniPlayer", planned["id"])
                         after = {name: list(db[name].find({}).sort("_id", 1)) for name in db.list_collection_names()}
@@ -492,16 +492,17 @@ class RealPlanCheckTests(unittest.TestCase):
                         result = report["plans"][0]
                         self.assertEqual((result["state"], result["derived_validity"]), (expected_state, expected_validity))
                         self.assertEqual(result["derived_validity"], service.directory_battle_detail(people[0], planned["id"])["validity"])
-                        self.assertTrue(all(player["saved_ready"] for player in result["players"]))
+                        self.assertEqual({player["id"] for player in result["players"] if player["saved_ready"]},
+                                         set(expected_ready))
                         print("PASS diagnostic snapshot: " + expected_state + "/" + expected_validity + "; all database records unchanged", flush=True)
                         return result
 
-                    inspect("draft", "valid")
+                    inspect("draft", "valid", people)
                     service.directory_leave_team(people[3], teams[1], False)
-                    left = inspect("draft", "roster_changed")
+                    left = inspect("draft", "roster_changed", people[:3])
                     self.assertFalse(left["players"][-1]["currently_in_saved_team"])
                     service.directory_cancel_battle(people[2], planned["id"])
-                    cancelled = inspect("cancelled", "roster_changed")
+                    cancelled = inspect("cancelled", "roster_changed", people[:3])
                     self.assertEqual(left["players"], cancelled["players"])
                     self.assertIsNotNone(cancelled["finished_at"])
                     self.assertEqual(db.auth_sessions.count_documents({}), 0)
