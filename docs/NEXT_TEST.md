@@ -1,10 +1,12 @@
-# Ready-plan practice — Windows/LDPlayer acceptance
+# Individual practice — Windows/LDPlayer acceptance
 
-Version 1192611 restricts new local practice to a valid draft with both current captains' approval and every selected player Ready. Only a selected player can launch. Cancelled, running and completed plans have no Practice action. The menu and fixed lineups explain availability and show approval/readiness counts for valid drafts.
+Release 1192612 lets a selected player practise a valid draft once both current captains approve and that player is Ready. Other players may remain Not ready. The screen separates personal practice availability from team readiness; a future shared battle still requires everyone Ready.
 
-The client refreshes the account and plan before confirmation, then rereads the same plan after confirmation. A failed read, changed account, changed plan or lost eligibility stops the launch; it never uses the old snapshot as a fallback. Practice remains local AI play with no account XP, team XP, rating or Alliance plan completion. Existing local saves remain usable; later changes to the Alliance plan do not rewrite an already-started local game. Completed Alliance replay recording/retrieval and shared multiplayer combat are later milestones; this release adds no fake replay action.
+A new Ready and practice shortcut first asks permission to save only your own Ready, then refreshes the account/plan and offers a separate practice confirmation. Back at the first confirmation makes no change. Back or a failed launch after the server confirms Ready leaves that confirmed action in place; the screen tells you to refresh and use Set myself not ready if you want to withdraw it. No mutation is retried automatically. Ordinary Practice this plan remains available when you are already Ready. Cancelled, running and completed plans offer neither practice action.
 
-The earlier correction A–H is accepted with WAN disconnected. This is one new combined practice/lifecycle batch, not a repeat of the leave/rejoin correction. Preserve existing accounts, teams, runtime/profile, OBB, all foundations and retained update journals/backups. Server code and the bridge are unchanged: keep the existing MongoDB, admin and bridge windows open. No database initialization, dependency installation, profile import or server/bridge rebuild is required.
+Both launch paths refresh the exact plan before and after confirmation. Only other players' Ready flags may differ between those reads; changed actor, own readiness, lineup, leader, map, captain approval, validity or state stops launch. This is launch-time checking, not a live shared reservation. Local practice controls your side and makes every other side AI, awards no persistent XP/rating, and does not complete the Alliance plan. Existing local saves remain independent. Shared host/join and authoritative completed-battle replay remain future work.
+
+The user accepted the previous 1192611 A–H with WAN disconnected and local Ethernet retained. This new batch checks individual readiness and the shortcut; it does not repeat the accepted save/load or leave/rejoin batches. Preserve all accounts, teams, runtime/profile, OBB, foundations and retained journals/backups. Server production code and the bridge are unchanged: keep the existing MongoDB, admin and bridge windows open. No service restart, database initialization, dependency installation, profile import or server/bridge rebuild is required.
 
 ## 1. Pull the update
 
@@ -26,7 +28,7 @@ Disconnect WAN while keeping local Ethernet connected for the remaining steps.
 
 ## 2. Rebuild and install the client
 
-Run in a separate PowerShell window. The helper verifies and preserves the completed account stages under unique before-practice-lifecycle backups and creates a new 1192611 update journal. Existing 1192608, 1192609 or 1192610 completed stages are supported; incomplete/conflicting stages stop for review. Keep all earlier backups and journals.
+Run in a separate PowerShell window. The helper verifies and preserves completed account stages in unique before-individual-practice backups and creates a new 1192612 update journal. Completed 1192608–1192611 stages are supported; incomplete/conflicting stages stop for review. Earlier backups and journals remain intact.
 
 ```powershell
 & {
@@ -36,34 +38,34 @@ Run in a separate PowerShell window. The helper verifies and preserves the compl
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
         -File '.\tools\Rebuild-WindowsAndroidAccountGame.ps1'
     if ($LASTEXITCODE -ne 0) {
-        throw 'Practice update build failed. Send the saved rebuild/build logs.'
+        throw 'Individual practice build failed. Send the saved rebuild/build logs.'
     }
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
         -File '.\tools\Install-AndroidAccountGame.ps1' `
         -KeepSavedProfile
     if ($LASTEXITCODE -ne 0) {
-        throw 'Practice update installation failed. Send the saved install log.'
+        throw 'Individual practice installation failed. Send the saved install log.'
     }
 }
 ```
 
-Expected: ANDROID ACCOUNT GAME REBUILD COMPLETE, ANDROID ACCOUNT GAME INSTALL COMPLETE, version 1192611 and the existing Trusted server: 100.99.99.14:15001. Choose Start game -> Alliance. If the profile is missing or unusable, stop and send the message instead of reimporting or resetting.
+Expected: ANDROID ACCOUNT GAME REBUILD COMPLETE, ANDROID ACCOUNT GAME INSTALL COMPLETE, version 1192612 and the existing Trusted server: 100.99.99.14:15001. Choose Start game -> Alliance. If the profile is missing or unusable, stop and send the message instead of reimporting or resetting.
 
 ## 3. One combined A–H test
 
 Use the existing four accounts on the same LDPlayer, switching with Alliance logout/login. Complete the batch without reporting each successful action separately. Stop on an unexpected result and send that step's message. Use one NEW plan UUID throughout B–H; leave older plans untouched.
 
-- **A — Cancelled plans.** As UniPlayer open Teams -> Battle plans -> My battle plans -> old cancelled plan 100599c9-610f-4d81-b8bb-1cb1b79e5f27. Expect no Practice this plan action. View fixed lineups must explain that cancelled plans are history only, with inactive approvals and historical readiness. Keep this old plan unchanged.
-- **B — New draft, no consent.** Confirm Koichi still contains UniPlayer (captain) and UniRecruit, and RivalPlan still contains UniSolo (captain) and UniRival. As UniPlayer propose Isar's Cross (2v2) against RivalPlan: Koichi side 1 UniPlayer/side 4 UniRecruit; RivalPlan side 2 UniSolo/side 3 UniRival. Record the new plan UUID. Expect 0/2 captain approvals and 0/4 selected players Ready; no Practice action. If another draft blocks creation or either roster differs, stop and report it rather than cancelling an unknown plan or recreating a team.
-- **C — Incomplete readiness.** UniPlayer and UniSolo each approve this new plan. Set UniPlayer, UniRecruit and UniSolo Ready, leaving UniRival Not ready. Reopen the plan as UniPlayer. Expect 2/2 approvals, 3/4 Ready, UniRival named as Not ready, and no Practice action.
-- **D — Ready and safe Back.** As UniRival set yourself Ready. As UniPlayer reopen the same plan: 2/2 approvals, 4/4 Ready and Practice this plan visible. Select it, review the confirmation, then choose Back. No game should start and the plan should remain draft. The confirmation describes your side as human and all other sides, including teammates, as computer-controlled.
-- **E — Readiness withdrawal and real practice.** As UniRival select Set myself not ready. As UniPlayer refresh/reopen: 3/4 Ready and Practice absent. Set UniRival Ready again, return to UniPlayer and choose Practice this plan -> Start local practice. Expect Isar's Cross, side 1 controlled by you, your saved Spearman leader, and all other sides controlled by AI. Saved lineups still include UniSolo's Elvish Fighter; do not change that leader. Recruit at least one unit, move a unit, then End Turn. Let the computer sides finish and confirm control returns to you on turn 2. Initial fog may hide enemy leaders.
-- **F — Local save/load.** During your turn use Menu -> Save Game and a new name such as Alliance-Practice-1192611. Use Menu -> Quit to Menu, then Load to reopen that save. Expect the same turn, units, sides and local practice objectives; advance another turn and confirm AI play still returns control to you. This is a local save, not a completed Alliance replay.
-- **G — Persistent data unchanged.** Use Menu -> Quit to Menu and open Alliance (log in if asked). View personal leader, My team and the same new plan. Expect the same account/team IDs, original leader types/levels, personal XP, team XP and rating. Confirm Koichi through My team and RivalPlan through Browse areas and teams (or UniSolo -> My team before H); both remain 2/8. The plan remains draft with four Ready flags; practice does not complete it or award persistent rewards.
-- **H — Cancel the new draft.** As UniSolo cancel only the NEW test plan. As UniPlayer refresh/reopen it. Expect cancelled/history-only wording and no Practice, Approve, Ready or Cancel action. The old cancelled plan from A remains unchanged. Existing local saves are preserved; they are independent of the now-cancelled draft.
+- **A — Cancelled history.** As UniPlayer open Teams -> Battle plans -> My battle plans -> old cancelled plan 100599c9-610f-4d81-b8bb-1cb1b79e5f27. Expect neither Practice this plan nor Ready and practice. Fixed lineups still show inactive approvals and historical readiness. Leave this plan unchanged.
+- **B — New draft.** Confirm Koichi has UniPlayer (captain) and UniRecruit, and RivalPlan has UniSolo (captain) and UniRival. As UniPlayer propose Isar's Cross (2v2) against RivalPlan: Koichi side 1 UniPlayer / side 4 UniRecruit; RivalPlan side 2 UniSolo / side 3 UniRival. Record the new plan UUID. Expect 0/2 captain approvals, 0/4 Ready and neither practice action. If another draft blocks creation or either roster differs, stop and report instead of cancelling an unknown plan or recreating a team.
+- **C — Back before saving Ready.** UniPlayer and UniSolo each approve the new plan; leave all four players Not ready. As UniPlayer reopen it: 2/2 approvals, 0/4 Ready, Ready and practice visible, ordinary Practice this plan absent. Select Ready and practice, then Back at Confirm Ready and practice. Reopen the plan: it must still show 0/4 Ready; no game starts.
+- **D — Back after saving Ready.** As UniPlayer select Ready and practice -> Save my Ready and continue. At the separate Confirm local team practice screen choose Back. Expect the message that your Ready action was confirmed but no practice started. Reopen the plan: only UniPlayer is Ready, 1/4 total. All other players remain Not ready. This confirmed Ready is intentionally retained.
+- **E — Practise alone.** Still as UniPlayer, choose Practice this plan -> Start local practice while the other three remain Not ready. Expect Isar's Cross, your saved Spearman on human-controlled side 1 and all other sides controlled by AI. Recruit a unit, move a unit, End Turn and let the computer finish. Confirm control returns to you on turn 2. Use Menu -> Quit to Menu. The plan remains draft; personal/team experience and rating are unchanged.
+- **F — Second player shortcut.** Log in as UniRecruit. The same plan shows 1/4 Ready, your own side Not ready, Ready and practice visible and ordinary Practice this plan absent. Choose Ready and practice -> Save my Ready and continue -> Start local practice. Expect your saved Spearman on human-controlled side 4; the other three sides are AI. Let earlier AI sides finish if necessary, play your turn and confirm control returns after their turns. Quit to Menu and check the plan: UniPlayer and UniRecruit Ready, 2/4 total. UniSolo and UniRival remain Not ready.
+- **G — Individual withdrawal.** As UniPlayer choose Set myself not ready and confirm. Reopen: 1/4 Ready, ordinary Practice this plan absent for UniPlayer, Ready and practice available. As UniRecruit reopen the same plan: ordinary Practice this plan is still available because UniRecruit remains Ready. No third practice launch is required.
+- **H — Cancel and compare.** As UniSolo cancel only this NEW test draft. As UniPlayer refresh/reopen: cancelled/history wording, neither practice action and no active approval/readiness actions. Compare View personal leader, Koichi through My team and RivalPlan through Browse areas and teams (or UniSolo -> My team): original account/team IDs, leader types/levels, personal XP, team XP, rating and two-member rosters remain unchanged. The old plan from A and existing local saves remain preserved.
 
-Original Koichi ID: 4cd736d3-dc6c-4c3d-a816-e7682b56db30. Use the actual RivalPlan ID from the game rather than OCR-like copied strings. Original team level/XP/rating were 1/0/1000; compare with your pre-test values. No leader reset or replacement account is needed.
+Original Koichi ID: 4cd736d3-dc6c-4c3d-a816-e7682b56db30. Use the actual RivalPlan ID from the game rather than OCR-like copied strings. UniSolo's saved leader is Elvish Fighter; the other three are Spearman, all originally level 1. Original team level/XP/rating were 1/0/1000; compare with your pre-test values. No leader reset or replacement account is needed.
 
 ## Return one report
 
