@@ -1,67 +1,23 @@
-# Correct the account dialog and identify the opening failure
+# Resume saved battle-planning acceptance
 
-The actual Windows1192607 build and in-place installation passed. The user confirms Trusted server100.99.99.14:15001 remains displayed, but selecting Alliance immediately shows the generic opening error, before the internal account menu or password entry. All three services report ready. This does not establish profile loss or a password failure.
+Login recovery is confirmed: the user can log in with the new password and sees Show password. WAN stayed disconnected while local Ethernet remained connected, by explicit user report. This confirms the current opening/login path at that scope; it does not determine the earlier failure's cause. No new1192608 build/install transcript or exact version output was supplied, and no repeated build is requested.
 
-Code inspection and a failing reproduction found a separate1192607 credential-dialog defect: replacing its password widget through the outer grid cannot cross the stock scrollbar-panel boundary.1192608 uses the field's actual owning grid and verifies replacement. This fixes that proven later failure. It also distinguishes profile-file/format/identity checks from menu/account-screen opening with fixed, non-secret messages. The cause of the reported earlier failure remains unproven until the new Windows result.
+Use the existing installed game and keep MongoDB, the admin service and the READY account bridge windows open. No pull, rebuild, installation, profile import, password reset, repeated login or initial service restart is needed for this record update. The first check below uses the current signed-in session. The intentional restart comes only in F, after a ready draft is saved.
 
-## 1. Pull the correction
+## Start with the original player and team
 
-Quit the game in LDPlayer. Keep the healthy database, admin service and READY account bridge windows open. Temporarily connect Windows to GitHub and run:
+Dismiss Logged in with OK. If an unread-decision list appears, use Back to return to Alliance without acknowledging another decision for this check.
 
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
-    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
-        $repo = '/d/Test/wesnoth-setup/' + $name
-        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
-        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Stop and send the output." }
-    }
-    'Both updates completed successfully.'
-}
-```
+| Route | Expected result |
+| --- | --- |
+| Alliance -> View personal leader -> Open | Original UniPlayer player ID; Spearman; level1; Experience0; Total experience0. |
+| OK -> Teams -> Open -> My team -> Open | Koichi, ID4cd736d3-dc6c-4c3d-a816-e7682b56db30; Yama; UniPlayer captain and UniRecruit member;2/8; team level1/experience0/rating1000. |
 
-Expected: both pulls succeed. Stop on any Git/local-change error without discarding files. Disconnect WAN again while keeping local Ethernet connected. The server delivery records the evidence and next step; no server/bridge rebuild, service restart or dependency installation is needed.
+If these values match, count the opening comparison in A below as complete and continue A–H in the same batch. Do not repeat that comparison solely to start A. If values differ or an error appears, stop and send the exact result before changing teams, plans or accounts. Keep passwords private.
 
-## 2. Build and install1192608 offline
+This batch tests saved battle planning: approved maps, fixed lineups, two captain approvals, player readiness, persistence and cancellation. Combat, battle start and XP/rating rewards are later work. Use one LDPlayer and switch accounts through Log out/Log in when the steps require it. Keep WAN disconnected and local Ethernet connected; return one combined A–H result report, including actual WAN status throughout the planning tests. The newly confirmed WAN status applies to the successful login, not automatically to every future planning action.
 
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client' -ErrorAction Stop
-
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Rebuild-WindowsAndroidAccountGame.ps1'
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Account dialog build failed. Send the saved rebuild and build logs.'
-    }
-
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Install-AndroidAccountGame.ps1' `
-        -KeepSavedProfile
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Account dialog installation failed. Send the saved install log.'
-    }
-}
-```
-
-Expected: completed1192607 account engine/APK stages are retained under unique before-credential-dialog-fix backups. The new1192608 journal preserves all earlier journals/backups. Recorded preparation resumes the same retained backups. Original engine/library/data/OBB stages remain unchanged. Build ends with ANDROID ACCOUNT GAME REBUILD COMPLETE; install ends with ANDROID ACCOUNT GAME INSTALL COMPLETE and Version1192608. The helper accepts installed1192607/1192608 and preserves app data and the imported profile. If a check stops, preserve the state and return its log; do not manually rename/delete stages, remove locks, uninstall or reinitialize anything.
-
-## 3. One opening and login check
-
-1. Confirm setup still shows Trusted server100.99.99.14:15001, then Start game -> Alliance. Expected: the internal Alliance menu opens. If an error appears first, stop and send its exact complete text, including any bracketed code. Do not reimport the profile, reset the app or attempt login through another path.
-2. If the menu opens, choose Log in. Expected: the credential dialog opens with Show password initially off. Enter UniPlayer and the NEW password from the already successful admin reset. Check Show password and compare locally, including case and symbols; correct any input discrepancy locally. Toggling must preserve the text. Hide it again and submit once. Never send the password, a visible-password screenshot, hash or token.
-3. Expected: Logged in. Then View personal leader and My team should show the original player ID, Spearman/level1/Experience0/Total experience0, Koichi ID4cd736d3-dc6c-4c3d-a816-e7682b56db30, captain UniPlayer/member UniRecruit2/8, team level1/XP0/rating1000. If login fails, stop repeated attempts and return the exact message plus whether the locally revealed text matched.
-
-Return one report: build/install markers and version, retained Trusted server, whether Alliance and Log in opened, checkbox behavior, login result, and unchanged values on success. Include actual WAN status during build and testing. On failure send the relevant client diagnostics/android-account-{rebuild,build,install}-*.txt and exact screen message. The old local password_match predates the reset; it does not validate the new password. No new reset or backend trace is requested. Planning tests remain paused until opening and login recovery are confirmed.
-
-## Paused planning acceptance — resume after login recovery
-
-The returned Windows output now confirms all three services ready: MongoDB127.0.0.1:27018, authenticated database/schema/transaction checks and admin127.0.0.1:18765, and bridge100.99.99.14:15001. Keep those three PowerShell windows and LDPlayer open. The earlier1192606 battle-planning build/install remains accepted. Resume this checklist only after account recovery and successful Android login have been confirmed. The1192607 Windows build/install is accepted;1192608 opening/login acceptance remains pending. At that point no additional pull/build/install, database initialization, repeated backend diagnostic or initial service restart is required. The intentional restart occurs only at check F.
-
-This update tests saved battle planning: approved maps, fixed lineups, two captain approvals, player readiness, persistence and cancellation. Combat, battle start and XP/rating rewards are later work. Use one LDPlayer and log out/log in to switch between four players. Keep WAN disconnected and local Ethernet connected; report the actual WAN state with the combined results.
-
-First confirm the app still shows Wesnoth Alliance and Trusted server100.99.99.14:15001, then choose Start game -> Alliance -> Log in. If the saved profile is missing/unusable, stop and report it without reimporting or resetting. Keep Koichi in Yama, ID4cd736d3-dc6c-4c3d-a816-e7682b56db30, captain UniPlayer and member UniRecruit2/8, with team level1/XP0/rating1000 and unchanged leaders. Do not repeat the previous1192605 management A–H tests; this is the new planning checklist.
+Preserve Koichi in Yama, captain UniPlayer and member UniRecruit2/8, team level1/XP0/rating1000 and unchanged leaders. The historical Area ID transcription differs, so compare the actual saved identity consistently rather than recreating the area. Do not repeat the completed1192605 management A–H tests; this is the pending planning checklist.
 
 ## A–E — planning in one LDPlayer
 
@@ -119,6 +75,6 @@ Reopen the app; confirm the retained Trusted server and fresh login requirement.
 
 ## Return one combined report
 
-The build/install and initial service readiness are already accepted; no repeat logs are required. Return the actual saved Trusted server display, planning A–H results (including F's full restart), the two team IDs and saved plan ID, and whether WAN stayed disconnected throughout these tests. State the earlier build/startup WAN status if known; it remains unreported. Include actual names if you used alternatives. No password, private key or runtime file is needed.
+Current opening/login and checkbox visibility are accepted with WAN disconnected by user report; earlier service readiness is accepted. No repeated build/install or login logs are required. Return the baseline leader/team comparison, planning A–H results (including F's full restart), the two team IDs and saved plan ID, and whether WAN stayed disconnected throughout these planning tests. Report the saved Trusted server display when reopening the app at F. Include actual names if you used alternatives. No password, private key or runtime file is needed.
 
 On any build/startup failure, send the complete console and its saved diagnostics log and stop before later steps. Saved logs are under server diagnostics/alliance-bridge-{rebuild,build,run}-*.txt and alliance-serve-*.txt; client diagnostics/android-account-{rebuild,build,install}-*.txt. Do not repeat earlier dependency builds, old management A–H or guest gameplay checks. Larger 3v3/4v4 contracts have automated backend/native coverage and pinned-map proof; actual combat, battle start, reconnect/turn synchronization and reward settlement remain later work.
