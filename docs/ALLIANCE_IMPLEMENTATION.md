@@ -1,5 +1,13 @@
 # Alliance Battle implementation checklist
 
+**Current release 1192617:** Startup authentication, owned campaign heroes/forms, integrated story rewards, authenticated native Multiplayer and selected-hero Teams are implemented. Use [UNIFIED_PRODUCT.md](UNIFIED_PRODUCT.md) for rules, [BASELINE.md](BASELINE.md) for verification limits and [NEXT_TEST.md](NEXT_TEST.md) for the authoritative Windows A–Z. Older records below are historical and do not override this delivery.
+
+The upgrade requires a verified cold backup, then creates the new schema 2 runtime at `%LOCALAPPDATA%\WesnothAlliance\runtime-v2` beside the old runtime. It preserves old data, trusted identity, OBB, pinned tools and completed builds. The current startup helper checks all five services (27018,18765,15001,15002,15000) before W07 UNIFIED GAME SERVICES READY. Account/native protocol is 2. No normal correction resets this new database.
+
+Actual 1192617 Android compilation and VPS verification pass; Windows/LDPlayer acceptance is pending. Use the existing one LDPlayer and the authenticated companion helper for additional computer seats. Record WAN once per batch, report the first unexpected result, then retest only the corrected step and affected regressions after a verified commit/push. Do not request another emulator or infer multiple-human acceptance.
+
+## Historical records (superseded by the current release)
+
 ## Current v1 checklist — release1192615
 
 **Latest Windows result:** A–E and F's automated installation pass; F's manual checks are now broadly accepted by the user's ‘All are running correctly’ confirmation. Per-account values were not newly supplied. G–Z remain pending. The user currently asks about the distinction between Alliance progression and existing Campaigns/Multiplayer; no new implementation or mode change is requested.

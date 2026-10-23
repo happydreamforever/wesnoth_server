@@ -1,0 +1,244 @@
+{
+  "format": "unified-release-verification-v1",
+  "release": 1192617,
+  "schema": 2,
+  "account_protocol": 2,
+  "status": "passed",
+  "created_utc": "2026-10-23T12:42:55.761892+00:00",
+  "production_commits": {
+    "client": "44055942b32c68d26109c169d513eda8933a2e45",
+    "server": "c0161f71638da4665fb8c326ec98f70d517c7340"
+  },
+  "scope": "VPS verification at the individual evidence scopes; Windows/LDPlayer release1192617 acceptance pending.",
+  "network": "Build/test Docker executions used --network none with local loopback fixtures. No Windows WAN state inferred.",
+  "android": {
+    "native_steps": 38,
+    "gradle_tasks_executed": 33,
+    "version": 1192617,
+    "abi": "x86_64",
+    "min_sdk": 23,
+    "apk": {
+      "bytes": 38681076,
+      "sha256": "e1a9f3373704738e019bd893b1909beef35fe40d7ef718651e3e4a1ff91056e3"
+    },
+    "native_library": {
+      "bytes": 521034712,
+      "sha256": "0b651ea0dcbd0086af05322396164aede6351e4827889227a5ba63aabc5cd0b7"
+    },
+    "same_input_reuse": "passed",
+    "independent_package_and_original_signer_verification": "passed",
+    "device_executed": false,
+    "package_receipt": {
+      "path": "wesnoth_client/build/android-account-game/receipt.json",
+      "bytes": 205224,
+      "sha256": "3446fee2bfab5fe9a3c19fce4ac5c5bbab5465ef6afb5ffe84a61ce009a39db1"
+    },
+    "engine_receipt": {
+      "path": "wesnoth_client/build/android-account-engine/receipt.json",
+      "bytes": 196025,
+      "sha256": "0e9d3e46b3cf8ea973e036a7fbea6d0d9bcf8cb18fad99064c0939b5aaee129d"
+    },
+    "verified_current_project_inputs": 145
+  },
+  "catalogue": {
+    "heroes": 117,
+    "forms": 346,
+    "story_campaign_ids": 21,
+    "sha256": "716cc8e34cfb9c68e735c8cccdc74af6ae233f3487b2b87e575e209cc0c5041c",
+    "client_server_parity": true
+  },
+  "tests": {
+    "server_unique_cases": 455,
+    "server_skips": 0,
+    "android_builder_profile_cases": 64,
+    "android_powershell_cases": 29,
+    "bridge_powershell_cases": 29,
+    "workflow_maintenance_fresh_cases": 36,
+    "companion_cases": 42,
+    "ordinary_mp_controller_groups": 25,
+    "form_engine_cases": 1384,
+    "power_shell_handoff_blocks_parsed": 12,
+    "counting": "Groups overlap; do not sum them into a single unique total."
+  },
+  "preservation": {
+    "status": "passed",
+    "foundation_files": 17731,
+    "prior_account_journal_prototype_files": 5471,
+    "pinned_engine_source_files": 1454,
+    "protected_trees": 37,
+    "prior_journals": 15,
+    "original_objects": 568,
+    "original_objects_relinked": 553,
+    "source_replacements": 15,
+    "unrelated_readmes_unchanged": true,
+    "actual_vps_transition": "1192616 ->1192617; both internal1192616 stages and journal retained",
+    "windows1192615_direct_transition": "fixture verified; actual Windows pending"
+  },
+  "evidence": [
+    {
+      "path": "wesnoth_client/build/audit-unified-product-final-20261023/android-prepare.log",
+      "bytes": 2005,
+      "sha256": "6f86ae5e4c826c515e5e270ea8a9e56c050d8042751992a21d077a03520adb12"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-product-final-20261023/android-build.log",
+      "bytes": 13455,
+      "sha256": "6a927429e9e1fad019ee15c1662933567028d6f286c573b9f9f3d1d45268e7ed"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-product-final-20261023/android-reuse.log",
+      "bytes": 1567,
+      "sha256": "f339fb77e954999986ed91d87bee70c1163ea33a6586dcbee2f984a4eacf0bd0"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-product-final-20261023/android-verify.log",
+      "bytes": 1487,
+      "sha256": "f2c4d8adfa14ec6ea6dd439c9c0378846bd5646963bebdbea402b5de8d575448"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-product-final-20261023/builder-tests.log",
+      "bytes": 22339,
+      "sha256": "da41f38688cde7a45b0157ee00a53e5d9438446f34c1f1c2f329ec60f3f79eb9"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-product-final-20261023/windows-tests.log",
+      "bytes": 5035,
+      "sha256": "23e3bdcd6341ff5fcfc2209404243d21cfdda2421ed1836b31d416ee208cd9d5"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-product-final-20261023/handoff/parse.log",
+      "bytes": 42,
+      "sha256": "8a81118e24ea263b17e43e2be9bb2df5a1d8c6d0a931badbbc0f984fb1ec8eea"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-product-final-20261023/snapshot-result.json",
+      "bytes": 245,
+      "sha256": "c156bcbdc061badec2a6b2c04b19f2817d017ee2815aca3cf7048bc65eb42712"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-product-final-20261023/preservation-final.json",
+      "bytes": 560,
+      "sha256": "9b7138a5eb82450de7d748f831ea620c6294591dc4a482d4837aea8c96eb6823"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-product-final-20261023/delivery-command.json",
+      "bytes": 697,
+      "sha256": "c27f100fefd747de9bb2509466c249377162f1bdce9c83103774907c88d19805"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-campaign-20261023/final-story-tests-6/story-validation.json",
+      "bytes": 1450,
+      "sha256": "8562ac7ed4d489b5539fa3deac2f324e2582b65f4d7afedd4d1d90bf3aef483e"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-campaign-20261023/final-story-tests-6/story-real-play-win.log",
+      "bytes": 4084,
+      "sha256": "95dd45d91a54be1a44d44f90b0b143f9e482cf67ae1d9e063d8ffcebe4ef1b6b"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-campaign-20261023/final-story-tests-6/story-reload-duplicate.log",
+      "bytes": 3142,
+      "sha256": "00e2bb7a0929f63d06f29e78c17b75f4fad924678c3be976cfe95b860b626edf"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-campaign-20261023/final-story-tests-6/story-branch.log",
+      "bytes": 35,
+      "sha256": "ba93f578b712ad9d750df40b5e8c771da5db1a7b2117b01d77922c9706418911"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-campaign-20261023/final-story-tests-6/story-wrong-account.log",
+      "bytes": 3359,
+      "sha256": "fe5766a183f53fb56dc71579c04751940b41013cba2bd0e77540dd9cc1755990"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-campaign-20261023/final-story-tests-6/story-wrong-generation.log",
+      "bytes": 3359,
+      "sha256": "90a9f3ad300720cb851583d41e416cd4e3b0c10b8f4f16dfc3670aad089fff3f"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-campaign-20261023/final-story-tests-6/story-verify-win.log",
+      "bytes": 42,
+      "sha256": "f90d720627eb047d75638cf32d3c8fc12198384a00376ad9162aa7a2dcb96f98"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-campaign-20261023/final-story-tests-6/story-verify-dead.log",
+      "bytes": 42,
+      "sha256": "f90d720627eb047d75638cf32d3c8fc12198384a00376ad9162aa7a2dcb96f98"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-campaign-20261023/final-story-tests-6/story-verify-loss.log",
+      "bytes": 42,
+      "sha256": "f90d720627eb047d75638cf32d3c8fc12198384a00376ad9162aa7a2dcb96f98"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-product-20261023/client-behavior-evidence.json",
+      "bytes": 26122,
+      "sha256": "13e619808a277ecbbc20b381698ae8c05dcf6ee4524af8e89c49d2ca7b362385"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-shared-20261023/validation.json",
+      "bytes": 19623,
+      "sha256": "bb6adcfcc979f20c5da5bb3d1e71f70091dde9e758897820e57664c78284c449"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-shared-20261023/casual-identity-02/validation.json",
+      "bytes": 285,
+      "sha256": "4f28611f75505d0c79d031d9115e8e95acd4a04392c675f386d53a95ca72840d"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-product-20261023/casual-ui-final.log",
+      "bytes": 1694,
+      "sha256": "39b1bba4f2ff6fde3676521e21f14b36af5b3f4f00750053c7671dbcf4ad331d"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-companion-launcher-20261023/validation-1192617.log",
+      "bytes": 7285,
+      "sha256": "6d9f26c62c2ec2792276194ad56fdda9dc009fe3715bb26911bf6554b6a73bee"
+    },
+    {
+      "path": "wesnoth_server/build/unified-server-final-verification.json",
+      "bytes": 19846,
+      "sha256": "579b3875fd682c7380a162fc02c57e8f1d87173d45c2a5bd0e81565410b916c4"
+    },
+    {
+      "path": "wesnoth_server/build/unified-workflow-tests-03.log",
+      "bytes": 5883,
+      "sha256": "50d97a1938b06b273fae2b4e0eb39accd285356982e9503623f7a13267abffef"
+    },
+    {
+      "path": "wesnoth_server/build/unified-bridge-helper-tests.log",
+      "bytes": 129,
+      "sha256": "376877dab0e230a608dd96d51f6fc7a76abd94b24bfa745dee7ff10e3ba35cf4"
+    },
+    {
+      "path": "wesnoth_server/build/audit-unified-recovery-20261023/real-tests-02.log",
+      "bytes": 2736,
+      "sha256": "dcc247432b11d5169db068c473fd89b52124e12596b1bff2a6f28df265c837ea"
+    },
+    {
+      "path": "wesnoth_server/build/audit-unified-recovery-20261023/unsupported-schema-retest.log",
+      "bytes": 484,
+      "sha256": "ac6bd2190a96e779a1f38412e08c729a41e2355d280f27778a0633cf46a1adf0"
+    },
+    {
+      "path": "wesnoth_client/build/audit-unified-campaign-20261023/hero-units-final-execution.json",
+      "bytes": 2394,
+      "sha256": "1cc0241d7909785ee14529b6d3b67adf3bddd783914bfd66529317bd76113388"
+    }
+  ],
+  "review": {
+    "independent_source_handoff_review": "passed; no known release blocker",
+    "recovery_attempts": "real-tests-02.log contains two individually passing cases and one outdated-exception assertion failure. The unsupported-schema case was corrected and passes in unsupported-schema-retest.log; failed attempt retained.",
+    "behavior_reuse": "client-behavior-evidence.json labels retained1192616 executions whose targeted behavior is unchanged. Two final account UI copy edits were compiled in1192617. Final campaign transition checks and companion1192617 tests are separate."
+  },
+  "limitations": [
+    "Actual Windows and LDPlayer1192617 functional acceptance remains pending A-Z.",
+    "Controlled production UI/network boundaries do not prove rendered Android UI.",
+    "Native story fixtures use a controlled HTTP/session boundary; real reward persistence is tested separately with MongoDB.",
+    "All21 complete story playthroughs are not claimed.",
+    "Computer companion seats do not establish multiple-human usability.",
+    "The local server validates identity, ownership, ordering and settlement; it does not independently simulate combat.",
+    "Tests for unchanged behavior may be retained with explicit source/reuse scope; not every suite reran against every final source file."
+  ],
+  "artifact_note": "APK and native-library hashes identify the VPS build, not necessarily a separately compiled Windows artifact."
+}
