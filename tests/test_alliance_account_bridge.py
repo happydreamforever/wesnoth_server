@@ -308,7 +308,7 @@ class BridgeTests(unittest.TestCase):
                 elif self.path in ("/internal/v1/me", "/internal/v1/logout") and (
                         self.headers.get("X-Player-Token") != parent.token or parent.revoked):
                     code, response = 401, {"error": {"code": "invalid_session"}}
-                elif self.path.startswith("/internal/v1/team-directory/"):
+                elif self.path.startswith(("/internal/v1/team-directory/", "/internal/v1/progression/", "/internal/v1/coordination/", "/internal/v1/shared/")):
                     if self.headers.get("X-Player-Token") != parent.token or parent.revoked:
                         code, response = 401, {"error": {"code": "invalid_session"}}
                     elif parent.directory_override is not None:
@@ -438,7 +438,10 @@ class BridgeTests(unittest.TestCase):
                          "my_applications", "team_applicants", "apply_team", "withdraw_application",
                          "approve_application", "reject_application", "application_decisions", "ack_decision",
                          "leave_team", "transfer_captain", "standings", "battle_maps", "my_battles",
-                         "battle_detail", "propose_battle", "approve_battle", "battle_ready", "cancel_battle"):
+                         "battle_detail", "propose_battle", "approve_battle", "battle_ready", "cancel_battle",
+                         "progression_catalog", "progression_start", "progression_status", "progression_finish",
+                         "progression_cancel", "progression_advance", "progression_history",
+                         "coordination_orders", "coordination_post", "shared_review", "shared_confirm"):
             value["token"] = token or self.token
         return value
 
@@ -999,6 +1002,48 @@ class BridgeTests(unittest.TestCase):
         time.sleep(.1)
         self.assertTrue(self.exchange(self.request())["ok"])
 
+
+    def test_extension_routes_remain_closed_and_public(self):
+        profile={'id':ACCOUNT['_id'],'username':'BridgePlayer','starter_id':'spearman','unit_type':'Spearman',
+            'level':1,'experience':20,'total_experience':20,'advancement_choices':[]}
+        order={'id':TEAM['id'],'author_id':ACCOUNT['_id'],'author_name':'BridgePlayer','text':'Guard north.',
+               'created_at':'2026-10-23T01:02:03Z'}
+        review={'run_id':BATTLE['id'],'state':'running','review_state':'awaiting_captains','candidate_digest':'a'*64,
+                'winner_team_id':TEAM['id'],'draw':False,'reports_received':4,'required_reports':4,'captains_approved':1,'revision':2}
+        cases=[('progression_advance',{'unit_type':'Swordsman'},{'profile':profile},'/internal/v1/progression/advance'),
+               ('coordination_orders',{'team_id':TEAM['id']},{'team_id':TEAM['id'],'team_name':TEAM['name'],'orders':[order],'has_more':False},'/internal/v1/coordination/orders'),
+               ('coordination_post',{'team_id':TEAM['id'],'text':'Guard north.'},{'order':order},'/internal/v1/coordination/post'),
+               ('shared_review',{'run_id':BATTLE['id']},review,'/internal/v1/shared/review'),
+               ('shared_confirm',{'run_id':BATTLE['id'],'candidate_digest':'a'*64},review,'/internal/v1/shared/confirm')]
+        for operation,body,response,target in cases:
+            with self.subTest(operation=operation):
+                type(self).directory_override=(200,response)
+                result=self.exchange(self.request(operation,body));self.assertEqual(result['data'],response)
+                method,path,headers,sent=self.calls[-1]
+                self.assertEqual((method,path,json.loads(sent)),('POST',target,body))
+                self.assertEqual(headers['X-Player-Token'],self.token)
+                type(self).directory_override=(200,dict(response,password_hash='private'))
+                self.assertEqual(self.exchange(self.request(operation,body))['status'],503)
+
+    def test_extension_unknown_backend_errors_never_expose_private_text(self):
+        for status in (400,403,409,500,503):
+            type(self).directory_override=(status,{'error':{'code':'private_config','message':self.secret}})
+            result=self.exchange(self.request('progression_catalog'))
+            self.assertFalse(result['ok']);self.assertNotIn(self.secret,json.dumps(result));self.assertNotIn('private_config',json.dumps(result))
+        type(self).directory_override=(409,{'error':{'code':'busy','message':self.secret}})
+        result=self.exchange(self.request('progression_catalog'))
+        self.assertEqual(result['data']['code'],'busy');self.assertNotIn(self.secret,json.dumps(result))
+
+    def test_extension_extra_authority_fields_rejected_before_backend(self):
+        for operation,body in [('progression_catalog',{'account_id':ACCOUNT['_id']}),
+                ('progression_finish',{'run_id':BATTLE['id'],'award_experience':9999}),
+                ('shared_confirm',{'run_id':BATTLE['id'],'candidate_digest':'a'*64,'winner_team_id':TEAM['id']}),
+                ('coordination_post',{'team_id':TEAM['id'],'text':'Guard north.','author_id':ACCOUNT['_id']})]:
+            with self.subTest(operation=operation),self.connect() as peer:
+                before=len(self.calls);payload=gzip.compress(json.dumps(self.request(operation,body)).encode())
+                peer.sendall(struct.pack('!I',len(payload))+payload)
+                with self.assertRaises((EOFError,ssl.SSLError,ConnectionError)):self.read_exact(peer,4)
+                self.assertEqual(len(self.calls),before)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

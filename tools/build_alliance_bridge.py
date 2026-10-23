@@ -13,7 +13,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 STAGE = ROOT / "build/alliance-account-bridge"
-INPUTS = ("alliance_bridge/CMakeLists.txt", "alliance_bridge/main.cpp", "tools/build_alliance_bridge.py")
+INPUTS = ("alliance_bridge/CMakeLists.txt", "alliance_bridge/main.cpp", "alliance_bridge/progression_protocol.hpp", "tools/build_alliance_bridge.py")
 PURPOSE = "wesnoth-alliance-account-bridge"
 
 

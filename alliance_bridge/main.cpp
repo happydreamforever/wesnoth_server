@@ -6,6 +6,7 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/json/src.hpp>
+#include "progression_protocol.hpp"
 #include <openssl/crypto.h>
 #include <openssl/sha.h>
 #include <openssl/x509v3.h>
@@ -250,6 +251,11 @@ Request account_request(const std::vector<unsigned char>& bytes) {
         result.token = text(root.at("token"), 43);
         if(!ascii_word(result.token, 43, 43)) invalid();
         if(result.operation == "me") result.method = http::verb::get;
+    } else if(alliance::progression_protocol::operation(result.operation)) {
+        if(!root.contains("token")) invalid();
+        result.token = text(root.at("token"), 43);
+        if(!ascii_word(result.token,43,43)) invalid();
+        alliance::progression_protocol::request(result.operation,body);
     } else if(directory_operation(result.operation)) {
         if(!root.contains("token")) invalid();
         result.token = text(root.at("token"), 43);
@@ -303,6 +309,10 @@ Request account_request(const std::vector<unsigned char>& bytes) {
         if(body.contains("name")) directory_name(text(body.at("name"), 64));
     } else invalid();
     result.body = json::serialize(body);
+    if(alliance::progression_protocol::operation(result.operation)) {
+        result.target = alliance::progression_protocol::target(result.operation);
+        return result;
+    }
     result.target = directory_operation(result.operation)
         ? "/internal/v1/team-directory/" + result.operation : "/internal/v1/" + result.operation;
     return result;
@@ -716,13 +726,28 @@ json::object directory_data(const Request& request, const json::object& root) {
 json::value account_response(const Request& request, unsigned status, const std::string& body) {
     const unsigned expected = request.operation == "register" || request.operation == "create_team" ||
                               request.operation == "propose_battle" ? 201 : 200;
+    const bool progression = alliance::progression_protocol::operation(request.operation);
+    if(progression && status != expected) {
+        if(status==401||status>=500) return safe_error(request.id,status);
+        const auto parsed = parse_json(body);
+        if(!parsed.is_object()||!parsed.as_object().contains("error")||!parsed.as_object().at("error").is_object()) return safe_error(request.id,status);
+        const auto& error = parsed.as_object().at("error").as_object();
+        fields(error,{"code","message"});
+        const auto code=text(error.at("code"),64);
+        const auto message=alliance::progression_protocol::public_error(code);
+        if(message.empty()) return safe_error(request.id,status);
+        return json::object{{"v",1},{"id",request.id},{"ok",false},{"status",status},{"data",json::object{{"code",code},{"message",message}}}};
+    }
     if(status != expected) return directory_operation(request.operation)
         ? directory_error(request, status, body) : safe_error(request.id, status);
     const auto value = parse_json(body);
     if(!value.is_object()) invalid();
     const auto& root = value.as_object();
     json::object data;
-    if(directory_operation(request.operation)) {
+    if(progression) {
+        alliance::progression_protocol::response(request.operation,root);
+        data = root;
+    } else if(directory_operation(request.operation)) {
         data = directory_data(request, root);
     } else if(request.operation == "logout") {
         if(text(root.at("status"), 32) != "logged_out") invalid();
