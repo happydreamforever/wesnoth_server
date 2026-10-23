@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
+import secrets
 from pathlib import Path
 import socket
 import stat
@@ -171,7 +172,7 @@ def reserved_ports():
     """Block official service startup while the stopped runtime is copied."""
     sockets = {}
     try:
-        for host, port in (("127.0.0.1", 27018), ("127.0.0.1", 18765), ("0.0.0.0", 15001), ("0.0.0.0", 15002)):
+        for host, port in (("127.0.0.1", 27018), ("127.0.0.1", 18765), ("0.0.0.0", 15000), ("0.0.0.0", 15001), ("0.0.0.0", 15002)):
             peer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sockets[port] = peer
             if os.name == "nt":
@@ -269,7 +270,29 @@ def verify_restore(runtime, mongod, ports):
                     time.sleep(0.25)
             else:
                 raise MaintenanceError("restored_database_start_timeout")
-        check_database(runtime)
+        # A cold backup's producer version does not prove its database schema.
+        # Inspect the restored database itself. Legacy v1 remains recoverable
+        # in an isolated copy, but is never upgraded or opened by the v2 app.
+        with _client(Settings.load(runtime).mongo_uri) as client:
+            db = client.wesnoth_game
+            metadata = db.schema_metadata.find_one({"_id": "alliance"})
+            schema = metadata.get("version") if metadata else None
+            if type(schema) is not int or schema not in (1, SCHEMA_VERSION):
+                raise MaintenanceError("unsupported_restored_database_schema")
+            if schema != SCHEMA_VERSION:
+                required = {"accounts", "teams", "areas", "game_runs", "settlements", "schema_metadata",
+                            "admin_audit", "auth_sessions", "auth_attempts"}
+                if (client.server_info()["version"] != MONGO_VERSION
+                        or not required.issubset(db.list_collection_names())
+                        or not db.accounts.find_one({"role": "admin", "status": "active"}, {"_id": 1})):
+                    raise MaintenanceError("legacy_restore_incomplete")
+                with client.start_session() as session:
+                    session.start_transaction()
+                    db.schema_metadata.insert_one({"_id": "restore-check-" + secrets.token_hex(16), "version": 1}, session=session)
+                    session.abort_transaction()
+                print("LEGACY DATABASE RECOVERY VERIFIED. Use the retained v1 release to run this copy.")
+            else:
+                check_database(runtime)
     finally:
         if process.poll() is None:
             with _client(_uri("wesnoth_operator", credentials["database_admin_password"], "admin")) as client:
@@ -290,6 +313,7 @@ def verify_restore(runtime, mongod, ports):
                 raise MaintenanceError("restored_database_shutdown_unconfirmed") from None
         if process.returncode != 0:
             raise MaintenanceError("restored_database_not_cleanly_stopped")
+    return schema
 
 
 def restore(runtime, backup_path, destination, mongod):
@@ -305,7 +329,7 @@ def restore(runtime, backup_path, destination, mongod):
     manifest = json.loads(read_small(archived / "manifest.json", 8 * 1024**2))
     if (manifest.get("purpose") != PURPOSE or manifest.get("format") != 1 or
         manifest.get("mongodb_version") != MONGO_VERSION or
-        manifest.get("producer_schema_version") != SCHEMA_VERSION):
+        manifest.get("producer_schema_version") not in (1, SCHEMA_VERSION)):
         raise MaintenanceError("unsupported_backup_version")
     files = manifest.get("files")
     if not isinstance(files, dict) or len(files) > MAX_FILES or set(CONTROLS) - files.keys():
@@ -332,13 +356,13 @@ def restore(runtime, backup_path, destination, mongod):
         (target / "mongo.json").write_text(json.dumps(mongo, indent=2) + "\n", encoding="utf-8")
         validate_runtime(target)
         with runtime_lock(target):
-            verify_restore(target, mongod, ports)
+            verified_schema = verify_restore(target, mongod, ports)
         after = inventory(source, recovery_source=True) if source_present else None
         if source.exists() != source_present or after != before or inventory(archived / "runtime") != files:
             raise MaintenanceError("protected_source_changed")
         (target / "RESTORE_INCOMPLETE").unlink()
         _write_new(target / "restore-verified.json", json.dumps({"format": 1,
-            "schema_version": SCHEMA_VERSION, "mongodb_version": MONGO_VERSION,
+            "schema_version": verified_schema, "mongodb_version": MONGO_VERSION,
             "verified_at": datetime.now(timezone.utc).isoformat()}) + "\n")
     return {"files": len(files), "schema_checked": True, "database_stopped": True,
             "original_unchanged": True, "original_present": source_present, "activation_performed": False}

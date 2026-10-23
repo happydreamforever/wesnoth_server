@@ -48,8 +48,9 @@ class BackupTests(unittest.TestCase):
         self.assertFalse(destination.exists())
 
     def test_each_service_port_must_be_stopped(self):
-        for port in (27018, 18765, 15001, 15002):
+        for port in (27018, 18765, 15000, 15001, 15002):
             with self.subTest(port=port), socket.socket() as listener:
+                listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 listener.bind(("127.0.0.1", port)); listener.listen()
                 with self.assertRaisesRegex(maintenance.MaintenanceError, "services_must_be_stopped"):
                     maintenance.backup(self.runtime, self.base / "backup")
@@ -85,7 +86,7 @@ class BackupTests(unittest.TestCase):
     def test_new_restore_rebases_only_copy_then_verifies(self):
         archived = self.base / "backup"; target = self.base / "restored"
         maintenance.backup(self.runtime, archived)
-        with patch.object(maintenance, "verify_restore") as verify:
+        with patch.object(maintenance, "verify_restore", return_value=maintenance.SCHEMA_VERSION) as verify:
             result = maintenance.restore(self.runtime, archived, target, Path("/unused/mongod"))
         verify.assert_called_once()
         self.assertTrue(result["original_unchanged"])
@@ -100,7 +101,7 @@ class BackupTests(unittest.TestCase):
         archived = self.base / "backup"; maintenance.backup(self.runtime, archived)
         manifest = archived / "manifest.json"; original = manifest.read_bytes()
         for failure in ("tamper", "incomplete", "version"):
-            with self.subTest(failure=failure), patch.object(maintenance, "verify_restore") as verify:
+            with self.subTest(failure=failure), patch.object(maintenance, "verify_restore", return_value=maintenance.SCHEMA_VERSION) as verify:
                 if failure == "tamper": (archived / "runtime/data/collection.wt").write_bytes(b"tampered")
                 elif failure == "incomplete": (archived / "INCOMPLETE").touch()
                 else:
@@ -134,7 +135,7 @@ class BackupTests(unittest.TestCase):
         (self.runtime / "data/WiredTiger").write_bytes(b"damaged")
         (self.runtime / "data/mongod.lock").write_bytes(b"old crashed process")
         damaged = maintenance.inventory(self.runtime, recovery_source=True)
-        with patch.object(maintenance, "verify_restore"):
+        with patch.object(maintenance, "verify_restore", return_value=maintenance.SCHEMA_VERSION):
             result = maintenance.restore(self.runtime, archived, self.base / "restored", Path("/unused"))
         self.assertTrue(result["original_present"])
         self.assertEqual(maintenance.inventory(self.runtime, recovery_source=True), damaged)
@@ -144,7 +145,7 @@ class BackupTests(unittest.TestCase):
         archived = self.base / "backup"
         maintenance.backup(self.runtime, archived)
         missing = self.base / "missing-original"
-        with patch.object(maintenance, "verify_restore"):
+        with patch.object(maintenance, "verify_restore", return_value=maintenance.SCHEMA_VERSION):
             result = maintenance.restore(missing, archived, self.base / "restored", Path("/unused"))
         self.assertFalse(result["original_present"])
         self.assertFalse(missing.exists())
@@ -162,7 +163,7 @@ class BackupTests(unittest.TestCase):
             self.assertEqual((archived / "runtime" / battle.relative_to(self.runtime) / name).read_bytes(), (battle / name).read_bytes())
         self.assertFalse((archived / "runtime/battles/daemon.lock").exists())
         self.assertEqual(guard.read_bytes(), b"0")
-        with patch.object(maintenance, "verify_restore"):
+        with patch.object(maintenance, "verify_restore", return_value=maintenance.SCHEMA_VERSION):
             maintenance.restore(self.runtime, archived, self.base / "restored", Path("/unused"))
         self.assertEqual((self.base / "restored" / battle.relative_to(self.runtime) / "events.jsonl").read_bytes(), b"private events.jsonl")
 
@@ -233,7 +234,7 @@ class RealRestoreTests(unittest.TestCase):
             finally: _stop_owned(process, source)
             before = maintenance.inventory(source)
             maintenance.backup(source, root / "backup")
-            with self.assertRaisesRegex(ValueError, "schema"):
+            with self.assertRaisesRegex(maintenance.MaintenanceError, "schema"):
                 maintenance.restore(source, root / "backup", root / "restored", mongod)
             self.assertTrue((root / "restored/RESTORE_INCOMPLETE").is_file())
             self.assertFalse((root / "restored/restore-verified.json").exists())
