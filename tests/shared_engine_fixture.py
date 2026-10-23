@@ -17,6 +17,7 @@ from pymongo import MongoClient
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from alliance.auth import AuthService, bootstrap_auth_schema, hash_password
 from alliance.domain import AllianceService
+from alliance.heroes import load_catalog
 from alliance.rules import MAPS
 from alliance.schema import bootstrap_schema
 from alliance.battle_daemon import BattleDaemon, tls_context
@@ -55,6 +56,27 @@ async def main():
         password = 'Disposable-engine-fixture-password-123'
         encoded = hash_password(password)
         actors = [domain.register('EnginePlayer' + str(n), encoded)['_id'] for n in range(1, args.size * 2 + 1)]
+        catalogue, digest = load_catalog()
+        campaign = next(row for row in catalogue['campaigns'] if row['id'] == 'Heir_To_The_Throne_Classic')
+        alias = next(row for row in campaign['aliases'] if row['hero_id'] == 'konrad')
+        form = next(row['form_id'] for row in alias['forms'] if row['source_type'] == 'Fighter' and row['source_variation'] == '')
+        other_alias = next(row for row in campaign['aliases'] if row['hero_id'] == 'delfador')
+        other_form = other_alias['forms'][0]['form_id']
+        # Exercise the actual story checkpoint transaction instead of inserting
+        # account_heroes or retaining the removed generic starter leader.
+        for actor in actors:
+            assert domain.get_account(actor)['heroes'] == []
+            story = domain.story_begin(actor, campaign['id'], catalogue['version'], digest)
+            checkpoint = {'run_id': story['run_id'], 'checkpoint_id': str(uuid4()), 'sequence': 0,
+                'scenario_id': campaign['first_scenario'], 'next_scenario_id': '', 'outcome': 'win',
+                'nonce': story['nonce'], 'replay_sha256': 'a' * 64,
+                'heroes': [{'hero_id': 'konrad', 'unit_id': alias['unit_id'], 'form_id': form,
+                            'unlocked_forms': [form], 'earned_experience': 7},
+                           {'hero_id': 'delfador', 'unit_id': other_alias['unit_id'], 'form_id': other_form,
+                            'unlocked_forms': [other_form], 'earned_experience': 7}]}
+            unlocked = domain.story_checkpoint(actor, checkpoint)
+            assert len(unlocked['heroes']) == 2 and all(row['hero_level'] == 2 for row in unlocked['heroes'])
+            assert domain.story_checkpoint(actor, checkpoint) == unlocked
         teams = []
         lineups = []
         for team_number in range(2):
@@ -66,9 +88,12 @@ async def main():
                 domain.approve_member(lineup[0], team, actor)
         battle = domain.create_battle(actors[0], teams[1], map_id, dict(zip(teams, lineups)))
         run_id = battle['_id']
-        domain.approve_battle(actors[args.size], run_id)
         for actor in actors:
-            domain.set_ready(actor, run_id)
+            domain.directory_select_hero(actor, run_id, 'konrad', form)
+        for captain in (actors[0], actors[args.size]):
+            domain.directory_approve_battle(captain, run_id)
+        for actor in actors:
+            domain.directory_battle_ready(actor, run_id, True)
         entries = []
         for actor in actors:
             account = domain.get_account(actor)
@@ -86,7 +111,9 @@ async def main():
         fixture = {'purpose': 'disposable-shared-engine-fixture', 'database': name, 'run_id': run_id,
                    'teams': teams, 'profile': profile, 'players': entries, 'battle': current,
                    'seed': room.record['seed'], 'generation': room.generation,
-                   'size': args.size, 'map_id': map_id, 'captain_indices': [0, args.size]}
+                   'size': args.size, 'map_id': map_id, 'captain_indices': [0, args.size],
+                   'catalog_version': catalogue['version'], 'catalog_sha256': digest}
+        fixture['hero'] = {'hero_id': 'konrad', 'form_id': form, 'hero_level': 2, 'total_experience': 27, 'unselected_hero_id': 'delfador'}
         with (root / 'private-fixture.json').open('x') as output:
             json.dump(fixture, output, indent=2)
         server = await asyncio.start_server(daemon.handle, '127.0.0.1', 15002)
