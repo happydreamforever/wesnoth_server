@@ -47,6 +47,7 @@ class BattleDaemonTests(unittest.IsolatedAsyncioTestCase):
     player = fixtures.MongoDomainTests.player
     teams = fixtures.MongoDomainTests.teams
     battle = fixtures.MongoDomainTests.battle
+    select_all = fixtures.MongoDomainTests.select_all
 
     @classmethod
     def setUpClass(cls):
@@ -142,6 +143,17 @@ class BattleDaemonTests(unittest.IsolatedAsyncioTestCase):
             if predicate():return
             await asyncio.sleep(.05)
         self.fail('Expected bounded state transition did not complete.')
+
+    async def test_health_current_release_without_account_or_room(self):
+        reader, writer = await asyncio.open_connection('127.0.0.1', self.port)
+        peer = Client(reader, writer); self.peers.append(peer)
+        writer.write(b'\0\0\0\1'); await writer.drain()
+        self.assertEqual(await reader.readexactly(4), b'\0\0\0\0')
+        await writer.start_tls(self.client_context, server_hostname='127.0.0.1')
+        await peer.send(message('alliance_health'))
+        reply = await peer.read('alliance_health')
+        self.assertEqual(reply.attrs, {'service':'alliance-battles','api':'1','implementation_release':'1192616'})
+        self.assertEqual(self.db.game_runs.count_documents({}), 0)
 
     async def test_four_six_eight_fixed_seats_and_no_start_before_all_loaded(self):
         for size in (2,3,4):
@@ -350,7 +362,7 @@ class BattleDaemonTests(unittest.IsolatedAsyncioTestCase):
         self.settlement=asyncio.create_task(self.daemon.settle_ready())
         await self.until(lambda:self.service.get_run(run)['state']=='completed')
         self.assertEqual(self.db.settlements.count_documents({}),1)
-        self.assertEqual(self.service.get_account(members[0][0])['leader']['total_experience'],20)
+        self.assertEqual(self.service.get_account(members[0][0])['heroes'][0]['total_experience'],20)
         self.assertEqual(len(self.daemon.rooms[run].record['replays']),4)
         saved=marker.read_text()
         for token in tokens.values():self.assertNotIn(token,saved)

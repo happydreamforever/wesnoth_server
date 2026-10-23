@@ -7,6 +7,7 @@
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/json/src.hpp>
 #include "progression_protocol.hpp"
+#include "unified_protocol.hpp"
 #include <openssl/crypto.h>
 #include <openssl/sha.h>
 #include <openssl/x509v3.h>
@@ -34,7 +35,7 @@ namespace http = boost::beast::http;
 namespace json = boost::json;
 using tcp = asio::ip::tcp;
 using Error = boost::system::error_code;
-constexpr std::size_t max_frame = 65536, max_json = 32768;
+constexpr std::size_t max_frame = 65536, max_json = 262144;
 constexpr unsigned max_connections = 32;
 constexpr auto request_timeout = std::chrono::seconds(10);
 
@@ -197,8 +198,7 @@ std::string inflate_frame(const std::vector<unsigned char>& bytes) {
     if(!valid) invalid();
     return std::string(reinterpret_cast<const char*>(output.data()), size);
 }
-std::vector<unsigned char> compress_frame(const json::value& value) {
-    const auto input = json::serialize(value);
+std::vector<unsigned char> compress_text_frame(const std::string& input) {
     if(input.empty() || input.size() > max_json) invalid();
     std::vector<unsigned char> output(max_frame + 4);
     z_stream stream{};
@@ -214,7 +214,7 @@ std::vector<unsigned char> compress_frame(const json::value& value) {
     output.resize(size + 4);
     return output;
 }
-const std::set<std::string> starters{"spearman", "elvish-fighter", "orcish-grunt", "dwarvish-fighter", "drake-fighter", "skeleton"};
+std::vector<unsigned char> compress_frame(const json::value& value) { return compress_text_frame(json::serialize(value)); }
 std::size_t utf8_characters(const std::string& value) {
     std::size_t result = 0;
     for(unsigned char c : value) if((c & 0xc0) != 0x80) ++result;
@@ -229,7 +229,7 @@ Request account_request(const std::vector<unsigned char>& bytes) {
     if(!value.is_object()) invalid();
     const auto& root = value.as_object();
     fields(root, {"v", "id", "op", "body"}, {"token"});
-    if(!root.at("v").is_int64() || root.at("v").as_int64() != 1) invalid();
+    if(!root.at("v").is_int64() || root.at("v").as_int64() != 2) invalid();
     Request result;
     result.id = text(root.at("id"), 32); if(!request_id(result.id)) invalid();
     result.operation = text(root.at("op"), 24);
@@ -237,20 +237,23 @@ Request account_request(const std::vector<unsigned char>& bytes) {
     const auto& body = root.at("body").as_object();
     if(result.operation == "register" || result.operation == "login") {
         if(root.contains("token")) invalid();
-        if(result.operation == "register") fields(body, {"username", "password", "starter_id"});
-        else fields(body, {"username", "password"});
+        fields(body, {"username", "password"});
         const auto username = text(body.at("username"), 24);
         if(!ascii_word(username, 3, 24) || username.find('-') != std::string::npos) invalid();
         const auto password = text(body.at("password"), 512);
         const auto length = utf8_characters(password);
         if(length < (result.operation == "register" ? 12U : 1U) || length > 128 || password.find('\0') != std::string::npos) invalid();
-        if(result.operation == "register" && !starters.count(text(body.at("starter_id"), 40))) invalid();
     } else if(result.operation == "me" || result.operation == "logout") {
         fields(body, {});
         if(!root.contains("token")) invalid();
         result.token = text(root.at("token"), 43);
         if(!ascii_word(result.token, 43, 43)) invalid();
         if(result.operation == "me") result.method = http::verb::get;
+    } else if(alliance::unified_protocol::operation(result.operation)) {
+        if(!root.contains("token")) invalid();
+        result.token=text(root.at("token"),43);
+        if(!ascii_word(result.token,43,43)) invalid();
+        alliance::unified_protocol::request(result.operation,body);
     } else if(alliance::progression_protocol::operation(result.operation)) {
         if(!root.contains("token")) invalid();
         result.token = text(root.at("token"), 43);
@@ -309,6 +312,9 @@ Request account_request(const std::vector<unsigned char>& bytes) {
         if(body.contains("name")) directory_name(text(body.at("name"), 64));
     } else invalid();
     result.body = json::serialize(body);
+    if(alliance::unified_protocol::operation(result.operation)) {
+        result.target="/internal/v1/product/"+result.operation;return result;
+    }
     if(alliance::progression_protocol::operation(result.operation)) {
         result.target = alliance::progression_protocol::target(result.operation);
         return result;
@@ -326,29 +332,16 @@ json::object safe_error(const std::string& id, unsigned status) {
     else if(status == 409) { code = "conflict"; message = "The username is unavailable or the account request conflicts with current state."; }
     else if(status == 429) { code = "rate_limited"; message = "Too many attempts. Wait before trying again."; }
     else status = 503;
-    return {{"v", 1}, {"id", id}, {"ok", false}, {"status", status},
+    return {{"v", 2}, {"id", id}, {"ok", false}, {"status", status},
             {"data", {{"code", code}, {"message", message}}}};
 }
 json::object public_account(const json::value& value) {
     if(!value.is_object()) invalid();
-    const auto& source = value.as_object();
-    const auto id = text(source.at("_id"), 64), username = text(source.at("username"), 24);
-    if(!ascii_word(username, 3, 24) || !ascii_word(id, 1, 64) || !source.at("leader").is_object()) invalid();
-    const auto& leader = source.at("leader").as_object();
-    json::object result_leader;
-    for(const auto* name : {"starter_id", "unit_type"}) {
-        const auto item = text(leader.at(name), 64);
-        if(item.empty()) invalid();
-        result_leader[name] = item;
-    }
-    if(!starters.count(text(leader.at("starter_id"), 40))) invalid();
-    for(const auto* name : {"level", "experience", "total_experience"}) {
-        const auto& item = leader.at(name);
-        if(!item.is_int64() || item.as_int64() < 0 || item.as_int64() > 2147483647) invalid();
-        if(std::string(name) == "level" && (item.as_int64() < 1 || item.as_int64() > 3)) invalid();
-        result_leader[name] = item;
-    }
-    return {{"id", id}, {"username", username}, {"leader", std::move(result_leader)}};
+    const auto& source=value.as_object();
+    json::object result{{"id",source.at("_id")},{"username",source.at("username")},
+        {"database_generation",source.at("database_generation")},{"heroes",source.at("heroes")}};
+    alliance::unified_protocol::profile(result);
+    return result;
 }
 std::int64_t directory_integer(const json::object& object, const char* key,
                                std::int64_t minimum, std::int64_t maximum = 2147483647) {
@@ -399,16 +392,10 @@ json::object public_team_summary(const json::object& team, bool detail) {
 }
 json::object public_member(const json::value& value) {
     if(!value.is_object()) invalid();
-    const auto& member = value.as_object();
-    fields(member, {"id", "username", "unit_type", "level"});
-    const auto id = directory_identifier(member.at("id"), true);
-    const auto username = text(member.at("username"), 24);
-    if(!ascii_word(username, 3, 24) || username.find('-') != std::string::npos) invalid();
-    const auto unit = text(member.at("unit_type"), 64);
-    if(unit.empty()) invalid();
-    for(char c : unit) if(!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == ' ')) invalid();
-    return {{"id", id}, {"username", username}, {"unit_type", unit},
-            {"level", directory_integer(member, "level", 1, 3)}};
+    const auto& member=value.as_object();fields(member,{"id","username","hero_count"});
+    const auto id=directory_identifier(member.at("id"),true), username=text(member.at("username"),24);
+    if(!ascii_word(username,3,24)||username.find('-')!=std::string::npos) invalid();
+    return {{"id",id},{"username",username},{"hero_count",directory_integer(member,"hero_count",0,256)}};
 }
 json::object public_team_detail(const json::value& value) {
     if(!value.is_object()) invalid();
@@ -464,7 +451,7 @@ json::object directory_error(const Request& request, unsigned status, const std:
         else if(source == "conflict") { code = "conflict"; message = "The team name or membership changed. Refresh My team before another change."; }
         else status = 503;
     } else status = 503;
-    return {{"v", 1}, {"id", request.id}, {"ok", false}, {"status", status},
+    return {{"v", 2}, {"id", request.id}, {"ok", false}, {"status", status},
             {"data", {{"code", code}, {"message", message}}}};
 }
 json::object public_battle_map(const json::value& value) {
@@ -528,9 +515,12 @@ json::object public_battle(const json::value& value, bool detail) {
             for(const auto& item : team.at("players").as_array()) {
                 if(!item.is_object()) invalid();
                 const auto& player = item.as_object();
-                fields(player, {"id", "username", "unit_type", "level", "side", "ready"});
-                auto public_player = public_member(json::object{{"id", player.at("id")},
-                    {"username", player.at("username")}, {"unit_type", player.at("unit_type")}, {"level", player.at("level")}});
+                fields(player, {"id", "username", "selection", "side", "ready"});
+                const auto account_id=directory_identifier(player.at("id"),true), username=text(player.at("username"),24);
+                if(!ascii_word(username,3,24)) invalid();
+                if(!player.at("selection").is_null()) alliance::unified_protocol::selection(player.at("selection"));
+                else if(player.at("ready").is_bool()&&player.at("ready").as_bool()) invalid();
+                json::object public_player{{"id",account_id},{"username",username},{"selection",player.at("selection")}};
                 if(!player_ids.insert(text(public_player.at("id"), 36)).second || !player.at("ready").is_bool() ||
                    directory_integer(player, "side", 1, 8) != map.at("sides").as_array()[teams.size()].as_array()[players.size()].as_int64()) invalid();
                 public_player["side"] = player.at("side");
@@ -727,8 +717,9 @@ json::object directory_data(const Request& request, const json::object& root) {
 json::value account_response(const Request& request, unsigned status, const std::string& body) {
     const unsigned expected = request.operation == "register" || request.operation == "create_team" ||
                               request.operation == "propose_battle" ? 201 : 200;
+    const bool unified=alliance::unified_protocol::operation(request.operation);
     const bool progression = alliance::progression_protocol::operation(request.operation);
-    if(progression && status != expected) {
+    if((progression||unified) && status != expected) {
         if(status==401||status>=500) return safe_error(request.id,status);
         const auto parsed = parse_json(body);
         if(!parsed.is_object()||!parsed.as_object().contains("error")||!parsed.as_object().at("error").is_object()) return safe_error(request.id,status);
@@ -737,7 +728,7 @@ json::value account_response(const Request& request, unsigned status, const std:
         const auto code=text(error.at("code"),64);
         const auto message=alliance::progression_protocol::public_error(code);
         if(message.empty()) return safe_error(request.id,status);
-        return json::object{{"v",1},{"id",request.id},{"ok",false},{"status",status},{"data",json::object{{"code",code},{"message",message}}}};
+        return json::object{{"v",2},{"id",request.id},{"ok",false},{"status",status},{"data",json::object{{"code",code},{"message",message}}}};
     }
     if(status != expected) return directory_operation(request.operation)
         ? directory_error(request, status, body) : safe_error(request.id, status);
@@ -745,7 +736,11 @@ json::value account_response(const Request& request, unsigned status, const std:
     if(!value.is_object()) invalid();
     const auto& root = value.as_object();
     json::object data;
-    if(progression) {
+    if(unified) {
+        alliance::unified_protocol::response(request.operation,root);
+        if(request.operation=="battle_select_hero") {fields(root,{"battle"});data["battle"]=public_battle(root.at("battle"),true);}
+        else data=root;
+    } else if(progression) {
         alliance::progression_protocol::response(request.operation,root);
         data = root;
     } else if(directory_operation(request.operation)) {
@@ -761,7 +756,7 @@ json::value account_response(const Request& request, unsigned status, const std:
             data["token"] = token;
         }
     }
-    return json::object{{"v", 1}, {"id", request.id}, {"ok", true}, {"status", status}, {"data", std::move(data)}};
+    return json::object{{"v", 2}, {"id", request.id}, {"ok", true}, {"status", status}, {"data", std::move(data)}};
 }
 struct Settings {
     std::string secret, address;
@@ -909,6 +904,15 @@ class Session : public std::enable_shared_from_this<Session> {
     void backend_failed() { send(safe_error(request_.id, 503)); }
     void forward() {
         try {
+            if(inflate_frame(incoming_) == "[alliance_health]\n[/alliance_health]\n") {
+                responding_ = true;
+                outgoing_ = compress_text_frame("[alliance_health]\nservice=\"alliance-accounts\"\napi=\"2\"\nimplementation_release=\"1192616\"\n[/alliance_health]\n");
+                asio::async_write(client_, asio::buffer(outgoing_), [self=shared_from_this()](Error error, std::size_t) {
+                    if(error) { self->close(); return; }
+                    self->client_.async_shutdown([self](Error) { self->close(); });
+                });
+                return;
+            }
             request_ = account_request(incoming_);
             backend_request_.method(request_.method);
             backend_request_.target(request_.target);
@@ -1008,7 +1012,7 @@ int main(int argc, char** argv) {
     const char* phase = "arguments";
     try {
         if(argc == 2 && std::string(argv[1]) == "--version") {
-            std::cout << "WESNOTH_ALLIANCE_ACCOUNT_BRIDGE protocol=1 max_connections=32 timeout_seconds=10\n";
+            std::cout << "WESNOTH_ALLIANCE_ACCOUNT_BRIDGE protocol=2 max_connections=32 timeout_seconds=10\n";
             return 0;
         }
         std::map<std::string, std::string> args;

@@ -112,7 +112,7 @@ class BuildInvocationTests(unittest.TestCase):
         if tool == "openssl.exe": return "OpenSSL 3.6.3 9 Jun 2026"
         if tool == "g++.exe": return "x86_64-w64-mingw32" if option == "-dumpmachine" else "16.2.0"
         if tool == "alliance-account-bridge.exe":
-            return "WESNOTH_ALLIANCE_ACCOUNT_BRIDGE protocol=1 max_connections=32 timeout_seconds=10"
+            return "WESNOTH_ALLIANCE_ACCOUNT_BRIDGE protocol=2 max_connections=32 timeout_seconds=10"
         self.fail("Unexpected tool")
 
     def native(self, command, _environment):

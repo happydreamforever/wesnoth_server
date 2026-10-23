@@ -502,9 +502,9 @@ class BattleDaemon:
                 not ID.fullmatch(record.get('generation', '')) or record['generation'] != binding.get('generation') or
                 not re.fullmatch(r'[0-9a-f]{8}', record.get('seed', '')) or record['battle'].get('id') != run_id):
             raise WireError('Room metadata differs from its database binding.')
-        saved = {(p['id'], team['id'], p['side'], p['unit_type'], p['level'])
+        saved = {(p['id'], team['id'], p['side'], json.dumps(p['selection'], sort_keys=True))
                  for team in record['battle']['teams'] for p in team['players']}
-        actual = {(p['account_id'], p['team_id'], p['side'], p['leader']['unit_type'], p['leader']['level'])
+        actual = {(p['account_id'], p['team_id'], p['side'], json.dumps(p['selection'], sort_keys=True))
                   for p in run['participants']}
         if saved != actual or record['battle']['map']['id'] != run['map_id']:
             raise WireError('Retained fixed lineup differs from the database.')
@@ -732,7 +732,7 @@ class BattleDaemon:
             node=root.children[0]
             if node.name=='alliance_health' and not node.attrs and not node.children:
                 await asyncio.to_thread(self.db.command,'ping')
-                await send(writer,message('alliance_health',service='alliance-battles',api=1))
+                await send(writer,message('alliance_health',service='alliance-battles',api=1,implementation_release=1192616))
                 return
             if node.name!='alliance_join' or set(node.attrs)!={'run_id','token','intent'} or node.children or node.attrs['intent'] not in ('play','result_retry','replay_download'):
                 raise WireError('Invalid join request.')

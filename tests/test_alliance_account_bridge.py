@@ -36,15 +36,14 @@ SPEC.loader.exec_module(IDENTITY)
 ACCOUNT = {
     "_id": "12345678-1234-1234-1234-123456789abc", "username": "BridgePlayer",
     "password_hash": "must-never-leave-backend", "role": "player",
-    "leader": {"starter_id": "spearman", "unit_type": "Spearman", "level": 1,
-               "experience": 0, "total_experience": 0, "advancement_choices": []},
+    "database_generation": "12345678-1234-1234-1234-123456789abd", "heroes": [],
 }
 TEAM = {
     "id": "22345678-1234-1234-1234-123456789abc", "name": "Lantern Guard",
     "area_id": "area-1", "area_name": "Area 1", "captain_id": ACCOUNT["_id"],
     "level": 1, "experience": 0, "rating": 1000, "capacity": 8,
     "members": [{"id": ACCOUNT["_id"], "username": ACCOUNT["username"],
-                 "unit_type": "Spearman", "level": 1}],
+                 "hero_count": 0}],
 }
 TEAM_SUMMARY = {key: TEAM[key] for key in
                 ("id", "name", "area_id", "captain_id", "level", "experience", "rating")}
@@ -60,8 +59,7 @@ for index, (team_id, name, ids) in enumerate((
     ('42345678-1234-1234-1234-123456789abc', 'Opposing Team',
      ['62345678-1234-1234-1234-123456789abc', '72345678-1234-1234-1234-123456789abc']))):
     BATTLE['teams'].append({'id': team_id, 'name': name, 'captain_id': ids[0], 'approved': False,
-        'players': [{'id': identifier, 'username': 'Player_' + str(side), 'unit_type': 'Spearman',
-                     'level': 1, 'side': side, 'ready': False}
+        'players': [{'id': identifier, 'username': 'Player_' + str(side), 'selection': None, 'side': side, 'ready': False}
                     for identifier, side in zip(ids, BATTLE_MAP['sides'][index])]})
 BATTLE_PROPOSAL = {'team_id': BATTLE['teams'][0]['id'], 'opponent_team_id': BATTLE['teams'][1]['id'],
     'map_id': BATTLE_MAP['id'], 'lineups': [{'team_id': team['id'], 'account_ids': [p['id'] for p in team['players']]}
@@ -188,7 +186,7 @@ class BridgeIdentityTests(unittest.TestCase):
             self.assertEqual(BridgeTests.read_exact(raw, 4), b"\0\0\0\0")
             context = ssl.create_default_context(cadata=self.profile["certificate_pem"])
             with context.wrap_socket(raw, server_hostname="127.0.0.1") as peer:
-                value = {"v": 1, "id": "b" * 32, "op": "me", "body": {},
+                value = {"v": 2, "id": "b" * 32, "op": "me", "body": {},
                          "token": secrets.token_urlsafe(32)}
                 encoded = gzip.compress(json.dumps(value).encode())
                 peer.sendall(struct.pack("!I", len(encoded)) + encoded)
@@ -433,7 +431,7 @@ class BridgeTests(unittest.TestCase):
         return data
 
     def request(self, operation="me", body=None, token=None):
-        value = {"v": 1, "id": "a" * 32, "op": operation, "body": body or {}}
+        value = {"v": 2, "id": "a" * 32, "op": operation, "body": body or {}}
         if operation in ("me", "logout", "areas", "teams", "my_team", "create_team", "team_detail",
                          "my_applications", "team_applicants", "apply_team", "withdraw_application",
                          "approve_application", "reject_application", "application_decisions", "ack_decision",
@@ -456,14 +454,31 @@ class BridgeTests(unittest.TestCase):
             self.assertEqual(result["id"], value["id"])
             return result
 
+    def test_health_has_current_release_without_credentials_or_backend_calls(self):
+        before = len(self.calls)
+        with self.connect() as peer:
+            body = gzip.compress(b'[alliance_health]\n[/alliance_health]\n')
+            peer.sendall(struct.pack('!I', len(body)) + body)
+            size, = struct.unpack('!I', self.read_exact(peer, 4))
+            result = gzip.decompress(self.read_exact(peer, size)).decode()
+            self.assertEqual(result, '[alliance_health]\nservice="alliance-accounts"\napi="2"\nimplementation_release="1192616"\n[/alliance_health]\n')
+        self.assertEqual(len(self.calls), before)
+        for request in (b'[alliance_health]\ntoken="secret"\n[/alliance_health]\n',
+                        b'[alliance_health]\n[/alliance_health]\n[login]\n[/login]\n'):
+            with self.connect() as peer:
+                body = gzip.compress(request)
+                peer.sendall(struct.pack('!I', len(body)) + body)
+                self.assertEqual(peer.recv(4), b'')
+        self.assertEqual(len(self.calls), before)
+
     def test_account_cycle_and_response_projection(self):
-        credentials = {"username": "BridgePlayer", "password": "example-pass-1234", "starter_id": "spearman"}
+        credentials = {"username": "BridgePlayer", "password": "example-pass-1234"}
         registered = self.exchange(self.request("register", credentials))
         self.assertEqual(registered["status"], 201)
         self.assertTrue(registered["ok"])
         account = registered["data"]["account"]
-        self.assertEqual(set(account), {"id", "username", "leader"})
-        self.assertEqual(set(account["leader"]), {"starter_id", "unit_type", "level", "experience", "total_experience"})
+        self.assertEqual(set(account), {"id", "username", "database_generation", "heroes"})
+        self.assertEqual(account["heroes"], [])
         self.assertNotIn("password_hash", json.dumps(registered))
         logged_in = self.exchange(self.request("login", {key: credentials[key] for key in ("username", "password")}))
         self.assertEqual(logged_in["data"]["token"], self.token)
@@ -477,10 +492,10 @@ class BridgeTests(unittest.TestCase):
         for change in ({"op": "settle"}, {"id": "A" * 32}, {"path": "/internal/v1/runs"},
                        {"body": {"xp": 999}}, {"token": "x\r\nHeader: unsafe"}):
             samples.append(json.dumps(dict(base, **change)).encode())
-        samples.append(json.dumps(base).replace('"v": 1', '"v": 1, "v": 1').encode())
-        samples.append(json.dumps(base).replace('"v": 1', '"v": 1, "\\u0076": 1').encode())
-        samples.append(json.dumps({"v": 1, "id": "a" * 32, "op": "register", "token": self.token,
-                                   "body": {"username": "BridgePlayer", "password": "example-pass-1234", "starter_id": "spearman"}}).encode())
+        samples.append(json.dumps(base).replace('"v": 2', '"v": 2, "v": 2').encode())
+        samples.append(json.dumps(base).replace('"v": 2', '"v": 2, "\\u0076": 2').encode())
+        samples.append(json.dumps({"v": 2, "id": "a" * 32, "op": "register", "token": self.token,
+                                   "body": {"username": "BridgePlayer", "password": "example-pass-1234"}}).encode())
         for value in samples:
             with self.subTest(value=value), self.connect() as peer:
                 before = len(self.calls)
@@ -492,7 +507,7 @@ class BridgeTests(unittest.TestCase):
 
     def test_compression_limits_and_trailing_data(self):
         valid = gzip.compress(json.dumps(self.request()).encode())
-        for body in (gzip.compress(b"x" * 32769), valid + b"extra", valid + valid, b"not gzip"):
+        for body in (gzip.compress(b"x" * 262145), valid + b"extra", valid + valid, b"not gzip"):
             with self.subTest(size=len(body)), self.connect() as peer:
                 before = len(self.calls)
                 peer.sendall(struct.pack("!I", len(body)) + body)
@@ -819,6 +834,8 @@ class BridgeTests(unittest.TestCase):
         approved = deepcopy(BATTLE)
         for team in approved['teams']:
             team['approved'] = True
+            for player in team['players']:
+                player['selection']={'hero_id':'konrad','form_id':'konrad-fighter','hero_level':2,'hero_revision':1,'unit_type':'UH_Konrad','unit_level':1}
         ready = deepcopy(approved)
         ready['teams'][0]['players'][0]['ready'] = True
         cases = [('battle_maps', {'area_id': 'area-1'}, {'area_id': 'area-1', 'maps': [BATTLE_MAP]}, 200),
@@ -940,7 +957,7 @@ class BridgeTests(unittest.TestCase):
         self.assertTrue(self.exchange(self.request('battle_detail', {'battle_id': BATTLE['id']}))['ok'])
 
     def test_stalled_backend_does_not_block_other_connection(self):
-        slow = self.request("register", {"username": "SlowPlayer", "password": "example-pass-1234", "starter_id": "spearman"})
+        slow = self.request("register", {"username": "SlowPlayer", "password": "example-pass-1234"})
         started = time.monotonic()
         with concurrent.futures.ThreadPoolExecutor() as pool:
             result = pool.submit(self.exchange, slow)
@@ -1004,8 +1021,7 @@ class BridgeTests(unittest.TestCase):
 
 
     def test_extension_routes_remain_closed_and_public(self):
-        profile={'id':ACCOUNT['_id'],'username':'BridgePlayer','starter_id':'spearman','unit_type':'Spearman',
-            'level':1,'experience':20,'total_experience':20,'advancement_choices':[]}
+        profile={'id':ACCOUNT['_id'],'username':'BridgePlayer','database_generation':ACCOUNT['database_generation'],'heroes':[]}
         order={'id':TEAM['id'],'author_id':ACCOUNT['_id'],'author_name':'BridgePlayer','text':'Guard north.',
                'created_at':'2026-10-23T01:02:03Z'}
         review={'run_id':BATTLE['id'],'state':'running','review_state':'awaiting_captains','candidate_digest':'a'*64,

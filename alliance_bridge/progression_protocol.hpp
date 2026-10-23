@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 #include <boost/json.hpp>
+#include "unified_protocol.hpp"
 #include <algorithm>
 #include <initializer_list>
 #include <map>
@@ -20,6 +21,12 @@ inline bool operation(const std::string& op) {
 }
 inline std::string public_error(const std::string& code) {
     static const std::map<std::string,std::string> messages={
+        {"hero_required","Every selected player must choose an owned hero before approval and Ready."},
+        {"hero_locked","Complete a story scenario controlling this hero to unlock it."},
+        {"form_locked","This hero form has not been earned yet."},
+        {"catalog_mismatch","The installed hero catalogue differs from the server."},
+        {"checkpoint_conflict","This campaign checkpoint differs from the saved server progress."},
+        {"invalid_ticket","The multiplayer admission expired. Reconnect from Multiplayer."},
         {"invalid_input","Check the selected action and entered text."},
         {"not_found","The selected mission, team or battle is no longer available. Refresh its list."},
         {"forbidden","This action is not permitted for the current player or captain."},
@@ -95,7 +102,8 @@ inline void request(const std::string& op, const json::object& body) {
         if(!uuid(text(body,"run_id",36))) invalid();
     } else if(op=="progression_catalog"||op=="progression_history") keys(body,{});
     else if(op=="progression_start") {
-        keys(body,{"mission_id"}); if(!mission(text(body,"mission_id",32))) invalid();
+        keys(body,{"mission_id","hero_id","form_id"}); if(!mission(text(body,"mission_id",32))) invalid();
+        text(body,"hero_id",80);text(body,"form_id",100);
     } else if(op=="progression_status"||op=="progression_cancel") {
         keys(body,{"run_id"}); if(!uuid(text(body,"run_id",36))) invalid();
     } else if(op=="progression_advance") {
@@ -104,7 +112,7 @@ inline void request(const std::string& op, const json::object& body) {
     } else {
         keys(body,{"run_id","mission_id","mission_version","nonce","outcome","replay_sha256","format"});
         if(!uuid(text(body,"run_id",36))||!mission(text(body,"mission_id",32))||
-           text(body,"mission_version",64)!="progression-campaign-v1"||
+           text(body,"mission_version",64)!="progression-campaign-v2"||
            !hex(text(body,"nonce",64),64)||!hex(text(body,"replay_sha256",64),64)||
            text(body,"format",64)!="alliance-native-campaign-result-v1") invalid();
         const auto result=text(body,"outcome",8); if(result!="win"&&result!="loss") invalid();
@@ -127,19 +135,16 @@ inline const json::array& array(const json::object& body, const char* key, std::
     return body.at(key).as_array();
 }
 inline void profile(const json::object& value) {
-    keys(value,{"id","username","starter_id","unit_type","level","experience","total_experience","advancement_choices"});
-    if(!uuid(text(value,"id",36))) invalid();
-    text(value,"username",24);text(value,"starter_id",40);text(value,"unit_type",64);
-    number(value,"level",1,3);number(value,"experience");number(value,"total_experience");
-    for(const auto& choice:array(value,"advancement_choices",3))
-        if(!choice.is_string()||choice.as_string().empty()||choice.as_string().size()>64) invalid();
+    alliance::unified_protocol::profile(value);
 }
 inline void run(const json::object& value, bool history=false) {
-    keys(value,{"id","account_id","username","mission_id","mission_name","mission_version","ruleset_version", "state", "unit_type","leader_level","nonce","created_at","finished_at","outcome","experience_awarded"});
+    keys(value,{"id","account_id","username","database_generation","hero_id","form_id","hero_level","mission_id","mission_name","mission_version","ruleset_version", "state", "unit_type","leader_level","nonce","created_at","finished_at","outcome","experience_awarded"});
     if(!uuid(text(value,"id",36))||!uuid(text(value,"account_id",36))||!mission(text(value,"mission_id",32))||
-       text(value,"mission_version",64)!="progression-campaign-v1"||text(value,"ruleset_version",32)!="alliance-v1") invalid();
-    text(value,"username",24);text(value,"mission_name",100);text(value,"unit_type",64);
-    number(value,"leader_level",1,3);number(value,"experience_awarded",0,20);
+       text(value,"mission_version",64)!="progression-campaign-v2"||text(value,"ruleset_version",32)!="unified-heroes-v2") invalid();
+    text(value,"username",24);text(value,"mission_name",100);text(value,"unit_type",128);
+    if(!uuid(text(value,"database_generation",36))) invalid();
+    text(value,"hero_id",80);text(value,"form_id",100);alliance::unified_protocol::integer(value,"hero_level",1);
+    number(value,"leader_level",0,20);number(value,"experience_awarded",0,20);
     const auto state=text(value,"state",16);
     if(state!="running"&&state!="completed"&&state!="cancelled") invalid();
     const auto nonce=text(value,"nonce",64,true);
@@ -185,7 +190,7 @@ inline void response(const std::string& op,const json::object& body) {
             if(!missions[i].is_object()) invalid();
             const auto& m=missions[i].as_object();
             keys(m,{"id","name","version","unlocked","completed","victory_experience"});
-            if(text(m,"id",32)!="alliance_training_"+std::to_string(i+1)||text(m,"version",64)!="progression-campaign-v1") invalid();
+            if(text(m,"id",32)!="alliance_training_"+std::to_string(i+1)||text(m,"version",64)!="progression-campaign-v2") invalid();
             text(m,"name",100);boolean(m,"unlocked");boolean(m,"completed");number(m,"victory_experience",20,20);
         }
         if(!body.at("active_run").is_null()) run(object(body,"active_run"));
