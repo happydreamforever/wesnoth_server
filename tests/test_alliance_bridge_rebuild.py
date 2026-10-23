@@ -1,5 +1,6 @@
 """Execute the Windows bridge-only rebuild helper under PowerShell with simulated native builds."""
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -10,7 +11,12 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 PWSH = ROOT.parent / 'wesnoth_client/build/host-tools/powershell-7.4.6/pwsh'
-INPUTS = ('alliance_bridge/CMakeLists.txt', 'alliance_bridge/main.cpp', 'tools/build_alliance_bridge.py')
+SPEC = importlib.util.spec_from_file_location('bridge_build', ROOT / 'tools/build_alliance_bridge.py')
+BUILD = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(BUILD)
+INPUTS = BUILD.INPUTS
+LEGACY_INPUTS = ('alliance_bridge/CMakeLists.txt', 'alliance_bridge/main.cpp', 'tools/build_alliance_bridge.py')
+HEADER = 'alliance_bridge/progression_protocol.hpp'
 def quote(value): return "'" + str(value).replace("'", "''") + "'"
 def sha(value): return hashlib.sha256(value).hexdigest()
 
@@ -27,7 +33,7 @@ class RebuildTests(unittest.TestCase):
         for name in INPUTS:
             path = self.repo / name; path.parent.mkdir(parents=True, exist_ok=True); path.write_text('corrected ' + name)
         self.old_owner = {'format': 1, 'purpose': 'wesnoth-alliance-account-bridge',
-                          'inputs': {name: sha(('old ' + name).encode()) for name in INPUTS}}
+                          'inputs': {name: sha(('old ' + name).encode()) for name in LEGACY_INPUTS}}
         self.old_receipt = self.complete_stage(self.stage, self.old_owner, b'completed old bridge')
         (self.stage / 'CMakeCache.txt').write_text('completed old configuration')
         self.new = self.base / 'new-stage-fixture'; self.new.mkdir()
@@ -52,6 +58,7 @@ class RebuildTests(unittest.TestCase):
         (stage / 'receipt.json').write_text(json.dumps(receipt, sort_keys=True))
         return receipt
     def invoke(self, *, running=0, second_running=False, query_error=False, rename_error=False, build_exit=0, partial=False):
+        self.before_invoke = {p.name:p.read_bytes() for p in self.stage.iterdir()}
         wrapper = self.base / 'wrapper.ps1'
         wrapper.write_text(f'''$ErrorActionPreference = 'Stop'
 $script:queries = 0
@@ -90,9 +97,10 @@ exit $LASTEXITCODE
         return process.returncode
     def no_build(self):
         self.assertFalse(self.backups); self.assertFalse(self.invocations)
+        self.assertEqual({p.name:p.read_bytes() for p in self.stage.iterdir()}, self.before_invoke)
         self.assertNotIn('ALLIANCE ACCOUNT BRIDGE REBUILD PASSED', self.output)
         self.assertIn('ERROR:', self.logs[0].read_text())
-    def test_success_preserves_old_build_and_only_delegates_bridge(self):
+    def assert_success(self):
         self.assertEqual(self.invoke(), 0, self.output)
         self.assertEqual(len(self.backups), 1)
         self.assertEqual({p.name:p.read_bytes() for p in self.backups[0].iterdir()}, self.before)
@@ -100,7 +108,24 @@ exit $LASTEXITCODE
             str(self.repo / 'tools/Build-WindowsAllianceBridge.ps1'), '-MsysRoot', r'D:\Test\wesnoth-setup\msys64',
             '-PythonPath', r'C:\Native Python\python.exe', '-CMakePath', r'C:\Program Files\CMake\bin\cmake.exe']])
         self.assertEqual((self.stage / 'alliance-account-bridge.exe').read_bytes(), b'corrected new bridge')
+        self.assertEqual(json.loads((self.stage / 'owner.json').read_text()), self.new_owner)
         self.assertIn('ALLIANCE ACCOUNT BRIDGE REBUILD PASSED', self.logs[0].read_text())
+    def current_old_stage(self):
+        self.old_owner['inputs'] = {name: sha(('old ' + name).encode()) for name in INPUTS}
+        self.old_receipt = self.complete_stage(self.stage, self.old_owner, b'completed old bridge')
+        self.before = {p.name:p.read_bytes() for p in self.stage.iterdir()}
+    def failed_after_build(self):
+        self.assertEqual(len(self.backups), 1); self.assertEqual(len(self.invocations), 1)
+        self.assertEqual({p.name:p.read_bytes() for p in self.backups[0].iterdir()}, self.before)
+        for name in ('owner.json', 'receipt.json', 'alliance-account-bridge.exe'):
+            self.assertEqual((self.stage / name).read_bytes(), (self.new / name).read_bytes())
+        self.assertNotIn('ALLIANCE ACCOUNT BRIDGE REBUILD PASSED', self.output)
+    def test_legacy_three_input_stage_rebuilds_with_current_builder_inputs(self):
+        self.assertIn(HEADER, INPUTS)
+        self.assert_success()
+    def test_current_four_input_stage_rebuilds_and_preserves_old_build(self):
+        self.current_old_stage()
+        self.assert_success()
     def test_running_bridge_is_not_stopped_or_renamed(self):
         self.assertEqual(self.invoke(running=1), 1); self.no_build()
     def test_bridge_starting_during_check_blocks_rename(self):
@@ -117,6 +142,31 @@ exit $LASTEXITCODE
     def test_receipt_binding_mismatch_is_rejected(self):
         receipt = json.loads(json.dumps(self.old_receipt)); receipt['binding']['inputs'][INPUTS[0]] = '0' * 64
         (self.stage / 'receipt.json').write_text(json.dumps(receipt)); self.assertEqual(self.invoke(), 1); self.no_build()
+    def test_current_header_binding_mismatch_is_rejected(self):
+        self.current_old_stage()
+        receipt = json.loads(json.dumps(self.old_receipt)); receipt['binding']['inputs'][HEADER] = '0' * 64
+        (self.stage / 'receipt.json').write_text(json.dumps(receipt)); self.assertEqual(self.invoke(), 1); self.no_build()
+    def test_current_owner_with_legacy_receipt_is_rejected(self):
+        self.current_old_stage()
+        receipt = json.loads(json.dumps(self.old_receipt)); del receipt['binding']['inputs'][HEADER]
+        (self.stage / 'receipt.json').write_text(json.dumps(receipt)); self.assertEqual(self.invoke(), 1); self.no_build()
+    def test_legacy_owner_with_current_receipt_is_rejected(self):
+        receipt = json.loads(json.dumps(self.old_receipt)); receipt['binding']['inputs'][HEADER] = '0' * 64
+        (self.stage / 'receipt.json').write_text(json.dumps(receipt)); self.assertEqual(self.invoke(), 1); self.no_build()
+    def test_old_stage_with_unknown_fourth_input_is_rejected(self):
+        self.current_old_stage()
+        self.old_owner['inputs']['alliance_bridge/unknown.hpp'] = self.old_owner['inputs'].pop(HEADER)
+        self.complete_stage(self.stage, self.old_owner, b'completed old bridge')
+        self.assertEqual(self.invoke(), 1); self.no_build()
+    def test_old_stage_with_wrong_case_header_key_is_rejected(self):
+        self.current_old_stage()
+        self.old_owner['inputs'][HEADER.upper()] = self.old_owner['inputs'].pop(HEADER)
+        self.complete_stage(self.stage, self.old_owner, b'completed old bridge')
+        self.assertEqual(self.invoke(), 1); self.no_build()
+    def test_current_header_with_invalid_hash_is_rejected(self):
+        self.current_old_stage(); self.old_owner['inputs'][HEADER] = 'invalid'
+        self.complete_stage(self.stage, self.old_owner, b'completed old bridge')
+        self.assertEqual(self.invoke(), 1); self.no_build()
     def test_invalid_source_binding_is_rejected(self):
         owner = json.loads(json.dumps(self.old_owner)); owner['inputs'][INPUTS[0]] = 'invalid'
         self.complete_stage(self.stage, owner, b'completed old bridge'); self.assertEqual(self.invoke(), 1); self.no_build()
@@ -144,13 +194,29 @@ exit $LASTEXITCODE
         self.assertEqual(self.invoke(partial=True), 1); self.assertEqual(len(self.backups), 1)
         self.assertNotIn('ALLIANCE ACCOUNT BRIDGE REBUILD PASSED', self.output)
     def test_new_build_with_stale_sources_cannot_pass(self):
-        self.complete_stage(self.new, self.old_owner, b'old source rebuilt')
-        self.assertEqual(self.invoke(), 1); self.assertEqual(len(self.backups), 1)
+        stale = dict(self.new_owner, inputs={name: sha(('old ' + name).encode()) for name in INPUTS})
+        self.complete_stage(self.new, stale, b'old source rebuilt')
+        self.assertEqual(self.invoke(), 1); self.failed_after_build()
         self.assertIn('does not match the current sources', self.logs[0].read_text())
-        self.assertNotIn('ALLIANCE ACCOUNT BRIDGE REBUILD PASSED', self.output)
+    def test_new_build_without_header_binding_cannot_pass(self):
+        del self.new_owner['inputs'][HEADER]
+        self.complete_stage(self.new, self.new_owner, b'corrected new bridge')
+        self.assertEqual(self.invoke(), 1); self.failed_after_build()
+    def test_new_build_with_replaced_header_key_cannot_pass(self):
+        self.new_owner['inputs']['alliance_bridge/unknown.hpp'] = self.new_owner['inputs'].pop(HEADER)
+        self.complete_stage(self.new, self.new_owner, b'corrected new bridge')
+        self.assertEqual(self.invoke(), 1); self.failed_after_build()
+    def test_new_build_with_changed_header_source_cannot_pass(self):
+        (self.repo / HEADER).write_text('header changed after build receipt')
+        self.assertEqual(self.invoke(), 1); self.failed_after_build()
+        self.assertIn('does not match the current sources', self.logs[0].read_text())
+    def test_new_build_with_mismatched_header_binding_cannot_pass(self):
+        receipt = json.loads((self.new / 'receipt.json').read_text()); receipt['binding']['inputs'][HEADER] = '0' * 64
+        (self.new / 'receipt.json').write_text(json.dumps(receipt))
+        self.assertEqual(self.invoke(), 1); self.failed_after_build()
+        self.assertIn('ownership and receipt disagree', self.logs[0].read_text())
     def test_new_build_with_bad_artifact_cannot_pass(self):
         (self.new / 'alliance-account-bridge.exe').write_bytes(b'changed after receipt')
-        self.assertEqual(self.invoke(), 1); self.assertEqual(len(self.backups), 1)
-        self.assertNotIn('ALLIANCE ACCOUNT BRIDGE REBUILD PASSED', self.output)
+        self.assertEqual(self.invoke(), 1); self.failed_after_build()
 
 if __name__ == '__main__': unittest.main()

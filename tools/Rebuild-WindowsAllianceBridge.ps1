@@ -8,7 +8,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
 $stage = Join-Path $repo 'build\alliance-account-bridge'
-$inputs = @('alliance_bridge/CMakeLists.txt', 'alliance_bridge/main.cpp', 'tools/build_alliance_bridge.py')
+$legacyInputs = @('alliance_bridge/CMakeLists.txt', 'alliance_bridge/main.cpp', 'tools/build_alliance_bridge.py')
+$inputs = @('alliance_bridge/CMakeLists.txt', 'alliance_bridge/main.cpp', 'alliance_bridge/progression_protocol.hpp', 'tools/build_alliance_bridge.py')
 $started = $false
 $result = 1
 $log = $null
@@ -45,21 +46,28 @@ function Test-CompletedBridge([bool]$CurrentSources) {
         throw 'The completed bridge metadata could not be read or parsed. Existing files were preserved.'
     }
     $exe = Get-Item -LiteralPath (Join-Path $stage 'alliance-account-bridge.exe') -Force
+    # Completed pre-progression builds may be preserved with their original
+    # three-input binding. Newly built output must bind the progression header.
+    $bindingInputs = $inputs
+    if (-not $CurrentSources -and @($owner.inputs.PSObject.Properties.Name).Count -eq $legacyInputs.Count) {
+        $bindingInputs = $legacyInputs
+    }
     foreach ($binding in @($owner, $receipt.binding)) {
         if (@($binding.PSObject.Properties.Name).Count -ne 3 -or
             -not ($binding.format -is [int] -or $binding.format -is [long]) -or $binding.format -ne 1 -or
             $binding.purpose -cne 'wesnoth-alliance-account-bridge' -or
-            @($binding.inputs.PSObject.Properties.Name).Count -ne $inputs.Count) {
+            @($binding.inputs.PSObject.Properties.Name).Count -ne $bindingInputs.Count) {
             throw 'The saved bridge ownership or receipt binding is invalid. Preserve it and send the log.'
         }
-        foreach ($name in $inputs) {
+        foreach ($name in $bindingInputs) {
             $hash = $binding.inputs.$name
-            if ($hash -isnot [string] -or $hash -cnotmatch '^[0-9a-f]{64}$') {
+            if (@($binding.inputs.PSObject.Properties.Name) -cnotcontains $name -or
+                $hash -isnot [string] -or $hash -cnotmatch '^[0-9a-f]{64}$') {
                 throw 'The saved bridge source binding is invalid. Preserve it and send the log.'
             }
         }
     }
-    foreach ($name in $inputs) {
+    foreach ($name in $bindingInputs) {
         if ($owner.inputs.$name -cne $receipt.binding.inputs.$name) {
             throw 'The completed bridge ownership and receipt disagree. Preserve them and send the log.'
         }
