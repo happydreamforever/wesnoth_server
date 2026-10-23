@@ -1,6 +1,7 @@
 """Native progression and operator controls on disposable MongoDB only."""
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
+import hashlib
 import json
 from datetime import timedelta
 import os
@@ -256,11 +257,178 @@ class ProgressionTests(unittest.TestCase):
             self.service.shared_start(run['_id'], generation, sum(members, []), 'f'*64)
         return run['_id'], teams, members, generation
 
+    def test_pending_advancement_blocks_new_fixed_lineup_before_any_plan_is_saved(self):
+        teams, members = self.teams()
+        actor = members[0][1]
+        leader = rules.award_experience(self.service.get_account(actor)['leader'], 50)
+        self.db.accounts.update_one({'_id': actor}, {'$set': {'leader': leader}})
+        before = self.snapshot()
+        self.assertDomain('advancement_required', self.service.create_battle,
+            members[0][0], teams[1], 'isars-cross', dict(zip(teams, members)))
+        self.assertEqual(self.snapshot(), before)
+        self.service.choose_advancement(actor, 'Swordsman')
+        plan = self.service.create_battle(members[0][0], teams[1], 'isars-cross', dict(zip(teams, members)))
+        selected = next(item for item in plan['participants'] if item['account_id'] == actor)
+        self.assertEqual(selected['leader']['unit_type'], 'Swordsman')
+        self.assertEqual(selected['leader']['total_experience'], 50)
+
+    def test_legacy_pending_advancement_cannot_approve_ready_or_prepare_and_can_cancel(self):
+        run, teams, members = self.battle(start=False)
+        actor = members[0][1]
+        leader = rules.award_experience(self.service.get_account(actor)['leader'], 50)
+        self.db.accounts.update_one({'_id': actor}, {'$set': {'leader': leader}})
+        # Model an older saved plan whose fixed snapshot already contained the
+        # pending choice, rather than merely a leader-changed current plan.
+        self.db.game_runs.update_one({'_id': run['_id'], 'participants.account_id': actor},
+            {'$set': {'participants.$.leader': leader}})
+        before = self.snapshot()
+        for method, args in (
+                (self.service.approve_battle, (members[0][0], run['_id'])),
+                (self.service.directory_approve_battle, (members[0][0], run['_id'])),
+                (self.service.set_ready, (actor, run['_id'], True)),
+                (self.service.directory_battle_ready, (actor, run['_id'], True)),
+                (self.service.shared_prepare, (actor, run['_id'], str(uuid4())))):
+            self.assertDomain('advancement_required', method, *args)
+            self.assertEqual(self.snapshot(), before)
+        self.service.directory_battle_ready(actor, run['_id'], False)
+        self.service.directory_cancel_battle(members[0][0], run['_id'])
+        self.assertEqual(self.service.get_run(run['_id'])['state'], 'cancelled')
+
+    def test_off_lineup_captain_pending_advancement_does_not_block_selected_players(self):
+        teams, members = self.teams(size=3)
+        for actor in (members[0][0], members[1][0]):
+            leader = rules.award_experience(self.service.get_account(actor)['leader'], 50)
+            self.db.accounts.update_one({'_id': actor}, {'$set': {'leader': leader}})
+        lineups = {teams[index]: members[index][1:] for index in range(2)}
+        run = self.service.create_battle(members[0][0], teams[1], 'isars-cross', lineups)
+        self.service.approve_battle(members[1][0], run['_id'])
+        for actor in sum(list(lineups.values()), []):
+            self.service.set_ready(actor, run['_id'])
+        generation = str(uuid4())
+        self.service.shared_prepare(members[0][1], run['_id'], generation)
+        result = self.service.shared_start(run['_id'], generation, sum(list(lineups.values()), []), 'a' * 64)
+        self.assertEqual(result['state'], 'running')
+        for actor in (members[0][0], members[1][0]):
+            self.assertIsNone(self.service.get_account(actor)['active_run_id'])
+
     def reports(self, run, teams, members, generation, *, disputed=False, draw=False):
         for number, actor in enumerate(sum(members, [])):
             winner = None if draw else teams[1 if disputed and number == 0 else 0]
             review = self.service.shared_report_result(actor, run, generation, winner, draw, str(number)*64)
         return review
+
+    def captain_command(self, actor, run, generation, event, *, previous='0'*64, suffix=''):
+        replay={'previous':previous,'wml':'[turn]\n[command]\n[fire_event]\nraise="alliance_'+event+suffix+'"\n[/fire_event]\n[/command]\n[/turn]\n'}
+        binding=hashlib.sha256(json.dumps(replay,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        return self.service.shared_captain_command(actor,run,generation,binding,event,replay)
+
+    def test_captain_surrender_is_ordered_idempotent_and_never_settles_without_end_reports(self):
+        run,teams,members,generation=self.shared();before=self.snapshot()
+        self.assertDomain('forbidden',self.captain_command,members[0][1],run,generation,'surrender')
+        self.assertDomain('room_conflict',self.captain_command,members[0][0],run,str(uuid4()),'surrender')
+        self.assertEqual(self.snapshot(),before)
+        result=self.captain_command(members[0][0],run,generation,'surrender')
+        self.assertEqual(result['terminal']['winner_team_id'],teams[1])
+        self.assertFalse(result['terminal']['draw'])
+        unchanged=self.snapshot()
+        self.assertEqual(result,self.captain_command(members[0][0],run,generation,'surrender'))
+        self.assertEqual(self.snapshot(),unchanged)
+        self.assertEqual(self.service.get_run(run)['state'],'running')
+        self.assertEqual(self.db.settlements.count_documents({}),0)
+        self.assertDomain('invalid_state',self.captain_command,members[1][0],run,generation,'surrender',suffix='other')
+        self.assertDomain('result_conflict',self.service.shared_report_result,members[0][0],run,generation,teams[0],False,'a'*64)
+        for actor in sum(members,[]):review=self.service.shared_report_result(actor,run,generation,teams[1],False,'a'*64)
+        self.assertDomain('result_agreement_required',self.service.shared_finish,run,generation)
+        for captain in (members[0][0],members[1][0]):self.service.shared_confirm_result(captain,run,review['candidate_digest'])
+        self.service.shared_finish(run,generation)
+        self.assertEqual(self.db.settlements.count_documents({}),1)
+
+    def test_mutual_draw_offer_withdraw_and_atomic_terminal_race(self):
+        run,teams,members,generation=self.shared()
+        first=self.captain_command(members[0][0],run,generation,'offer_draw')
+        self.assertIsNone(first['terminal']);self.assertEqual(first['draw_offers'],[teams[0]])
+        withdrawn=self.captain_command(members[0][0],run,generation,'withdraw_draw',previous=first['command_id'])
+        self.assertEqual(withdrawn['draw_offers'],[])
+        first=self.captain_command(members[0][0],run,generation,'offer_draw',previous=withdrawn['command_id'])
+        before=self.snapshot()
+        original=self.service._captain
+        def fail_after_account_lock(*args):
+            original(*args)
+            raise RuntimeError('fixture transaction abort')
+        with patch.object(self.service,'_captain',side_effect=fail_after_account_lock):
+            with self.assertRaises(RuntimeError):self.captain_command(members[1][0],run,generation,'offer_draw',previous=first['command_id'])
+        self.assertEqual(self.snapshot(),before)
+        def attempt(event):
+            try:return self.captain_command(members[1][0],run,generation,event,previous=first['command_id'])
+            except DomainError as error:return error.code
+        with ThreadPoolExecutor(max_workers=2) as pool:results=list(pool.map(attempt,('offer_draw','surrender')))
+        self.assertEqual(sum(isinstance(value,dict) for value in results),1)
+        self.assertIn('invalid_state',results)
+        self.assertEqual(self.service.get_run(run)['state'],'running')
+        self.assertEqual(self.db.settlements.count_documents({}),0)
+
+    def assert_operator_resolution_preserves_terminal_outcome(self, draw):
+        admin = self.admin()
+        run, teams, members, generation = self.shared()
+        if draw:
+            first = self.captain_command(members[0][0], run, generation, 'offer_draw')
+            self.captain_command(members[1][0], run, generation, 'offer_draw', previous=first['command_id'])
+        else:
+            self.captain_command(members[0][0], run, generation, 'surrender')
+        winner = None if draw else teams[1]
+        for actor in sum(members, []):
+            review = self.service.shared_report_result(actor, run, generation, winner, draw, 'a' * 64)
+        before = self.snapshot()
+        self.assertDomain('result_conflict', self.service.admin_resolve_shared_result,
+            admin, run, teams[0], False, 'Incorrect fixture resolution', review['revision'])
+        self.assertEqual(self.snapshot(), before)
+        result = self.service.admin_resolve_shared_result(admin, run, winner, draw,
+            'Verified synchronized decision and all retained recordings', review['revision'])
+        self.assertEqual(result['result'], {'kind': 'alliance', 'winner_team_id': winner, 'draw': draw})
+
+    def test_operator_resolution_preserves_synchronized_surrender(self):
+        self.assert_operator_resolution_preserves_terminal_outcome(False)
+
+    def test_operator_resolution_preserves_synchronized_draw(self):
+        self.assert_operator_resolution_preserves_terminal_outcome(True)
+
+    def test_captain_command_rejects_unbound_data_closed_run_and_existing_end(self):
+        run,teams,members,generation=self.shared()
+        before=self.snapshot()
+        for replay in ({},{'previous':'x','wml':'fixture'},{'previous':'0'*64,'wml':'x'*65537}):
+            self.assertDomain('invalid_input',self.service.shared_captain_command,members[0][0],run,generation,'a'*64,'surrender',replay)
+        self.assertEqual(self.snapshot(),before)
+        self.service.shared_report_result(members[0][1],run,generation,teams[0],False,'a'*64)
+        self.assertDomain('invalid_state',self.captain_command,members[0][0],run,generation,'surrender')
+        self.service.shared_cancel(run,generation,'Fixture abort preserves history')
+        self.assertDomain('invalid_state',self.captain_command,members[0][0],run,generation,'offer_draw')
+
+    def test_surrender_and_conflicting_game_end_are_serialized(self):
+        run, teams, members, generation = self.shared()
+        barrier = threading.Barrier(2)
+        def attempt(action):
+            barrier.wait(timeout=10)
+            try:
+                if action == 'surrender':
+                    self.captain_command(members[0][0], run, generation, 'surrender')
+                else:
+                    self.service.shared_report_result(members[1][1], run, generation, teams[0], False, 'a' * 64)
+                return action
+            except DomainError as error:
+                return error.code
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(attempt, ('surrender', 'report')))
+        self.assertEqual(sum(value in ('surrender', 'report') for value in results), 1)
+        room = self.service.get_run(run)['shared_room']
+        self.assertNotEqual(bool(room.get('terminal')), bool(room.get('result_reports')))
+        if room.get('terminal'):
+            self.assertEqual(room['terminal']['winner_team_id'], teams[1])
+            self.assertIn('result_conflict', results)
+        else:
+            self.assertEqual(room['result_reports'][members[1][1]]['winner_team_id'], teams[0])
+            self.assertIn('invalid_state', results)
+        self.assertEqual(self.db.settlements.count_documents({}), 0)
+        self.assertEqual(self.service.get_run(run)['state'], 'running')
 
     def test_room_preparation_no_reservations_and_exact_admission(self):
         run, teams, members, generation = self.shared(start=False)
@@ -397,6 +565,34 @@ class ProgressionTests(unittest.TestCase):
         for actor in selected:self.assertEqual(self.service.get_account(actor)['leader']['total_experience'],10)
         for captain in (members[0][0],members[1][0]):self.assertEqual(self.service.get_account(captain)['leader']['total_experience'],0)
         self.assertEqual(self.service.get_account(members[0][0])['active_run_id'],outside['id'])
+
+    def test_completed_shared_history_keeps_original_members_and_captains_after_transfer(self):
+        teams,members=self.teams(size=3)
+        lineups={team:players[1:] for team,players in zip(teams,members)}
+        run=self.service.create_battle(members[0][0],teams[1],'isars-cross',lineups)['_id']
+        self.service.approve_battle(members[1][0],run)
+        selected=members[0][1:]+members[1][1:]
+        for actor in selected:self.service.set_ready(actor,run)
+        generation=str(uuid4());self.service.shared_prepare(selected[0],run,generation)
+        self.service.shared_start(run,generation,selected,'f'*64)
+        for actor in selected:review=self.service.shared_report_result(actor,run,generation,None,True,'a'*64)
+        for captain in (members[0][0],members[1][0]):self.service.shared_confirm_result(captain,run,review['candidate_digest'])
+        self.service.shared_finish(run,generation)
+        new_captain=self.player();self.service.request_join(new_captain,teams[0])
+        self.service.approve_member(members[0][0],teams[0],new_captain)
+        self.service.transfer_captain(members[0][0],teams[0],new_captain)
+        self.service.leave_team(members[0][0]);self.service.leave_team(selected[0])
+        before=self.snapshot()
+        for actor in (members[0][0],selected[0]):
+            self.assertIn(run,[item['id'] for item in self.service.directory_my_battles(actor)['battles']])
+            detail=self.service.directory_battle_detail(actor,run)
+            self.assertEqual(detail['teams'][0]['captain_id'],members[0][0])
+            self.assertEqual(detail['state'],'completed')
+            self.service.shared_replay_access(actor,run)
+        self.assertNotIn(run,[item['id'] for item in self.service.directory_my_battles(new_captain)['battles']])
+        self.assertDomain('forbidden',self.service.directory_battle_detail,new_captain,run)
+        self.assertDomain('forbidden',self.service.shared_replay_access,new_captain,run)
+        self.assertEqual(self.snapshot(),before)
 
 
 if __name__ == '__main__': unittest.main()

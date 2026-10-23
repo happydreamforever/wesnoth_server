@@ -379,5 +379,115 @@ class BattleDaemonTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.service.get_run(run)['state'],'running')
         self.assertEqual(self.db.settlements.count_documents({}),0)
 
+    async def test_real_engine_termination_advisory_is_not_a_result_and_allows_upload(self):
+        run,teams,members,tokens,peers=await self.running();actor=members[0][0];room=self.daemon.rooms[run]
+        before=room.chain
+        for result in ('victory','defeat'):
+            await peers[actor].send(message('info',type='termination',condition='game over',result=result))
+        await self.upload(peers[actor],run,teams[0],b'Actual controller END ordering fixture')
+        self.assertEqual(room.chain,before)
+        self.assertEqual(self.service.shared_result_review(actor,run)['reports_received'],1)
+        self.assertEqual(self.db.settlements.count_documents({}),0)
+        bad=peers[members[1][0]]
+        await bad.send(message('info',type='termination',condition='game over',result='victory',experience=999))
+        await bad.read('leave_game')
+        self.assertEqual(self.service.shared_result_review(actor,run)['reports_received'],1)
+
+    def captain_packet(self,side,action):
+        return Node(children=[Node('turn',children=[Node('command',{'from_side':str(side)},[
+            Node('custom_command',{'name':'alliance_captain_v1'},[Node('data',{'action':action})]),Node('checkup')])])])
+
+    async def test_captain_feature_gate_rejects_without_mutating(self):
+        run,teams,members,tokens,peers=await self.running();room=self.daemon.rooms[run]
+        with patch('alliance.battle_daemon.CAPTAIN_COMMANDS_ENABLED',False):
+            await peers[members[0][0]].send(self.captain_packet(1,'surrender'))
+            await peers[members[0][0]].read('leave_game')
+        self.assertNotIn('terminal',self.service.get_run(run)['shared_room'])
+        self.assertEqual(room.chain,'0'*64)
+
+    async def test_ordered_captain_command_crash_recovery_replays_exactly_once(self):
+        run,teams,members,tokens,peers=await self.running();room=self.daemon.rooms[run];actor=members[0][0]
+        packet=self.captain_packet(1,'surrender')
+        packet.children[0].children.insert(0,Node('command',{'from_side':'1'},[Node('move',{'x':'1,2','y':'1,1'})]))
+        def fail_before_append(node):
+            room.freeze()
+            raise RuntimeError('Fixture crash after database commit before event append')
+        with patch('alliance.battle_daemon.CAPTAIN_COMMANDS_ENABLED',True),patch.object(room,'append',side_effect=fail_before_append):
+            await peers[actor].send(packet)
+            await self.until(lambda:room.failed)
+        stored=self.service.get_run(run)['shared_room']
+        self.assertEqual(stored['terminal']['winner_team_id'],teams[1])
+        self.assertEqual(room.chain,'0'*64)
+        await self.stop_server();await self.start_server();await self.daemon.recover_running()
+        recovered=self.daemon.rooms[run]
+        self.assertEqual(len(recovered.history),1)
+        self.assertEqual(recovered.chain,stored['terminal']['command_id'])
+        await self.daemon.recover_running();self.assertEqual(len(recovered.history),1)
+        self.assertEqual(self.db.settlements.count_documents({}),0)
+        peer,_=await self.joined(run,actor,tokens[actor])
+        await peer.send(message('alliance_loaded',scenario_sha256='f'*64))
+        replay=await peer.read('turn');await peer.read('alliance_start')
+        self.assertEqual(replay.children[0].children[0].name,'move')
+        self.assertEqual(replay.children[-1].children[0].attrs['name'],'alliance_captain_v1')
+
+    async def test_buffered_same_turn_moves_precede_final_captain_decision(self):
+        run,teams,members,tokens,peers=await self.running();room=self.daemon.rooms[run];actor=members[0][0]
+        with patch('alliance.battle_daemon.CAPTAIN_COMMANDS_ENABLED',True):
+            for action in ('offer_draw','withdraw_draw'):
+                packet=self.captain_packet(1,action)
+                packet.children[0].children[:0]=[
+                    Node('command',{'from_side':'1'},[Node('move',{'x':'1,2','y':'1,1'})]),
+                    Node('command',{'from_side':'1'},[Node('recruit',{'type':'Spearman','x':'2','y':'2'})])]
+                await peers[actor].send(packet)
+                for other in sum(members,[]):
+                    if other!=actor:
+                        relayed=await peers[other].read('turn')
+                        self.assertEqual([command.children[0].name for command in relayed.children],['move','recruit','custom_command'])
+                self.assertEqual(room.current_side,1)
+        record=self.service.get_run(run)['shared_room']
+        self.assertEqual(record['draw_offers'],[])
+        self.assertEqual(len(record['captain_commands']),2)
+        self.assertEqual(len(room.history),2)
+        self.assertEqual(self.db.settlements.count_documents({}),0)
+
+    async def test_captain_packet_rejects_cross_turn_nonfinal_and_spoofed_prefixes(self):
+        run,teams,members,tokens,peers=await self.running();room=self.daemon.rooms[run];actor=members[0][0]
+        with patch('alliance.battle_daemon.CAPTAIN_COMMANDS_ENABLED',True):
+            for mode in ('nonfinal','multiple','end_turn','other_side','debug'):
+                packet=self.captain_packet(1,'offer_draw');commands=packet.children[0].children
+                if mode=='nonfinal':commands.append(Node('command',{'from_side':'1'},[Node('move')]))
+                elif mode=='multiple':commands[:0]=self.captain_packet(1,'withdraw_draw').children[0].children
+                else:
+                    child=Node('end_turn',{'next_player_number':'2'}) if mode=='end_turn' else Node('debug_lua' if mode=='debug' else 'move')
+                    commands.insert(0,Node('command',{'from_side':'2' if mode=='other_side' else '1'},[child]))
+                await peers[actor].send(packet);await peers[actor].read('leave_game')
+                await self.until(lambda:actor not in room.peers)
+                self.assertEqual(room.chain,'0'*64)
+                self.assertNotIn('captain_commands',self.service.get_run(run)['shared_room'])
+                peers[actor],_=await self.joined(run,actor,tokens[actor])
+                await peers[actor].send(message('alliance_loaded',scenario_sha256='f'*64))
+                await peers[actor].read('alliance_start')
+
+    async def test_captain_wire_rejects_out_of_turn_and_spoofed_payload_before_mutating(self):
+        run,teams,members,tokens,peers=await self.running();room=self.daemon.rooms[run]
+        with patch('alliance.battle_daemon.CAPTAIN_COMMANDS_ENABLED',True):
+            await peers[members[1][0]].send(self.captain_packet(2,'offer_draw'))
+            await peers[members[1][0]].read('leave_game')
+            packet=self.captain_packet(1,'surrender');packet.children[0].children[0].children[0].children[0].attrs['winner_team_id']=teams[0]
+            await peers[members[0][0]].send(packet);await peers[members[0][0]].read('leave_game')
+        self.assertNotIn('captain_commands',self.service.get_run(run)['shared_room'])
+        self.assertEqual(room.chain,'0'*64)
+
+    async def test_committed_captain_command_preflight_limit_freezes_before_later_events(self):
+        run,teams,members,tokens,peers=await self.running();room=self.daemon.rooms[run];actor=members[0][0]
+        with patch('alliance.battle_daemon.CAPTAIN_COMMANDS_ENABLED',True),patch('alliance.battle_daemon.MAX_HISTORY',1):
+            await peers[actor].send(self.captain_packet(1,'surrender'))
+            await self.until(lambda:room.failed)
+        self.assertEqual(room.chain,'0'*64)
+        self.assertIn('terminal',self.service.get_run(run)['shared_room'])
+        await self.stop_server();await self.start_server();await self.daemon.recover_running()
+        self.assertEqual(len(self.daemon.rooms[run].history),1)
+        self.assertEqual(self.db.settlements.count_documents({}),0)
+
 
 if __name__=='__main__':unittest.main()

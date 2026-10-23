@@ -441,7 +441,9 @@ class AllianceService:
         result['map'] = self._planning_map(run['map_id'])
         result['validity'] = self._planning_validity(run, teams, accounts, area)
         for display, current in zip(result['teams'], teams):
-            captain_id = current['captain_id'] if current and current['status'] == 'active' else ''
+            historical = run['state'] == 'completed' and run.get('shared_room', {}).get('state') == 'completed'
+            captain_id = (run['shared_room']['captains'].get(display['id'], '') if historical else
+                          current['captain_id'] if current and current['status'] == 'active' else '')
             display.update(captain_id=captain_id,
                            approved=bool(captain_id and run['approvals'].get(display['id']) == captain_id),
                            players=[{'id': player['account_id'],
@@ -455,9 +457,15 @@ class AllianceService:
         self._directory_player(actor_id)
         _directory_id(after, empty=True, uuid=True)
         team = self.db.teams.find_one({'members.account_id': actor_id, 'status': 'active'}, {'_id': 1})
-        if team is None:
-            return {'battles': [], 'next': ''}
-        query = {'kind': 'alliance', 'team_ids': team['_id']}
+        history = {'state': 'completed', 'shared_room.state': 'completed', '$or': [
+            {'participants.account_id': actor_id}, {'$expr': {'$in': [actor_id, {'$map': {
+                'input': {'$objectToArray': {'$ifNull': ['$shared_room.captains', {}]}},
+                'as': 'captain', 'in': '$$captain.v'}}]}}]}
+        branches = [history]
+        if team:
+            branches.append({'team_ids': team['_id'], '$or': [
+                {'state': {'$ne': 'completed'}}, {'shared_room': {'$exists': False}}]})
+        query = {'kind': 'alliance', '$or': branches}
         if after:
             query['_id'] = {'$gt': after}
         records = list(self.db.game_runs.find(query, {'_id': 1, 'area_id': 1, 'map_id': 1, 'state': 1,
@@ -470,7 +478,12 @@ class AllianceService:
         _directory_id(battle_id, uuid=True)
         def read(session):
             run = self._run(battle_id, session)
-            self._planning_access(actor_id, run, session)
+            if run['kind'] == 'alliance' and run['state'] == 'completed' and run.get('shared_room', {}).get('state') == 'completed':
+                permitted = {item['account_id'] for item in run['participants']} | set(run['shared_room']['captains'].values())
+                if actor_id not in permitted:
+                    raise DomainError('forbidden', 'Only the recorded players and captains may view this completed shared battle.')
+            else:
+                self._planning_access(actor_id, run, session)
             return self._planning_record(run, session)
         return self._tx(read)
 
@@ -501,6 +514,8 @@ class AllianceService:
         if validity != 'valid':
             raise DomainError('busy' if validity == 'busy' else 'stale_proposal',
                               'This plan is unavailable or changed. Inspect it before creating another plan.')
+        if any(accounts[player['account_id']]['leader']['advancement_choices'] for player in run['participants']):
+            raise DomainError('advancement_required', 'A selected player must choose their available leader advancement before preparing this battle.')
         # Serialize validation with membership, captaincy, progression and status
         # changes. No active-run reservation is made for a proposal.
         for team in teams:
@@ -967,7 +982,10 @@ class AllianceService:
             if any(p not in members for p in lineups[team['_id']]):
                 raise DomainError('not_member', 'Every selected player must belong to that team.')
             for player in lineups[team['_id']]:
-                self._idle(self._player(player, session))
+                account = self._player(player, session)
+                self._idle(account)
+                if account['leader']['advancement_choices']:
+                    raise DomainError('advancement_required', 'A selected player must choose their available leader advancement before preparing this battle.')
                 all_players.append(player)
         if len(all_players) != len(set(all_players)):
             raise DomainError('invalid_lineup', 'A player cannot fight on both teams.')
@@ -1181,6 +1199,72 @@ class AllianceService:
         return {'run_id': run['_id'], 'account_id': recording_actor,
                 'generation': room['generation'], 'sha256': report['replay_sha256']}
 
+    def shared_captain_command(self, actor_id, run_id, generation, command_id, event, replay):
+        """Trusted daemon records an ordered, synchronized captain action.
+
+        This is not a terminal HTTP route. The caller must first establish the
+        native command's authenticated seat and replay ordering. Recording a
+        directive never ends or settles a battle by itself.
+        """
+        _directory_id(run_id, uuid=True)
+        if (event not in ('surrender', 'offer_draw', 'withdraw_draw') or
+                not isinstance(command_id, str) or not re.fullmatch(r'[0-9a-f]{64}', command_id) or
+                not isinstance(replay, dict) or set(replay) != {'previous', 'wml'} or
+                not isinstance(replay['previous'], str) or not re.fullmatch(r'[0-9a-f]{64}', replay['previous']) or
+                not isinstance(replay['wml'], str) or not 1 <= len(replay['wml'].encode('utf-8')) <= 65536 or
+                '\0' in replay['wml'] or hashlib.sha256(json.dumps(replay, sort_keys=True,
+                    separators=(',', ':')).encode()).hexdigest() != command_id):
+            raise DomainError('invalid_input', 'A bounded captain command binding is required.')
+        def write(session):
+            account = self._account(actor_id, session)
+            if account['role'] != 'player':
+                raise DomainError('forbidden', 'Only a participating captain may act.')
+            run = self._run(run_id, session)
+            room = self._shared_binding(run, generation)
+            previous = room.get('captain_commands', {}).get(command_id)
+            if previous:
+                if previous['actor_id'] != actor_id or previous['event'] != event or previous['replay'] != replay:
+                    raise DomainError('result_conflict', 'A captain command binding cannot be reused.')
+                return deepcopy(previous)
+            if run['state'] != 'running' or room['state'] != 'running':
+                raise DomainError('invalid_state', 'Captain commands require a running shared battle.')
+            if actor_id not in {item['account_id'] for item in run['participants']}:
+                raise DomainError('forbidden', 'Only a selected captain seat may emit a synchronized game command.')
+            if room.get('result_reports') or room.get('terminal'):
+                raise DomainError('invalid_state', 'This battle already has a terminal decision or result report.')
+            teams = [self._team(team_id, session) for team_id in run['team_ids']]
+            team = next((item for item in teams if item['captain_id'] == actor_id), None)
+            if team is None or room.get('captains', {}).get(team['_id']) != actor_id:
+                raise DomainError('forbidden', 'Only a recorded current captain may act.')
+            self._captain(actor_id, team, session)
+            if any(item['active_run_id'] != run_id for item in teams):
+                raise DomainError('reservation_conflict', 'The shared team reservations changed.')
+            if len(room.get('captain_commands', {})) >= 128:
+                raise DomainError('limit_reached', 'This battle has reached its captain-command limit.')
+            offers = set(room.get('draw_offers', []))
+            terminal = None
+            if event == 'offer_draw':
+                offers.add(team['_id'])
+                if offers == set(run['team_ids']):
+                    terminal = {'kind': 'draw', 'winner_team_id': None, 'draw': True}
+            elif event == 'withdraw_draw':
+                offers.discard(team['_id'])
+            else:
+                terminal = {'kind': 'surrender', 'winner_team_id': next(item for item in run['team_ids'] if item != team['_id']), 'draw': False}
+            if terminal:
+                terminal.update({'command_id': command_id, 'actor_id': actor_id})
+            receipt = {'actor_id': actor_id, 'team_id': team['_id'], 'event': event,
+                       'command_id': command_id, 'draw_offers': sorted(offers), 'terminal': terminal,
+                       'replay': deepcopy(replay)}
+            update = {'shared_room.draw_offers': sorted(offers),
+                      'shared_room.captain_commands.' + command_id: receipt}
+            if terminal:
+                update['shared_room.terminal'] = terminal
+            self.db.game_runs.update_one({'_id': run_id}, {'$set': update,
+                '$inc': {'shared_room.revision': 1}}, session=session)
+            return deepcopy(receipt)
+        return self._tx(write)
+
     def shared_cancel(self, run_id, generation, reason):
         """Fenced daemon shutdown/abort; never expire or settle a running room."""
         _directory_id(run_id, uuid=True)
@@ -1274,6 +1358,9 @@ class AllianceService:
                 return self._shared_review(run, session)
             if run['state'] != 'running' or room['state'] != 'running':
                 raise DomainError('invalid_state', 'Only a running shared game accepts result reports.')
+            terminal = room.get('terminal')
+            if terminal and (terminal['winner_team_id'] != winner_team_id or terminal['draw'] != draw):
+                raise DomainError('result_conflict', 'The game END report differs from the synchronized captain decision.')
             self.db.game_runs.update_one({'_id': run_id}, {'$set': {'shared_room.result_reports.' + actor_id: report},
                                                           '$inc': {'shared_room.revision': 1}}, session=session)
             return self._shared_review(self._run(run_id, session), session)
@@ -1337,6 +1424,9 @@ class AllianceService:
                 raise DomainError('result_agreement_required', 'All player END reports must exist before operator resolution.')
             if not draw and winner_team_id not in run['team_ids']:
                 raise DomainError('invalid_result', 'The winner must be a participating team.')
+            terminal = room.get('terminal')
+            if terminal and (terminal['winner_team_id'] != winner_team_id or terminal['draw'] != draw):
+                raise DomainError('result_conflict', 'Operator resolution must retain the synchronized captain decision.')
             before = self._shared_review(run, session)
             receipt = self._finish_battle(run_id, winner_team_id, draw, session, shared_authorized=True)
             resolution = {'actor_id': actor_id, 'reason': reason, 'winner_team_id': winner_team_id,

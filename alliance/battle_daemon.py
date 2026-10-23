@@ -32,6 +32,9 @@ from tools.alliance_transport import verify_identity
 MAX_HISTORY = 128 * 1024 * 1024
 MAX_REPLAY = 32 * 1024 * 1024
 MAX_ROOMS = 128
+# Synchronized surrender and mutual draw are exercised with actual native
+# engines; the command still requires the recorded captain's current turn.
+CAPTAIN_COMMANDS_ENABLED = True
 ID = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
 
 
@@ -56,6 +59,40 @@ def write_json(path, value):
     except BaseException:
         # Leave an interrupted write for diagnosis; never erase the old record.
         raise
+
+
+def captain_action(root):
+    """Recognize only the confirmed synchronized native captain command."""
+    actions = [child for turn in root.children if turn.name == 'turn'
+               for command in turn.children for child in command.children
+               if child.name == 'custom_command' and child.attrs.get('name') == 'alliance_captain_v1']
+    if not actions:
+        return None
+    if root.attrs or len(root.children) != 1 or root.children[0].name != 'turn':
+        raise WireError('Invalid captain command packet.')
+    turn = root.children[0]
+    if (turn.attrs or not 1 <= len(turn.children) <= 512 or
+            any(command.name != 'command' or not command.children for command in turn.children)):
+        raise WireError('A captain action requires synchronized commands.')
+    # Stock block_undo flushes any preceding move/recruit commands together with
+    # the non-undoable captain decision. Bind the whole same-turn packet so its
+    # exact ordered prefix is recovered if the database commit precedes fsync.
+    command = turn.children[-1]
+    if len(actions) != 1 or actions[0] not in command.children:
+        raise WireError('The captain action must be the final synchronized command.')
+    if any(child.name == 'end_turn' for earlier in turn.children[:-1] for child in earlier.children):
+        raise WireError('A captain action cannot follow a turn change in the same packet.')
+    if len(actions) != 1 or any(child is not actions[0] and not re.fullmatch(r'checkup[0-9]*', child.name) for child in command.children):
+        raise WireError('A captain action cannot contain another game action.')
+    action = actions[0]
+    if action.attrs != {'name': 'alliance_captain_v1'} or len(action.children) != 1 or action.children[0].name != 'data':
+        raise WireError('Invalid captain command data.')
+    data = action.children[0]
+    if set(data.attrs) != {'action'} or data.children or data.attrs['action'] not in ('surrender','offer_draw','withdraw_draw'):
+        raise WireError('Invalid captain action.')
+    if command.attrs.get('dependent') == 'yes':
+        raise WireError('A captain action cannot be an out-of-turn choice.')
+    return data.attrs['action']
 
 
 @contextmanager
@@ -111,6 +148,7 @@ class Room:
         self.last_choice = -1
         self.choices = {}
         self.chain = '0'*64
+        self.event_hashes = set()
         self.failed = False
         self.verified_replays = set()
         history = safe_path(directory/'events.jsonl')
@@ -127,6 +165,7 @@ class Room:
                     if event['previous'] != self.chain or hashlib.sha256(body).hexdigest() != digest:
                         raise ValueError('Retained room history is inconsistent.')
                     self.chain = digest
+                    self.event_hashes.add(digest)
                     node = parse(event['wml'])
                     self.count_replay(node)
                     self.history.append(node)
@@ -190,6 +229,7 @@ class Room:
             with safe_path(self.directory/'events.jsonl').open('a', encoding='utf-8', newline='\n') as stream:
                 stream.write(line); stream.flush(); os.fsync(stream.fileno())
             self.chain = digest
+            self.event_hashes.add(digest)
             self.history_bytes += len(line.encode())
             self.history.append(node)
             self.track(node)
@@ -366,6 +406,11 @@ class Room:
                     raise WireError('Invalid turn commands.')
                 # Validate the entire batch before writing or relaying anything.
                 simulated_side = self.current_side
+                captain_event = captain_action(root)
+                if captain_event and not CAPTAIN_COMMANDS_ENABLED:
+                    raise WireError('The native captain command is not available in this build.')
+                if captain_event and peer.side != self.current_side:
+                    raise WireError('A captain action belongs to its active side turn.')
                 for command in node.children:
                     if command.name!='command' or not command.children:
                         raise WireError('Invalid turn command.')
@@ -396,10 +441,38 @@ class Room:
                             if not 1<=next_side<=self.size+1:
                                 raise WireError('Invalid next side.')
                             simulated_side=(next_side-1)%self.size+1
-                self.append(root)
+                if captain_event:
+                    replay = {'previous': self.chain, 'wml': serialize(root)}
+                    binding = hashlib.sha256(json.dumps(replay, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+                    try:
+                        await asyncio.to_thread(self.daemon.domain.shared_captain_command,
+                            peer.account['_id'], self.run_id, self.generation, binding, captain_event, replay)
+                    except DomainError:
+                        raise
+                    except BaseException:
+                        # Commit response loss is uncertain. Freeze rather than
+                        # letting later commands pass the durable pending one.
+                        self.freeze()
+                        raise
+                try:
+                    self.append(root)
+                except BaseException:
+                    if captain_event:
+                        # Even preflight limits can fail before append's own
+                        # write guard. No later command may pass the committed
+                        # captain event until exact recovery completes it.
+                        self.freeze()
+                    raise
                 await self.broadcast(root, exclude=peer.account['_id'])
             elif node.name in ('leave_game','stop_updates'):
                 peer.close()
+            elif node.name=='info':
+                # The real play controller emits this advisory before its
+                # replay upload. It proves no outcome and earns no reward.
+                if (set(node.attrs)!={'type','condition','result'} or node.children or
+                        node.attrs['type']!='termination' or node.attrs['condition']!='game over' or
+                        node.attrs['result'] not in ('victory','defeat')):
+                    raise WireError('Invalid game termination advisory.')
             elif node.name=='message':
                 text=node.attrs.get('message','')
                 if not 1<=len(text)<=500 or node.children:
@@ -463,6 +536,33 @@ class BattleDaemon:
         if changed:
             room.persist()
 
+    def recover_captain_commands(self, room, run):
+        """Complete a committed command's missing event append exactly once."""
+        commands = run.get('shared_room', {}).get('captain_commands', {})
+        if len(commands) > 128:
+            raise WireError('Retained captain command limit exceeded.')
+        pending = {key: value for key, value in commands.items() if key not in room.event_hashes}
+        while pending:
+            candidates = [(key, value) for key, value in pending.items() if value['replay']['previous'] == room.chain]
+            if len(candidates) != 1:
+                raise WireError('Retained captain commands do not continue the event history.')
+            binding, receipt = candidates[0]
+            replay = receipt['replay']
+            if (set(replay) != {'previous','wml'} or len(replay['wml'].encode()) > 65536 or
+                    hashlib.sha256(json.dumps(replay,sort_keys=True,separators=(',', ':')).encode()).hexdigest() != binding):
+                raise WireError('Retained captain command digest differs.')
+            packet = parse(replay['wml'])
+            if captain_action(packet) != receipt['event']:
+                raise WireError('Retained captain action differs.')
+            actor = next((item for item in run['participants'] if item['account_id']==receipt['actor_id']),None)
+            if (actor is None or run['shared_room']['captains'].get(actor['team_id']) != receipt['actor_id'] or
+                    actor['side'] != room.current_side or
+                    any(command.attrs.get('from_side') not in (None,str(actor['side']))
+                        for command in packet.children[0].children)):
+                raise WireError('Retained captain command ownership differs.')
+            room.append(packet)
+            del pending[binding]
+
     async def recover_running(self):
         """Resume settlement after restart without requiring another player join."""
         runs = await asyncio.to_thread(lambda: list(self.db.game_runs.find(
@@ -481,6 +581,9 @@ class BattleDaemon:
                     self.rooms[run_id] = Room(self, run_id, directory, record)
                 room = self.rooms[run_id]
                 async with room.lock:
+                    if room.failed:
+                        continue
+                    self.recover_captain_commands(room, run)
                     self.recover_replays(room, run)
 
     async def reserve_room_slot(self):
@@ -540,6 +643,7 @@ class BattleDaemon:
                         'seed':secrets.token_hex(4),'state':'preparing','scenario_sha256':''}
                 write_json(marker,record)
             room=Room(self,run_id,directory,record)
+            self.recover_captain_commands(room, run)
             self.rooms[run_id]=room
             return room
 
