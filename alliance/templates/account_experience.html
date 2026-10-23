@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<p class="eyebrow">Audited correction</p><h1>Correct {{ account.username }}’s leader experience</h1>
-<section class="panel"><p>Use only to correct a verified missing or mistaken award. This does not change the leader’s type, team, rating or mission completion. Experience already spent on advancement cannot be removed. An active game must finish or be cancelled first.</p>
-<dl><dt>Leader</dt><dd>{{ account.leader.unit_type }}</dd><dt>Current experience</dt><dd>{{ account.leader.experience }}</dd><dt>Total experience</dt><dd>{{ account.leader.total_experience }}</dd></dl>
-<form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="revision" value="{{ account.revision }}"><label for="delta">Experience adjustment (negative to subtract)</label><input id="delta" name="delta" type="number" min="-1000" max="1000" step="1" required><label for="reason">Evidence and reason for correction</label><textarea id="reason" name="reason" minlength="3" maxlength="500" required></textarea><button type="submit">Save audited correction</button> <a href="{{ url_for('account_detail', account_id=account._id) }}">Back without changes</a></form></section>
+<p class="eyebrow">Audited correction</p><h1>Correct {{ account.username }}’s hero experience</h1>
+<p>Choose the individual hero to correct. Each hero has separate experience and level. Finish active team battles first.</p>
+{% for hero in account.heroes %}<section class="panel"><h2>{{ hero.name }}</h2>
+<p>Hero level {{ hero.hero_level }} · Total experience {{ hero.total_experience }}</p>
+<form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="revision" value="{{ hero.revision }}"><input type="hidden" name="hero_id" value="{{ hero.hero_id }}">
+<label>Experience adjustment<input name="delta" type="number" min="-1000000" max="1000000" step="1" required></label>
+<label>Evidence and reason<textarea name="reason" minlength="3" maxlength="500" required></textarea></label><button type="submit">Save audited correction</button></form></section>{% else %}<p>No heroes have been unlocked.</p>{% endfor %}
+<a href="{{ url_for('account_detail', account_id=account._id) }}">Back</a>
 {% endblock %}

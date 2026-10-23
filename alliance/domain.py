@@ -81,7 +81,7 @@ def public_account(document):
     return result
 
 
-class AllianceService:
+class LegacyAllianceService:
     def __init__(self, db):
         self.db = db
 
@@ -915,7 +915,7 @@ class AllianceService:
             receipt = self._finish_campaign(run_id, outcome, session)
             self.db.game_runs.update_one({'_id': run_id}, {'$set': {'native_result': evidence}}, session=session)
             return {'run': self._campaign_record(actor_id, self._run(run_id, session), session=session),
-                    'profile': self._progression_profile(self._account(actor_id, session)),
+                    'profile': self._progression_profile(self._account(actor_id, session), session),
                     'experience_awarded': receipt['rewards']['players'][0]['experience']}
         return self._tx(write)
 
@@ -1791,3 +1791,12 @@ class AllianceService:
                             {'state': 'cancelled'}, session)
             return result
         return self._tx(write)
+
+
+# The historical domain remains the team/settlement foundation. V2 replaces
+# every single-leader boundary with the owned-hero model and explicit reset.
+from .product import UnifiedProduct
+
+
+class AllianceService(UnifiedProduct, LegacyAllianceService):
+    pass

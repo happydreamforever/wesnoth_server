@@ -333,7 +333,8 @@ def check_database(runtime):
         if db.schema_metadata.find_one({"_id": "alliance", "version": SCHEMA_VERSION}) is None:
             raise ConfigurationError("Unsupported or incomplete Alliance schema; explicit initialization/migration required.")
         required = {"accounts", "teams", "areas", "game_runs", "settlements", "schema_metadata",
-                    "admin_audit", "auth_sessions", "auth_attempts"}
+                    "admin_audit", "auth_sessions", "auth_attempts", "account_heroes",
+                    "story_checkpoints", "casual_tickets", "casual_games"}
         if not required.issubset(db.list_collection_names()):
             raise ConfigurationError("Alliance schema is incomplete; resume initialization.")
         if not db.accounts.find_one({"role": "admin", "status": "active"}, {"_id": 1}):

@@ -8,7 +8,7 @@ from __future__ import annotations
 from copy import deepcopy
 import math
 
-RULESET_VERSION = 'alliance-v1'
+RULESET_VERSION = 'unified-heroes-v2'
 TEAM_CAPACITY = 8
 MAX_JOIN_REQUESTS = 64
 
@@ -58,7 +58,7 @@ MAPS = {
 # These identifiers reserve the progression order. Playable mission content is a
 # separate delivery; the persistence service must not advertise it as installed.
 MISSIONS = ('alliance_training_1', 'alliance_training_2', 'alliance_training_3')
-MISSION_VERSION = 'progression-campaign-v1'
+MISSION_VERSION = 'progression-campaign-v2'
 MISSION_NAMES = dict(zip(MISSIONS, ('Border Patrol', 'The River Crossing', 'The Old Fortress')))
 CAMPAIGN_CONTENT_READY = True
 LEADER_REWARDS = {'win': 20, 'loss': 10, 'draw': 10}

@@ -29,7 +29,11 @@ class ProgressionTests(unittest.TestCase):
     admin = fixtures.MongoDomainTests.admin
     teams = fixtures.MongoDomainTests.teams
     battle = fixtures.MongoDomainTests.battle
+    select_all = fixtures.MongoDomainTests.select_all
     assertDomain = fixtures.MongoDomainTests.assertDomain
+
+    def start_training(self, actor, mission):
+        return self.service.progression_start(actor, mission, self.hero_id, self.form_id)
 
     def finish(self, actor, run, **changes):
         args = dict(run_id=run['id'], mission_id=run['mission_id'], mission_version=run['mission_version'],
@@ -40,7 +44,7 @@ class ProgressionTests(unittest.TestCase):
 
     def snapshot(self):
         return {name: list(self.db[name].find({}).sort('_id', 1)) for name in
-                ('accounts', 'teams', 'areas', 'game_runs', 'settlements', 'admin_audit')}
+                ('accounts', 'account_heroes', 'teams', 'areas', 'game_runs', 'settlements', 'admin_audit')}
 
     def test_catalog_read_only_unlock_and_private_projection(self):
         actor = self.player()
@@ -50,19 +54,18 @@ class ProgressionTests(unittest.TestCase):
         self.assertEqual([m['unlocked'] for m in result['missions']], [True, False, False])
         self.assertIsNone(result['active_run'])
         self.assertNotIn('password_hash', json.dumps(result))
-        self.assertEqual(set(result['profile']), {'id','username','starter_id','unit_type','level',
-                                                'experience','total_experience','advancement_choices'})
+        self.assertEqual(set(result['profile']), {'id','username','database_generation','heroes'})
 
     def test_bound_run_completion_and_duplicate_reward(self):
         actor = self.player()
-        run = self.service.progression_start(actor, rules.MISSIONS[0])['run']
+        run = self.start_training(actor, rules.MISSIONS[0])['run']
         self.assertRegex(run['nonce'], r'^[0-9a-f]{64}$')
         self.assertEqual(self.service.progression_catalog(actor)['active_run'], run)
         self.assertEqual(self.service.progression_status(actor, run['id'])['run'], run)
         self.assertEqual(self.service.progression_history(actor)['runs'][0]['nonce'], '')
         result = self.finish(actor, run)
         self.assertEqual(result['experience_awarded'], 20)
-        self.assertEqual(result['profile']['experience'], 20)
+        self.assertEqual(result['profile']['heroes'][0]['total_experience'], 20)
         self.assertEqual(result['run']['state'], 'completed')
         self.assertEqual(result['run']['nonce'], '')
         again = self.finish(actor, run)
@@ -74,7 +77,7 @@ class ProgressionTests(unittest.TestCase):
 
     def test_wrong_owner_nonce_version_mission_and_result_cannot_award(self):
         actor, other = self.player(), self.player()
-        run = self.service.progression_start(actor, rules.MISSIONS[0])['run']
+        run = self.start_training(actor, rules.MISSIONS[0])['run']
         before = self.snapshot()
         self.assertDomain('forbidden', self.finish, other, run)
         self.assertDomain('forbidden', self.service.progression_status, other, run['id'])
@@ -84,22 +87,22 @@ class ProgressionTests(unittest.TestCase):
             self.assertDomain('invalid_result', self.finish, actor, run, **{field:value})
         self.assertEqual(self.snapshot(), before)
 
-    def test_legacy_or_practice_run_has_no_native_completion_binding(self):
+    def test_story_or_practice_run_has_no_training_completion_binding(self):
+        from alliance.heroes import load_catalog
         actor = self.player()
-        run = self.service.start_campaign(actor, rules.MISSIONS[0])
-        projected = self.service.progression_status(actor, run['_id'])['run']
-        self.assertEqual(projected['nonce'], '')
-        self.assertDomain('invalid_result', self.finish, actor, projected,
-                          nonce='a'*64, mission_version=rules.MISSION_VERSION)
+        catalog, digest = load_catalog()
+        story = self.service.story_begin(actor, catalog['campaigns'][0]['id'], catalog['version'], digest)
+        self.assertDomain('forbidden', self.service.progression_status, actor, story['run_id'])
+        self.assertDomain('invalid_state', self.service.finish_campaign, story['run_id'], 'win')
         self.assertEqual(self.db.settlements.count_documents({}), 0)
 
     def test_loss_and_cancel_release_without_progress(self):
         actor = self.player()
-        run = self.service.progression_start(actor, rules.MISSIONS[0])['run']
+        run = self.start_training(actor, rules.MISSIONS[0])['run']
         lost = self.finish(actor, run, outcome='loss')
-        self.assertEqual(lost['profile']['total_experience'], 0)
+        self.assertEqual(lost['profile']['heroes'][0]['total_experience'], 0)
         self.assertFalse(self.service.progression_catalog(actor)['missions'][1]['unlocked'])
-        fresh = self.service.progression_start(actor, rules.MISSIONS[0])['run']
+        fresh = self.start_training(actor, rules.MISSIONS[0])['run']
         cancelled = self.service.progression_cancel(actor, fresh['id'])
         self.assertEqual(cancelled['run']['state'], 'cancelled')
         self.assertEqual(self.service.progression_cancel(actor, fresh['id']), cancelled)
@@ -108,7 +111,7 @@ class ProgressionTests(unittest.TestCase):
 
     def test_finish_is_atomic_and_races_award_once(self):
         actor = self.player()
-        run = self.service.progression_start(actor, rules.MISSIONS[0])['run']
+        run = self.start_training(actor, rules.MISSIONS[0])['run']
         before = self.snapshot()
         with patch.object(self.service, '_record_settlement', side_effect=RuntimeError('fixture rollback')):
             with self.assertRaises(RuntimeError): self.finish(actor, run)
@@ -116,28 +119,29 @@ class ProgressionTests(unittest.TestCase):
         with ThreadPoolExecutor(max_workers=2) as pool:
             results = list(pool.map(lambda _: self.finish(actor, run), range(2)))
         self.assertEqual(results[0], results[1])
-        self.assertEqual(self.service.get_account(actor)['leader']['total_experience'], 20)
+        self.assertEqual(self.service.get_account(actor)['heroes'][0]['total_experience'], 20)
 
     def test_history_bounded_and_no_nonce_or_other_player(self):
         actor, other = self.player(), self.player()
         for _ in range(22):
-            run = self.service.progression_start(actor, rules.MISSIONS[0])['run']
+            run = self.start_training(actor, rules.MISSIONS[0])['run']
             self.service.progression_cancel(actor, run['id'])
-        self.service.progression_start(other, rules.MISSIONS[0])
+        self.start_training(other, rules.MISSIONS[0])
         history = self.service.progression_history(actor)
         self.assertEqual(len(history['runs']), 20)
         self.assertTrue(history['has_more'])
         self.assertTrue(all(row['account_id'] == actor and row['nonce'] == '' for row in history['runs']))
 
-    def test_advancement_preserves_identity_and_requires_earned_choice(self):
+    def test_permanent_growth_keeps_form_and_needs_no_manual_advancement(self):
         actor = self.player()
         for _ in range(3):
-            run = self.service.progression_start(actor, rules.MISSIONS[0])['run']
-            self.finish(actor, run)
-        self.assertDomain('advancement_required', self.service.progression_start, actor, rules.MISSIONS[1])
-        result = self.service.progression_advance(actor, 'Swordsman')['profile']
-        self.assertEqual((result['id'], result['level'], result['experience'], result['total_experience']), (actor,2,18,60))
-        self.assertDomain('invalid_advancement', self.service.progression_advance, actor, 'Royal Guard')
+            self.finish(actor, self.start_training(actor, rules.MISSIONS[0])['run'])
+        hero = self.service.get_account(actor)['heroes'][0]
+        self.assertEqual((hero['hero_id'], hero['hero_level'], hero['experience'], hero['total_experience']),
+                         (self.hero_id, 3, 5, 60))
+        self.assertEqual(hero['forms'], [self.form_id])
+        self.assertDomain('unsupported_ruleset', self.service.progression_advance, actor, 'Swordsman')
+        self.start_training(actor, rules.MISSIONS[1])
 
     def test_captain_orders_private_bounded_and_transfer(self):
         teams, members = self.teams()
@@ -178,37 +182,39 @@ class ProgressionTests(unittest.TestCase):
         revision = self.db.areas.find_one({'_id':'area-1'}).get('revision',0)
         self.assertDomain('busy', self.service.admin_edit_area, admin, 'area-1', 'Area 1', False, ['isars-cross'], 'Active battle', revision)
 
-    def test_correction_bounded_audited_stale_no_type_or_team_changes(self):
+    def test_correction_bounded_audited_stale_no_form_or_team_changes(self):
         admin, actor = self.admin(), self.player()
         team = self.service.create_team(actor, 'Correction Team')
-        account = self.service.get_account(actor)
-        result = self.service.admin_correct_experience(admin, actor, 50, 'Verified missing award', account['revision'])
-        self.assertEqual((result['unit_type'],result['experience'],result['total_experience']), ('Spearman',50,50))
+        revision = self.service.get_account(actor)['heroes'][0]['revision']
+        result = self.service.admin_correct_hero_experience(admin, actor, self.hero_id, 50, 'Verified missing award', revision)
+        hero = result['heroes'][0]
+        self.assertEqual((hero['hero_level'], hero['experience'], hero['total_experience']), (2, 30, 50))
+        self.assertEqual(hero['forms'], [self.form_id])
         self.assertEqual(self.service.directory_my_team(actor)['id'], team['_id'])
-        self.assertEqual(self.db.admin_audit.count_documents({'action':'correct_leader_experience'}), 1)
-        self.assertDomain('stale_account', self.service.admin_correct_experience, admin, actor, 1, 'Old form', account['revision'])
-        self.service.progression_advance(actor, 'Swordsman')
-        revision = self.service.get_account(actor)['revision']
-        self.assertDomain('invalid_correction', self.service.admin_correct_experience, admin, actor, -9, 'Spent experience', revision)
-        for delta in (0,1001,-1001,True,1.5):
-            self.assertDomain('invalid_input', self.service.admin_correct_experience, admin, actor, delta, 'Invalid correction', revision)
+        self.assertEqual(self.db.admin_audit.count_documents({'action':'correct_hero_experience'}), 1)
+        self.assertDomain('stale_account', self.service.admin_correct_hero_experience, admin, actor, self.hero_id, 1, 'Old form', revision)
+        revision = hero['revision']
+        self.assertDomain('invalid_correction', self.service.admin_correct_hero_experience, admin, actor, self.hero_id, -51, 'Negative total', revision)
+        for delta in (0,1000001,-1000001,True,1.5):
+            self.assertDomain('invalid_input', self.service.admin_correct_hero_experience, admin, actor, self.hero_id, delta, 'Invalid correction', revision)
 
     def test_http_contract_auth_csrf_projection_and_templates(self):
         bootstrap_auth_schema(self.db)
         password='Fixture-only-password-123'
         hashed=hash_password(password)
-        actor=self.service.register('NativePlayer',hashed)['_id']
+        actor=self.player()
+        self.db.accounts.update_one({'_id':actor},{'$set':{'password_hash':hashed}})
         admin=self.service.bootstrap_admin('Operator',hashed)['_id']
         settings=SimpleNamespace(host='127.0.0.1',port=18765,secret_key=uuid4().hex,bridge_secret=uuid4().hex)
         app=create_app(settings,self.db);app.config['TESTING']=True;client=app.test_client()
         auth=AuthService(self.db)
-        token=auth.authenticate('NativePlayer',password,'player')['token']
+        token=auth.authenticate(self.service.get_account(actor)['username'],password,'player')['token']
         headers={'Authorization':'Bearer '+settings.bridge_secret,'X-Player-Token':token}
         url='/internal/v1/progression/'
         self.assertEqual(client.post(url+'catalog',json={}).status_code,401)
         self.assertEqual(client.post(url+'catalog?extra=1',json={},headers=headers).status_code,400)
         self.assertEqual(client.post(url+'catalog',json={'xp':20},headers=headers).status_code,400)
-        result=client.post(url+'start',json={'mission_id':rules.MISSIONS[0]},headers=headers)
+        result=client.post(url+'start',json={'mission_id':rules.MISSIONS[0], 'hero_id':self.hero_id, 'form_id':self.form_id},headers=headers)
         self.assertEqual(result.status_code,200)
         run=result.json['run'];self.assertTrue(run['nonce'])
         self.assertNotIn(run['nonce'],client.post(url+'history',json={},headers=headers).get_data(as_text=True))
@@ -232,13 +238,13 @@ class ProgressionTests(unittest.TestCase):
             return re.search(r'name="csrf_token" value="([^"]+)"',client.get(path).get_data(as_text=True)).group(1)
         client.post('/login',data={'csrf_token':token('/login'),'username':'Operator','password':password})
         path='/accounts/'+actor+'/experience'
-        form={'csrf_token':token(path),'revision':str(self.service.get_account(actor)['revision']),
-              'delta':'42','reason':'Verified omitted mission awards'}
+        form={'csrf_token':token(path),'revision':str(self.service.get_account(actor)['heroes'][0]['revision']),
+              'hero_id':self.hero_id, 'delta':'42','reason':'Verified omitted mission awards'}
         before=self.snapshot()
         self.assertEqual(client.post(path,data={**form,'unit_type':'Royal Guard'}).status_code,400)
         self.assertEqual(self.snapshot(),before)
         self.assertEqual(client.post(path,data=form).status_code,302)
-        self.assertEqual(self.service.get_account(actor)['leader']['experience'],42)
+        self.assertEqual(self.service.get_account(actor)['heroes'][0]['total_experience'],42)
         self.assertEqual(client.post(path,data=form).status_code,409)
         path='/areas/area-1/edit'
         form={'csrf_token':token(path),'revision':str(self.db.areas.find_one({'_id':'area-1'}).get('revision',0)),
@@ -247,7 +253,7 @@ class ProgressionTests(unittest.TestCase):
         self.assertEqual(client.post(path,data=form).status_code,409)
         self.assertFalse(self.db.areas.find_one({'_id':'area-1'})['enabled'])
         self.assertEqual(self.db.admin_audit.count_documents({'actor_id':admin,
-                         'action':{'$in':['correct_leader_experience','edit_area']}}),2)
+                         'action':{'$in':['correct_hero_experience','edit_area']}}),2)
 
     def shared(self, start=True):
         run, teams, members = self.battle(start=False)
@@ -257,30 +263,25 @@ class ProgressionTests(unittest.TestCase):
             self.service.shared_start(run['_id'], generation, sum(members, []), 'f'*64)
         return run['_id'], teams, members, generation
 
-    def test_pending_advancement_blocks_new_fixed_lineup_before_any_plan_is_saved(self):
+    def test_unselected_hero_requires_choice_before_ready_and_shared_prepare(self):
         teams, members = self.teams()
-        actor = members[0][1]
-        leader = rules.award_experience(self.service.get_account(actor)['leader'], 50)
-        self.db.accounts.update_one({'_id': actor}, {'$set': {'leader': leader}})
-        before = self.snapshot()
-        self.assertDomain('advancement_required', self.service.create_battle,
-            members[0][0], teams[1], 'isars-cross', dict(zip(teams, members)))
-        self.assertEqual(self.snapshot(), before)
-        self.service.choose_advancement(actor, 'Swordsman')
         plan = self.service.create_battle(members[0][0], teams[1], 'isars-cross', dict(zip(teams, members)))
-        selected = next(item for item in plan['participants'] if item['account_id'] == actor)
-        self.assertEqual(selected['leader']['unit_type'], 'Swordsman')
-        self.assertEqual(selected['leader']['total_experience'], 50)
+        actor = members[0][1]
+        before = self.snapshot()
+        for method, args in ((self.service.directory_battle_ready, (actor, plan['_id'], True)),
+                             (self.service.approve_battle, (members[0][0], plan['_id'])),
+                             (self.service.shared_prepare, (actor, plan['_id'], str(uuid4())))):
+            self.assertDomain('hero_required', method, *args)
+            self.assertEqual(self.snapshot(), before)
+        self.select_all(plan['_id'], members)
+        selected = self.service.get_run(plan['_id'])['participants'][0]['selection']
+        self.assertEqual(selected['hero_id'], self.hero_id)
+        self.assertEqual(selected['form_id'], self.form_id)
 
-    def test_legacy_pending_advancement_cannot_approve_ready_or_prepare_and_can_cancel(self):
+    def test_changed_hero_cannot_approve_ready_or_prepare_and_can_cancel(self):
         run, teams, members = self.battle(start=False)
         actor = members[0][1]
-        leader = rules.award_experience(self.service.get_account(actor)['leader'], 50)
-        self.db.accounts.update_one({'_id': actor}, {'$set': {'leader': leader}})
-        # Model an older saved plan whose fixed snapshot already contained the
-        # pending choice, rather than merely a leader-changed current plan.
-        self.db.game_runs.update_one({'_id': run['_id'], 'participants.account_id': actor},
-            {'$set': {'participants.$.leader': leader}})
+        self.db.account_heroes.update_one({'account_id':actor}, {'$inc':{'total_experience':50,'revision':1}})
         before = self.snapshot()
         for method, args in (
                 (self.service.approve_battle, (members[0][0], run['_id'])),
@@ -288,28 +289,26 @@ class ProgressionTests(unittest.TestCase):
                 (self.service.set_ready, (actor, run['_id'], True)),
                 (self.service.directory_battle_ready, (actor, run['_id'], True)),
                 (self.service.shared_prepare, (actor, run['_id'], str(uuid4())))):
-            self.assertDomain('advancement_required', method, *args)
+            self.assertDomain('stale_proposal', method, *args)
             self.assertEqual(self.snapshot(), before)
         self.service.directory_battle_ready(actor, run['_id'], False)
         self.service.directory_cancel_battle(members[0][0], run['_id'])
         self.assertEqual(self.service.get_run(run['_id'])['state'], 'cancelled')
 
-    def test_off_lineup_captain_pending_advancement_does_not_block_selected_players(self):
+    def test_off_lineup_captain_growth_does_not_block_selected_players(self):
         teams, members = self.teams(size=3)
         for actor in (members[0][0], members[1][0]):
-            leader = rules.award_experience(self.service.get_account(actor)['leader'], 50)
-            self.db.accounts.update_one({'_id': actor}, {'$set': {'leader': leader}})
+            self.db.account_heroes.update_one({'account_id':actor}, {'$inc':{'total_experience':50,'revision':1}})
         lineups = {teams[index]: members[index][1:] for index in range(2)}
         run = self.service.create_battle(members[0][0], teams[1], 'isars-cross', lineups)
-        self.service.approve_battle(members[1][0], run['_id'])
-        for actor in sum(list(lineups.values()), []):
-            self.service.set_ready(actor, run['_id'])
+        self.select_all(run['_id'], list(lineups.values()))
+        for captain in (members[0][0], members[1][0]):self.service.approve_battle(captain, run['_id'])
+        for actor in sum(list(lineups.values()), []):self.service.set_ready(actor, run['_id'])
         generation = str(uuid4())
         self.service.shared_prepare(members[0][1], run['_id'], generation)
         result = self.service.shared_start(run['_id'], generation, sum(list(lineups.values()), []), 'a' * 64)
         self.assertEqual(result['state'], 'running')
-        for actor in (members[0][0], members[1][0]):
-            self.assertIsNone(self.service.get_account(actor)['active_run_id'])
+        for actor in (members[0][0], members[1][0]):self.assertIsNone(self.service.get_account(actor)['active_run_id'])
 
     def reports(self, run, teams, members, generation, *, disputed=False, draw=False):
         for number, actor in enumerate(sum(members, [])):
@@ -501,7 +500,7 @@ class ProgressionTests(unittest.TestCase):
         self.assertEqual(self.service.get_run(run)['state'],'cancelled')
         for actor in sum(members,[]):
             account=self.service.get_account(actor)
-            self.assertIsNone(account['active_run_id']);self.assertEqual(account['leader']['total_experience'],0)
+            self.assertIsNone(account['active_run_id']);self.assertEqual(account['heroes'][0]['total_experience'],0)
         self.assertEqual(self.db.settlements.count_documents({}),0)
 
     def test_shared_reports_need_every_player_and_both_captains_before_rewards(self):
@@ -522,8 +521,8 @@ class ProgressionTests(unittest.TestCase):
             results=list(pool.map(lambda _:self.service.shared_finish(run,generation),range(2)))
         self.assertEqual(results[0],results[1])
         self.assertEqual(self.db.settlements.count_documents({}),1)
-        self.assertEqual(self.service.get_account(members[0][0])['leader']['total_experience'],20)
-        self.assertEqual(self.service.get_account(members[1][0])['leader']['total_experience'],10)
+        self.assertEqual(self.service.get_account(members[0][0])['heroes'][0]['total_experience'],20)
+        self.assertEqual(self.service.get_account(members[1][0])['heroes'][0]['total_experience'],10)
         self.assertEqual(self.service.get_team(members[0][0],teams[0])['rating'],1012)
 
     def test_disputed_reports_require_audited_operator_resolution(self):
@@ -544,13 +543,15 @@ class ProgressionTests(unittest.TestCase):
         teams,members=self.teams(size=3)
         lineups={team:players[1:] for team,players in zip(teams,members)}
         run=self.service.create_battle(members[0][0],teams[1],'isars-cross',lineups)['_id']
+        self.select_all(run,list(lineups.values()))
+        self.service.approve_battle(members[0][0],run)
         self.service.approve_battle(members[1][0],run)
         selected=members[0][1:]+members[1][1:]
         for actor in selected:self.service.set_ready(actor,run)
         generation=str(uuid4());self.service.shared_prepare(selected[0],run,generation)
         self.assertDomain('forbidden',self.service.shared_admission,members[0][0],run,generation)
         self.service.shared_start(run,generation,selected,'f'*64)
-        outside=self.service.progression_start(members[0][0],rules.MISSIONS[0])['run']
+        outside=self.start_training(members[0][0],rules.MISSIONS[0])['run']
         self.assertEqual(self.service.shared_admission(selected[0],run,generation)['room_state'],'running')
         for actor in selected:review=self.service.shared_report_result(actor,run,generation,None,True,'a'*64)
         for captain in (members[0][0],members[1][0]):self.service.shared_confirm_result(captain,run,review['candidate_digest'])
@@ -562,14 +563,16 @@ class ProgressionTests(unittest.TestCase):
         for captain in (members[0][0],members[1][0]):
             self.assertEqual(self.service.shared_replay_access(captain,run)['account_id'],side_one)
         self.assertDomain('forbidden',self.service.shared_replay_access,self.player(),run)
-        for actor in selected:self.assertEqual(self.service.get_account(actor)['leader']['total_experience'],10)
-        for captain in (members[0][0],members[1][0]):self.assertEqual(self.service.get_account(captain)['leader']['total_experience'],0)
+        for actor in selected:self.assertEqual(self.service.get_account(actor)['heroes'][0]['total_experience'],10)
+        for captain in (members[0][0],members[1][0]):self.assertEqual(self.service.get_account(captain)['heroes'][0]['total_experience'],0)
         self.assertEqual(self.service.get_account(members[0][0])['active_run_id'],outside['id'])
 
     def test_completed_shared_history_keeps_original_members_and_captains_after_transfer(self):
         teams,members=self.teams(size=3)
         lineups={team:players[1:] for team,players in zip(teams,members)}
         run=self.service.create_battle(members[0][0],teams[1],'isars-cross',lineups)['_id']
+        self.select_all(run,list(lineups.values()))
+        self.service.approve_battle(members[0][0],run)
         self.service.approve_battle(members[1][0],run)
         selected=members[0][1:]+members[1][1:]
         for actor in selected:self.service.set_ready(actor,run)

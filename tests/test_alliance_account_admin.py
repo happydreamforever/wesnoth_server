@@ -230,15 +230,22 @@ class AccountAdministrationTests(unittest.TestCase):
         self.assertEqual(self.auth.authenticate('PlayerOne', self.replacement, 'player')['account']['_id'], self.player)
 
     def test_active_run_blocks_edit_but_allows_password_recovery_without_unlock(self):
-        run = self.service.start_campaign(self.player, 'alliance_training_1')
+        from alliance.heroes import load_catalog
+        catalog,digest=load_catalog();campaign=next(c for c in catalog['campaigns'] if c['aliases']);alias=campaign['aliases'][0]
+        hero,form=alias['hero_id'],alias['forms'][0]['form_id'];story=self.service.story_begin(self.player,campaign['id'],catalog['version'],digest)
+        self.service.story_checkpoint(self.player,{'run_id':story['run_id'],'checkpoint_id':str(uuid4()),'sequence':0,
+            'scenario_id':campaign['first_scenario'],'next_scenario_id':'','outcome':'win','nonce':story['nonce'],
+            'replay_sha256':'a'*64,'heroes':[{'hero_id':hero,'unit_id':alias['unit_id'],'form_id':form,'unlocked_forms':[form],'earned_experience':0}]})
+        run=self.service.get_run(self.service.progression_start(self.player,'alliance_training_1',hero,form)['run']['id'])
         before = self.account()
         run_before = self.db.game_runs.find_one({'_id': run['_id']})
+        hero_before = list(self.db.account_heroes.find({'account_id': self.player}))
         self.assert_domain('busy', self.edit, username='BusyPlayer')
         self.reset()
         after = self.account()
         self.assertEqual(after['active_run_id'], run['_id'])
-        self.assertEqual(after['leader'], before['leader'])
-        self.assertEqual(after['campaign_completed'], before['campaign_completed'])
+        self.assertEqual(list(self.db.account_heroes.find({'account_id': self.player})), hero_before)
+        self.assertEqual(after['training_completed'], before['training_completed'])
         self.assertEqual(self.db.game_runs.find_one({'_id': run['_id']}), run_before)
         self.assertEqual(self.db.settlements.count_documents({}), 0)
 

@@ -33,7 +33,7 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
         SESSION_COOKIE_SECURE=False,  # Deliberate: HTTP is restricted to loopback.
         PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
         SESSION_REFRESH_EACH_REQUEST=False,
-        MAX_CONTENT_LENGTH=32 * 1024,
+        MAX_CONTENT_LENGTH=256 * 1024,
         MAX_FORM_MEMORY_SIZE=16 * 1024,
         MAX_FORM_PARTS=20,
         WTF_CSRF_TIME_LIMIT=3600,
@@ -248,7 +248,7 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     @app.get("/accounts")
     @admin_required
     def accounts():
-        records = list(db.accounts.find({}, {"_id": 1, "username": 1, "role": 1, "status": 1, "leader": 1}).sort("username", 1).limit(100))
+        records = [domain.get_account(row['_id']) for row in db.accounts.find({}, {'_id': 1}).sort('username', 1).limit(100)]
         return render_template("accounts.html", records=records)
 
     @app.get("/accounts/<account_id>")
@@ -314,13 +314,13 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     def account_experience(account_id):
         account = domain.get_account(account_id)
         if request.method == "POST":
-            revision = account_form("delta", "reason")
-            delta = account_form_text("delta", 6)
-            if not re.fullmatch(r'-?[0-9]{1,4}', delta):
+            revision = account_form("hero_id", "delta", "reason")
+            delta = account_form_text("delta", 8)
+            if not re.fullmatch(r'-?[0-9]{1,7}', delta):
                 abort(400)
-            domain.admin_correct_experience(g.admin["_id"], account_id, int(delta),
+            domain.admin_correct_hero_experience(g.admin["_id"], account_id, account_form_text('hero_id', 80), int(delta),
                 account_form_text("reason", 500), revision)
-            flash("Experience correction saved with an audit record. Leader type and team membership are unchanged.")
+            flash("Hero experience correction saved with an audit record.")
             return redirect(url_for("account_detail", account_id=account_id))
         return render_template("account_experience.html", account=account)
 
@@ -415,12 +415,13 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
         # Capability metadata is not a live native-client or game-daemon probe.
         return jsonify(status="ok", service="alliance", api_version=1,
                        game_bridge_integrated=True, campaign_content_ready=CAMPAIGN_CONTENT_READY,
-                       health_scope="backend_only", native_runtime_checked=False, implementation_release=1192615)
+                       health_scope="backend_only", native_runtime_checked=False, implementation_release=1192616,
+                       product_schema_version=2)
 
     @internal_route("/register", player=False)
     def register():
-        data = payload("username", "password", "starter_id")
-        account = domain.register(text_field(data, "username", maximum=64), hash_password(text_field(data, "password", maximum=1024)), text_field(data, "starter_id", default="spearman", maximum=40))
+        data = payload("username", "password")
+        account = domain.register(text_field(data, "username", maximum=64), hash_password(text_field(data, "password", maximum=1024)))
         return jsonify(account=account), 201
 
     @internal_route("/login", player=False)
@@ -450,6 +451,60 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
             abort(400)
         return data
 
+    @internal_route('/product/hero_catalog')
+    def hero_catalog():
+        progression_payload()
+        return jsonify(domain.hero_catalog(g.player['_id']))
+
+    @internal_route('/product/story_begin')
+    def story_begin():
+        data = progression_payload('campaign_id', 'catalog_version', 'catalog_sha256')
+        return jsonify(domain.story_begin(g.player['_id'], **data))
+
+    @internal_route('/product/story_status')
+    def story_status():
+        data = progression_payload('run_id')
+        return jsonify(domain.story_status(g.player['_id'], data['run_id']))
+
+    @internal_route('/product/story_checkpoint')
+    def story_checkpoint():
+        data = progression_payload('run_id', 'checkpoint_id', 'sequence', 'scenario_id', 'next_scenario_id',
+                                   'outcome', 'heroes', 'replay_sha256', 'nonce')
+        return jsonify(domain.story_checkpoint(g.player['_id'], data))
+
+    @internal_route('/product/battle_select_hero')
+    def battle_select_hero():
+        data = progression_payload('battle_id', 'hero_id', 'form_id')
+        return jsonify(battle=domain.directory_select_hero(g.player['_id'], **data))
+
+    @internal_route('/product/casual_ticket')
+    def casual_ticket():
+        progression_payload()
+        return jsonify(domain.casual_ticket(g.player['_id'], request.headers['X-Player-Token']))
+
+    @internal_route('/product/casual_select')
+    def casual_select():
+        data = progression_payload('game_id', 'side', 'hero_id', 'form_id')
+        return jsonify(domain.casual_select(g.player['_id'], session_token=request.headers['X-Player-Token'], **data))
+
+    @internal_route('/casual/admit', player=False)
+    def casual_admit():
+        data = progression_payload('ticket', 'username')
+        return jsonify(domain.casual_admit(**data))
+
+    @internal_route('/casual/hero', player=False)
+    def casual_hero():
+        data = progression_payload('ticket', 'account_id', 'game_id', 'side')
+        return jsonify(domain.casual_consume_hero(**data))
+
+    @internal_route('/casual/freeze', player=False)
+    def casual_freeze():
+        return jsonify(domain.casual_freeze(**progression_payload('game_id', 'players')))
+
+    @internal_route('/casual/restore', player=False)
+    def casual_restore():
+        return jsonify(domain.casual_restore(**progression_payload('game_id')))
+
     @internal_route("/progression/catalog")
     def progression_catalog():
         progression_payload()
@@ -457,8 +512,8 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
 
     @internal_route("/progression/start")
     def progression_start():
-        data = progression_payload("mission_id")
-        return jsonify(domain.progression_start(g.player["_id"], text_field(data, "mission_id", maximum=64)))
+        data = progression_payload("mission_id", "hero_id", "form_id")
+        return jsonify(domain.progression_start(g.player["_id"], **data))
 
     @internal_route("/progression/status")
     def progression_status():

@@ -22,6 +22,7 @@ from uuid import uuid4
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from alliance import rules
+from alliance.heroes import load_catalog, hero_progress, spent_experience, scaled_stat
 try:
     from pymongo import MongoClient
     from pymongo.errors import OperationFailure, DuplicateKeyError
@@ -32,38 +33,29 @@ except ImportError:
 
 
 class RulesTests(unittest.TestCase):
-    def test_all_starters_have_finite_valid_paths(self):
-        self.assertEqual(len(rules.STARTERS), 6)
-        def walk(unit, ancestors):
-            self.assertNotIn(unit, ancestors)
-            level, threshold, children = rules.UNIT_TYPES[unit]
-            self.assertGreater(threshold, 0)
-            for child in children:
-                self.assertEqual(rules.UNIT_TYPES[child][0], level + 1)
-                walk(child, ancestors + [unit])
-        for starter in rules.STARTERS.values():
-            walk(starter['unit_type'], [])
+    def test_owned_hero_catalogue_has_unique_compatible_forms(self):
+        catalog, digest = load_catalog()
+        self.assertEqual(len(digest), 64)
+        heroes = {item['id'] for item in catalog['heroes']}
+        self.assertEqual(len(heroes), len(catalog['heroes']))
+        self.assertEqual(len({f['id'] for f in catalog['forms']}), len(catalog['forms']))
+        for form in catalog['forms']:
+            self.assertIn(form['hero_id'], heroes)
+            self.assertGreaterEqual(form['native_level'], 0)
+            self.assertGreater(form['base_hitpoints'], 0)
 
-    def test_advancement_preserves_overflow_and_caps_terminal_stats(self):
-        leader = rules.award_experience(rules.new_leader('spearman'), 60)
-        self.assertEqual(leader['unit_type'], 'Spearman')
-        self.assertEqual(leader['advancement_choices'], ['Swordsman', 'Pikeman', 'Javelineer'])
-        promoted = rules.advance_leader(leader, 'Swordsman')
-        self.assertEqual(promoted['experience'], 18)
-        promoted = rules.advance_leader(rules.award_experience(promoted, 80), 'Royal Guard')
-        self.assertEqual(promoted['level'], 3)
-        self.assertEqual(promoted['experience'], 0)
-        self.assertEqual(promoted['total_experience'], 140)
-        self.assertEqual(rules.award_experience(promoted, 100)['advancement_choices'], [])
-        self.assertEqual(leader['unit_type'], 'Spearman')
+    def test_permanent_levels_preserve_overflow_without_native_advancement(self):
+        self.assertEqual(hero_progress(60), {'hero_level': 3, 'experience': 5, 'total_experience': 60})
+        for level in (1, 2, 3, 100, 10000):
+            self.assertEqual(hero_progress(spent_experience(level))['hero_level'], level)
+            self.assertEqual(spent_experience(level + 1) - spent_experience(level), 5 * level * level + 15)
+        self.assertEqual(scaled_stat(25, 2, 2), 26)
+        self.assertEqual(scaled_stat(5, 11, 1), 6)
 
-    def test_no_unearned_or_arbitrary_advancement(self):
-        for unit in ('Swordsman', 'Ancient Lich', 'Drake Warrior'):
-            with self.assertRaises(ValueError):
-                rules.advance_leader(rules.new_leader('spearman'), unit)
+    def test_no_negative_or_noninteger_hero_experience(self):
         for amount in (-1, 0.5, True):
             with self.assertRaises(ValueError):
-                rules.award_experience(rules.new_leader('spearman'), amount)
+                hero_progress(amount)
 
     def test_elo_and_team_levels(self):
         self.assertEqual(rules.rating_delta(1000, 1000, 1), 12)
@@ -122,14 +114,33 @@ class MongoDomainTests(unittest.TestCase):
         bootstrap_schema(self.db)
         self.service = AllianceService(self.db)
         self.counter = 0
+        catalog, _ = load_catalog()
+        self.form = next(f for f in catalog['forms'] if f['hero_id'] == 'konrad' and f['native_level'] == 1)
+        self.hero_id = self.form['hero_id']
+        self.form_id = self.form['id']
 
     def tearDown(self):
         if re.fullmatch(r'alliance_test_[0-9a-f]{32}', self.database_name):
             self.client.drop_database(self.database_name)
 
-    def player(self, starter='spearman'):
+    def player(self):
         self.counter += 1
-        return self.service.register(f'Player_{self.counter}', '$argon2id$test-only-not-a-login-hash', starter)['_id']
+        account = self.service.register(f'Player_{self.counter}', '$argon2id$test-only-not-a-login-hash')['_id']
+        # A valid zero-XP owned hero isolates membership/transaction tests from
+        # story reward setup. Actual story unlock and dedup are covered in
+        # test_unified_product.py and the native protocol integration suite.
+        self.db.account_heroes.insert_one({'_id': str(uuid4()), 'account_id': account,
+            'hero_id': self.hero_id, 'forms': [self.form_id], 'total_experience': 0, 'revision': 0})
+        return account
+
+    def training(self, account, mission, service=None):
+        service = service or self.service
+        public = service.progression_start(account, mission, self.hero_id, self.form_id)['run']
+        return service.get_run(public['id'])
+
+    def select_all(self, run_id, members):
+        for account in sum(members, []):
+            self.service.directory_select_hero(account, run_id, self.hero_id, self.form_id)
 
     def admin(self):
         return self.service.bootstrap_admin('Operator', '$argon2id$test-only-not-a-login-hash')['_id']
@@ -149,6 +160,8 @@ class MongoDomainTests(unittest.TestCase):
         teams, members = self.teams(size)
         map_id = {2: 'isars-cross', 3: 'hexcake', 4: 'mokena-prairie'}[size]
         run = self.service.create_battle(members[0][0], teams[1], map_id, dict(zip(teams, members)))
+        self.select_all(run['_id'], members)
+        self.service.approve_battle(members[0][0], run['_id'])
         self.service.approve_battle(members[1][0], run['_id'])
         for player in sum(members, []):
             self.service.set_ready(player, run['_id'])
@@ -162,10 +175,11 @@ class MongoDomainTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, code)
 
     def test_registration_unique_casefold_and_safe_public_view(self):
-        account = self.service.register('Alice_1', '$argon2id$test-hash', 'skeleton')
+        account = self.service.register('Alice_1', '$argon2id$test-hash')
         self.assertNotIn('password_hash', account)
         self.assertNotIn('password_hash', self.service.get_account(account['_id']))
-        self.assertEqual(account['leader']['unit_type'], 'Skeleton')
+        self.assertEqual(account['heroes'], [])
+        self.assertNotIn('leader', account)
         self.assertDomain('conflict', self.service.register, 'ALICE_1', '$argon2id$test-hash')
         for name in ('ab', '$where', {'$ne': None}, 'User with space'):
             self.assertDomain('invalid_input', self.service.register, name, '$argon2id$test-hash')
@@ -175,7 +189,7 @@ class MongoDomainTests(unittest.TestCase):
         admin = self.admin()
         self.assertDomain('already_initialized', self.service.bootstrap_admin, 'Operator2', '$argon2id$hash')
         self.assertDomain('forbidden', self.service.create_team, admin, 'AdminTeam')
-        self.assertDomain('forbidden', self.service.start_campaign, admin, rules.MISSIONS[0])
+        self.assertDomain('forbidden', self.training, admin, rules.MISSIONS[0])
         self.assertEqual(self.db.admin_audit.count_documents({'action': 'bootstrap_admin'}), 1)
 
     def test_directory_pages_are_bounded_stable_and_public(self):
@@ -213,13 +227,13 @@ class MongoDomainTests(unittest.TestCase):
 
     def test_directory_team_creation_and_own_team_reconcile_without_duplicate(self):
         actor, other = self.player(), self.player()
-        original = self.service.get_account(actor)['leader']
+        original = self.service.get_account(actor)['heroes'][0]
         self.assertIsNone(self.service.directory_my_team(actor))
         team = self.service.directory_create_team(actor, '  Lantern Guard  ', 'area-1')
         self.assertEqual(team['name'], 'Lantern Guard')
         self.assertEqual(team['captain_id'], actor)
         self.assertEqual((team['level'], team['experience'], team['rating'], team['capacity']), (1, 0, 1000, 8))
-        self.assertEqual(team['members'], [{'id': actor, 'username': 'Player_1', 'unit_type': 'Spearman', 'level': 1}])
+        self.assertEqual(team['members'], [{'id': actor, 'username': 'Player_1', 'hero_count': 1}])
         # Even when a caller discards the successful creation reply, the next
         # authenticated own-team read finds the single committed team.
         self.assertEqual(self.service.directory_my_team(actor), team)
@@ -227,7 +241,7 @@ class MongoDomainTests(unittest.TestCase):
         self.assertDomain('already_member', self.service.directory_create_team, actor, 'Another Name', 'area-1')
         self.assertDomain('conflict', self.service.directory_create_team, other, 'lantern guard', 'area-1')
         self.assertEqual(self.db.teams.count_documents({'members.account_id': actor}), 1)
-        self.assertEqual(self.service.get_account(actor)['leader'], original)
+        self.assertEqual(self.service.get_account(actor)['heroes'][0], original)
         self.service.request_join(other, team['id'])
         detail = self.service.directory_my_team(actor)
         self.assertNotIn('join_requests', detail)
@@ -274,7 +288,7 @@ class MongoDomainTests(unittest.TestCase):
                 {'team_id': ids[1], 'account_id': applicant, 'status': 'withdrawn'})
         self.assertEqual(self.service.directory_my_team(applicant)['id'], ids[0])
         self.assertNotIn(applicant, self.service._team(ids[1])['join_requests'])
-        self.assertEqual(self.service.get_account(applicant)['leader']['total_experience'], 0)
+        self.assertEqual(self.service.get_account(applicant)['heroes'][0]['total_experience'], 0)
 
     def test_directory_captain_applicants_pages_and_queue_capacity(self):
         captain, outsider = self.player(), self.player()
@@ -291,7 +305,7 @@ class MongoDomainTests(unittest.TestCase):
             self.assertEqual(page['team_id'], team)
             self.assertEqual(len(page['applicants']), expected_count)
             for item in page['applicants']:
-                self.assertEqual(set(item), {'id', 'username', 'unit_type', 'level'})
+                self.assertEqual(set(item), {'id', 'username', 'hero_count'})
             seen += [item['id'] for item in page['applicants']]
             cursor = page['next']
         self.assertEqual(seen, sorted(applicants))
@@ -346,15 +360,15 @@ class MongoDomainTests(unittest.TestCase):
             self.assertDomain('invalid_input', method, *args)
         self.assertDomain('forbidden', self.service.directory_my_applications, admin)
         self.assertDomain('forbidden', self.service.directory_apply_team, admin, team)
-        run = self.service.start_campaign(applicant, rules.MISSIONS[0])
+        run = self.training(applicant, rules.MISSIONS[0])
         self.assertDomain('busy', self.service.directory_apply_team, applicant, team)
         self.service.cancel_run(run['_id'], 'Membership fixture complete')
         self.service.directory_apply_team(applicant, team)
-        run = self.service.start_campaign(applicant, rules.MISSIONS[0])
+        run = self.training(applicant, rules.MISSIONS[0])
         self.assertDomain('busy', self.service.directory_approve_application, captain, team, applicant)
         self.service.directory_withdraw_application(applicant, team)
         self.assertEqual(self.service._team(team)['join_requests'], [])
-        self.assertEqual(self.service.get_account(applicant)['leader']['total_experience'], 0)
+        self.assertEqual(self.service.get_account(applicant)['heroes'][0]['total_experience'], 0)
 
     def test_application_decisions_owner_read_ack_and_unchanged_legacy_profile(self):
         captain, applicant, stranger = self.player(), self.player(), self.player()
@@ -393,7 +407,7 @@ class MongoDomainTests(unittest.TestCase):
         self.assertEqual([item['status'] for item in decisions], ['approved', 'rejected'])
         self.assertEqual([item['team_name'] for item in decisions], ['Renamed Team', 'Decision Snapshot'])
         self.assertEqual([item['unread'] for item in decisions], [True, False])
-        self.assertEqual(self.service.get_account(applicant)['leader']['total_experience'], 0)
+        self.assertEqual(self.service.get_account(applicant)['heroes'][0]['total_experience'], 0)
         self.assertEqual(self.service._team(team)['experience'], 0)
 
     def test_application_decisions_retain_only_latest_fifty(self):
@@ -523,7 +537,7 @@ class MongoDomainTests(unittest.TestCase):
         teams, members = self.teams()
         team, (captain, member) = teams[0], members[0]
         before = self.service._team(team)
-        leaders = {actor: self.service.get_account(actor)['leader'] for actor in (captain, member)}
+        leaders = {actor: self.service.get_account(actor)['heroes'][0] for actor in (captain, member)}
         result = self.service.directory_transfer_captain(captain, team, member)
         self.assertEqual(result, {'team_id': team, 'account_id': member, 'status': 'transferred'})
         changed = self.service._team(team)
@@ -539,7 +553,7 @@ class MongoDomainTests(unittest.TestCase):
         self.assertEqual((archived['status'], archived['members'], archived['captain_id'], archived['join_requests']),
                          ('archived', [], None, []))
         for actor, leader in leaders.items():
-            self.assertEqual(self.service.get_account(actor)['leader'], leader)
+            self.assertEqual(self.service.get_account(actor)['heroes'][0], leader)
         self.assertDomain('not_found', self.service.directory_team, captain, team)
         self.assertDomain('not_found', self.service.directory_leave_team, member, team, False)
 
@@ -626,7 +640,7 @@ class MongoDomainTests(unittest.TestCase):
                 pending = pool.submit(self.service.directory_transfer_captain, captain, team, member)
                 try:
                     self.assertTrue(read.wait(5))
-                    other_service.start_campaign(target, rules.MISSIONS[0])
+                    self.training(target, rules.MISSIONS[0], other_service)
                 finally:
                     resume.set()
                 with self.assertRaises(DomainError) as raised:
@@ -723,32 +737,32 @@ class MongoDomainTests(unittest.TestCase):
 
     def test_campaign_order_progression_choice_and_duplicate_completion(self):
         player = self.player()
-        self.assertDomain('mission_locked', self.service.start_campaign, player, rules.MISSIONS[1])
-        first = self.service.start_campaign(player, rules.MISSIONS[0])
-        self.assertDomain('busy', self.service.start_campaign, player, rules.MISSIONS[0])
+        self.assertDomain('mission_locked', self.training, player, rules.MISSIONS[1])
+        first = self.training(player, rules.MISSIONS[0])
+        self.assertDomain('busy', self.training, player, rules.MISSIONS[0])
         receipt = self.service.finish_campaign(first['_id'], 'win')
         self.assertEqual(receipt, self.service.finish_campaign(first['_id'], 'win'))
         self.assertDomain('result_conflict', self.service.finish_campaign, first['_id'], 'loss')
         for mission in rules.MISSIONS[1:]:
-            run = self.service.start_campaign(player, mission)
+            run = self.training(player, mission)
             self.service.finish_campaign(run['_id'], 'win')
         account = self.service.get_account(player)
-        self.assertEqual(account['leader']['total_experience'], 60)
-        self.assertEqual(account['campaign_completed'], list(rules.MISSIONS))
-        self.assertDomain('advancement_required', self.service.start_campaign, player, rules.MISSIONS[0])
-        self.service.choose_advancement(player, 'Swordsman')
-        self.assertEqual(self.service.get_account(player)['leader']['experience'], 18)
-        self.service.start_campaign(player, rules.MISSIONS[0])
+        self.assertEqual(account['heroes'][0]['total_experience'], 60)
+        self.assertEqual(account['training_completed'], list(rules.MISSIONS))
+        self.assertEqual(account['heroes'][0]['hero_level'], 3)
+        self.assertDomain('unsupported_ruleset', self.service.choose_advancement, player, 'Swordsman')
+        self.assertEqual(account['heroes'][0]['experience'], 5)
+        self.training(player, rules.MISSIONS[0])
 
     def test_loss_and_cancellation_never_award_campaign_xp(self):
         player = self.player()
-        run = self.service.start_campaign(player, rules.MISSIONS[0])
+        run = self.training(player, rules.MISSIONS[0])
         self.service.finish_campaign(run['_id'], 'loss')
-        run = self.service.start_campaign(player, rules.MISSIONS[0])
+        run = self.training(player, rules.MISSIONS[0])
         self.service.cancel_run(run['_id'], 'Lost connection before completion')
         account = self.service.get_account(player)
-        self.assertEqual(account['leader']['total_experience'], 0)
-        self.assertEqual(account['campaign_completed'], [])
+        self.assertEqual(account['heroes'][0]['total_experience'], 0)
+        self.assertEqual(account['training_completed'], [])
         self.assertIsNone(account['active_run_id'])
         self.assertDomain('invalid_state', self.service.finish_campaign, run['_id'], 'win')
 
@@ -758,7 +772,9 @@ class MongoDomainTests(unittest.TestCase):
             teams, members = self.teams(size) if size == 2 else self._extra_teams(size)
             map_id = {2: 'isars-cross', 3: 'hexcake', 4: 'mokena-prairie'}[size]
             run = self.service.create_battle(members[0][0], teams[1], map_id, dict(zip(teams, members)))
+            self.select_all(run['_id'], members)
             self.assertDomain('approval_required', self.service.start_battle, members[0][0], run['_id'])
+            self.service.approve_battle(members[0][0], run['_id'])
             self.service.approve_battle(members[1][0], run['_id'])
             self.assertDomain('not_ready', self.service.start_battle, members[0][0], run['_id'])
             for player in sum(members, []):
@@ -775,7 +791,8 @@ class MongoDomainTests(unittest.TestCase):
         map_id = {2: 'isars-cross', 3: 'hexcake', 4: 'mokena-prairie'}[size]
         lineups = [{'team_id': team, 'account_ids': selected} for team, selected in zip(teams, members)]
         plan = self.service.directory_propose_battle(members[0][0], teams[0], teams[1], map_id, lineups)
-        return plan, teams, members
+        self.select_all(plan['id'], members)
+        return self.service.directory_battle_detail(members[0][0], plan['id']), teams, members
 
     def test_planning_all_maps_explicit_approvals_readiness_and_no_gameplay(self):
         for size in (2, 3, 4):
@@ -788,9 +805,10 @@ class MongoDomainTests(unittest.TestCase):
             self.assertEqual([team['approved'] for team in plan['teams']], [False, False])
             self.assertEqual([[p['side'] for p in team['players']] for team in plan['teams']],
                              [list(sides) for sides in rules.MAPS[map_id]['sides']])
-            self.assertDomain('approval_required', self.service.directory_battle_ready, members[0][1], plan['id'], True)
+            self.assertDomain('hero_required', self.service.directory_battle_ready, members[0][1], plan['id'], True)
+            self.select_all(plan['id'], members)
+            self.service.directory_battle_ready(members[0][1], plan['id'], True)
             self.service.directory_approve_battle(members[0][0], plan['id'])
-            self.assertDomain('approval_required', self.service.directory_battle_ready, members[0][1], plan['id'], True)
             self.service.directory_approve_battle(members[1][0], plan['id'])
             for member in sum(members, []):
                 final = self.service.directory_battle_ready(member, plan['id'], True)
@@ -800,7 +818,7 @@ class MongoDomainTests(unittest.TestCase):
             for member in sum(members, []):
                 account = self.service.get_account(member)
                 self.assertIsNone(account['active_run_id'])
-                self.assertEqual(account['leader']['total_experience'], 0)
+                self.assertEqual(account['heroes'][0]['total_experience'], 0)
             for team_id in teams:
                 team = self.service._team(team_id)
                 self.assertIsNone(team['active_run_id'])
@@ -828,7 +846,7 @@ class MongoDomainTests(unittest.TestCase):
             for team in detail['teams']:
                 self.assertEqual(set(team), {'id', 'name', 'captain_id', 'approved', 'players'})
                 for player in team['players']:
-                    self.assertEqual(set(player), {'id', 'username', 'unit_type', 'level', 'side', 'ready'})
+                    self.assertEqual(set(player), {'id', 'username', 'selection', 'side', 'ready'})
             self.assertNotIn('password_hash', json.dumps(detail))
             self.assertNotIn('experience', json.dumps(detail))
         maps = self.service.directory_battle_maps(members[0][0], 'area-1')
@@ -854,7 +872,7 @@ class MongoDomainTests(unittest.TestCase):
             (self.db.areas, 'area-1', 'enabled', False, 'map_unavailable'),
             (self.db.areas, 'area-1', 'approved_maps', [], 'map_unavailable'),
             (self.db.accounts, members[1][1], 'status', 'suspended', 'player_unavailable'),
-            (self.db.accounts, members[1][1], 'leader.total_experience', 1, 'leader_changed'),
+            (self.db.account_heroes, self.db.account_heroes.find_one({'account_id': members[1][1]})['_id'], 'revision', 1, 'leader_changed'),
             (self.db.accounts, members[1][1], 'active_run_id', str(uuid4()), 'busy'),
             (self.db.teams, teams[1], 'active_run_id', str(uuid4()), 'busy')]
         for collection, identifier, key, value, expected in cases:
@@ -888,7 +906,7 @@ class MongoDomainTests(unittest.TestCase):
         self.assertFalse(detail['teams'][1]['approved'])
         self.assertDomain('forbidden', self.service.directory_approve_battle, members[1][0], plan['id'])
         self.assertDomain('forbidden', self.service.directory_cancel_battle, members[1][0], plan['id'])
-        self.assertDomain('approval_required', self.service.directory_battle_ready, members[1][0], plan['id'], True)
+        self.service.directory_battle_ready(members[1][0], plan['id'], True)
         self.service.directory_approve_battle(members[1][1], plan['id'])
         self.service.directory_battle_ready(members[1][0], plan['id'], True)
         for key in ('lineups', 'participants'):
@@ -1219,11 +1237,11 @@ class MongoDomainTests(unittest.TestCase):
         for method, args in ((self.service.leave_team, (captain,)),
                              (self.service.transfer_captain, (captain, teams[0], members[0][1])),
                              (self.service.admin_move_team, (admin, teams[0], 'area-1', 'Move during game')),
-                             (self.service.choose_advancement, (captain, 'Swordsman')),
-                             (self.service.start_campaign, (captain, rules.MISSIONS[0]))):
+                             (self.service.directory_select_hero, (captain, run['_id'], self.hero_id, self.form_id)),
+                             (self.training, (captain, rules.MISSIONS[0]))):
             self.assertDomain('busy', method, *args)
         self.assertDomain('invalid_state', self.service.set_ready, captain, run['_id'], False)
-        self.assertEqual(self.service.get_account(captain)['leader']['experience'], 0)
+        self.assertEqual(self.service.get_account(captain)['heroes'][0]['experience'], 0)
 
     def test_settlement_awards_fixed_rewards_once_and_clears_locks(self):
         run, teams, members = self.battle()
@@ -1237,7 +1255,7 @@ class MongoDomainTests(unittest.TestCase):
             self.assertIsNone(stored['active_run_id'])
             for player in members[i]:
                 account = self.service.get_account(player)
-                self.assertEqual(account['leader']['experience'], (20, 10)[i])
+                self.assertEqual(account['heroes'][0]['total_experience'], (20, 10)[i])
                 self.assertIsNone(account['active_run_id'])
         self.assertEqual(self.db.settlements.count_documents({}), 1)
 
@@ -1247,7 +1265,7 @@ class MongoDomainTests(unittest.TestCase):
         for team in teams:
             stored = self.db.teams.find_one({'_id': team})
             self.assertEqual((stored['experience'], stored['rating']), (50, 1000))
-        self.assertEqual(self.service.get_account(members[0][0])['leader']['experience'], 10)
+        self.assertEqual(self.service.get_account(members[0][0])['heroes'][0]['experience'], 10)
 
     def test_concurrent_duplicate_settlement(self):
         run, teams, members = self.battle()
@@ -1255,12 +1273,13 @@ class MongoDomainTests(unittest.TestCase):
             results = list(pool.map(lambda _: self.service.finish_battle(run['_id'], teams[0]), range(6)))
         self.assertTrue(all(r == results[0] for r in results))
         self.assertEqual(self.db.settlements.count_documents({}), 1)
-        self.assertEqual(self.service.get_account(members[0][0])['leader']['total_experience'], 20)
+        self.assertEqual(self.service.get_account(members[0][0])['heroes'][0]['total_experience'], 20)
 
     def test_transaction_failure_rolls_back_partial_rewards(self):
         run, teams, members = self.battle()
         accounts_before = list(self.db.accounts.find({}).sort('_id', 1))
         teams_before = list(self.db.teams.find({}).sort('_id', 1))
+        heroes_before = list(self.db.account_heroes.find({}).sort('_id', 1))
         original = self.service._reward_player
         count = 0
         def failing(*args, **kwargs):
@@ -1275,6 +1294,7 @@ class MongoDomainTests(unittest.TestCase):
         self.service._reward_player = original
         self.assertEqual(list(self.db.accounts.find({}).sort('_id', 1)), accounts_before)
         self.assertEqual(list(self.db.teams.find({}).sort('_id', 1)), teams_before)
+        self.assertEqual(list(self.db.account_heroes.find({}).sort('_id', 1)), heroes_before)
         self.assertEqual(self.db.settlements.count_documents({}), 0)
         self.service.finish_battle(run['_id'], teams[0])
 
@@ -1282,7 +1302,7 @@ class MongoDomainTests(unittest.TestCase):
         player = self.player()
         def start(_):
             try:
-                return self.service.start_campaign(player, rules.MISSIONS[0])['_id']
+                return self.training(player, rules.MISSIONS[0])['_id']
             except DomainError as error:
                 return error.code
         with ThreadPoolExecutor(max_workers=4) as pool:
@@ -1314,20 +1334,20 @@ class MongoDomainTests(unittest.TestCase):
         self.db.auth_sessions.insert_one({'_id': 'test-session', 'account_id': player})
         self.service.admin_set_account_status(admin, player, 'suspended', 'Operator review requested')
         self.assertEqual(self.db.auth_sessions.count_documents({'account_id': player}), 0)
-        self.assertDomain('suspended', self.service.start_campaign, player, rules.MISSIONS[0])
+        self.assertDomain('suspended', self.training, player, rules.MISSIONS[0])
         self.assertDomain('forbidden', self.service.admin_set_account_status, admin, admin, 'suspended', 'Self lockout attempt')
         self.service.admin_set_account_status(admin, player, 'active', 'Operator review complete')
-        run = self.service.start_campaign(player, rules.MISSIONS[0])
+        run = self.training(player, rules.MISSIONS[0])
         self.service.admin_cancel_run(admin, run['_id'], 'Cancelled after connection loss')
         self.service.admin_cancel_run(admin, run['_id'], 'Duplicate cancellation retry')
         self.assertEqual(self.db.admin_audit.count_documents({'action': 'cancel_run'}), 1)
-        self.assertEqual(self.service.get_account(player)['leader']['total_experience'], 0)
+        self.assertEqual(self.service.get_account(player)['heroes'][0]['total_experience'], 0)
 
     def test_leader_preview_change_requires_a_new_proposal(self):
         run, teams, members = self.battle(start=False)
         player = members[0][0]
-        self.assertIn('leader', run['participants'][0])
-        campaign = self.service.start_campaign(player, rules.MISSIONS[0])
+        self.assertIn('selection', run['participants'][0])
+        campaign = self.training(player, rules.MISSIONS[0])
         self.service.finish_campaign(campaign['_id'], 'win')
         self.assertDomain('stale_proposal', self.service.approve_battle, members[1][0], run['_id'])
         self.assertDomain('stale_proposal', self.service.start_battle, player, run['_id'])
@@ -1352,7 +1372,7 @@ class MongoDomainTests(unittest.TestCase):
         self.assertNotIn('password_hash', repr(public))
         private = self.service.get_team(captain, team)
         self.assertEqual(private['join_requests'], [applicant])
-        self.assertEqual(private['applicants'][0]['_id'], applicant)
+        self.assertEqual(private['applicants'][0]['id'], applicant)
         self.assertDomain('forbidden', self.service.reject_member, outsider, team, applicant)
         self.service.reject_member(captain, team, applicant)
         self.assertEqual(self.service.get_team(captain, team)['join_requests'], [])
@@ -1365,7 +1385,7 @@ class MongoDomainTests(unittest.TestCase):
         self.db.game_runs.update_one({'_id': run['_id']}, {'$set': {'ruleset_version': 'future-v99'}})
         self.assertDomain('unsupported_ruleset', self.service.finish_battle, run['_id'], teams[0])
         self.assertEqual(self.db.settlements.count_documents({}), 0)
-        self.assertEqual(self.service.get_account(members[0][0])['leader']['total_experience'], 0)
+        self.assertEqual(self.service.get_account(members[0][0])['heroes'][0]['total_experience'], 0)
         self.service.cancel_run(run['_id'], 'Version unavailable; release reservations')
 
     def test_schema_rejects_unknown_version_and_is_repeatable(self):

@@ -18,6 +18,7 @@ from pymongo import MongoClient
 from alliance.auth import AuthService, bootstrap_auth_schema, hash_password
 from alliance.domain import AllianceService
 from alliance.schema import bootstrap_schema
+from alliance.heroes import load_catalog
 from alliance.web import create_app
 
 
@@ -46,7 +47,7 @@ class AllianceWebTests(unittest.TestCase):
         cls.mongo.close()
 
     def setUp(self):
-        for name in ("accounts", "teams", "game_runs", "settlements", "admin_audit", "auth_sessions", "auth_attempts"):
+        for name in ("accounts", "teams", "game_runs", "settlements", "admin_audit", "auth_sessions", "auth_attempts", "account_heroes", "story_checkpoints", "casual_tickets", "casual_games"):
             self.db[name].delete_many({})
         self.db.areas.delete_many({"_id": {"$ne": "area-1"}})
         self.domain = AllianceService(self.db)
@@ -191,11 +192,11 @@ class AllianceWebTests(unittest.TestCase):
         self.assertTrue(response.json["game_bridge_integrated"])
         self.assertEqual(response.json["health_scope"], "backend_only")
         self.assertFalse(response.json["native_runtime_checked"])
-        self.assertEqual(response.json["implementation_release"], 1192615)
+        self.assertEqual(response.json["implementation_release"], 1192616)
 
     def test_register_login_team_creation_and_logout(self):
         response = self.client.post("/internal/v1/register", headers=self.bridge, json={
-            "username": "NewPlayer", "password": self.password, "starter_id": "spearman"})
+            "username": "NewPlayer", "password": self.password})
         self.assertEqual(response.status_code, 201)
         self.assertNotIn("password_hash", response.json["account"])
         response = self.client.post("/internal/v1/login", headers=self.bridge, json={"username": "NewPlayer", "password": self.password})
@@ -268,7 +269,7 @@ class AllianceWebTests(unittest.TestCase):
             self.assertEqual(post('my_applications', {'after': ''}, headers).status_code, 200)
         applicants = post('team_applicants', {'team_id': team, 'after': ''}, captain_headers)
         self.assertEqual(applicants.json, {'team_id': team, 'next': '', 'applicants': [{
-            'id': self.player['_id'], 'username': 'PlayerOne', 'unit_type': 'Spearman', 'level': 1}]})
+            'id': self.player['_id'], 'username': 'PlayerOne', 'hero_count': 0}]})
         self.assertNotIn(self.password_hash, str(applicants.json))
         # Withdrawal, rejection, and reapplication have distinct acknowledgements.
         self.assertEqual(post('withdraw_application', {'team_id': team}).json,
@@ -288,7 +289,7 @@ class AllianceWebTests(unittest.TestCase):
         self.assertEqual(post('my_team', {}).json['team']['id'], team)
         self.assertEqual(post('team_applicants', {'team_id': team, 'after': ''}, captain_headers).json['applicants'], [])
         self.assertEqual(len(post('team_detail', {'team_id': team}).json['team']['members']), 2)
-        self.assertEqual(self.domain.get_account(self.player['_id'])['leader']['total_experience'], 0)
+        self.assertEqual(self.domain.get_account(self.player['_id'])['heroes'], [])
         self.assertEqual(self.domain._team(team)['experience'], 0)
 
     def test_native_application_decisions_are_owner_only_and_explicitly_acknowledged(self):
@@ -378,7 +379,7 @@ class AllianceWebTests(unittest.TestCase):
         self.assertEqual(archived.json, {'team_id': team, 'account_id': self.player['_id'], 'status': 'left', 'archived': True})
         self.assertEqual(post('standings', {'area_id': 'area-1'}).json,
                          {'area_id': 'area-1', 'teams': [], 'has_more': False})
-        self.assertEqual(self.domain.get_account(self.player['_id'])['leader']['total_experience'], 0)
+        self.assertEqual(self.domain.get_account(self.player['_id'])['heroes'], [])
 
     def test_native_management_busy_and_suspended_target_leave_membership_unchanged(self):
         captain = self.player['_id']
@@ -400,6 +401,21 @@ class AllianceWebTests(unittest.TestCase):
                                     json={'team_id': team, 'account_id': member})
         self.assertEqual((suspended.status_code, suspended.json['error']['code']), (403, 'forbidden'))
         self.assertEqual(self.domain._team(team), before)
+
+    def unlock_hero(self, account_id):
+        catalog,digest=load_catalog();campaign=next(c for c in catalog['campaigns'] if c['aliases']);alias=campaign['aliases'][0]
+        hero,form=alias['hero_id'],alias['forms'][0]['form_id']
+        run=self.domain.story_begin(account_id,campaign['id'],catalog['version'],digest)
+        self.domain.story_checkpoint(account_id,{'run_id':run['run_id'],'checkpoint_id':str(uuid4()),'sequence':0,
+            'scenario_id':campaign['first_scenario'],'next_scenario_id':'','outcome':'win','nonce':run['nonce'],
+            'replay_sha256':'a'*64,'heroes':[{'hero_id':hero,'unit_id':alias['unit_id'],'form_id':form,
+            'unlocked_forms':[form],'earned_experience':0}]})
+        return hero,form
+
+    def training_run(self):
+        hero,form=self.unlock_hero(self.player['_id'])
+        run=self.domain.progression_start(self.player['_id'],'alliance_training_1',hero,form)['run']
+        return self.domain.get_run(run['id'])
 
     def planning_fixture(self):
         players = [self.player] + [self.domain.register(name, self.password_hash)
@@ -433,7 +449,10 @@ class AllianceWebTests(unittest.TestCase):
         self.assertEqual(post('my_battles', {'after': ''}, 1).json['battles'][0]['id'], battle['id'])
         self.assertEqual(post('battle_detail', selector, 3).json, created.json)
         early = post('battle_ready', {**selector, 'ready': True}, 1)
-        self.assertEqual((early.status_code, early.json['error']['code']), (409, 'approval_required'))
+        self.assertEqual((early.status_code, early.json['error']['code']), (409, 'hero_required'))
+        for player in players:
+            hero,form=self.unlock_hero(player['_id'])
+            self.domain.directory_select_hero(player['_id'],battle['id'],hero,form)
         self.assertEqual(post('approve_battle', selector, 1).status_code, 403)
         self.assertEqual(post('cancel_battle', selector, 1).status_code, 403)
         self.assertEqual(post('approve_battle', selector, 0).status_code, 200)
@@ -447,7 +466,7 @@ class AllianceWebTests(unittest.TestCase):
         self.assertEqual(post('start_battle', selector).status_code, 404)
         for player in players:
             self.assertIsNone(self.domain.get_account(player['_id'])['active_run_id'])
-            self.assertEqual(self.domain.get_account(player['_id'])['leader']['total_experience'], 0)
+            self.assertEqual(self.domain.get_account(player['_id'])['heroes'][0]['total_experience'], 20)
         self.assertEqual(self.db.settlements.count_documents({}), 0)
         cancelled = post('cancel_battle', selector, 2)
         self.assertEqual(cancelled.status_code, 200)
@@ -578,8 +597,9 @@ class AllianceWebTests(unittest.TestCase):
         headers = self.player_headers()
         response = self.client.post("/internal/v1/campaigns/start", headers=headers,
             json={"mission_id": "alliance_training_1"})
-        self.assertEqual(response.status_code, 201)
-        run_id = response.json["run"]["_id"]
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json['error']['code'], 'unsupported_ruleset')
+        run_id = self.training_run()['_id']
         response = self.client.get("/internal/v1/runs/" + run_id, headers=headers)
         self.assertEqual(response.status_code, 200)
         url = "/internal/v1/server/campaigns/" + run_id + "/finish"
@@ -596,7 +616,7 @@ class AllianceWebTests(unittest.TestCase):
         self.assertEqual(conflict.status_code, 409)
         self.assertEqual(conflict.json["error"]["code"], "result_conflict")
         account = self.domain.get_account(self.player["_id"])
-        self.assertEqual(account["leader"]["total_experience"], 20)
+        self.assertEqual(account["heroes"][0]["total_experience"], 40)
         self.assertIsNone(account["active_run_id"])
         self.assertEqual(self.db.settlements.count_documents({"_id": run_id}), 1)
 
@@ -604,7 +624,7 @@ class AllianceWebTests(unittest.TestCase):
         self.domain.register("OtherPlayer", self.password_hash)
         result = self.auth.authenticate("OtherPlayer", self.password, "player")
         other_headers = {**self.bridge, "X-Player-Token": result["token"]}
-        run = self.domain.start_campaign(self.player["_id"], "alliance_training_1")
+        run = self.training_run()
         self.assertEqual(self.client.get("/internal/v1/runs/" + run["_id"], headers=other_headers).status_code, 403)
         self.login_admin()
         response = self.client.get("/runs/" + run["_id"])
@@ -614,7 +634,7 @@ class AllianceWebTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(self.domain.get_run(run["_id"])["state"], "cancelled")
         self.assertIsNone(self.domain.get_account(self.player["_id"])["active_run_id"])
-        self.assertEqual(self.domain.get_account(self.player["_id"])["leader"]["total_experience"], 0)
+        self.assertEqual(self.domain.get_account(self.player["_id"])["heroes"][0]["total_experience"], 20)
         response = self.client.post("/internal/v1/server/campaigns/" + run["_id"] + "/finish",
                                    headers=self.bridge, json={"outcome": "win"})
         self.assertEqual(response.status_code, 409)
@@ -652,7 +672,7 @@ class AllianceWebTests(unittest.TestCase):
         self.assertNotIn("join_requests", response.json["team"])
         self.assertNotIn("applicants", response.json["team"])
         self.assertEqual(response.json["team"]["members"][0]["username"], "PlayerOne")
-        self.assertEqual(response.json["team"]["members"][0]["leader"]["unit_type"], "Spearman")
+        self.assertEqual(response.json["team"]["members"][0]["heroes"], [])
         response = self.client.get(path, headers=self.player_headers())
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json["team"]["join_requests"], [applicant["_id"]])
@@ -685,7 +705,7 @@ class AllianceWebTests(unittest.TestCase):
         self.assertEqual([m["account_id"] for m in current["members"]], [self.player["_id"]])
 
     def test_unauthenticated_result_routes_reveal_no_existing_run(self):
-        run = self.domain.start_campaign(self.player["_id"], "alliance_training_1")
+        run = self.training_run()
         paths = ["/internal/v1/server/campaigns/" + run["_id"] + "/finish",
                  "/internal/v1/server/campaigns/does-not-exist/finish"]
         responses = [self.client.post(path, json={"outcome": "win"}) for path in paths]
@@ -702,18 +722,33 @@ class AllianceWebTests(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_changed_leader_snapshot_blocks_settlement_without_partial_rewards(self):
-        run = self.domain.start_campaign(self.player["_id"], "alliance_training_1")
-        self.db.accounts.update_one({"_id": self.player["_id"]}, {"$set": {"leader.experience": 1}})
+        run = self.training_run()
+        self.db.account_heroes.update_one({"account_id": self.player["_id"]}, {"$inc": {"revision": 1}})
         response = self.client.post("/internal/v1/server/campaigns/" + run["_id"] + "/finish",
                                    headers=self.bridge, json={"outcome": "win"})
         self.assertEqual(response.status_code, 409)
         self.assertEqual(response.json["error"]["code"], "snapshot_conflict")
         self.assertEqual(self.db.settlements.count_documents({}), 0)
-        self.assertEqual(self.domain.get_account(self.player["_id"])["leader"]["total_experience"], 0)
+        self.assertEqual(self.domain.get_account(self.player["_id"])["heroes"][0]["total_experience"], 20)
         self.assertEqual(self.domain.get_account(self.player["_id"])["active_run_id"], run["_id"])
 
+    def test_admin_hero_correction_is_scoped_revision_checked_and_audited(self):
+        hero,form=self.unlock_hero(self.player['_id'])
+        self.login_admin();path='/accounts/'+self.player['_id']+'/experience'
+        body={'csrf_token':self.csrf(path),'hero_id':hero,'delta':'10','reason':'Correct observed hero XP','revision':'1'}
+        denied=dict(body);denied.pop('csrf_token')
+        self.assertEqual(self.client.post(path,data=denied).status_code,400)
+        response=self.client.post(path,data=body)
+        self.assertEqual(response.status_code,302)
+        owned=self.domain.get_account(self.player['_id'])['heroes'][0]
+        self.assertEqual(owned['total_experience'],30)
+        self.assertEqual(owned['revision'],2)
+        self.assertEqual(self.client.post(path,data=body).status_code,409)
+        self.assertEqual(self.db.admin_audit.count_documents({'action':'correct_hero_experience'}),1)
+        self.assertEqual(self.domain.get_account(self.player['_id'])['heroes'][0],owned)
+
     def test_oversized_requests_rejected(self):
-        response = self.client.post("/internal/v1/login", headers=self.bridge, json={"username": "x" * 33000})
+        response = self.client.post("/internal/v1/login", headers=self.bridge, json={"username": "x" * 262145})
         self.assertEqual(response.status_code, 413)
 
     def test_unknown_failure_hides_sensitive_exception_text(self):

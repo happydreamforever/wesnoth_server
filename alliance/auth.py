@@ -132,10 +132,9 @@ class AuthService:
             raise AuthError("invalid_session", "Please sign in again.")
         return hashlib.sha256(token.encode("ascii")).hexdigest()
 
-    @staticmethod
-    def _public(account):
-        return {key: value for key, value in account.items()
-                if key not in ("password_hash", "application_decisions")}
+    def _public(self, account):
+        from .product import account_profile
+        return account_profile(self.db, account)
 
     def validate_token(self, raw_token, scope):
         if scope not in ("admin", "player"):

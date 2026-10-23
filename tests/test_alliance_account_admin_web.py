@@ -140,7 +140,7 @@ class AccountAdminWebTests(unittest.TestCase):
         changed = self.domain.get_account(self.player["_id"])
         self.assertEqual(changed["username"], "RenamedPlayer")
         self.assertEqual(changed["status"], "suspended")
-        for key in ("_id", "role", "leader", "campaign_completed", "active_run_id"):
+        for key in ("_id", "role", "heroes", "training_completed", "database_generation", "active_run_id"):
             self.assertEqual(changed[key], original[key])
         self.assertEqual(self.db.teams.find_one({"_id": team["_id"]}), saved_team)
         self.assertEqual(self.db.accounts.find_one({"_id": self.player["_id"]})["password_hash"], self.password_hash)

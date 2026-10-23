@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from uuid import uuid4
 from pymongo import ASCENDING
 from pymongo.errors import CollectionInvalid
 
 from .rules import MAPS
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def _object(required, properties):
@@ -24,12 +25,11 @@ LEADER = _object(['starter_id', 'unit_type', 'level', 'experience', 'total_exper
 })
 SCHEMAS = {
     'accounts': {'$jsonSchema': _object(
-        ['_id', 'username', 'username_key', 'password_hash', 'role', 'status', 'leader',
-         'campaign_completed', 'active_run_id', 'revision'], {
+        ['_id', 'username', 'username_key', 'password_hash', 'role', 'status',
+         'database_generation', 'active_run_id', 'revision'], {
             '_id': STRING, 'username': STRING, 'username_key': STRING, 'password_hash': STRING,
             'role': {'enum': ['player', 'admin']}, 'status': {'enum': ['active', 'suspended']},
-            'leader': LEADER, 'campaign_completed': {'bsonType': 'array', 'items': STRING,
-                                                   'maxItems': 3, 'uniqueItems': True},
+            'database_generation': STRING,
             'active_run_id': NULLABLE_STRING, 'revision': INTEGER,
         })},
     'teams': {'$and': [
@@ -74,11 +74,26 @@ SCHEMAS = {
         'reason': STRING, 'created_at': {'bsonType': 'date'},
     })},
     'schema_metadata': {'$jsonSchema': _object(['_id', 'version'], {'_id': STRING, 'version': INTEGER})},
+    'account_heroes': {'$jsonSchema': _object(
+        ['_id', 'account_id', 'hero_id', 'forms', 'total_experience', 'revision'], {
+            '_id': STRING, 'account_id': STRING, 'hero_id': STRING,
+            'forms': {'bsonType': 'array', 'items': STRING, 'uniqueItems': True, 'minItems': 1},
+            'total_experience': INTEGER, 'revision': INTEGER})},
+    'story_checkpoints': {'$jsonSchema': _object(
+        ['_id', 'run_id', 'account_id', 'sequence', 'digest', 'result'], {
+            '_id': STRING, 'run_id': STRING, 'account_id': STRING, 'sequence': INTEGER,
+            'digest': STRING, 'result': {'bsonType': 'object'}})},
+    'casual_games': {'$jsonSchema': _object(['_id', 'database_generation', 'players'], {
+        '_id': STRING, 'database_generation': STRING, 'players': {'bsonType': 'array', 'maxItems': 99}})},
+    'casual_tickets': {'$jsonSchema': _object(
+        ['_id', 'account_id', 'purpose', 'expires_at', 'consumed'], {
+            '_id': STRING, 'account_id': STRING, 'purpose': {'enum': ['lobby', 'hero']},
+            'expires_at': {'bsonType': 'date'}, 'consumed': {'bsonType': 'bool'}})},
 }
 
 
 def bootstrap_schema(db):
-    """Install v1 in an owned database; never upgrade an unknown schema implicitly.
+    """Install v2 only in a fresh owned database; never migrate v1 implicitly.
 
     Caller must first validate local MongoDB configuration and authorization. No
     document migrations or destructive collection changes are performed here.
@@ -106,9 +121,13 @@ def bootstrap_schema(db):
     db.areas.create_index([('name_key', ASCENDING)], unique=True, name='unique_area_name')
     db.game_runs.create_index([('state', ASCENDING), ('created_at', -1)], name='run_status')
     db.game_runs.create_index([('participants.account_id', ASCENDING), ('created_at', -1)], name='account_runs')
+    db.account_heroes.create_index([('account_id', ASCENDING), ('hero_id', ASCENDING)], unique=True, name='owned_hero')
+    db.story_checkpoints.create_index([('run_id', ASCENDING), ('sequence', ASCENDING)], unique=True, name='story_sequence')
+    db.casual_tickets.create_index('expires_at', expireAfterSeconds=0, name='ticket_expiry')
     db.admin_audit.create_index([('created_at', -1)], name='audit_time')
     db.schema_metadata.update_one({'_id': 'alliance'}, {'$setOnInsert': {
-        'version': SCHEMA_VERSION, 'created_at': datetime.now(timezone.utc)}}, upsert=True)
+        'version': SCHEMA_VERSION, 'database_generation': str(uuid4()),
+        'created_at': datetime.now(timezone.utc)}}, upsert=True)
     db.areas.update_one({'_id': 'area-1'}, {'$setOnInsert': {
         'name': 'Area 1', 'name_key': 'area 1', 'enabled': True,
         'approved_maps': list(MAPS), 'created_at': datetime.now(timezone.utc)}}, upsert=True)
