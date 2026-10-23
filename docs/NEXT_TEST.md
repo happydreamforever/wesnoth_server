@@ -6,6 +6,63 @@ Use the existing **one LDPlayer instance**, MSYS2, Python, SDK/NDK, supplied 1.1
 
 Report each step before continuing if you prefer. At the first unexpected result, stop that test and send its letter, exact message and sanitized log. Do not delete stages, journals, locks or runtime data. Record WAN status once per batch; keep local Ethernet and LDPlayer available.
 
+## Current step A result — inspect Git before continuing
+
+Both expected commits were reached (`73460b1` server, `ee71821` client), but the returned pull emitted pack-index errors in both repositories. Step A is pending an integrity check. Run the following on the existing checkout with services still stopped; internet is not required. It collects metadata and reads Git objects without repairing or replacing them. Return the saved log before B. No additional pull is needed for this documentation update.
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $workspace = 'D:\Test\wesnoth-setup'
+    $bash = Join-Path $workspace 'msys64\usr\bin\bash.exe'
+    $diagnostics = Join-Path $workspace 'wesnoth_server\diagnostics'
+    $null = New-Item -ItemType Directory -Path $diagnostics -Force
+    $log = Join-Path $diagnostics ('git-integrity-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.txt')
+    $repos = @(
+        @{ Name = 'wesnoth_server'; Pack = 'pack-a1dbf79da1e9eab53ea1abcad7d901edb7273f0a' },
+        @{ Name = 'wesnoth_client'; Pack = 'pack-465704dbd0d559b97acac843f52bd3302655234c' }
+    )
+
+    Start-Transcript -LiteralPath $log -NoClobber | Out-Null
+    try {
+        foreach ($entry in $repos) {
+            Write-Host "REPOSITORY: $($entry.Name)"
+            $repo = '/d/Test/wesnoth-setup/' + $entry.Name
+            $prefix = 'PATH=/usr/bin:$PATH /usr/bin/git --no-pager --no-optional-locks --no-lazy-fetch -c core.fsmonitor=false -c diff.autoRefreshIndex=false -C ' + $repo + ' '
+            foreach ($check in @(
+                'rev-parse --verify HEAD^{commit}'
+                'fsck --full --no-reflogs --no-dangling --no-progress'
+                'diff --no-ext-diff --no-textconv --name-status --'
+                'diff --cached --no-ext-diff --no-textconv --name-status HEAD --'
+            )) {
+                Write-Host "CHECK: $check"
+                & $bash --noprofile --norc -c ($prefix + $check)
+                Write-Host "EXIT: $LASTEXITCODE"
+            }
+
+            foreach ($extension in @('.pack', '.idx')) {
+                $relative = $entry.Name + '\.git\objects\pack\' + $entry.Pack + $extension
+                $path = Join-Path $workspace $relative
+                try {
+                    Get-Item -LiteralPath $path -Force -ErrorAction Stop |
+                        Format-List FullName,Length,LastWriteTimeUtc,Attributes
+                } catch {
+                    Write-Host "FILE CHECK: $path"
+                    Write-Host ('CATEGORY: ' + $_.CategoryInfo.Category)
+                    Write-Host ('DETAIL: ' + $_.Exception.Message)
+                }
+            }
+        }
+        Write-Host 'Collection finished. Send this log for review; this message does not declare Git healthy.'
+    } finally {
+        Stop-Transcript | Out-Null
+        Write-Host "Saved log: $log"
+    }
+}
+```
+
+Expected: the two delivered HEADs, successful object checks with exit0 and no missing/bad-object or index errors; staged/unstaged checks print filenames only if changes exist. Diff exit0 means the command ran, so inspect the filenames too. Exact pack/index metadata must be reviewed: a missing `.idx` can leave a pack outside Git's normal checks. If both old pack and index have disappeared, do not infer damage solely from their absence. Do not delete or regenerate files based only on this collection.
+
 ## A. Stop services and pull both repositories
 
 Save/quit the game. Stop companions, native multiplayer, shared battles, account bridge and admin service with Ctrl+C; stop MongoDB last. Wait for their prompts. Temporarily connect Windows to GitHub:
