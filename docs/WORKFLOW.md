@@ -1,12 +1,22 @@
 # Offline Wesnoth development workflow
 
+**Current corrective client release 1192618 (2026-10-23):** The user reports startup/dialog, external-keyboard case, logout/session-loss and Quit behavior needing correction. The Android update addresses these together. The final VPS offline Android build, artifact verification and same-input reuse pass; 1192618 Windows/LDPlayer acceptance remains pending. Use [NEXT_TEST.md](NEXT_TEST.md) for this corrective U1–U7 batch, [BASELINE.md](BASELINE.md) for the completed evidence and remaining limits, and [UNIFIED_PRODUCT.md](UNIFIED_PRODUCT.md) for unchanged game rules.
+
+The accepted 1192617 A–H work already established schema 2 at `%LOCALAPPDATA%\WesnothAlliance\runtime-v2`, all five healthy Windows services and the saved trusted profile. MongoDB 27018, admin 18765, account bridge 15001, shared battles 15002 and authenticated native Multiplayer 15000 remain on the existing server 1192617 implementation and protocol 2. Existing runtime-v2 players, IDs, heroes, XP and administrator remain in place. The old runtime and backups stay retained. No fresh initialization, reset, migration or routine service restart is part of this correction.
+
+Delivery after commit/push is **client-only MSYS2 Git pull -> WAN disconnected/local Ethernet retained -> Rebuild-WindowsAndroidAccountGame.ps1 -> Install-AndroidAccountGame.ps1 -KeepSavedProfile -> one combined U1–U7 report**. Save/leave any active game before updating. Keep the five services open, except the deliberately scoped account-bridge interruptions in U6; restart only that bridge with the same runtime-v2 and identity afterward. Do not rebuild server components, upgrade tools, recopy the OBB, reimport trust or repeat accepted foundation tests. Use an existing new-game player if one was already created; first signup is conditional on no such account yet, never a workaround for failed login.
+
+Record actual WAN state once per batch and note subsequent changes. Stop on the first unexpected result; preserve its logs and current state. Reproduce/fix on VPS, verify the affected behavior, commit/push, then repeat only the failed check and affected regressions. Keep the existing one LDPlayer; computer-controlled companion seats are not multiple-human acceptance. After this correction is accepted, resume the retained J–Z product checks in [UNIFIED_GAME_ACCEPTANCE_1192617.md](UNIFIED_GAME_ACCEPTANCE_1192617.md), without repeating its historical A–H setup or replacing account IDs.
+
+## Historical records (superseded by the current release)
+
+### Retained 1192617 delivery banner
+
 **Current release 1192617:** Startup authentication, owned campaign heroes/forms, integrated story rewards, authenticated native Multiplayer and selected-hero Teams are implemented. Use [UNIFIED_PRODUCT.md](UNIFIED_PRODUCT.md) for rules, [BASELINE.md](BASELINE.md) for verification limits and [NEXT_TEST.md](NEXT_TEST.md) for the authoritative Windows A–Z. Older records below are historical and do not override this delivery.
 
 The upgrade requires a verified cold backup, then creates the new schema 2 runtime at `%LOCALAPPDATA%\WesnothAlliance\runtime-v2` beside the old runtime. It preserves old data, trusted identity, OBB, pinned tools and completed builds. The current startup helper checks all five services (27018,18765,15001,15002,15000) before W07 UNIFIED GAME SERVICES READY. Account/native protocol is 2. No normal correction resets this new database.
 
 Actual 1192617 Android compilation and VPS verification pass; Windows/LDPlayer acceptance is pending. Use the existing one LDPlayer and the authenticated companion helper for additional computer seats. Record WAN once per batch, report the first unexpected result, then retest only the corrected step and affected regressions after a verified commit/push. Do not request another emulator or infer multiple-human acceptance.
-
-## Historical records (superseded by the current release)
 
 **F manual check broadly confirmed (2026-10-23):** After the requested saved-profile/login/personal-leader/team checks, the user reports “All are running correctly.” Record F as accepted by user confirmation at this scope, alongside the earlier captured1192615 installation and service startup. No new per-account values, screenshots or network trace were supplied; do not invent current XP or exact roster/ID observations. G–Z gameplay acceptance remains pending. The next scheduled check is G captain orders; the user currently asks for an explanation of Campaign progression and whether existing Campaigns/Multiplayer remain usable. Answer that question before resuming the test checklist; no new pull/build/install/restart is required.
 

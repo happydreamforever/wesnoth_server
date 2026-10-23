@@ -1,256 +1,116 @@
-# Unified game — release 1192617 Windows acceptance
+# Android 1192618 — startup, keyboard, session and Quit correction
 
-This batch replaces the former separate Alliance account/leader flow with one startup account, a collection of campaign heroes, and hero selection for multiplayer and teams. VPS verification and Windows acceptance are recorded separately. The Windows results below are pending until you return them.
+This corrective batch keeps the accepted 1192617 Windows services, runtime-v2 database, trusted profile, players and game data. The change is the Android client. The final offline Android build, artifact/version/original-signer verification and same-input reuse pass on the VPS. The expected results below are the Windows acceptance target; LDPlayer input, exit and connection-loss behavior still require your report.
 
-Use the existing **one LDPlayer instance**, MSYS2, Python, SDK/NDK, supplied 1.19.26 data and installed OBB. No dependency upgrade, OBB transfer or trusted-profile reimport is required. The internet MongoDB URL in `.env` is unused. The authorized fresh database is created beside the old runtime; it is not an in-place migration. Old accounts/teams stay in the old backup/runtime. You will create new administrator/player accounts and earn heroes through campaigns.
+Use the existing single LDPlayer at `127.0.0.1:5555`, API28/x86_64. Keep all five runtime-v2 service windows open. Save and leave any active game before updating the app. Keep the same player account and record its ID/hero count before and after this batch if it was already created. Do not create a replacement player to work around a login failure.
 
-Report each step before continuing if you prefer. At the first unexpected result, stop that test and send its letter, exact message and sanitized log. Do not delete stages, journals, locks or runtime data. Record WAN status once per batch; keep local Ethernet and LDPlayer available.
+The earlier A–H results remain accepted. The complete historical A–Z checklist is retained in [UNIFIED_GAME_ACCEPTANCE_1192617.md](UNIFIED_GAME_ACCEPTANCE_1192617.md) for the later J–Z gameplay checks. Do not repeat its old backup/fresh-initialization/build sequence. This batch requires no server update/build, database initialization, dependency upgrade, OBB transfer or profile import. The `.env` internet database remains unused.
 
-## Current checkpoint — A–H accepted; run I next
+At the first unexpected result, stop and send its step, exact message and relevant saved log. Keep app data, stages, journals, backups and runtime files. Never send passwords or private runtime/profile-key files. Record actual WAN status once for the batch and mention any subsequent change.
 
-The H console confirms successful in-place installation of **1192617**, original-signer/artifact checks and AccountSetupActivity startup. The user separately confirms **Trusted server100.99.99.14:15001** and **Start game** are visible. A–H are accepted; no repeat installation or command is required. Keep all five runtime-v2 service windows and one LDPlayer open, WAN disconnected/local Ethernet connected.
+## U1. Update only the client
 
-Perform **I — startup/session** in the app:
-
-1. Choose Start game. Expect Welcome to Wesnoth with Log in, Sign up and Quit game. Choose Quit game before signing in; gameplay must not become available. Reopen Wesnoth and choose Start game again.
-2. Choose Sign up and create the new game player UniPlayer (or record another chosen username). Enter and confirm a private password of 12–128 characters. Expect automatic sign-in and the welcome message, without choosing a starter leader. The administrator uni and old-runtime player credentials are separate. If signup reports an uncertain result, follow its instruction to try logging in with the same credentials rather than creating a duplicate.
-3. Open Heroes -> My heroes, then Account details. Expect the same new player ID and Heroes unlocked:0. Record that ID and count.
-4. Open Campaigns, return, then open Teams -> My team. Expect no second login and You do not belong to a team yet. Return without starting a campaign or creating a team; actual play and rewards are later steps.
-5. Choose Heroes -> Log out. Make exactly one intentionally incorrect-password login attempt; expect Invalid username or password. Then log in correctly and confirm the same player ID and Heroes unlocked:0.
-6. Quit and reopen the game. Expect the trusted connection to remain saved and login to be requested again. Log in and confirm the same ID and empty collection.
-
-Send one I1–I6 report with the new player ID and visible hero count; never send passwords. Stop on the first unexpected result and send its exact message. No pull, rebuild, service restart, initialization, profile import or OBB transfer is needed. The install helper's older Alliance-login suggestion does not apply: this release authenticates at startup. I–Z acceptance remains pending.
-
-## A. Stop services and pull both repositories
-
-Save/quit the game. Stop companions, native multiplayer, shared battles, account bridge and admin service with Ctrl+C; stop MongoDB last. Wait for their prompts. Temporarily connect Windows to GitHub:
+Temporarily connect Windows to GitHub. In PowerShell:
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
     $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
-    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
-        $repo = '/d/Test/wesnoth-setup/' + $name
-        Write-Host "Updating $name"
-        & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
-        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Send the output." }
-        & $bash --noprofile --norc -c ('/usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
-        if ($LASTEXITCODE -ne 0) { throw 'Could not read the delivered commit.' }
+    $repo = '/d/Test/wesnoth-setup/wesnoth_client'
+    & $bash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
+    if ($LASTEXITCODE -ne 0) { throw 'Client pull failed. Stop and send the output.' }
+    & $bash --noprofile --norc -c ('/usr/bin/git -C ' + $repo + ' rev-parse --short HEAD')
+    if ($LASTEXITCODE -ne 0) { throw 'Could not read the client commit. Stop and send the output.' }
+}
+```
+
+Expected: successful pull and the delivered client commit. Preserve existing README edits. Disconnect WAN again while retaining local Ethernet and LDPlayer. Keep the five services open; no routine restart is needed.
+
+## U2. Build the corrected Android app offline
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client' -ErrorAction Stop
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File '.\tools\Rebuild-WindowsAndroidAccountGame.ps1'
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Android update failed. Send the saved rebuild/build logs.'
     }
 }
 ```
 
-Expected: both pulls succeed and print commit IDs. Disconnect WAN, retain local Ethernet. Keep all game services stopped through F. Existing Git file-mode settings remain in place; do not stash/reset local work blindly if a pull stops.
+Expected: the completed 1192617 account stages are retained, the new account engine/APK build succeeds, and `ANDROID ACCOUNT GAME REBUILD COMPLETE` appears. The helper reuses the original engine/dependency foundations and cached Gradle packages; it does not replace the installed OBB. Saved logs are `diagnostics/android-account-rebuild-*.txt` and `diagnostics/android-account-build-*.txt`. Do not delete an interrupted update journal or manually rename stages.
 
-## B. Make a new cold backup of the old game
-
-Use a new backup now: an earlier backup may not include your latest accounts, teams or battles.
+## U3. Install and retain the saved trusted server
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
-    $backup = Join-Path $env:LOCALAPPDATA ('WesnothAlliance\backups\before-1192617-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff'))
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Invoke-WindowsAllianceMaintenance.ps1' `
-        -Operation Backup -DestinationPath $backup `
-        -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
-    if ($LASTEXITCODE -ne 0) { throw 'Backup stopped. Send its sanitized diagnostic log.' }
-    Write-Host "Keep this exact private backup path for step F: $backup"
-}
-```
-
-Expected: `ALLIANCE BACKUP VERIFIED`, then MA03 completion. `schema_checked: false` is normal for a cold backup. Keep the backup locally; it contains credentials and player data. The separate TLS identity remains in `wesnoth_server\runtime\alliance-transport`. Do not start or change the old runtime between B and F.
-
-## C. Rebuild the account bridge
-
-```powershell
-& {
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Rebuild-WindowsAllianceBridge.ps1' `
-        -MsysRoot 'D:\Test\wesnoth-setup\msys64'
-    if ($LASTEXITCODE -ne 0) { throw 'Bridge rebuild failed. Send its rebuild/build logs.' }
-}
-```
-
-Expected: previous bridge retained, `ALLIANCE ACCOUNT BRIDGE REBUILD PASSED`. The new account protocol and hero catalogue require the coordinated client/server update. Keep services stopped afterward and continue at D; the wrapper's generic suggestion to run the bridge does not replace this batch order.
-
-## D. Build authenticated ordinary Multiplayer
-
-```powershell
-& {
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Build-WindowsMultiplayer.ps1' `
-        -MsysRoot 'D:\Test\wesnoth-setup\msys64'
-    if ($LASTEXITCODE -ne 0) { throw 'Multiplayer build failed. Send the saved log.' }
-}
-```
-
-Expected: `UNIFIED MULTIPLAYER ARTIFACT VERIFIED` and `UNIFIED MULTIPLAYER BUILD PASSED`. This uses a separate `build\windows-unified-mingw64` stage. The earlier guest-server build remains retained; do not run it alongside the new server on port15000. A same-input interrupted build can be resumed. After a later source correction, use `-PreservePreviousBuild` only as directed; it retains a verified completed prior stage before rebuilding.
-
-## E. Build Android 1192617 offline
-
-```powershell
-& {
-    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client' -ErrorAction Stop
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File '.\tools\Rebuild-WindowsAndroidAccountGame.ps1'
-    if ($LASTEXITCODE -ne 0) { throw 'Android rebuild failed. Send the saved rebuild/build logs.' }
-}
-```
-
-Expected: both previous account stages retained, native build and offline Gradle complete, `ANDROID ACCOUNT GAME REBUILD COMPLETE`. Pinned foundation objects, dependencies and OBB remain intact. Keep any interrupted update journal for analysis. Keep services stopped and continue at F before G startup and H installation; the helper's generic install suggestion does not replace this batch order.
-
-## F. Create the new database beside the old one
-
-Paste the exact backup path printed in B when this block asks for it. Enter only the new administrator credentials at the helper's private prompts. The administrator is separate from game players.
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $backup = Read-Host 'Paste the full private backup path from step B'
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Initialize-WindowsUnifiedGame.ps1' `
-        -BackupPath $backup `
-        -PreviousRuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime') `
-        -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2')
-    if ($LASTEXITCODE -ne 0) { throw 'Fresh initialization stopped. Send only the console error, never credentials.' }
-}
-```
-
-Expected: `UNIFIED FRESH START VERIFIED`, `schema_version: 2`, old runtime/backup preserved and new database stopped. Repeating the exact command after success reuses the completed new runtime; it must not erase new accounts. If initialization is interrupted, retain the incomplete target and report the error. Do not choose another target to work around a failure.
-
-From now on **every service uses runtime-v2**. Older saved campaign/account identities are not silently reassigned to newly registered users, even if usernames match.
-
-## G. Start all five services in order
-
-```powershell
-& {
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Start-WindowsAllianceStack.ps1' `
-        -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2') `
-        -MsysRoot 'D:\Test\wesnoth-setup\msys64' -IncludeBattles
-    if ($LASTEXITCODE -ne 0) { throw 'Startup stopped. Send the workflow text and JSON reports.' }
-}
-```
-
-Expected: W01 runtime/identity, W02 database, W03 backend, W04 bridge, W05 shared battles, W06 native Multiplayer, then **W07 UNIFIED GAME SERVICES READY**. Keep all five service windows open.
-
-| Service | Address |
-| --- | --- |
-| MongoDB | 127.0.0.1:27018 |
-| Admin website | http://127.0.0.1:18765/ |
-| Account bridge | saved Windows address:15001 |
-| Shared teams | saved Windows address:15002 |
-| Native Multiplayer | saved Windows address:15000 |
-
-The saved address was 100.99.99.14. If it no longer belongs to Windows, report that result before changing the trusted profile. An older running backend or guest server is rejected rather than silently accepted. Later use the same command with `-CheckOnly` for read-only health checks.
-
-## H. Install with the saved trusted connection
-
-```powershell
-& {
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
         -File 'D:\Test\wesnoth-setup\wesnoth_client\tools\Install-AndroidAccountGame.ps1' `
         -KeepSavedProfile
-    if ($LASTEXITCODE -ne 0) { throw 'Installation failed. Send the saved install log.' }
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Android installation failed. Send the saved install log.'
+    }
 }
 ```
 
-Expected: `ANDROID ACCOUNT GAME INSTALL COMPLETE`, installed version1192617, and the existing Trusted server100.99.99.14:15001. Choose Start game. If the profile is missing/unusable, report the message without clearing data or reimporting.
+Expected: `ANDROID ACCOUNT GAME INSTALL COMPLETE`, verified installed version **1192618**, and the setup screen showing the existing **Trusted server: 100.99.99.14:15001** and **Start game**. The app update preserves its data and profile. Saved log: `diagnostics/android-account-install-*.txt`. If the saved profile is missing or unusable, stop and report it without importing/resetting it.
 
-## I–Z. Functional acceptance
+## U4. Welcome, clean cancellation and exact keyboard input
 
-Use new player accounts, for example UniPlayer, UniRecruit, UniSolo and UniRival. Reusing those usernames is allowed, but their new IDs must differ from the old database. Record IDs/XP as observed; do not copy the historical baseline. Passwords never belong in a test report.
+1. Choose **Start game**. Expect **Welcome to Wesnoth** with three direct buttons: **Log in**, **Sign up** and **Quit**. There must be no action list or extra OK selection step, and no usable gameplay behind the welcome screen.
+2. Choose **Log in**, then **Cancel** before submitting. Expect a clean welcome screen with no old credential dialog left visible behind it. Open **Sign up**, then cancel before submitting; expect the same clean return. Neither cancellation should create an account or report a failed login.
+3. In a login password field, enable **Show password** and type only a harmless test sample such as `aAzZ1!`, not your real password. Check lowercase, deliberate uppercase with Shift, deliberate Caps Lock on/off, and a symbol using your Windows keyboard layout. What appears must match what you typed; the first character must not be capitalized automatically. Turn off Caps Lock and release Shift afterward.
+4. Choose **Reset keyboard modifiers**. Expect inline confirmation that modifiers were reset for new typing and existing text was not changed. The sample already in the field must remain exactly unchanged. Append a lowercase letter, then a deliberate Shift-uppercase letter and symbol. Normal intentional case must still work. Clear the whole sample and cancel; do not submit it as a login.
+5. If you already created a player in runtime-v2, log in to that same player. Do not sign up again. If you have not created any player yet, use **Sign up** once with your chosen name and a private 12–128-character password, then its confirmation prompt. Expect automatic sign-in without a starter-leader choice. If signup gives an uncertain result, report it and try the same account's login only as instructed; do not make another account.
+6. Open **Heroes -> My heroes**, then **Account details**. Record the actual player ID and hero count. An account that has not completed a campaign should still show **Heroes unlocked: 0**. Existing heroes/XP, if any, must remain unchanged.
 
-| Step | Actions | Expected result |
-| --- | --- | --- |
-| I — startup/session | Start game. Choose Quit game before login, reopen, then Sign up as UniPlayer. Open Heroes, Campaigns and Teams. Log out, try one wrong password, then log in correctly. Quit/reopen and log in. | No unauthenticated gameplay path. Signup has no starter selection and signs in once. New Heroes collection is empty. Modes reuse the same session; no additional Alliance login. Wrong password is rejected; saved trusted connection survives restart. |
-| J — first story victory | Campaigns -> Story campaigns -> Heir to the Throne, easiest difficulty. Play its first scenario according to its normal objectives. Save once during play, finish with Victory, then inspect Heroes. | Original story units/stats/objectives remain. Eligible named heroes that participated become owned with their earned forms. Each receives actual earned combat/supported script XP plus20 victoryXP; ordinary recruits do not enter the collection. No teamXP/rating. Record each visible hero and XP. |
-| K — save/recall/forms | Continue that playthrough. Save/quit/reopen with the same account; load and continue. Deploy a named companion, exercise recalls and a natural advancement/transformation when available, then win. In a separate account, try loading the first account's bound save. | Same-account continuation preserves scenario state and its XP ledger. Eligible deployed/recall/departed participants are tracked; unused recalled-list heroes do not receive a free victory award. Earned forms share the canonical hero's XP. Another account cannot claim the save. Report the campaign/scenario/hero for any mismatch. |
-| L — repeat, defeat and delayed delivery | Record XP. Replay the already rewarded checkpoint from its retained save and win again. Start a genuinely NEW story playthrough and win. Separately lose a scenario. For delayed delivery, stop only the account bridge just before a saved scenario victory, finish, then restart the missing bridge with G and log in again. | Same checkpoint awards once; each scenario grants XP once per playthrough. A genuine same-scenario revisit can unlock new eligible forms/heroes without repeatXP; a new playthrough can earnXP again. An older already-advanced branch may refuse continuation rather than create a new reward sequence. Defeat grants0 permanentXP. Failed delivery retains a private pending result and retries after reconnection, awarding once. Do not clear game data. Record before/afterXP and the exact error/result. |
-| M — owned hero growth/training | Heroes -> inspect owned heroes/forms. Campaigns -> Hero training -> choose an unlocked mission and an owned hero/form; win, then inspect that hero. Retry pending results/history, watch its local replay. Also test an unfinished training cancellation and a defeat. | Victory adds20XP to the selected hero only; cancellation/defeat add0. Other heroes/team/rating stay unchanged. Forms share heroXP. Level costs5L²+15; accumulated growth affects later multiplayer/training, not story starting stats. Replay/retry never awards twice. |
-| N — ordinary Multiplayer | Main-menu Multiplayer opens the trusted lobby using the current account. Create a normal map with your human side and computer opponents. Choose your owned hero/form before Ready; Back from a selection leaves it unchanged. Play two rounds, save, finish/leave and inspect Heroes. Then host the saved game and resume. | No second login or guest nickname. Human side requires owned selection and Ready. Original map/recruitment/turn flow remains. HeroHP/damage use permanent level; movement/strikes/resistances/innate abilities remain. No permanentXP/rating. Resume retains the saved hero/army/combat state; no fresh healing or hero replacement. |
-| O — teams/membership | Create the other three players sequentially. Each must win a real story scenario to unlock a hero. In the admin website create/enable Yama if needed. UniPlayer creates Koichi; UniSolo creates RivalPlan. UniRecruit applies to Koichi and UniRival to RivalPlan; captains approve. Test withdrawal/rejection/decision history with a disposable application. Post and view captain orders. | Empty signup collections require real unlocks. Applications, decisions, member-only views and captain permissions remain correct. Each team has2/8 members; player collection details replace the former single starter. Membership/captain changes invalidate affected draft consent. |
-| P — fixed hero choice/readiness | Create NEW Isar's Cross 2v2 plan: Koichi sides1/4 and RivalPlan sides2/3. Each player selects an owned hero/form before Ready. Both captains approve; set Ready. Change one player's hero/form, inspect all actors, then reapprove/re-ready. | Unowned/absent hero cannot be readied. Confirmed selection change clears every Ready flag and both approvals. Plan shows the chosen hero, form and permanent level per seat. Back does not mutate. Cancelled/stale plans remain inactive; leaving/rejoining cannot retain valid old consent. |
-| Q — individual practice | With both approvals but only your own Ready, open Practice. Test My side, Command my team and Local hotseat, including saved-game load. Set yourself Not ready; separately cancel a disposable plan. | Practice appears after your own Ready; no Ready-and-practice shortcut. Actual copies use selected hero/forms/scaling. No persistent reward/reservation/shared completion. Not ready, cancelled and stale plans cannot start new practice. |
-| R — shared 2v2 | Finish all four selections/Ready/approvals. Use the companion commands below for the other three fixed accounts. Log in as UniPlayer in LDPlayer, join the same shared plan. Play at least two rounds. | All four authenticated seats load before start. Each controls its fixed army; same hero/form/stats/alliance/map. Companion seats are computer-controlled. No synchronization error; control returns to you. |
-| S — reconnect | During UniPlayer's turn return to menu without completing the battle, then reconnect to the same plan. After this passes, perform the controlled shared-service restart below. | Same army, position, turn and immutable hero snapshot; no new battle/reward. Missing seat pauses progression as needed. No hero switch while a run is active. |
-| T — completion/settlement | Finish the battle, let every companion acknowledge END/replay, then log in as both captains sequentially and confirm the matching result. Reopen result review. | Settlement waits for consistent reports and both captain confirmations. Winner20XP/selectedhero and100teamXP; loser10/selectedhero and25teamXP; draw10/selectedhero and50teamXP. Other owned heroes stay unchanged. Team level1+floor(teamXP/500); Elo changes once. Repeated review cannot award twice. |
-| U — replay | Watch the completed local replay; as the other captain download the completed replay if needed and watch through END. Inspect Heroes/team values afterward. | Verified replay contains original frozen heroes and outcome. No additional rewards. Cancelled/incomplete plans offer no completed replay. |
-| V — larger teams | Add one story-qualified player per team; create/complete NEW Hexcake 3v3 with five companions. Add another per team; repeat NEW Mokena Prairie 4v4 with seven companions. Choose heroes, approve and ready every seat. | Fixed 6/8-seat ownership, all-loaded start, normal synchronization, results/replay and selected-hero-only rewards. Same one LDPlayer; report insufficient memory as blocked acceptance, not pass. No second emulator is required. |
-| W — captain decisions | On NEW plans test confirmation Back, surrender and mutual draw. Use the explicit captain-policy command below for the opposing captain. Test offer/withdraw/reoffer. | Back sends nothing; surrender gives the other team victory; a single draw offer does not end play, both current offers do. Normal END/replay/report/confirmation settlement still applies. |
-| X — admin controls | Local website: inspect accounts, individual heroes, teams, areas, runs and audit. On an unlocked test hero outside a run enter `1` in the XP correction field with a reason, then `-1` with another reason. Test disposable area enabled/map settings. Reset a disposable player's password and verify old/new password behavior. | Correct specific hero is edited/audited; no other collection changes. Area controls affect new plans. Reset invalidates sessions/unused tickets. Existing live hero snapshots remain immutable. Never edit MongoDB directly to fabricate a result. |
-| Y — restart/persistence | Record new IDs, hero/forms/XP, teamXP/rating and completed run. Quit game, stop all five services in reverse order, restart with G, reopen/login and inspect the same records. | Same new database generation/IDs, collections, teams, completed result and replay. No extra reward and no profile reimport. Old1192615 account saves cannot become new account results. |
-| Z — recovery | Stop all services, run the post-test backup/isolated restore below, then restart normal runtime-v2 with G. | Verified cold backup; isolated authenticated/schema/rollback restore test shuts down cleanly. Normal runtime is neither replaced nor activated from the restore. Latest new progress remains. |
+## U5. One session and main-menu Log out
 
-For cross-campaign identity coverage, additionally win eligible scenarios featuring the same named protagonist in different stories. The same canonical hero gains a new earned form/XP; unrelated characters such as Konrad and KonradII stay separate. Completing every supplied campaign is extended content acceptance; report exactly which stories/scenarios were exercised rather than marking all 21 entries played.
+1. Open **Campaigns**, then return without starting a scenario. Open **Teams**, then return. Neither should request another login.
+2. Open **Multiplayer**, then use **Back** to return to the main menu. It must retain the current account; Heroes -> Account details must show the same ID. Starting a multiplayer game or selecting an owned hero is not required for this check.
+3. Use **Log out** on the main menu. Heroes should contain only **My heroes** and **Account details**, without its former duplicate logout action. Expect the welcome screen directly after the logout request, without a separate acknowledgement/OK dialog. This manual observation checks the signed-out UI; it does not independently prove server token revocation.
+4. After logout, expect a solid authentication background and the welcome/login gate. Main-menu controls or gameplay must not remain accessible behind it. Cancel a login once to confirm the clean return, then log in to the same player. Check the same ID and hero count.
 
-## Companion seats within the existing LDPlayer
+WAN remains disconnected throughout U4/U5. A working LAN account connection must not depend on public internet access.
 
-Each companion account must already own a story-earned hero, belong to the correct team, and have its selected hero/form and Ready saved on the exact plan. They do not unlock heroes automatically. In three separate PowerShell windows for R, substitute the actual plan UUID and use UniRecruit, UniSolo and UniRival respectively:
+## U6. Controlled account-bridge outage and recovery
 
-```powershell
-$battle = 'PASTE-THE-NEW-BATTLE-PLAN-UUID-HERE'
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_client\tools\Run-AndroidAllianceCompanion.ps1' `
-    -Username 'UniRecruit' -BattleId $battle
-```
+This check stops **only the account bridge on port15001**. Keep MongoDB, the admin service, shared battles, native Multiplayer and LDPlayer running. Keep the game foreground, signed in and idle at its main menu, with no request or credential dialog already open.
 
-Review/confirm the account, battle and controller policy. Enter its password only at the hidden prompt. Keep the windows open; do not simultaneously use a companion account in the GUI. Success requires its acknowledged END/replay and saved sanitized report. These are real authenticated engine clients, not a multiple-human usability test.
-
-For a mid-battle disconnect rerun the same account and battle command. If END already occurred and only result upload failed, use `-RetryResult`; keep its journal/replay. Do not automatically change the plan or create a replacement run.
-
-For mutual draw on a fresh plan, replace UniSolo's normal companion with:
-
-```powershell
-$battle = 'PASTE-THE-NEW-DRAW-PLAN-UUID-HERE'
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_client\tools\Run-AndroidAllianceCompanion.ps1' `
-    -Username 'UniSolo' -BattleId $battle -CaptainAction OfferDraw -AfterTurn 1
-```
-
-This explicit policy passes turns and sends one draw offer. UniPlayer offers through the in-game captain menu. For withdrawal testing delay the opposing offer, for example AfterTurn3. `Surrender` and `WithdrawDraw` are also explicit policies; normal companions play AI. These controls require a captain in a fixed seat.
-
-## Controlled shared-service restart for S
-
-After GUI reconnect passes, wait for UniPlayer's turn and return to menu. Stop only the shared-battle service with Ctrl+C and wait for its prompt. Other services remain open. Companion disconnect errors are expected in this subcheck; let their commands finish. Repeat G to start the missing shared service, then rerun the same companion accounts/exact plan and reconnect UniPlayer. Expect preserved armies/turn; continue only if consistent. Do not cancel, change readiness, reinitialize or use RetryResult before END.
-
-## Post-test backup and isolated restore for Z
-
-Stop all five services. Run this whole block so the restore uses the just-created backup:
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $root = Join-Path $env:LOCALAPPDATA 'WesnothAlliance'
-    $tag = (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N')
-    $backup = Join-Path $root ('backups\after-1192617-' + $tag)
-    $restore = Join-Path $root ('restore-checks\1192617-' + $tag)
-    $helper = 'D:\Test\wesnoth-setup\wesnoth_server\tools\Invoke-WindowsAllianceMaintenance.ps1'
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File $helper `
-        -Operation Backup -DestinationPath $backup -RuntimeRoot (Join-Path $root 'runtime-v2')
-    if ($LASTEXITCODE -ne 0) { throw 'Post-test backup failed. Send its sanitized log.' }
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File $helper `
-        -Operation Restore -BackupPath $backup -DestinationPath $restore `
-        -RuntimeRoot (Join-Path $root 'runtime-v2')
-    if ($LASTEXITCODE -ne 0) { throw 'Isolated restore failed. Keep both folders and send its sanitized log.' }
-}
-```
-
-Keep both private folders locally; do not select the restored test folder for normal launch. The retained version1 backup can also be verified/restored into a separate folder. It stays version1 and requires matching1192615 application code to operate; restore does not migrate it or switch current services.
-
-## Report, fix and retest
-
-Example after A–H pass and I fails; replace these letters with your actual results:
+1. In the existing **Run-WindowsAllianceBridge.ps1** window, press **Ctrl+C** once and wait for its PowerShell prompt. Normal shutdown prints `Alliance account bridge stopped.` and saves `diagnostics/alliance-bridge-run-*.txt`. If shutdown is uncertain, stop and report it rather than starting a duplicate bridge.
+2. Return focus to LDPlayer, leave the game foreground and wait. It should detect the missing account connection automatically and clear its local signed-in session. The check interval is about 3 seconds; a request that reaches its timeout can add up to about 10 seconds, plus UI scheduling. Expect the connection-lost/sign-in explanation over a solid background, with no interactive old game/menu behind it. This is local sign-out; it does not claim the unreachable server revoked the previous token.
+3. Choose **Log in** and make one attempt using the same account while the bridge is still stopped. Expect a clear connection error and return to the authentication flow, without a crash, frozen interface or access to gameplay. Cancel must not uncover the old game. This reconnect gate may show only **Log in** and **Quit**, because continuing the paused app requires the same player and database generation; do not create another player.
+4. Restart the existing bridge in its PowerShell window:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\New-WindowsAllianceTestReport.ps1' `
-    -BatchId '1192617' -WanStatus Disconnected `
-    -PassedSteps 'A,B,C,D,E,F,G,H' -FailedSteps 'I' `
-    -NotRunSteps 'J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z'
+    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Run-WindowsAllianceBridge.ps1' `
+    -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2') `
+    -MsysRoot 'D:\Test\wesnoth-setup\msys64'
 ```
 
-This records your observations; it does not execute gameplay checks. Send the exact error, relevant diagnostic/build/install/workflow/companion log, plan/run ID and before/after heroXP for reward problems. Never send passwords, tokens, `.env`, private identity/runtime files or database backups.
+Expected: `ALLIANCE ACCOUNT BRIDGE READY 100.99.99.14:15001 -> local account service`. Keep this window open. Do not rebuild, reinitialize, change the trusted profile or switch back to the old runtime.
 
-Development workflow: analyze/reproduce the first failure on VPS -> fix -> affected regression/real execution checks -> commit/push -> precise pull/rebuild/restart instructions -> repeat the failed step and affected regressions. Keep unrelated accepted results. After F has succeeded, a normal fix does not repeat the fresh-database step or reset player progress. WAN status is recorded once per batch, with changes noted. Windows rendering and multiple-human acceptance are never inferred from VPS or companion results.
+5. Log in with the **same player account**. Expect recovery to the paused app with the same player ID, hero count and XP. No account replacement or new reward should occur. If the bridge fails to reach READY or the app stays signed out after a correct reconnect, return the exact message and saved bridge log.
+6. After that recovery passes, check the foreground-request path once: stop only the bridge again, wait for its PowerShell prompt, then immediately return to LDPlayer and tap **Multiplayer** before the periodic check opens the sign-in gate. Expect a connection error/authentication gate, **not the app closing**, and no usable old menu behind it. If automatic sign-out opens first, report that timing; it does not independently test the foreground-request path, and repeated racing clicks are unnecessary.
+7. Restart the bridge with the exact command in step 4, require READY again, and log in to the **same account**. Expect the same player ID and collection. Keep the bridge and other four services running afterward. WAN remains disconnected; no separate WAN reconfirmation is needed between these two controlled outages.
+
+This deliberately tests background detection and a foreground account request during a bridge outage, not every possible server outage or database restart.
+
+## U7. Quit closes the app task
+
+1. From the signed-in main menu choose its **Quit** action. Expect the Wesnoth app/task to close to LDPlayer's launcher, not return to the server-profile setup screen.
+2. Reopen **Wesnoth Offline** from its icon. The saved trusted server must still be present. Choose Start game; expect fresh authentication rather than the previous in-memory session.
+3. At Welcome choose **Quit** without logging in. Expect the whole app/task to close again, with no unauthenticated gameplay or setup screen left open.
+4. Reopen, choose Start game and log in to the same player. Confirm the same player ID, hero count and any existing XP. Leave all five services running.
+
+No campaign victory, hero unlock, team creation or XP correction is part of this corrective batch.
+
+## Return one combined result
+
+Return U1–U7 as PASS, FAILED or NOT RUN, the printed client commit, installed version, existing player ID/hero count and any changed XP. For a failure include the exact screen text, the first failing substep and its relevant saved build/install/bridge log. Report how long automatic sign-out took and whether Quit returned to the LDPlayer launcher. Confirm WAN was disconnected/local Ethernet connected for the batch; note any change. Never include passwords, tokens, `.env`, private keys or database backups.
+
+After review, continue the retained gameplay checklist from J onward using this same runtime and account. Routine fixes repeat only the failed check and affected regressions; they do not repeat fresh setup or erase progress.

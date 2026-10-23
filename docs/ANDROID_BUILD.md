@@ -1,12 +1,22 @@
 # Android build checkpoint
 
+**Current corrective client release 1192618 (2026-10-23):** The final VPS offline Android build, artifact/version/original-signer verification and same-input reuse pass. The target changes are direct Welcome actions and clean credential cancellation, main-menu Log out, a protected reconnect gate after account connection loss, exact manual keyboard case/symbol handling with explicit modifier reset, and closing the whole Android task on Quit. Windows/LDPlayer acceptance remains pending. The implementation and final verification scope belong in [BASELINE.md](BASELINE.md); exact delivery and combined acceptance steps are in [NEXT_TEST.md](NEXT_TEST.md).
+
+The current Windows baseline already has the accepted 1192617 APK/setup profile, schema 2 runtime-v2 and all five healthy services. The new APK 1192618 continues using **server 1192617/account protocol 2/native protocol 2**. No server, bridge or native Multiplayer rebuild/restart is required for installation. Only U6 intentionally stops/restarts the existing account bridge to check connection loss and recovery. Keep every service selected to `%LOCALAPPDATA%\WesnothAlliance\runtime-v2`; do not reinitialize it or recreate established players/administrator.
+
+The normal account updater verifies and retains the completed 1192617 account engine/APK stages, then builds the new owned account stages. Original engine objects, dependency binaries/source caches, pinned SDK/NDK/Java tools, signing identity, supplied 1.19.26 data and installed OBB remain the foundations. The keyboard changes affect owned Java code and a checked copy of the SDL Java glue; the pinned SDL native library is not rebuilt for them. Installation uses **Install-AndroidAccountGame.ps1 -KeepSavedProfile**, targets the existing LDPlayer 127.0.0.1:5555/API28/x86_64 and must verify version 1192618 while preserving trusted server 100.99.99.14:15001 and app data.
+
+Pull only the client after delivery confirmation through MSYS2 Git, disconnect WAN while retaining Ethernet, run the account rebuild and in-place installation, then report U1–U7. No dependency upgrade, profile import, OBB transfer, old foundation rebuild or database reset is requested. Preserve existing player IDs/hero counts/XP; no reward is earned by this correction test. The full previous product checklist remains in [UNIFIED_GAME_ACCEPTANCE_1192617.md](UNIFIED_GAME_ACCEPTANCE_1192617.md) for later J onward; its old setup and startup labels are historical.
+
+## Historical records (superseded by the current release)
+
+### Retained 1192617 delivery banner
+
 **Current release 1192617:** Startup authentication, owned campaign heroes/forms, integrated story rewards, authenticated native Multiplayer and selected-hero Teams are implemented. Use [UNIFIED_PRODUCT.md](UNIFIED_PRODUCT.md) for rules, [BASELINE.md](BASELINE.md) for verification limits and [NEXT_TEST.md](NEXT_TEST.md) for the authoritative Windows A–Z. Older records below are historical and do not override this delivery.
 
 The upgrade requires a verified cold backup, then creates the new schema 2 runtime at `%LOCALAPPDATA%\WesnothAlliance\runtime-v2` beside the old runtime. It preserves old data, trusted identity, OBB, pinned tools and completed builds. The current startup helper checks all five services (27018,18765,15001,15002,15000) before W07 UNIFIED GAME SERVICES READY. Account/native protocol is 2. No normal correction resets this new database.
 
 Actual 1192617 Android compilation and VPS verification pass; Windows/LDPlayer acceptance is pending. Use the existing one LDPlayer and the authenticated companion helper for additional computer seats. Record WAN once per batch, report the first unexpected result, then retest only the corrected step and affected regressions after a verified commit/push. Do not request another emulator or infer multiple-human acceptance.
-
-## Historical records (superseded by the current release)
 
 **Current checkpoint — Alliance v1 implementation complete, release 1192615 (2026-10-23):** The user accepts the previous local-training batch and requests the remaining team-battle checklist, VPS verification and an improved Windows report/fix/retest workflow. Treat 1192614 acceptance as user-observed; no new explicit WAN statement accompanied it. The last separately confirmed offline practice behavior is 1192613. Only ONE LDPlayer instance is available. Do not request a phone or additional emulator instances, or equate computer-controlled companion seats with multiple-human acceptance.
 
