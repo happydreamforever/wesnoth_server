@@ -2,6 +2,8 @@
 
 ## Current v1 checklist — release1192615
 
+**Latest Windows result:** A's MSYS2 pulls and commit checks pass at server `d5eaa2e` / client `a7be19a`. Backup, new builds, installation and new gameplay acceptance remain pending; continue at B without another pull.
+
 The implementation checklist and local acceptance checklist are separate. A checked implementation item means code plus the stated VPS verification; it does not mean Windows/LDPlayer1192615 has passed. Earlier dated sections below retain the project's evidence history. The user accepts1192614 local training;1192615 uses the A–Z sequence in [NEXT_TEST.md](NEXT_TEST.md).
 
 | Feature | Implementation and VPS verification | Windows acceptance |

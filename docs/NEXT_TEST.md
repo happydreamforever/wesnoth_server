@@ -1,5 +1,7 @@
 # Alliance team battle — release 1192615
 
+**Current user checkpoint:** Step A's pulls and commit checks passed at server `d5eaa2e` / client `a7be19a`. Continue with **B** using those checkouts; no additional pull is required for this record update. Keep services stopped for the backup and disconnect WAN while retaining Ethernet. Backup and all later 1192615 acceptance results are still pending.
+
 This is the next complete Windows/LDPlayer acceptance batch. Earlier account, membership, planning and local-practice results remain accepted. The new campaign progression, shared battles, result settlement, replay retrieval and recovery must be tested on your computer. VPS results do not establish Windows acceptance.
 
 Use **one LDPlayer instance**. The new companion helper runs separately authenticated, computer-controlled engine processes inside that same instance for the other fixed seats. These are real network clients, but they do not establish multiple-human synchronization or separate-device connectivity. Start with 2v2. Larger formats need enough memory for six/eight engine processes; report resource limits rather than starting another emulator.
@@ -42,7 +44,7 @@ All Alliance service windows must be stopped. Run this in a new PowerShell windo
         -Operation Backup -DestinationPath $backup `
         -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime')
     if ($LASTEXITCODE -ne 0) { throw 'Backup stopped. Send only its sanitized diagnostic log.' }
-    Write-Host "Keep this private backup path for step Z: $backup"
+    Write-Host "Keep this private pre-update backup path: $backup"
 }
 ```
 
