@@ -27,7 +27,7 @@ inline std::string public_error(const std::string& code) {
         {"busy","This player or team is reserved by an unfinished game. Review that game first."},
         {"mission_locked","Complete the previous campaign mission first."},
         {"invalid_mission","This mission version is not supported by the server."},
-        {"advancement_required","Choose an available leader advancement before starting another mission."},
+        {"advancement_required","Choose an available leader advancement in Campaign progression before preparing or starting another game."},
         {"invalid_advancement","That advancement is not available. Refresh your personal leader."},
         {"invalid_result","The saved result could not be verified. Preserve its replay and report this message."},
         {"result_conflict","The result is incomplete, disputed or changed. Review it before confirming."},

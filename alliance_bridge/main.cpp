@@ -457,6 +457,7 @@ json::object directory_error(const Request& request, unsigned status, const std:
         else if(source == "invalid_lineup") { code = "invalid_lineup"; message = "Choose the required distinct current members for each team."; }
         else if(source == "different_area") { code = "different_area"; message = "Both teams must belong to the same area."; }
         else if(source == "stale_proposal") { code = "stale_proposal"; message = "This battle plan changed or is unavailable. Inspect it before approving or becoming ready."; }
+        else if(source == "advancement_required") { code = "advancement_required"; message = "A selected player must choose their available leader advancement before preparing this battle."; }
         else if(source == "approval_required") { code = "approval_required"; message = "Both current captains must explicitly approve this battle plan first."; }
         else if(source == "invalid_state") { code = "invalid_state"; message = "This operation requires a planned battle. Refresh the plan."; }
         else if(source == "suspended") { code = "forbidden"; message = "A required player is unavailable for this operation."; status = 403; }

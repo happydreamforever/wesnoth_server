@@ -931,7 +931,7 @@ class BridgeTests(unittest.TestCase):
 
     def test_planning_safe_errors_preserve_current_session(self):
         for code in ('planning_exists', 'invalid_map', 'invalid_lineup', 'different_area', 'stale_proposal',
-                     'approval_required', 'invalid_state'):
+                     'advancement_required', 'approval_required', 'invalid_state'):
             type(self).directory_override = (409, {'error': {'code': code, 'message': self.secret}})
             result = self.exchange(self.request('battle_detail', {'battle_id': BATTLE['id']}))
             self.assertEqual((result['status'], result['data']['code']), (409, code))
