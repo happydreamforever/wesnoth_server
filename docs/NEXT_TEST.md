@@ -6,24 +6,13 @@ Use the existing **one LDPlayer instance**, MSYS2, Python, SDK/NDK, supplied 1.1
 
 Report each step before continuing if you prefer. At the first unexpected result, stop that test and send its letter, exact message and sanitized log. Do not delete stages, journals, locks or runtime data. Record WAN status once per batch; keep local Ethernet and LDPlayer available.
 
-## Current checkpoint — A–E accepted; update server and retry F
+## Current checkpoint — A–F accepted; run G next
 
-F reached the new administrator's private prompts but returned only `initialization_incomplete`. The cause is not yet known; the old helper hid several possible input/database/cleanup errors. `uni` is a valid username. Keep both runtimes and the verified backup unchanged. A–E do not need repeating.
+The successful F retry reports ALLIANCE INITIALIZATION PASSED and UNIFIED FRESH START VERIFIED, with schema_version 2, previous_runtime_preserved true, database_stopped true and reused false. The new administrator is `uni`. Use `%LOCALAPPDATA%\WesnothAlliance\runtime-v2` for every service from now on; the old runtime and B backup remain retained. The prior generic failure's cause was not identified and must not be inferred from this success.
 
-A server-only correction now reports a safe `stage` and `reason`, with clear password-input guidance and no credential output. It is tested on the VPS, including real MongoDB failures and same-target recovery. Temporarily connect to GitHub and pull the server:
+Continue directly at **G** using the existing checked startup helper, current MSYS2 root and -IncludeBattles. No additional pull, backup, initialization or rebuild is required. Keep WAN disconnected and local Ethernet connected. Expect five service windows and **W07 UNIFIED GAME SERVICES READY** after W02–W06 pass. Leave all five windows open and return the workflow output before H installation. If startup stops, send its saved workflow text and JSON reports; preserve the service windows already running.
 
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
-    & $bash --noprofile --norc -c 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server pull --ff-only origin main'
-    if ($LASTEXITCODE -ne 0) { throw 'Server pull failed. Stop and send the output.' }
-}
-```
-
-Disconnect WAN and retain local Ethernet. With all services stopped, retry **F below using exactly** `%LOCALAPPDATA%\WesnothAlliance\backups\before-1192617-20261023-100621-012`, previous `runtime` and the existing partial `runtime-v2`. The helper preserves the old database and backup and resumes existing new credentials; if the administrator already exists, it skips creating/replacing it. Do not delete files, change the target or make another backup to work around this error.
-
-Expected: `UNIFIED FRESH START VERIFIED`, schema 2, previous runtime preserved and database stopped. If it stops, send the safe stage/reason lines and console error, never passwords/private runtime files. Return this retry result before G service startup and H installation. No client pull, rebuild, OBB transfer or profile import is required. F–Z remain pending; A–E below are reference only.
+A–F below are retained as reference and should not be repeated. The Android 1192617 APK is built but not yet installed in this batch. G–Z acceptance remains pending.
 
 ## A. Stop services and pull both repositories
 
