@@ -123,8 +123,13 @@ exit $LASTEXITCODE
     def test_legacy_three_input_stage_rebuilds_with_current_builder_inputs(self):
         self.assertIn(HEADER, INPUTS)
         self.assert_success()
-    def test_current_four_input_stage_rebuilds_and_preserves_old_build(self):
+    def test_current_five_input_stage_rebuilds_and_preserves_old_build(self):
         self.current_old_stage()
+        self.assert_success()
+    def test_previous_four_input_stage_is_preserved_before_v2_rebuild(self):
+        self.old_owner['inputs'] = {name: sha(('old ' + name).encode()) for name in (*LEGACY_INPUTS, HEADER)}
+        self.old_receipt = self.complete_stage(self.stage, self.old_owner, b'completed old bridge')
+        self.before = {p.name:p.read_bytes() for p in self.stage.iterdir()}
         self.assert_success()
     def test_running_bridge_is_not_stopped_or_renamed(self):
         self.assertEqual(self.invoke(running=1), 1); self.no_build()

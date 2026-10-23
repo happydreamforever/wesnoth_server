@@ -1,7 +1,7 @@
 # Windows PowerShell 5.1. Reuse healthy services; start missing ones in separate windows.
 [CmdletBinding()]
 param(
-    [string]$RuntimeRoot = (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime'),
+    [string]$RuntimeRoot = (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2'),
     [string]$MsysRoot = 'D:\Test\wesnoth-setup\msys64',
     [switch]$CheckOnly,
     [switch]$IncludeBattles

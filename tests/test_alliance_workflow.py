@@ -45,8 +45,8 @@ class WorkflowTests(unittest.TestCase):
         with patch.object(workflow, "open_port", return_value=True), patch.object(workflow, "launch") as launch:
             self.run_helper(battles=True)
         launch.assert_not_called()
-        self.assertEqual([row["id"] for row in self.report["steps"]], ["W01", "W02", "W03", "W04", "W05", "W06"])
-        self.assertEqual([row["action"] for row in self.report["steps"][1:-1]], ["reused"] * 4)
+        self.assertEqual([row["id"] for row in self.report["steps"]], ["W01", "W02", "W03", "W04", "W05", "W06", "W07"])
+        self.assertEqual([row["action"] for row in self.report["steps"][1:-1]], ["reused"] * 5)
         workflow.bridge_check.assert_any_call({"server_address": "127.0.0.1"}, battles=True)
         self.assertEqual(self.report["status"], "passed")
 
@@ -71,10 +71,10 @@ class WorkflowTests(unittest.TestCase):
             self.assertTrue(log.is_file())
             calls.append(wrapper)
             return child
-        with patch.object(workflow, "open_port", side_effect=[False, True] * 4), patch.object(workflow, "launch", side_effect=launch):
+        with patch.object(workflow, "open_port", side_effect=[False, True] * 5), patch.object(workflow, "launch", side_effect=launch):
             self.run_helper(battles=True)
-        self.assertEqual(calls, [row[3] for row in (*workflow.STEPS, workflow.BATTLE_STEP)])
-        self.assertEqual(len(list(self.root.glob("report-W*.txt"))), 4)
+        self.assertEqual(calls, [row[3] for row in (*workflow.STEPS, workflow.BATTLE_STEP, workflow.MULTIPLAYER_STEP)])
+        self.assertEqual(len(list(self.root.glob("report-W*.txt"))), 5)
         child.terminate.assert_not_called(); child.kill.assert_not_called()
 
     def test_failure_keeps_prior_services_and_never_starts_later(self):
@@ -148,10 +148,10 @@ class RealTlsHealthTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls): cls.temp.cleanup()
 
-    def check(self, *, battles=False, reply=None, preamble=b"\0\0\0\0", profile=None):
+    def check(self, *, battles=False, multiplayer=False, reply=None, preamble=b"\0\0\0\0", profile=None):
         requests = []
         errors = []
-        port = 15002 if battles else 15001
+        port = 15000 if multiplayer else 15002 if battles else 15001
         with socket.socket() as listener:
             listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             listener.bind(("127.0.0.1", port)); listener.listen(1); listener.settimeout(10)
@@ -167,11 +167,12 @@ class RealTlsHealthTests(unittest.TestCase):
                             if battles:
                                 length = int.from_bytes(workflow.receive_exact(peer, 4, workflow.time.monotonic() + 5), "big")
                                 requests.append(gzip.decompress(workflow.receive_exact(peer, length, workflow.time.monotonic() + 5)))
+                            if battles or multiplayer:
                                 payload = gzip.compress(reply)
                                 peer.sendall(len(payload).to_bytes(4, "big") + payload)
                 except Exception as error: errors.append(type(error).__name__)
             thread = threading.Thread(target=serve); thread.start()
-            result = workflow.bridge_check(profile or self.profile, battles=battles)
+            result = workflow.bridge_check(profile or self.profile, battles=battles, multiplayer=multiplayer)
             thread.join(12)
             self.assertFalse(thread.is_alive())
         return result, requests, errors
@@ -185,6 +186,14 @@ class RealTlsHealthTests(unittest.TestCase):
         result, requests, errors = self.check(battles=True, reply=reply)
         self.assertTrue(result); self.assertEqual(errors, [])
         self.assertEqual(requests[1], b"[alliance_health]\n[/alliance_health]\n")
+
+    def test_actual_native_multiplayer_release_greeting_without_login(self):
+        greeting=b'[version]\nalliance_protocol="2"\nimplementation_release="1192616"\n[/version]\n'
+        result,requests,errors=self.check(multiplayer=True,reply=greeting)
+        self.assertTrue(result);self.assertEqual(errors,[])
+        self.assertEqual(requests,[b"\0\0\0\1"])
+        for bad in (greeting.replace(b'1192616',b'1192615'),greeting.replace(b'[/version]',b'alliance_protocol="2"\n[/version]'),b'x'*16385):
+            self.assertFalse(self.check(multiplayer=True,reply=bad)[0])
 
     def test_downgrade_and_wrong_identity_fail_closed(self):
         self.assertFalse(self.check(preamble=b"\xff" * 4)[0])

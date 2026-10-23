@@ -31,7 +31,8 @@ STEPS = (("W02", "database", 27018, "Run-WindowsAllianceDatabase.ps1"),
          ("W03", "backend", 18765, "Run-WindowsAlliance.ps1"),
          ("W04", "bridge", 15001, "Run-WindowsAllianceBridge.ps1"))
 BATTLE_STEP = ("W05", "battles", 15002, "Run-WindowsAllianceBattles.ps1")
-EXPECTED_IMPLEMENTATION_RELEASE = 1192615
+MULTIPLAYER_STEP = ("W06", "multiplayer", 15000, "Run-WindowsMultiplayer.ps1")
+EXPECTED_IMPLEMENTATION_RELEASE = 1192616
 BACKEND_RELEASE_ERROR = "W03_backend_release_mismatch"
 
 
@@ -128,27 +129,44 @@ def valid_battle_health(raw):
     return fields == {"service": "alliance-battles", "api": "1"}
 
 
-def bridge_check(profile, *, battles=False):
+def valid_multiplayer_health(raw):
+    """Read only the bounded unsolicited authenticated-lobby version greeting."""
+    try:
+        lines = [line.strip() for line in raw.decode("utf-8").splitlines() if line.strip()]
+    except UnicodeError:
+        return False
+    if len(lines) != 4 or lines[0] != "[version]" or lines[-1] != "[/version]":
+        return False
+    fields = {}
+    for line in lines[1:-1]:
+        match = re.fullmatch(r'(alliance_protocol|implementation_release)\s*=\s*"([0-9]+)"', line)
+        if not match or match[1] in fields: return False
+        fields[match[1]] = match[2]
+    return fields == {"alliance_protocol": "2", "implementation_release": str(EXPECTED_IMPLEMENTATION_RELEASE)}
+
+
+def bridge_check(profile, *, battles=False, multiplayer=False):
     try:
         context = tls_client_context(profile)
         deadline = time.monotonic() + 6
-        port = 15002 if battles else 15001
+        port = 15000 if multiplayer else (15002 if battles else 15001)
         with socket.create_connection((profile["server_address"], port), timeout=3) as raw:
             raw.sendall(b"\0\0\0\1")
             if receive_exact(raw, 4, deadline) != b"\0\0\0\0": return False
             raw.settimeout(max(.001, deadline - time.monotonic()))
             with context.wrap_socket(raw, server_hostname=profile["server_address"]) as peer:
                 if hashlib.sha256(peer.getpeercert(binary_form=True)).hexdigest() != profile["certificate_sha256"]: return False
-                if not battles: return True
-                request = gzip.compress(b"[alliance_health]\n[/alliance_health]\n", mtime=0)
-                peer.sendall(len(request).to_bytes(4, "big") + request)
+                if not battles and not multiplayer: return True
+                if battles:
+                    request = gzip.compress(b"[alliance_health]\n[/alliance_health]\n", mtime=0)
+                    peer.sendall(len(request).to_bytes(4, "big") + request)
                 size = int.from_bytes(receive_exact(peer, 4, deadline), "big")
                 if not 1 <= size <= 8192: return False
                 compressed = receive_exact(peer, size, deadline)
                 decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
                 message = decoder.decompress(compressed, 16385)
                 if len(message) > 16384 or not decoder.eof or decoder.unused_data or decoder.unconsumed_tail: return False
-                return valid_battle_health(message)
+                return valid_multiplayer_health(message) if multiplayer else valid_battle_health(message)
     except Exception: return False
 
 
@@ -157,13 +175,13 @@ def quoted(value):
 
 
 def launcher_script(wrapper, runtime, msys, log, powershell):
-    if wrapper not in {row[3] for row in (*STEPS, BATTLE_STEP)}:
+    if wrapper not in {row[3] for row in (*STEPS, BATTLE_STEP, MULTIPLAYER_STEP)}:
         raise WorkflowError("unsupported_service_wrapper")
     # A native child PowerShell converts its Write-Host/Out-Host output into
     # console output too. Running a .ps1 in this pipeline directly would omit
     # host-only readiness/error lines from the step log.
     command = "& " + quoted(powershell) + " -NoProfile -ExecutionPolicy Bypass -File " + quoted(ROOT / "tools" / wrapper) + " -RuntimeRoot " + quoted(runtime)
-    if wrapper == "Run-WindowsAllianceBridge.ps1": command += " -MsysRoot " + quoted(msys)
+    if wrapper in ("Run-WindowsAllianceBridge.ps1", "Run-WindowsMultiplayer.ps1"): command += " -MsysRoot " + quoted(msys)
     if wrapper == "Run-WindowsAllianceBattles.ps1": command += " -IdentityRoot " + quoted(ROOT / "runtime/alliance-transport")
     # Arguments are PowerShell single-quoted literals, not command interpolation.
     # Only these noninteractive service wrappers are transcribed here.
@@ -189,10 +207,12 @@ def run(runtime, msys, start, report, *, include_battles=False):
     report["steps"].append({"id": "W01", "service": "configuration", "status": "passed"})
     print("W01 PASS owned runtime and saved local identity", flush=True)
     with workflow_lock(runtime):
-        for step, name, port, wrapper in (*STEPS, *((BATTLE_STEP,) if include_battles else ())):
-            address = profile["server_address"] if name in ("bridge", "battles") else "127.0.0.1"
+        for step, name, port, wrapper in (*STEPS, *((BATTLE_STEP,) if include_battles else ()), MULTIPLAYER_STEP):
+            address = profile["server_address"] if name in ("bridge", "battles", "multiplayer") else "127.0.0.1"
             check = (lambda: database_check(runtime)) if name == "database" else (
-                (lambda: backend_check(runtime)) if name == "backend" else (lambda: bridge_check(profile, battles=name == "battles")))
+                (lambda: backend_check(runtime)) if name == "backend" else (
+                    (lambda: bridge_check(profile, multiplayer=True)) if name == "multiplayer" else
+                    (lambda: bridge_check(profile, battles=name == "battles"))))
             row = {"id": step, "service": name, "status": "checking", "action": "none"}
             report["steps"].append(row)
             def checked():
@@ -230,8 +250,8 @@ def run(runtime, msys, start, report, *, include_battles=False):
                 raise WorkflowError(step + "_startup_unconfirmed")
             print(step + " PASS " + name, flush=True)
     report["status"] = "passed"
-    report["steps"].append({"id": "W06", "service": "workflow", "status": "passed"})
-    print("W06 ALLIANCE SERVICES READY. Keep the service windows open.", flush=True)
+    report["steps"].append({"id": "W07", "service": "workflow", "status": "passed"})
+    print("W07 UNIFIED GAME SERVICES READY. Keep the service windows open.", flush=True)
 
 
 def main(argv=None):
