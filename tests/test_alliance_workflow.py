@@ -164,10 +164,10 @@ class RealTlsHealthTests(unittest.TestCase):
                         raw.sendall(preamble)
                         if preamble != b"\0\0\0\0": return
                         with self.context.wrap_socket(raw, server_side=True) as peer:
-                            if battles:
+                            if not multiplayer:
                                 length = int.from_bytes(workflow.receive_exact(peer, 4, workflow.time.monotonic() + 5), "big")
                                 requests.append(gzip.decompress(workflow.receive_exact(peer, length, workflow.time.monotonic() + 5)))
-                            if battles or multiplayer:
+                            if reply is not None:
                                 payload = gzip.compress(reply)
                                 peer.sendall(len(payload).to_bytes(4, "big") + payload)
                 except Exception as error: errors.append(type(error).__name__)
@@ -178,14 +178,19 @@ class RealTlsHealthTests(unittest.TestCase):
         return result, requests, errors
 
     def test_actual_pinned_tls_existing_bridge_no_account_data(self):
-        result, requests, errors = self.check()
-        self.assertTrue(result); self.assertEqual(requests, [b"\0\0\0\1"]); self.assertEqual(errors, [])
+        reply = b'[alliance_health]\nservice="alliance-accounts"\napi="2"\nimplementation_release="1192616"\n[/alliance_health]\n'
+        result, requests, errors = self.check(reply=reply)
+        self.assertTrue(result); self.assertEqual(errors, [])
+        self.assertEqual(requests, [b"\0\0\0\1", b"[alliance_health]\n[/alliance_health]\n"])
+        for bad in (reply.replace(b'1192616', b'1192615'), reply.replace(b'api="2"', b'api="1"')):
+            self.assertFalse(self.check(reply=bad)[0])
 
     def test_actual_battle_health_fixed_bounded_read_only_request(self):
-        reply = b'[alliance_health]\nservice="alliance-battles"\napi="1"\n[/alliance_health]\n'
+        reply = b'[alliance_health]\nservice="alliance-battles"\napi="1"\nimplementation_release="1192616"\n[/alliance_health]\n'
         result, requests, errors = self.check(battles=True, reply=reply)
         self.assertTrue(result); self.assertEqual(errors, [])
         self.assertEqual(requests[1], b"[alliance_health]\n[/alliance_health]\n")
+        self.assertFalse(self.check(battles=True, reply=reply.replace(b'1192616', b'1192615'))[0])
 
     def test_actual_native_multiplayer_release_greeting_without_login(self):
         greeting=b'[version]\nalliance_protocol="2"\nimplementation_release="1192616"\n[/version]\n'

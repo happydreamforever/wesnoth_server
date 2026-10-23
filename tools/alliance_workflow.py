@@ -116,17 +116,19 @@ def receive_exact(peer, length, deadline):
     return bytes(data)
 
 
-def valid_battle_health(raw):
+def valid_service_health(raw, *, battles=False):
     # Accept only this fixed, credential-free protocol response. No generic WML
     # evaluation, nested tags or arbitrary response content enters the report.
     lines = [line.strip() for line in raw.decode("utf-8").splitlines() if line.strip()]
-    if len(lines) != 4 or lines[0] != "[alliance_health]" or lines[-1] != "[/alliance_health]": return False
+    if len(lines) != 5 or lines[0] != "[alliance_health]" or lines[-1] != "[/alliance_health]": return False
     fields = {}
     for line in lines[1:-1]:
-        match = re.fullmatch(r'(service|api)\s*=\s*"([^"\\]*)"', line)
+        match = re.fullmatch(r'(service|api|implementation_release)\s*=\s*"([^"\\]*)"', line)
         if not match or match[1] in fields: return False
         fields[match[1]] = match[2]
-    return fields == {"service": "alliance-battles", "api": "1"}
+    return fields == {"service": "alliance-battles" if battles else "alliance-accounts",
+                      "api": "1" if battles else "2",
+                      "implementation_release": str(EXPECTED_IMPLEMENTATION_RELEASE)}
 
 
 def valid_multiplayer_health(raw):
@@ -156,8 +158,7 @@ def bridge_check(profile, *, battles=False, multiplayer=False):
             raw.settimeout(max(.001, deadline - time.monotonic()))
             with context.wrap_socket(raw, server_hostname=profile["server_address"]) as peer:
                 if hashlib.sha256(peer.getpeercert(binary_form=True)).hexdigest() != profile["certificate_sha256"]: return False
-                if not battles and not multiplayer: return True
-                if battles:
+                if not multiplayer:
                     request = gzip.compress(b"[alliance_health]\n[/alliance_health]\n", mtime=0)
                     peer.sendall(len(request).to_bytes(4, "big") + request)
                 size = int.from_bytes(receive_exact(peer, 4, deadline), "big")
@@ -166,7 +167,7 @@ def bridge_check(profile, *, battles=False, multiplayer=False):
                 decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
                 message = decoder.decompress(compressed, 16385)
                 if len(message) > 16384 or not decoder.eof or decoder.unused_data or decoder.unconsumed_tail: return False
-                return valid_multiplayer_health(message) if multiplayer else valid_battle_health(message)
+                return valid_multiplayer_health(message) if multiplayer else valid_service_health(message, battles=battles)
     except Exception: return False
 
 
@@ -264,7 +265,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     report = {"format": 1, "purpose": "wesnoth-alliance-service-workflow", "status": "failed", "steps": [],
         "created_at": datetime.now(timezone.utc).isoformat(), "report_path": str(args.report),
-        "scope": "Local database identity/schema, authenticated HTTP health and pinned bridge TLS and optional battle-service health only; no player login or gameplay tested.",
+        "scope": "Local database identity/schema, authenticated backend release and pinned TLS protocol/release checks for accounts, optional shared battles and native Multiplayer; no player login or gameplay tested.",
         "expected_backend_implementation_release": EXPECTED_IMPLEMENTATION_RELEASE,
         "wan_disconnected": "not_observed"}
     try:
