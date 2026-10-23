@@ -21,7 +21,8 @@ from pymongo.errors import OperationFailure
 from alliance.auth import AuthService
 from alliance.config import Settings, ConfigurationError
 from alliance.deployment import (initialize, owned_runtime, runtime_lock, _start_mongo,
-                                 _stop_owned, _client, check_database, _admin_credentials)
+                                 _stop_owned, _client, check_database, _admin_credentials,
+                                 InitializationError)
 from alliance.domain import DomainError, validate_username
 
 
@@ -260,11 +261,16 @@ class ConfigurationTests(unittest.TestCase):
                      patch("alliance.schema.bootstrap_schema"), \
                      patch("alliance.auth.bootstrap_auth_schema"):
                     if cleanup_error is not None:
-                        with self.assertRaisesRegex(RuntimeError, "cleanup failed"):
+                        with self.assertRaises(InitializationError) as caught:
                             initialize(runtime, Path("mongod"))
+                        self.assertEqual(caught.exception.stage, "database-shutdown")
+                        self.assertEqual(caught.exception.reason, "unexpected_error")
+                        self.assertNotIn("cleanup failed", str(caught.exception))
                     elif exit_code != 0:
-                        with self.assertRaisesRegex(ConfigurationError, "did not exit cleanly"):
+                        with self.assertRaises(InitializationError) as caught:
                             initialize(runtime, Path("mongod"))
+                        self.assertEqual(caught.exception.stage, "database-shutdown")
+                        self.assertEqual(caught.exception.reason, "configuration_error")
                     else:
                         initialize(runtime, Path("mongod"))
                 stop.assert_called_once_with(process, runtime)
@@ -294,8 +300,10 @@ class ActualDeploymentTests(unittest.TestCase):
             # release its operation lock and avoid collecting a password.
             with redirect_stdout(out), \
                  patch("getpass.getpass", side_effect=AssertionError("Invalid username must fail first")):
-                with self.assertRaises(DomainError):
+                with self.assertRaises(InitializationError) as caught:
                     initialize(runtime, mongod, admin_username="invalid operator")
+                self.assertEqual(caught.exception.stage, "administrator-input")
+                self.assertEqual(caught.exception.reason, "invalid_admin_username")
             self.assertNotIn("ALLIANCE INITIALIZATION PASSED", out.getvalue())
             self.assertFalse((runtime / "operation.lock").exists())
             before = {name: (runtime / name).read_bytes() for name in
@@ -364,7 +372,7 @@ class ActualDeploymentTests(unittest.TestCase):
                         self.assertTrue(health["game_bridge_integrated"])
                         self.assertEqual(health["health_scope"], "backend_only")
                         self.assertFalse(health["native_runtime_checked"])
-                        self.assertEqual(health["implementation_release"], 1192615)
+                        self.assertEqual(health["implementation_release"], 1192617)
                         self.assertTrue(health["campaign_content_ready"])
                     finally:
                         service.terminate()

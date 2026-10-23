@@ -6,6 +6,7 @@ from pathlib import Path
 import secrets
 import socket
 import subprocess
+import sys
 import time
 import warnings
 from urllib.parse import quote
@@ -18,6 +19,67 @@ from .runtime_lock import runtime_lock
 
 PURPOSE = "wesnoth-alliance-local"
 MONGO_VERSION = "8.0.32"
+
+
+_INITIALIZATION_STAGES = frozenset({
+    "runtime", "runtime-configuration", "database-start", "replica-set", "schema",
+    "application-user", "administrator-input", "administrator-password",
+    "administrator-account", "application-verification", "database-shutdown", "fresh-start",
+})
+_INITIALIZATION_REASONS = frozenset({
+    "username_input_ended", "invalid_admin_username", "password_input_unavailable",
+    "password_mismatch", "invalid_password_length", "password_hash_failed",
+    "database_operation_failed", "database_connection_failed", "file_access_denied",
+    "file_operation_failed", "configuration_error", "interrupted", "unexpected_error",
+})
+
+
+class AdministratorInputError(ConfigurationError):
+    """A fixed input reason, without retaining the supplied username/password."""
+    def __init__(self, reason, message):
+        super().__init__(message)
+        self.reason = reason
+
+
+class InitializationError(ConfigurationError):
+    """Public diagnostic fields contain only fixed stage/reason identifiers."""
+    def __init__(self, stage, reason, *, cleanup_reason=None):
+        self.stage = stage if stage in _INITIALIZATION_STAGES else "fresh-start"
+        self.reason = reason if reason in _INITIALIZATION_REASONS else "unexpected_error"
+        self.cleanup_reason = (None if cleanup_reason is None else
+            cleanup_reason if cleanup_reason in _INITIALIZATION_REASONS else "unexpected_error")
+        message = f"Initialization stopped; stage={self.stage}; reason={self.reason}"
+        if self.cleanup_reason is not None:
+            message += f"; cleanup_reason={self.cleanup_reason}"
+        super().__init__(message)
+
+
+def _initialization_reason(error):
+    # Never stringify arbitrary exceptions: MongoDB errors may embed credentials,
+    # command documents or password hashes, and OS errors may name private files.
+    # Classification must also work if importing auth (including its initial
+    # Argon2 hash) failed. Do not retry a potentially failing import here.
+    auth_error = getattr(sys.modules.get(__package__ + ".auth"), "AuthError", ())
+    hashing_error = getattr(sys.modules.get("argon2.exceptions"), "HashingError", ())
+    if isinstance(error, AdministratorInputError):
+        return error.reason if error.reason in _INITIALIZATION_REASONS else "unexpected_error"
+    if isinstance(error, auth_error) and error.code == "invalid_password":
+        return "invalid_password_length"
+    if isinstance(error, hashing_error):
+        return "password_hash_failed"
+    if isinstance(error, OperationFailure):
+        return "database_operation_failed"
+    if isinstance(error, PyMongoError):
+        return "database_connection_failed"
+    if isinstance(error, PermissionError):
+        return "file_access_denied"
+    if isinstance(error, OSError):
+        return "file_operation_failed"
+    if isinstance(error, ConfigurationError):
+        return "configuration_error"
+    if isinstance(error, KeyboardInterrupt):
+        return "interrupted"
+    return "unexpected_error"
 
 
 def _write_new(path, data, mode=0o600):
@@ -203,14 +265,14 @@ def _admin_credentials(admin_username, admin_password):
                 username, _ = validate_username(input())
                 break
             except EOFError:
-                raise ConfigurationError(
+                raise AdministratorInputError("username_input_ended",
                     "Administrator input ended. Rerun initialization in an interactive PowerShell "
                     "console using the same runtime; existing data was preserved.") from None
             except DomainError:
                 print("Use 3-24 ASCII letters, digits or underscores for the username.",
                       flush=True)
         else:
-            raise ConfigurationError(
+            raise AdministratorInputError("invalid_admin_username",
                 "Administrator username was invalid five times. Rerun initialization using the "
                 "same runtime; existing data was preserved.")
     else:
@@ -227,27 +289,49 @@ def _admin_credentials(admin_username, admin_password):
                 password = getpass.getpass("New admin password (12-128 characters): ")
                 confirmation = getpass.getpass("Repeat admin password: ")
         except (EOFError, getpass.GetPassWarning):
-            raise ConfigurationError(
+            raise AdministratorInputError("password_input_unavailable",
                 "Hidden password input is unavailable or ended. Rerun initialization in an "
                 "interactive PowerShell console without input redirection using the same runtime; "
                 "existing data was preserved.") from None
         if confirmation != password:
-            raise ConfigurationError("Passwords did not match. Rerun initialization to complete the admin step.")
+            raise AdministratorInputError("password_mismatch",
+                "Passwords did not match. Rerun initialization to complete the admin step.")
     return username, password
 
 
 def initialize(runtime, mongod, *, admin_username=None, admin_password=None):
     """Create only the explicit owned runtime; safe to resume with unchanged files."""
+    current_stage = "runtime"
+
+    def stage(name):
+        nonlocal current_stage
+        previous, current_stage = current_stage, name
+        return previous
+
+    try:
+        return _initialize(runtime, mongod, admin_username=admin_username,
+                           admin_password=admin_password, stage=stage)
+    except InitializationError:
+        raise
+    except (Exception, KeyboardInterrupt) as error:
+        raise InitializationError(current_stage, _initialization_reason(error)) from None
+
+
+def _initialize(runtime, mongod, *, admin_username, admin_password, stage):
     from .auth import bootstrap_auth_schema, hash_password
-    from .domain import AllianceService
+    from .domain import AllianceService, DomainError
     from .schema import bootstrap_schema
     path = owned_runtime(runtime, create=True)
     with runtime_lock(path):
+        stage("runtime-configuration")
         credentials = _configure_runtime(path)
+        stage("database-start")
         process = _start_mongo(path, mongod)
-        anonymous = _client("mongodb://127.0.0.1:27018/?directConnection=true")
-        privileged = _client(_uri("wesnoth_operator", credentials["database_admin_password"], "admin"))
+        anonymous = privileged = None
         try:
+            anonymous = _client("mongodb://127.0.0.1:27018/?directConnection=true")
+            privileged = _client(_uri("wesnoth_operator", credentials["database_admin_password"], "admin"))
+            stage("replica-set")
             hello = anonymous.admin.command("hello")
             if not hello.get("setName"):
                 anonymous.admin.command("replSetInitiate", {"_id": "wesnoth-rs", "members": [
@@ -272,8 +356,10 @@ def initialize(runtime, mongod, *, admin_username=None, admin_password=None):
                 privileged = _client(_uri("wesnoth_operator", credentials["database_admin_password"], "admin"))
                 privileged.admin.command("ping")
             db = privileged.wesnoth_game
+            stage("schema")
             bootstrap_schema(db)
             bootstrap_auth_schema(db)
+            stage("application-user")
             users = db.command("usersInfo", "wesnoth_app")["users"]
             expected_roles = [{"role": "readWrite", "db": "wesnoth_game"}]
             if not users:
@@ -281,8 +367,17 @@ def initialize(runtime, mongod, *, admin_username=None, admin_password=None):
             elif users[0].get("roles") != expected_roles:
                 raise ConfigurationError("Existing application database user has unexpected roles; no permissions changed.")
             if not db.accounts.find_one({"role": "admin"}):
-                username, password = _admin_credentials(admin_username, admin_password)
-                AllianceService(db).bootstrap_admin(username, hash_password(password))
+                stage("administrator-input")
+                try:
+                    username, password = _admin_credentials(admin_username, admin_password)
+                except DomainError:
+                    raise AdministratorInputError("invalid_admin_username",
+                        "Use 3-24 ASCII letters, digits or underscores for the administrator username.") from None
+                stage("administrator-password")
+                password_hash = hash_password(password)
+                stage("administrator-account")
+                AllianceService(db).bootstrap_admin(username, password_hash)
+            stage("application-verification")
             settings = Settings.load(path)
             with _client(settings.mongo_uri) as app_client:
                 app_client.wesnoth_game.accounts.find_one({}, {"_id": 1})
@@ -290,12 +385,29 @@ def initialize(runtime, mongod, *, admin_username=None, admin_password=None):
                 if status["authInfo"]["authenticatedUserRoles"] != expected_roles:
                     raise ConfigurationError("Runtime database scope verification failed.")
         finally:
-            anonymous.close()
-            privileged.close()
-            _stop_owned(process, path)
-        if process.poll() != 0:
-            raise ConfigurationError(
-                f"Owned MongoDB did not exit cleanly after initialization; inspect {path / 'logs' / 'mongodb.log'} locally.")
+            primary_error = sys.exc_info()[1]
+            primary_stage = stage("database-shutdown")
+            try:
+                # Stop the owned database even if closing a client fails.
+                try:
+                    if anonymous is not None:
+                        anonymous.close()
+                finally:
+                    try:
+                        if privileged is not None:
+                            privileged.close()
+                    finally:
+                        _stop_owned(process, path)
+                if process.poll() != 0:
+                    raise ConfigurationError("Owned MongoDB did not exit cleanly after initialization.")
+            except (Exception, KeyboardInterrupt) as cleanup_error:
+                if primary_error is not None:
+                    raise InitializationError(primary_stage, _initialization_reason(primary_error),
+                        cleanup_reason=_initialization_reason(cleanup_error)) from None
+                raise
+            else:
+                if primary_error is not None:
+                    stage(primary_stage)
         print("ALLIANCE INITIALIZATION PASSED")
         print("MongoDB 8.0.32; authenticated single-node replica set; scoped application user; admin account ready.")
         print("Owned database stopped. Start the database window, then the service window.")

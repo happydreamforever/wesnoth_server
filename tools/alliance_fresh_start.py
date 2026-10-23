@@ -13,7 +13,8 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from alliance.deployment import initialize, owned_runtime, _write_new
+from alliance.deployment import (initialize, owned_runtime, _write_new,
+                                 InitializationError, _initialization_reason)
 from alliance.schema import SCHEMA_VERSION
 from alliance.runtime_lock import runtime_lock
 from tools import alliance_maintenance as maintenance
@@ -22,6 +23,25 @@ from tools.alliance_workflow import workflow_lock
 PURPOSE = "wesnoth-unified-fresh-game"
 MARKER = "fresh-start.json"
 COMPLETE = "fresh-start-complete.json"
+
+
+def report_initialization_error(error):
+    print("UNIFIED FRESH START STOPPED: initialization_incomplete")
+    print(f"stage={error.stage}; reason={error.reason}")
+    if error.cleanup_reason is not None:
+        print(f"cleanup_stage=database-shutdown; cleanup_reason={error.cleanup_reason}")
+        print("Database shutdown was not verified. Keep services stopped and send these diagnostic lines.")
+    else:
+        guidance = {
+            "password_mismatch": "The two password entries did not match. Rerun the same command and enter the same password twice.",
+            "invalid_password_length": "The administrator password must contain 12-128 characters. Rerun the same command with a password in that range.",
+            "username_input_ended": "Username input ended. Rerun the same command in an interactive PowerShell window.",
+            "invalid_admin_username": "Use 3-24 ASCII letters, digits or underscores for the administrator username.",
+            "password_input_unavailable": "Hidden password input was unavailable or ended. Use an interactive PowerShell window without input redirection.",
+            "interrupted": "Setup was interrupted. Keep the same runtime and backup paths when resuming.",
+        }
+        print(guidance.get(error.reason, "Send the stage and reason above for review; do not send passwords or private runtime files."))
+    print("Keep the existing backup and both runtime folders. Do not delete files or choose a new destination.")
 
 
 def checked_backup(archive):
@@ -97,13 +117,15 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         result = fresh_start(args.previous_runtime, args.backup, args.runtime, args.mongod)
+    except InitializationError as error:
+        report_initialization_error(error)
+        return 1
     except maintenance.MaintenanceError as error:
         print("UNIFIED FRESH START STOPPED: " + str(error))
         print("Existing data is retained. Keep any incomplete new runtime for diagnosis.")
         return 1
-    except (Exception, KeyboardInterrupt):
-        print("UNIFIED FRESH START STOPPED: initialization_incomplete")
-        print("Existing data is retained. Rerun the same command to resume; never delete runtime files.")
+    except (Exception, KeyboardInterrupt) as error:
+        report_initialization_error(InitializationError("fresh-start", _initialization_reason(error)))
         return 1
     print("UNIFIED FRESH START VERIFIED")
     print(json.dumps(result, sort_keys=True))
