@@ -2,7 +2,7 @@
 
 ## Current v1 checklist — release1192615
 
-**Latest Windows result:** A's MSYS2 pulls and commit checks pass at server `d5eaa2e` / client `a7be19a`. Backup, new builds, installation and new gameplay acceptance remain pending; continue at B without another pull.
+**Latest Windows result:** A's pulls pass at server `d5eaa2e` / client `a7be19a`; B's cold backup passes with 109 files / 257,632,893 bytes and user-confirmed WAN disconnection. Next pull the server-only bridge rebuild-helper correction, then perform C. Existing backup is valid; new builds, installation and gameplay remain pending.
 
 The implementation checklist and local acceptance checklist are separate. A checked implementation item means code plus the stated VPS verification; it does not mean Windows/LDPlayer1192615 has passed. Earlier dated sections below retain the project's evidence history. The user accepts1192614 local training;1192615 uses the A–Z sequence in [NEXT_TEST.md](NEXT_TEST.md).
 

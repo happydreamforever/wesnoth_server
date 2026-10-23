@@ -1,6 +1,6 @@
 # Alliance team battle — release 1192615
 
-**Current user checkpoint:** Step A's pulls and commit checks passed at server `d5eaa2e` / client `a7be19a`. Continue with **B** using those checkouts; no additional pull is required for this record update. Keep services stopped for the backup and disconnect WAN while retaining Ethernet. Backup and all later 1192615 acceptance results are still pending.
+**Current user checkpoint:** A's pulls passed at server `d5eaa2e` / client `a7be19a`. B's cold backup now passed with 109 files / 257,632,893 bytes; the user confirms WAN was disconnected. Continue at **C** after the targeted server-helper pull below. The backup remains valid. All new build/install/gameplay acceptance is still pending.
 
 This is the next complete Windows/LDPlayer acceptance batch. Earlier account, membership, planning and local-practice results remain accepted. The new campaign progression, shared battles, result settlement, replay retrieval and recovery must be tested on your computer. VPS results do not establish Windows acceptance.
 
@@ -51,6 +51,21 @@ All Alliance service windows must be stopped. Run this in a new PowerShell windo
 Expected: MA03 maintenance complete, with a new backup destination. Existing runtime is unchanged. The backup contains private database credentials and player data: keep it locally. The separate TLS identity at `wesnoth_server\runtime\alliance-transport` is preserved in place and is not included in this runtime backup.
 
 ## C. Rebuild the account bridge
+
+Before this first C run, update the server helper. Review found a mismatch between the old three-input receipt check and the new four-input bridge build. The correction preserves either completed prior version and requires all current inputs after rebuilding. Temporarily connect Windows to GitHub and run this targeted pull once:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
+    & $bash --noprofile --norc -c 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server pull --ff-only origin main'
+    if ($LASTEXITCODE -ne 0) { throw 'Server pull failed. Stop and send the output.' }
+    & $bash --noprofile --norc -c '/usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server rev-parse --short HEAD'
+    if ($LASTEXITCODE -ne 0) { throw 'Could not read the server commit.' }
+}
+```
+
+Disconnect WAN again, retain local Ethernet, and keep all Alliance services stopped. Your completed B backup remains valid. Run the rebuild:
 
 ```powershell
 & {
