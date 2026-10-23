@@ -1145,6 +1145,22 @@ class AllianceService:
             return {'run_id': run_id, 'state': 'running', 'generation': generation, 'scenario_sha256': scenario_sha256}
         return self._tx(write)
 
+    def shared_evidence_admission(self, actor_id, run_id, generation):
+        """Allow an exact owner to retry an END receipt after settlement.
+
+        This grants no gameplay admission or current team membership. A completed
+        seat can only retransmit evidence matching its immutable saved report.
+        """
+        _directory_id(run_id, uuid=True)
+        self._directory_player(actor_id)
+        run = self._run(run_id)
+        room = self._shared_binding(run, generation)
+        if run['state'] == 'running':
+            return self.shared_admission(actor_id, run_id, generation)
+        if run['state'] != 'completed' or room['state'] != 'completed' or actor_id not in room.get('result_reports', {}):
+            raise DomainError('invalid_state', 'Only an existing running or completed seat result can be retried.')
+        return self._shared_record(actor_id, run)
+
     def shared_cancel(self, run_id, generation, reason):
         """Fenced daemon shutdown/abort; never expire or settle a running room."""
         _directory_id(run_id, uuid=True)
