@@ -2,7 +2,7 @@
 
 ## Current v1 checklist — release1192615
 
-**Latest Windows result:** A–E and F's automated installation pass. The user returned ANDROID ACCOUNT GAME INSTALL COMPLETE, explicit version1192615 verification and fresh setup startup on the existing LDPlayer. Finish F's manual trusted-server, login and account/team-state checks with the installed app and four healthy services. New gameplay acceptance remains pending; no pull, rebuild or reinstall is needed.
+**Latest Windows result:** A–E and F's automated installation pass; F's manual checks are now broadly accepted by the user's ‘All are running correctly’ confirmation. Per-account values were not newly supplied. G–Z remain pending. The user currently asks about the distinction between Alliance progression and existing Campaigns/Multiplayer; no new implementation or mode change is requested.
 
 The implementation checklist and local acceptance checklist are separate. A checked implementation item means code plus the stated VPS verification; it does not mean Windows/LDPlayer1192615 has passed. Earlier dated sections below retain the project's evidence history. The user accepts1192614 local training;1192615 uses the A–Z sequence in [NEXT_TEST.md](NEXT_TEST.md).
 
@@ -21,7 +21,7 @@ The implementation checklist and local acceptance checklist are separate. A chec
 | Replays | Durable local recording, authenticated bounded server upload/download, owner/captain access, verified native playback with no rewards | L/T pending |
 | Operator website | Accounts/password controls retained; area enabled/maps controls, bounded audited XP corrections, disputed-result resolution and no-reward cancellation | Y pending |
 | Backup and restore | Cold private runtime/database/replay backup; hash-checked restore into new storage; authenticated replica/schema/rollback verification; original runtime preserved | B passed; Z pending |
-| Delivery and diagnostics | Preserved1192608–1192614 upgrades,1192615 APK, exact receipts, four-service startup/health, sanitized combined test reports and targeted retest workflow | A–E and F install passed; F manual checks pending |
+| Delivery and diagnostics | Preserved1192608–1192614 upgrades,1192615 APK, exact receipts, four-service startup/health, sanitized combined test reports and targeted retest workflow | A–F accepted; F manual portion user-confirmed |
 
 - [x] Keep full-strength leaders for v1, using the actual six starter advancement trees and24 allowed unit types. Leader XP and team XP are separate; ordinary recruits remain battle-local.
 - [x] Preserve approved alliances: Isar's Cross1/4 vs2/3; Hexcake1/4/5 vs2/3/6; Mokena Prairie1/3/5/8 vs2/4/6/7.
