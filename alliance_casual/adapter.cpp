@@ -60,11 +60,12 @@ void adapter::choose(int game,int side,const std::string&account,const std::stri
  auto& state=get(game);require(!state.restored);auto response=call("hero",{{"ticket",ticket},{"account_id",account},{"game_id",state.id},{"side",side}});wire::selection(response.at("selection"));
  for(const auto& [number,s]:state.seats)require(number==side||s.account_id!=account);
  auto& value=state.seats[side];auto selection=response.at("selection").as_object();
- if(value.account_id!=account||value.selection!=selection){for(auto& [_,s]:state.seats)s.ready=false;value={account,username,selection,false};}
+ if(value.account_id!=account||value.selection!=selection){changed(game);value={account,username,selection,false};}
 }
+void adapter::changed(int game,bool reset_ready){auto&state=get(game);require(state.revision<std::numeric_limits<std::int64_t>::max());++state.revision;state.launch_revision=0;if(reset_ready)for(auto&[_,s]:state.seats)s.ready=false;}
 void adapter::ready(int game,int side,const std::string&account,bool value){auto&state=get(game);auto&s=state.seats.at(side);require(s.account_id==account);s.ready=value;}
 void adapter::freeze(int game){auto&state=get(game);json::array players;for(const auto&[side,s]:state.seats){require(s.ready);players.push_back(json::object{{"account_id",s.account_id},{"username",s.username},{"side",side},{"selection",s.selection}});}call("freeze",{{"game_id",state.id},{"players",players}});state.restored=true;}
-void adapter::context(int game,simple_wml::document&output)const{const auto&state=rooms_.at(game);auto&n=output.root().add_child("alliance_game");n.set_attr_dup("id",state.id.c_str());n.set_attr("resume",state.restored?"yes":"no");}
+void adapter::context(int game,simple_wml::document&output)const{const auto&state=rooms_.at(game);auto&n=output.root().add_child("alliance_game");n.set_attr_dup("id",state.id.c_str());n.set_attr("resume",state.restored?"yes":"no");if(state.individual){n.set_attr("individual_room","yes");n.set_attr_dup("room_revision",std::to_string(state.revision).c_str());}}
 void adapter::selections(int game,simple_wml::document&output)const{const auto&state=rooms_.at(game);for(const auto&[side,s]:state.seats){auto&n=output.root().add_child("alliance_selection");n.set_attr_dup("game_id",state.id.c_str());n.set_attr_int("side",side);n.set_attr_dup("account_id",s.account_id.c_str());n.set_attr_dup("username",s.username.c_str());n.set_attr("ready",s.ready?"yes":"no");for(const auto*key:{"hero_id","form_id","unit_type"})n.set_attr_dup(key,str(s.selection,key).c_str());for(const auto*key:{"hero_level","hero_revision","unit_level"})n.set_attr_dup(key,std::to_string(number(s.selection,key)).c_str());}}
 void adapter::validate_leader(const simple_wml::node& side,const seat& selected,bool restored)const{
  const auto&s=selected.selection;require(side["alliance_account_id"].to_string()==selected.account_id);

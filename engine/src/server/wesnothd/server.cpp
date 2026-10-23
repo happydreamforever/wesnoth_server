@@ -775,7 +775,7 @@ void server::login_client(boost::asio::yield_context yield, SocketPtr socket)
 {
 	if(alliance_) {
 		simple_wml::document greeting; auto& version = greeting.root().add_child("version");
-		version.set_attr("alliance_protocol", "2").set_attr("implementation_release", "1192617");
+		version.set_attr("alliance_protocol", "2").set_attr("implementation_release", "1192617").set_attr("individual_rooms", "1");
 		coro_send_doc(socket, greeting, yield);
 	} else coro_send_doc(socket, version_query_response_, yield);
 
@@ -1523,7 +1523,15 @@ void server::handle_create_game(player_iterator player, simple_wml::node& create
 
 	const std::string game_name = create_game["name"].to_string();
 	const std::string game_password = create_game["password"].to_string();
-	const std::string initial_bans = create_game["ignored"].to_string();
+	const bool individual=alliance_ && create_game["individual_room"].to_bool();
+	if(individual && (game_name.empty() || game_name.size()>256 || game_name.find_first_of("\r\n")!=std::string::npos || !game_password.empty())) {
+        simple_wml::document refused("[leave_game]\n[/leave_game]\n",simple_wml::INIT_STATIC);
+        send_to_player(player,refused);
+        send_server_message(player,"Individual rooms need a name and are public, without a room password.","error");
+        send_to_player(player,games_and_users_list_);
+        return;
+    }
+	const std::string initial_bans = individual?"":create_game["ignored"].to_string();
 	const queue_type::type queue_type = queue_type::get_enum(create_game["queue_type"].to_string()).value_or(queue_type::type::normal);
 	int queue_id = create_game["queue_id"].to_int();
 
@@ -1540,7 +1548,11 @@ void server::handle_create_game(player_iterator player, simple_wml::node& create
 	});
 
 	wesnothd::game& g = *player->get_game();
-	if(alliance_) { alliance_->create(g.id()); alliance_updates(g); }
+	if(alliance_) {
+        alliance_->create(g.id()).individual=create_game["individual_room"].to_bool();
+        g.set_individual_room(alliance_->get(g.id()).individual);
+        alliance_updates(g);
+    }
 
 	DBG_SERVER << "initial bans: " << initial_bans;
 	if(initial_bans != "") {
@@ -1650,7 +1662,17 @@ void server::handle_join_game(player_iterator player, simple_wml::node& join)
 		return;
 	}
 
-	if(alliance_) { simple_wml::document context; alliance_->context(g->id(), context); alliance_->selections(g->id(), context); send_to_player(player, context); }
+	if(alliance_ && alliance_->get(g->id()).individual && !observer) {
+        const auto& room=alliance_->get(g->id());
+        if(g->started() || g->nplayers()>=g->get_sides_list().size()
+           || join["room_revision"].to_string()!=std::to_string(room.revision)) {
+            send_to_player(player,leave_game_doc);
+            send_server_message(player,"This room changed, filled or started. Review its latest details before joining.","error");
+            send_to_player(player,games_and_users_list_);
+            return;
+        }
+    }
+	if(alliance_) { simple_wml::document context; alliance_->context(g->id(), context); individual_context(*g,context); alliance_->selections(g->id(), context); send_to_player(player, context); }
 	bool joined = g->add_player(player, observer);
 	if(!joined) {
 		WRN_SERVER << player->client_ip() << "\t" << player->info().name()
@@ -1668,6 +1690,11 @@ void server::handle_join_game(player_iterator player, simple_wml::node& join)
 
 	player_connections_.modify(player,
 		std::bind(&player_record::set_game, std::placeholders::_1, g));
+	if(alliance_ && alliance_->get(g->id()).individual && !observer) {
+        alliance_->changed(g->id());
+        alliance_reconcile(*g);
+        alliance_updates(*g);
+    }
 
 	g->describe_slots();
 
@@ -1779,12 +1806,176 @@ void server::handle_leave_server_queue(player_iterator p, simple_wml::node& data
 	}
 }
 
+namespace {
+int individual_number(const simple_wml::node& node,const char* key,int fallback)
+{
+    const auto value=node[key].to_string();
+    if(value.empty()) return fallback;
+    std::size_t used=0; const int number=std::stoi(value,&used);
+    if(used!=value.size() || std::to_string(number)!=value) throw std::runtime_error("Invalid individual room number");
+    return number;
+}
+// Consent covers the room's published rules and fixed human assignments. Native
+// launch-only RNG/faction/leader resolution is intentionally excluded; the
+// separate start guard verifies the complete authenticated hero snapshot.
+std::string individual_settings(const simple_wml::node& level)
+{
+    const auto* scenario=level.child("scenario");
+    const auto* mp=level.child("multiplayer");
+    if(!scenario || !mp || level.child("snapshot") || (*mp)["savegame"].to_bool()
+       || (*mp)["shuffle_sides"].to_bool())
+        throw std::runtime_error("Individual rooms require a new fixed-side map");
+    const auto& sides=scenario->children("side");
+    if(sides.size()<2 || sides.size()>8 || (*scenario)["map_data"].empty())
+        throw std::runtime_error("Individual rooms require two to eight human map seats");
+    const int turns=individual_number(*scenario,"turns",-1);
+    if(turns!= -1 && (turns<1 || turns>1000)) throw std::runtime_error("Invalid room turn limit");
+    std::string output;
+    auto field=[&](const simple_wml::node& node,const char* name){
+        const auto value=node[name].to_string();
+        output+=std::string(name)+"="+std::to_string(value.size())+":"+value+";";
+    };
+    for(const auto* key:{"map_data","turns","experience_modifier","victory_when_enemies_defeated"}) field(*scenario,key);
+    for(const auto* key:{"mp_scenario","mp_era","mp_fog","mp_shroud","observer","mp_countdown",
+        "mp_countdown_init_time","mp_countdown_reservoir_time","mp_countdown_turn_bonus",
+        "mp_countdown_action_bonus","mp_village_gold","mp_village_support","experience_modifier",
+        "random_start_time","shuffle_sides","mp_use_map_settings"}) field(*mp,key);
+    int expected=1;
+    std::set<std::string> owners;
+    for(const auto* side:sides) {
+        if((*side)["side"].to_int()!=expected++ || (*side)["controller"].to_string()!="human"
+           || !(*side)["allow_player"].to_bool(true) || individual_number(*side,"gold",100)<0
+           || individual_number(*side,"gold",100)>1000)
+            throw std::runtime_error("Individual room seats must remain human with valid gold");
+        const auto owner=(*side)["player_id"].to_string();
+        if(!owner.empty() && !owners.insert(owner).second) throw std::runtime_error("Each individual player controls one seat");
+        for(const auto* key:{"side","controller","player_id","team_name","gold","income",
+            "village_gold","village_support","fog","shroud","allow_player"}) field(*side,key);
+    }
+    return output;
+}
+}
+
+void server::individual_publish(game& g)
+{
+    if(!alliance_ || !g.level_init() || !g.description()) return;
+    const auto& room=alliance_->get(g.id());
+    if(!room.individual) return;
+    // Keep the stock lobby's Join availability and the richer room counters
+    // consistent in every pushed update, including immediate reservations.
+    g.describe_slots();
+    auto& desc=*g.description_for_writing();
+    if(const auto* mp=g.level().child("multiplayer")) {
+        for(const auto* key:{"mp_scenario","mp_scenario_name","mp_era","mp_fog","mp_shroud","observer",
+            "mp_countdown","mp_countdown_init_time","mp_countdown_reservoir_time",
+            "mp_countdown_turn_bonus","mp_countdown_action_bonus"}) desc.set_attr_dup(key,(*mp)[key]);
+    }
+    const auto& sides=g.get_sides_list();
+    int ready=0;
+    for(const auto& [_,seat]:room.seats) if(seat.ready) ++ready;
+    desc.set_attr("individual_room","yes");
+    desc.set_attr_dup("room_revision",std::to_string(room.revision).c_str());
+    desc.set_attr_int("room_members",static_cast<int>(g.nplayers()));
+    desc.set_attr_int("room_capacity",static_cast<int>(sides.size()));
+    desc.set_attr_int("room_ready",ready);
+    desc.set_attr("room_status",g.started()?"playing":g.nplayers()==sides.size()?
+        (ready==static_cast<int>(sides.size())?"ready":"full"):"waiting");
+    const auto* scenario=game::starting_pos(g.level().root());
+    desc.set_attr_int("room_turns",individual_number(*scenario,"turns",-1));
+    desc.set_attr_dup("map_data",desc["mp_shroud"].to_bool()?simple_wml::string_span(""):(*scenario)["map_data"]);
+    while(!desc.children("room_side").empty()) desc.remove_child("room_side",0);
+    std::string gold;
+    for(const auto* side:sides) {
+        const auto value=std::to_string(individual_number(*side,"gold",100));
+        if(gold.empty()) gold=value;
+        else if(gold!=value) gold="mixed";
+        auto& detail=desc.add_child("room_side");
+        for(const auto* key:{"side","team_name","player_id","income","village_gold","village_support","fog","shroud"})
+            detail.set_attr_dup(key,(*side)[key]);
+        detail.set_attr_dup("gold",value.c_str());
+        const auto participant=player_connections_.get<name_t>().find((*side)["player_id"].to_string());
+        detail.set_attr("connected",participant!=player_connections_.get<name_t>().end()
+            && participant->get_game().get()==&g?"yes":"no");
+        const auto chosen=room.seats.find((*side)["side"].to_int());
+        detail.set_attr("ready",chosen!=room.seats.end() && chosen->second.ready?"yes":"no");
+        if(chosen!=room.seats.end()) {
+            detail.set_attr_dup("unit_type",std::string(chosen->second.selection.at("unit_type").as_string()).c_str());
+            detail.set_attr_dup("hero_level",boost::json::serialize(chosen->second.selection.at("hero_level")).c_str());
+        }
+    }
+    desc.set_attr_dup("room_gold",gold.c_str());
+}
+
+void server::individual_launch_hint(game& g)
+{
+    if(!alliance_ || !g.level_init() || g.started()) return;
+    auto& room=alliance_->get(g.id());
+    if(!room.individual || room.launch_revision==room.revision || g.nplayers()!=g.get_sides_list().size()
+       || room.seats.size()!=g.get_sides_list().size()) return;
+    for(const auto* side:g.get_sides_list()) {
+        const auto it=room.seats.find((*side)["side"].to_int());
+        if(it==room.seats.end() || !it->second.ready || it->second.username!=(*side)["player_id"].to_string()) return;
+        const auto player=player_connections_.get<name_t>().find(it->second.username);
+        if(player==player_connections_.get<name_t>().end() || player->get_game().get()!=&g) return;
+    }
+    for(const auto& member:g.all_game_users()) if(g.is_owner(member)) {
+        room.launch_revision=room.revision;
+        simple_wml::document message;
+        auto& hint=message.root().add_child("individual_start");
+        hint.set_attr_dup("game_id",room.id.c_str());
+        hint.set_attr_dup("room_revision",std::to_string(room.revision).c_str());
+        send_to_player(member,message);
+        break;
+    }
+}
+
+void server::individual_context(game& g,simple_wml::document& message)
+{
+    auto* context=message.child("alliance_game");
+    if(!context || !g.description() || !alliance_->get(g.id()).individual) return;
+    individual_publish(g);
+    context->set_attr_int("room_id",g.id());
+    for(const auto* key:{"individual_room","room_revision","room_members","room_capacity","room_ready",
+        "room_status","room_gold","room_turns","name","mp_scenario","mp_scenario_name","mp_era","mp_fog",
+        "mp_shroud","observer","mp_countdown","mp_countdown_init_time","mp_countdown_reservoir_time",
+        "mp_countdown_turn_bonus","mp_countdown_action_bonus"})
+        context->set_attr_dup(key,(*g.description())[key]);
+    for(const auto* side:g.description()->children("room_side")) side->copy_into(context->add_child("room_side"));
+}
+
+void server::individual_departure(game& g,const std::string& username)
+{
+    if(!alliance_ || g.started()) return;
+    auto& room=alliance_->get(g.id());
+    if(!room.individual) return;
+    bool participant=false;
+    for(auto* side:g.get_sides_list()) if((*side)["player_id"].to_string()==username) {
+        participant=true;
+        side->set_attr("player_id",""); side->set_attr("current_player","");
+    }
+    if(!participant) return;
+    simple_wml::document cleared;
+    for(auto it=room.seats.begin();it!=room.seats.end();) {
+        if(it->second.username==username) {
+            auto& row=cleared.root().add_child("alliance_selection");
+            row.set_attr_dup("game_id",room.id.c_str()).set_attr_int("side",it->first).set_attr("cleared","yes");
+            it=room.seats.erase(it);
+        } else ++it;
+    }
+    alliance_->changed(g.id());
+    if(!cleared.root().no_children()) g.send_data(cleared);
+}
+
 void server::alliance_updates(game& g)
 {
     simple_wml::document message;
     alliance_->context(g.id(), message);
+    individual_context(g,message);
     alliance_->selections(g.id(), message);
     g.send_data(message);
+    individual_publish(g);
+    if(g.description()) update_game_in_lobby(g);
+    individual_launch_hint(g);
 }
 
 void server::alliance_reconcile(game& g)
@@ -1803,6 +1994,11 @@ void server::alliance_reconcile(game& g)
     }
     bool changed=!room.layout.empty() && room.layout!=layout;
     room.layout=layout;
+    if(room.individual) {
+        auto settings=individual_settings(g.level().root());
+        changed=changed || (!room.settings.empty() && room.settings!=settings);
+        room.settings=std::move(settings);
+    }
     simple_wml::document removed;
     for(auto it=room.seats.begin();it!=room.seats.end();) {
         if(!owned.count(it->first)) {
@@ -1816,7 +2012,7 @@ void server::alliance_reconcile(game& g)
         ++it;
     }
     if(changed) {
-        for(auto& [_,seat]:room.seats)seat.ready=false;
+        alliance_->changed(g.id());
         if(!removed.root().no_children())g.send_data(removed);
         alliance_updates(g);
     }
@@ -1830,6 +2026,8 @@ void server::alliance_start_guard(game& g)
     if(mp && (*mp)["shuffle_sides"].to_bool()) throw std::runtime_error("Fixed human sides cannot be shuffled");
     alliance_reconcile(g);
     g.update_side_data();
+    if(room.individual && (g.nplayers()!=g.get_sides_list().size()
+       || room.launch_revision!=room.revision)) throw std::runtime_error("Individual room is not full and ready");
     std::set<int> required;
     std::set<std::string> accounts;
     for(const auto* side : g.get_sides_list()) {
@@ -1880,7 +2078,12 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
             } else {
                 const auto* request=data.child("alliance_ready"); const int side=(*request)["side"].to_int();
                 if(side < 1 || !g.controls_side({side}, p)) throw std::runtime_error("Not this player's side");
+                auto& room=alliance_->get(g.id());
+                if(room.individual && (*request)["room_revision"].to_string()!=std::to_string(room.revision))
+                    throw std::runtime_error("Room changed; review before Ready");
+                const bool was_ready=room.seats.at(side).ready;
                 alliance_->ready(g.id(), side, account, (*request)["ready"].to_bool());
+                if(room.individual && was_ready && !(*request)["ready"].to_bool()) alliance_->changed(g.id(),false);
             }
             alliance_updates(g);
         } catch(const std::exception&) { send_server_message(p, "Hero selection or Ready was refused. Refresh the game and choose your own hero again.", "error"); }
@@ -1967,18 +2170,29 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 		}
 
         if(alliance_) {
-            try { alliance_->restore(g.id(), data.root()); }
+            try {
+                auto& room=alliance_->get(g.id());
+                if(room.individual) room.settings=individual_settings(data.root());
+                alliance_->restore(g.id(), data.root());
+                if(room.individual && room.restored) throw std::runtime_error("Individual room cannot load a saved snapshot");
+            }
             catch(const std::exception&) { send_server_message(p, "This saved game has no matching authenticated hero snapshot. Start a new multiplayer game.", "error"); delete_game(g.id()); return; }
         }
 		// Record the full scenario in g.level()
 		g.level().swap(data);
-        if(alliance_) alliance_updates(g);
 
 		// The host already put himself in the scenario so we just need
 		// to update_side_data().
 		// g.take_side(sock);
 		g.update_side_data();
 		g.describe_slots();
+        if(alliance_) {
+            alliance_reconcile(g);
+            // Publish a complete summary before the first lobby insertion.
+            individual_publish(g);
+            simple_wml::document context;
+            alliance_->context(g.id(),context); individual_context(g,context); alliance_->selections(g.id(),context); g.send_data(context);
+        }
 
 		// Send the update of the game description to the lobby.
 		simple_wml::document diff;
@@ -2038,6 +2252,11 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 		if(!g.is_owner(p)) {
 			return;
 		}
+        if(alliance_ && alliance_->get(g.id()).individual) {
+            send_server_message(p,"This individual battle has ended. Create a new room for another battle.","error");
+            delete_game(g.id());
+            return;
+        }
 
 		if(!g.level_init()) {
 			WRN_SERVER << p->client_ip() << "\tWarning: " << player.name()
@@ -2125,9 +2344,15 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 		}
 
         if(alliance_) {
-            try { alliance_start_guard(g); }
+            try {
+                const auto& room=alliance_->get(g.id());
+                if(room.individual && (*data.child("start_game"))["room_revision"].to_string()!=std::to_string(room.revision))
+                    throw std::runtime_error("Room changed before automatic start");
+                alliance_start_guard(g);
+            }
             catch(const std::exception& error) {
                 ERR_SERVER << "Unified multiplayer start guard: " << error.what();
+                if(alliance_->get(g.id()).individual) { alliance_->changed(g.id()); alliance_updates(g); }
                 simple_wml::document response; auto& ack=response.root().add_child("alliance_start");
                 ack.set_attr_dup("game_id", alliance_->get(g.id()).id.c_str()).set_attr("accepted", "no");
                 send_to_player(p, response);
@@ -2218,6 +2443,7 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 		update_game_in_lobby(g);
 		return;
 	} else if(data.child("leave_game")) {
+		individual_departure(g,p->name());
 		if(g.remove_player(p)) {
 			delete_game(g.id());
 		} else {
@@ -2229,7 +2455,9 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 
 			// Only run this if the game object is still valid
 			if(auto gStrong = g_ptr.lock()) {
+                if(alliance_ && alliance_->get(gStrong->id()).individual) alliance_reconcile(*gStrong);
 				gStrong->describe_slots();
+                if(alliance_) alliance_updates(*gStrong);
 				//Don't update the game if it no longer exists.
 				has_diff |= make_change_diff(*games_and_users_list_.child("gamelist"), "gamelist", "game", gStrong->description(), diff);
 			}
@@ -2264,6 +2492,16 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 		}
 
 		if(alliance_ && g.started()) return;
+        if(alliance_ && alliance_->get(g.id()).individual) {
+            try {
+                auto candidate=g.level().clone(); candidate->root().apply_diff(*scenario_diff);
+                individual_settings(candidate->root());
+            } catch(const std::exception&) {
+                send_server_message(p,"Room change refused: individual battles require a new two-to-eight-player human map with valid settings.","error");
+                delete_game(g.id());
+                return;
+            }
+        }
 		g.level().root().apply_diff(*scenario_diff);
 		alliance_reconcile(g);
 		const simple_wml::node* cfg_change = scenario_diff->child("change_child");
@@ -2276,6 +2514,7 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 		update_game_in_lobby(g);
 
 		g.send_data(data, p);
+        if(alliance_) individual_launch_hint(g);
 		return;
 		// If a player changes his faction.
 	} else if(data.child("change_faction")) {
@@ -2283,6 +2522,10 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 		return;
 		// If the owner of a side is changing the controller.
 	} else if(const simple_wml::node* change = data.child("change_controller")) {
+        if(alliance_ && !g.started() && alliance_->get(g.id()).individual) {
+            send_server_message(p,"Individual room seats are fixed. Leave the room to release your seat.","error");
+            return;
+        }
 		g.transfer_side_control(p, *change);
 		g.describe_slots();
 		update_game_in_lobby(g);
@@ -2313,8 +2556,11 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 			: g.kick_member(*data.child("kick"), p)};
 
 		if(user) {
+            individual_departure(g,(*user)->name());
 			player_connections_.modify(*user, std::bind(&player_record::enter_lobby, std::placeholders::_1));
+            if(alliance_ && alliance_->get(g.id()).individual) alliance_reconcile(g);
 			g.describe_slots();
+            if(alliance_) alliance_updates(g);
 
 			update_game_in_lobby(g, user);
 
@@ -2422,8 +2668,11 @@ void server::remove_player(player_iterator iter)
 	bool game_ended = false;
 	if(g) {
         if(alliance_ && !g->started()) {
+            individual_departure(*g,iter->name());
             for(auto& [_,seat]:alliance_->get(g->id()).seats) if(seat.username==iter->name()) seat.ready=false;
-            alliance_updates(*g);
+            // Individual occupancy is published only after removal, so the
+            // first new revision cannot still count the disconnected socket.
+            if(!alliance_->get(g->id()).individual) alliance_updates(*g);
         }
 		game_ended = g->remove_player(iter, true, false);
 	}
@@ -2468,6 +2717,10 @@ void server::remove_player(player_iterator iter)
 		start_lan_server_timer();
 
 	if(game_ended) delete_game(g->id());
+    else if(g && alliance_ && alliance_->get(g->id()).individual) {
+        if(!g->started()) { alliance_reconcile(*g); g->describe_slots(); }
+        alliance_updates(*g);
+    }
 }
 
 void server::send_to_lobby(simple_wml::document& data, utils::optional<player_iterator> exclude)
@@ -3476,6 +3729,7 @@ void server::delete_game(int gameid, const std::string& reason)
 
 void server::update_game_in_lobby(wesnothd::game& g, utils::optional<player_iterator> exclude)
 {
+	individual_publish(g);
 	simple_wml::document diff;
 	if(auto p_desc = g.changed_description()) {
 		if(make_change_diff(*games_and_users_list_.child("gamelist"), "gamelist", "game", p_desc, diff)) {

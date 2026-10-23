@@ -96,13 +96,13 @@ class Native(unittest.TestCase):
                 if process.poll() is not None:raise AssertionError(text)
                 time.sleep(.03)
             raise AssertionError('Startup timed out: '+text)
-        start(ROOT/'build/unified-bridge-vps/alliance-account-bridge',['--runtime',str(cls.runtime),'--identity',str(cls.identity)],'ALLIANCE ACCOUNT BRIDGE READY')
+        start(Path(os.environ.get('ALLIANCE_TEST_BRIDGE_BINARY', ROOT/'build/unified-bridge-vps/alliance-account-bridge')),['--runtime',str(cls.runtime),'--identity',str(cls.identity)],'ALLIANCE ACCOUNT BRIDGE READY')
         config=cls.root/'server.cfg'
         config.write_text('\n'.join(k+'='+json.dumps(str(v)) for k,v in {
             'alliance_auth':'yes','tls_enabled':'yes','alliance_runtime':cls.runtime,'alliance_catalog':ROOT/'alliance/hero_catalog.json',
             'tls_fullchain':cls.identity/'server-cert.pem','tls_private_key':cls.identity/'server-key.pem',
             'versions_accepted':'1.19.26','connections_allowed':30,'save_replays':'no'}.items()))
-        start(ROOT/'build/unified-server-vps/bin/wesnothd',['--config',str(config),'--port','15000','--log-info=server'],'opened fifo')
+        start(Path(os.environ.get('ALLIANCE_TEST_SERVER_BINARY', ROOT/'build/unified-server-vps/bin/wesnothd')),['--config',str(config),'--port','15000','--log-info=server'],'opened fifo')
         cls.counter=0
     @classmethod
     def tearDownClass(cls):

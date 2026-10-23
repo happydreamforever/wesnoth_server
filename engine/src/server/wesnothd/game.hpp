@@ -98,6 +98,7 @@ public:
 	{
 		return (player == owner_);
 	}
+	void set_individual_room(bool value) { individual_room_ = value; }
 
 	/**
 	 * @param player The player being checked.
@@ -638,6 +639,7 @@ public:
 	}
 
 private:
+	bool individual_room_ = false;
 	// forbidden operations
 	game(const game&) = delete;
 	game& operator=(const game&) = delete;

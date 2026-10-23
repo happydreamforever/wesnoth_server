@@ -382,21 +382,34 @@ bool game::take_side(player_iterator user)
 	// (this file) has this code to figure out a fitting side for new players, this is clearly too much.
 	// Check if we can figure out a fitting side.
 	const simple_wml::node::child_list& sides = get_sides_list();
+	auto reserve_individual_side = [&](simple_wml::node* side) {
+		if(!individual_room_) return;
+		const auto index=static_cast<std::size_t>((*side)["side"].to_int()-1);
+		if(index>=sides_.size()) return;
+		// Reserve immediately, before another socket can request the same seat.
+		// The host still receives the ordinary assignment message and publishes
+		// its matching scenario diff through the usual native staging flow.
+		sides_[index]=user;
+		side->set_attr_dup("player_id",user->name().c_str());
+		side->set_attr_dup("current_player",user->name().c_str());
+	};
 
-	for(const simple_wml::node* side : sides) {
+	for(simple_wml::node* side : sides) {
 		if(((*side)["controller"] == side_controller::human || (*side)["controller"] == side_controller::reserved)
 				&& (*side)["current_player"] == user->name().c_str()) {
 
 			if(send_taken_side(cfg, side)) {
+				reserve_individual_side(side);
 				return true;
 			}
 		}
 	}
 
 	// If there was no fitting side just take the first available.
-	for(const simple_wml::node* side : sides) {
+	for(simple_wml::node* side : sides) {
 		if((*side)["controller"] == side_controller::human) {
 			if(send_taken_side(cfg, side)) {
+				reserve_individual_side(side);
 				return true;
 			}
 		}

@@ -54,6 +54,10 @@ private:
 	void alliance_updates(game& g);
 	void alliance_reconcile(game& g);
 	void alliance_start_guard(game& g);
+	void individual_publish(game& g);
+	void individual_context(game& g, simple_wml::document& message);
+	void individual_launch_hint(game& g);
+	void individual_departure(game& g, const std::string& username);
 	void handle_new_client(socket_ptr socket);
 	void handle_new_client(tls_socket_ptr socket);
 
