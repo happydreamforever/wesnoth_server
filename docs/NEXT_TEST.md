@@ -6,13 +6,13 @@ Use the existing **one LDPlayer instance**, MSYS2, Python, SDK/NDK, supplied 1.1
 
 Report each step before continuing if you prefer. At the first unexpected result, stop that test and send its letter, exact message and sanitized log. Do not delete stages, journals, locks or runtime data. Record WAN status once per batch; keep local Ethernet and LDPlayer available.
 
-## Current checkpoint — A–C accepted; run D next
+## Current checkpoint — A–D accepted; run E next
 
-The repository update and Git integrity checks passed at server `73460b1` / client `ee71821`. B's cold backup verified 110 files / 258,474,865 bytes, with WAN explicitly confirmed disconnected. Keep the exact private backup at `%LOCALAPPDATA%\WesnothAlliance\backups\before-1192617-20261023-100621-012` for F.
+The repository update and Git integrity checks passed at server `73460b1` / client `ee71821`. B's cold backup verified 110 files / 258,474,865 bytes, with WAN explicitly confirmed disconnected. Keep the exact private backup at `%LOCALAPPDATA%\WesnothAlliance\backups\before-1192617-20261023-100621-012` for F. C's bridge rebuild and previous-stage preservation passed.
 
-C now passes on Windows: the previous bridge was preserved, both compile/link steps finished, and ARTIFACT VERIFIED / BUILD PASSED / REBUILD PASSED appeared. Logs are recorded in BASELINE.md. This proves the bridge build, not startup or Android behavior.
+D now passes on Windows: all 47 native compile/link steps finished, followed by UNIFIED MULTIPLAYER ARTIFACT VERIFIED and UNIFIED MULTIPLAYER BUILD PASSED. The saved log is recorded in BASELINE.md. This establishes the native Multiplayer build, not listener startup or Android connectivity.
 
-Continue directly at **D** using the already pulled helper. No additional pull, backup or bridge rebuild is required. Keep all services stopped and WAN disconnected/local Ethernet retained through F. After D passes, continue E, then F and G. D–Z remain pending; A–C below are retained as reference and should not be repeated now.
+Continue directly at **E** using the already pulled client helper. No additional pull, backup or server rebuild is required. Keep all services stopped and WAN disconnected/local Ethernet retained through F. After E passes, continue F fresh runtime, G startup and H installation. The Android rebuild helper's generic installation suggestion does not bypass F/G. E–Z remain pending; A–D below are retained as reference and should not be repeated now.
 
 ## A. Stop services and pull both repositories
 
@@ -91,7 +91,7 @@ Expected: `UNIFIED MULTIPLAYER ARTIFACT VERIFIED` and `UNIFIED MULTIPLAYER BUILD
 }
 ```
 
-Expected: both previous account stages retained, native build and offline Gradle complete, `ANDROID ACCOUNT GAME REBUILD COMPLETE`. Pinned foundation objects, dependencies and OBB remain intact. Keep any interrupted update journal for analysis.
+Expected: both previous account stages retained, native build and offline Gradle complete, `ANDROID ACCOUNT GAME REBUILD COMPLETE`. Pinned foundation objects, dependencies and OBB remain intact. Keep any interrupted update journal for analysis. Keep services stopped and continue at F before G startup and H installation; the helper's generic install suggestion does not replace this batch order.
 
 ## F. Create the new database beside the old one
 
