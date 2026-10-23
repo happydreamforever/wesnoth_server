@@ -1,6 +1,6 @@
 # Alliance team battle — release 1192615
 
-**Current user checkpoint:** A–E have passed, including the actual Windows1192615 Android build and four-service startup. Continue at **F** with the existing completed APK; no additional pull or rebuild is needed. Keep all four service windows and LDPlayer open, WAN disconnected and local Ethernet retained. Install with KeepSavedProfile, then verify the saved trusted server and existing account/team state. New APK installation and gameplay acceptance remain pending.
+**Current user checkpoint:** A–E and F's automated installation have passed. Android version **1192615** and fresh setup startup are verified. Finish **F's manual checks** in the installed app: confirm the saved trusted server, log in to the existing accounts and record current leader/team state before earning rewards. Keep the four service windows open, WAN disconnected and local Ethernet retained. No new pull, rebuild, reinstall or service restart is needed. Saved-profile visibility, login/state preservation and G–Z acceptance remain pending.
 
 This is the next complete Windows/LDPlayer acceptance batch. Earlier account, membership, planning and local-practice results remain accepted. The new campaign progression, shared battles, result settlement, replay retrieval and recovery must be tested on your computer. VPS results do not establish Windows acceptance.
 
