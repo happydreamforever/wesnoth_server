@@ -23,6 +23,7 @@ from pymongo.errors import PyMongoError
 
 from alliance.config import Settings
 from alliance.deployment import owned_runtime, _client
+from alliance.schema import SCHEMA_VERSION
 
 MAX_BYTES = 32768
 USERNAME = re.compile(r"[A-Za-z0-9_]{3,24}\Z")
@@ -116,7 +117,7 @@ def read_account(runtime, username):
         with _client(settings.mongo_uri) as client, timeout(6):
             db = client.wesnoth_game
             schema = db.schema_metadata.find_one({"_id": "alliance"}, {"_id": 0, "version": 1})
-            if not schema or type(schema.get("version")) is not int or schema["version"] != 1:
+            if not schema or type(schema.get("version")) is not int or schema["version"] != SCHEMA_VERSION:
                 raise DiagnosticError("unsupported_database")
             account = db.accounts.find_one({"username_key": username.casefold()}, {
                 "_id": 1, "username": 1, "username_key": 1, "role": 1,

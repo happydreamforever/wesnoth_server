@@ -96,7 +96,7 @@ class LoginCheckTests(unittest.TestCase):
             "mongo_uri": self.uri, "host": "127.0.0.1", "port": 18765,
             "secret_key": "s" * 64, "bridge_secret": "b" * 64}}))
         self.documents = {
-            "schema_metadata": {"version": 1},
+            "schema_metadata": {"version": 2},
             "accounts": {"_id": PLAYER_ID, "username": "UniPlayer", "username_key": "uniplayer",
                 "role": "player", "status": "active", "password_hash": self.encoded,
                 "private": self.private, "revision": 19},
@@ -187,7 +187,7 @@ class LoginCheckTests(unittest.TestCase):
         self.prompt.assert_not_called()
 
     def test_unsupported_schema_and_database_failure_are_redacted(self):
-        self.documents["schema_metadata"] = {"version": 2}
+        self.documents["schema_metadata"] = {"version": 1}
         self.assertEqual(self.collect()["outcome"], "unsupported_database")
         self.factory.side_effect = ServerSelectionTimeoutError(self.uri)
         self.assertEqual(self.collect()["outcome"], "database_unavailable")

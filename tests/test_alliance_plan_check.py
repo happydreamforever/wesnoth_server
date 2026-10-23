@@ -12,7 +12,7 @@ import sys
 import tempfile
 import unittest
 from unittest import mock
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from bson.int64 import Int64
 from pymongo.errors import ServerSelectionTimeoutError
@@ -21,6 +21,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("plan_check", ROOT / "tools/check_alliance_plan.py")
 CHECK = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(CHECK)
+from alliance.heroes import load_catalog
+CATALOG, CATALOG_DIGEST = load_catalog()
+FORM = next(f for f in CATALOG["forms"] if f["hero_id"] == "konrad" and f["native_level"] == 1)
 NOW = datetime(2026, 10, 22, 14, 0, tzinfo=timezone.utc)
 PRIVATE = "PRIVATE_CONFIGURATION_SENTINEL"
 
@@ -149,9 +152,14 @@ class Client:
 
 def fixtures():
     people = [{"_id": uid(index), "username": name, "username_key": name.casefold(),
-        "role": "player", "status": "active", "leader": CHECK.rules.new_leader("spearman"),
+        "role": "player", "status": "active", "database_generation": uid(900),
         "active_run_id": None, "password_hash": PRIVATE, "private": PRIVATE}
         for index, name in enumerate(("UniPlayer", "UniRecruit", "UniSolo", "UniRival"), 1)]
+    heroes = [{"_id": uid(50 + index), "account_id": person["_id"], "hero_id": FORM["hero_id"],
+        "forms": [FORM["id"]], "total_experience": 0, "revision": 0, "private": PRIVATE}
+        for index, person in enumerate(people)]
+    hero_selection = {"hero_id": FORM["hero_id"], "form_id": FORM["id"], "hero_level": 1,
+                "hero_revision": 0, "unit_type": FORM["unit_type"], "unit_level": FORM["native_level"]}
     teams = [{"_id": uid(20 + index), "name": name, "status": "active", "area_id": "area-1",
         "captain_id": people[index * 2]["_id"], "members": [{"account_id": p["_id"]}
             for p in people[index * 2:index * 2 + 2]], "active_run_id": None, "private": PRIVATE}
@@ -167,8 +175,8 @@ def fixtures():
         run["lineups"][t["_id"]] = [p["_id"] for p in selected]
         for p, side in zip(selected, ((1, 4), (2, 3))[index]):
             run["participants"].append({"account_id": p["_id"], "username": p["username"],
-                "team_id": t["_id"], "side": side, "leader": deepcopy(p["leader"]), "private": PRIVATE})
-    return {"schema_metadata": [{"_id": "alliance", "version": 1}], "accounts": people,
+                "team_id": t["_id"], "side": side, "selection": deepcopy(hero_selection), "private": PRIVATE})
+    return {"schema_metadata": [{"_id": "alliance", "version": 2}], "accounts": people, "account_heroes": heroes,
         "teams": teams, "game_runs": [run],
         "areas": [{"_id": "area-1", "enabled": True, "approved_maps": list(CHECK.rules.MAPS)}]}
 
@@ -221,7 +229,7 @@ class PlanCheckTests(unittest.TestCase):
         self.assertEqual(len(self.client.transaction_options), 1)
         self.assertEqual(set(name for name, _, _ in self.client.calls), set(self.documents))
         self.assertIn("current on-disk", report["scope"])
-        self.assertEqual(set(report["disk_logic_sha256"]), {"alliance/domain.py", "alliance/rules.py"})
+        self.assertEqual(set(report["disk_logic_sha256"]), {"alliance/domain.py", "alliance/product.py", "alliance/heroes.py", "alliance/rules.py", "alliance/schema.py", "alliance/hero_catalog.json"})
         self.assertTrue(all(len(value) == 64 for value in report["disk_logic_sha256"].values()))
 
     def test_leave_and_cancel_separate_saved_consent_from_live_membership(self):
@@ -241,11 +249,13 @@ class PlanCheckTests(unittest.TestCase):
         run = self.documents["game_runs"][0]
         run.update(state="cancelled", finished_at=NOW)
         run["ready"].remove(uid(3))
-        self.documents["accounts"][2]["leader"] = CHECK.rules.new_leader("elvish-fighter")
-        run["participants"][2]["leader"] = CHECK.rules.new_leader("elvish-fighter")
+        form = next(f for f in CATALOG["forms"] if f["hero_id"] != FORM["hero_id"])
+        self.documents["account_heroes"][2].update(hero_id=form["hero_id"], forms=[form["id"]])
+        run["participants"][2]["selection"].update(hero_id=form["hero_id"], form_id=form["id"],
+            unit_type=form["unit_type"], unit_level=form["native_level"])
         record = self.collect(battle_id=uid(100))["plans"][0]
         self.assertEqual((record["state"], record["derived_validity"]), ("cancelled", "valid"))
-        self.assertEqual(record["players"][2]["saved_unit_type"], "Elvish Fighter")
+        self.assertEqual(record["players"][2]["saved_selection"]["unit_type"], form["unit_type"])
         self.assertFalse(record["players"][2]["saved_ready"])
         self.assertTrue(record["players"][3]["saved_ready"])
         self.assertTrue(record["players"][3]["currently_in_saved_team"])
@@ -300,7 +310,7 @@ class PlanCheckTests(unittest.TestCase):
             self.documents[collection][0][key] = value
             self.assertEqual(self.collect()["plans"][0]["derived_validity"], expected)
             self.documents = before
-        self.documents["accounts"][3]["leader"]["total_experience"] = 1
+        self.documents["account_heroes"][3]["revision"] = 1
         self.assertEqual(self.collect()["plans"][0]["derived_validity"], "leader_changed")
 
     def test_invalid_selectors_configuration_and_schema_fail_without_private_output(self):
@@ -317,13 +327,14 @@ class PlanCheckTests(unittest.TestCase):
             self.assertEqual(self.collect()["outcome"], "invalid_configuration")
         self.factory.assert_not_called()
         self.config.write_bytes(original)
-        for schema in (None, True, 2):
+        for schema in (None, True, 1):
             self.documents["schema_metadata"] = [] if schema is None else [{"_id": "alliance", "version": schema}]
             self.assertEqual(self.collect()["outcome"], "unsupported_database")
 
     def test_malformed_records_are_fixed_errors_with_no_partial_plan_dump(self):
         cases = (("accounts", "username", "bad\nname", "invalid_account_record"),
-            ("accounts", "leader", {"private": PRIVATE}, "invalid_account_record"),
+            ("accounts", "database_generation", PRIVATE, "invalid_account_record"),
+            ("account_heroes", "total_experience", PRIVATE, "invalid_hero_record"),
             ("teams", "members", [{"account_id": uid(1)}] * 9, "invalid_team_record"),
             ("teams", "captain_id", PRIVATE, "invalid_team_record"),
             ("game_runs", "state", PRIVATE, "invalid_plan_record"),
@@ -353,7 +364,7 @@ class PlanCheckTests(unittest.TestCase):
             lambda run: run["participants"][0].update(account_id=uid(999)),
             lambda run: run["participants"][0].update(team_id=uid(999)),
             lambda run: run["participants"][0].update(side=True),
-            lambda run: run["participants"][0]["leader"].update(level=True),
+            lambda run: run["participants"][0]["selection"].update(hero_level=True),
             lambda run: run["ready"].append(run["ready"][0]),
             lambda run: run["lineups"][uid(20)].__setitem__(1, uid(1)),
             lambda run: run["planning_teams"][0].update(id=uid(999)),
@@ -371,7 +382,7 @@ class PlanCheckTests(unittest.TestCase):
         self.assertEqual(self.collect()["outcome"], "account_ineligible")
 
     def test_legitimate_bson_long_leader_experience_and_legacy_names_are_supported(self):
-        self.documents["accounts"][0]["leader"]["total_experience"] = Int64(0)
+        self.documents["account_heroes"][0]["total_experience"] = Int64(0)
         run = self.documents["game_runs"][0]
         del run["planning_teams"]
         for participant in run["participants"]:
@@ -382,6 +393,40 @@ class PlanCheckTests(unittest.TestCase):
         self.assertEqual(result["players"][0]["current_username"], "UniPlayer")
         self.assertIsNone(result["teams"][0]["saved_name"])
         self.assertEqual(result["teams"][0]["current_name"], "Koichi")
+
+    def test_explicit_unselected_seats_remain_unknown_and_read_no_hero_rows(self):
+        run = self.documents["game_runs"][0]
+        run["ready"] = []; run["approvals"] = {}
+        for participant in run["participants"]: participant["selection"] = None
+        report = self.collect()
+        self.assertEqual(report["status"], "collected")
+        for player in report["plans"][0]["players"]:
+            self.assertIsNone(player["saved_selection"])
+            self.assertIsNone(player["current_hero_owned"])
+            self.assertIsNone(player["current_hero_revision"])
+            self.assertIsNone(player["hero_snapshot_matches"])
+        self.assertNotIn("account_heroes", [name for name, _, _ in self.client.calls])
+        del run["participants"][0]["selection"]
+        self.assertEqual(self.collect()["outcome"], "invalid_plan_record")
+
+    def test_selected_hero_ownership_and_revision_are_independent_facts(self):
+        self.documents["account_heroes"].pop(3)
+        report = self.collect()["plans"][0]
+        self.assertEqual(report["derived_validity"], "leader_changed")
+        self.assertFalse(report["players"][3]["current_hero_owned"])
+        self.assertFalse(report["players"][3]["hero_snapshot_matches"])
+        self.assertIsNone(report["players"][3]["current_hero_revision"])
+        self.documents = fixtures()
+        self.documents["account_heroes"][0]["revision"] = 1
+        report = self.collect()["plans"][0]
+        self.assertEqual(report["derived_validity"], "leader_changed")
+        self.assertTrue(report["players"][0]["current_hero_owned"])
+        self.assertFalse(report["players"][0]["hero_snapshot_matches"])
+        self.assertEqual(report["players"][0]["current_hero_revision"], 1)
+        self.documents["game_runs"][0]["state"] = "cancelled"
+        report = self.collect()["plans"][0]
+        self.assertEqual(report["derived_validity"], "valid")
+        self.assertFalse(report["players"][0]["hero_snapshot_matches"])
 
     def test_guarded_configuration_rejects_symlink_and_hardlink(self):
         preserved = self.runtime / "preserved.json"
@@ -466,8 +511,19 @@ class RealPlanCheckTests(unittest.TestCase):
                 with _client(Settings.load(runtime).mongo_uri) as client:
                     db = client.wesnoth_game
                     service = AllianceService(db)
-                    people = [service.register(name, "$argon2id$fixture-not-used-for-login", "spearman")["_id"]
+                    people = [service.register(name, "$argon2id$fixture-not-used-for-login")["_id"]
                               for name in ("UniPlayer", "UniRecruit", "UniSolo", "UniRival")]
+                    campaign = next(c for c in CATALOG["campaigns"] if any(
+                        a["hero_id"] == FORM["hero_id"] and any(f["form_id"] == FORM["id"] for f in a["forms"])
+                        for a in c["aliases"]))
+                    alias = next(a for a in campaign["aliases"] if a["hero_id"] == FORM["hero_id"])
+                    for actor in people:
+                        story = service.story_begin(actor, campaign["id"], CATALOG["version"], CATALOG_DIGEST)
+                        service.story_checkpoint(actor, {"run_id":story["run_id"], "checkpoint_id":str(uuid4()),
+                            "sequence":0, "scenario_id":campaign["first_scenario"], "next_scenario_id":"", "outcome":"win",
+                            "nonce":story["nonce"], "replay_sha256":"a"*64,
+                            "heroes":[{"hero_id":FORM["hero_id"], "unit_id":alias["unit_id"], "form_id":FORM["id"],
+                                       "unlocked_forms":[FORM["id"]], "earned_experience":0}]})
                     teams = []
                     for index, name in enumerate(("Koichi", "RivalPlan")):
                         captain, member = people[index * 2:index * 2 + 2]
@@ -478,6 +534,8 @@ class RealPlanCheckTests(unittest.TestCase):
                     planned = service.directory_propose_battle(people[0], teams[0], teams[1], "isars-cross",
                         [{"team_id": team_id, "account_ids": people[index * 2:index * 2 + 2]}
                          for index, team_id in enumerate(teams)])
+                    for actor in people:
+                        service.directory_select_hero(actor, planned["id"], FORM["hero_id"], FORM["id"])
                     for captain in (people[0], people[2]):
                         service.directory_approve_battle(captain, planned["id"])
                     for player in people:

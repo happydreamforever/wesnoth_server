@@ -17,6 +17,8 @@ from pymongo.read_concern import ReadConcern
 
 from alliance.domain import AllianceService
 from alliance import rules
+from alliance.heroes import catalog_form, hero_progress
+from alliance.schema import SCHEMA_VERSION
 from alliance.deployment import _client
 from tools.check_alliance_login import DiagnosticError, local_settings, USERNAME, UUID
 
@@ -26,17 +28,20 @@ MAX_REPORT_BYTES = 131072
 FAILURES = frozenset({"invalid_configuration", "invalid_username", "invalid_battle_id",
     "unsupported_database", "database_unavailable", "account_missing", "account_ineligible",
     "battle_not_found", "invalid_account_record", "invalid_team_record", "invalid_plan_record",
-    "invalid_area_record", "logic_unavailable", "report_too_large", "collection_cancelled",
+    "invalid_area_record", "invalid_hero_record", "logic_unavailable", "report_too_large", "collection_cancelled",
     "unexpected_error"})
 AREA_ID = re.compile(r"[A-Za-z0-9_-]{1,64}\Z")
 TEAM_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9 _-]{2,39}\Z")
 VERSION = re.compile(r"[A-Za-z0-9_.-]{1,64}\Z")
-ACCOUNT_FIELDS = {key: 1 for key in ("_id", "username", "username_key", "role", "status", "leader", "active_run_id")}
+ACCOUNT_FIELDS = {key: 1 for key in ("_id", "username", "username_key", "role", "status", "database_generation", "active_run_id")}
 TEAM_FIELDS = {key: 1 for key in ("_id", "name", "area_id", "status", "captain_id", "members.account_id", "active_run_id")}
 RUN_FIELDS = {key: 1 for key in ("_id", "kind", "state", "ruleset_version", "map_id", "area_id",
     "team_ids", "lineups", "approvals", "ready", "participants.account_id", "participants.team_id",
-    "participants.side", "participants.username", "participants.leader", "planning_teams.id",
+    "participants.side", "participants.username", "participants.selection", "planning_teams.id",
     "planning_teams.name", "created_at", "finished_at")}
+HERO_FIELDS = {key: 1 for key in ("_id", "account_id", "hero_id", "forms", "total_experience", "revision")}
+HERO_ID = re.compile(r"[a-z0-9_-]{1,80}\Z")
+FORM_ID = re.compile(r"[A-Za-z0-9_-]{1,100}\Z")
 AREA_FIELDS = {key: 1 for key in ("_id", "enabled", "approved_maps")}
 SCOPE = (
     "Direct local database snapshot only. Validity is derived using the current on-disk domain logic; "
@@ -72,19 +77,47 @@ def timestamp(value, error):
     return result
 
 
-def leader(value, error):
-    keys = {"starter_id", "unit_type", "level", "experience", "total_experience", "advancement_choices"}
+def integer(value, error, minimum=0):
+    require(isinstance(value, int) and not isinstance(value, bool)
+            and minimum <= value <= 9223372036854775807, error)
+    return int(value)
+
+
+def selection(value, error):
+    if value is None:
+        return None
+    keys = {"hero_id", "form_id", "hero_level", "hero_revision", "unit_type", "unit_level"}
     require(isinstance(value, dict) and set(value) == keys, error)
-    require(isinstance(value["starter_id"], str) and value["starter_id"] in rules.STARTERS, error)
-    require(isinstance(value["unit_type"], str) and value["unit_type"] in rules.UNIT_TYPES, error)
-    for key in ("level", "experience", "total_experience"):
-        require(isinstance(value[key], int) and not isinstance(value[key], bool)
-                and 0 <= value[key] <= 9223372036854775807, error)
-    require(value["level"] == rules.UNIT_TYPES[value["unit_type"]][0], error)
-    choices = sequence(value["advancement_choices"], 3, error)
-    require(all(isinstance(choice, str) and choice in rules.UNIT_TYPES for choice in choices), error)
-    require(len(set(choices)) == len(choices), error)
-    return {**{key: value[key] for key in keys - {"advancement_choices"}}, "advancement_choices": list(choices)}
+    result = {"hero_id": text(value["hero_id"], HERO_ID, error),
+              "form_id": text(value["form_id"], FORM_ID, error),
+              "hero_level": integer(value["hero_level"], error, 1),
+              "hero_revision": integer(value["hero_revision"], error),
+              "unit_level": integer(value["unit_level"], error),
+              "unit_type": value["unit_type"]}
+    try:
+        _, form = catalog_form(result["hero_id"], result["form_id"])
+    except ValueError:
+        raise DiagnosticError(error) from None
+    require(result["unit_type"] == form["unit_type"] and result["unit_level"] == form["native_level"], error)
+    return result
+
+
+def owned_hero(value):
+    error = "invalid_hero_record"
+    require(isinstance(value, dict), error)
+    result = {"account_id": identifier(value.get("account_id"), error),
+              "hero_id": text(value.get("hero_id"), HERO_ID, error),
+              "total_experience": integer(value.get("total_experience"), error),
+              "revision": integer(value.get("revision"), error)}
+    forms = sequence(value.get("forms"), 128, error)
+    result["forms"] = [text(form, FORM_ID, error) for form in forms]
+    require(forms and len(set(forms)) == len(forms), error)
+    for form_id in forms:
+        try:
+            catalog_form(result["hero_id"], form_id)
+        except ValueError:
+            raise DiagnosticError(error) from None
+    return result
 
 
 def account(value):
@@ -95,7 +128,8 @@ def account(value):
     require(value.get("username_key") == result["username"].casefold(), error)
     require(value.get("role") in ("player", "admin") and value.get("status") in ("active", "suspended"), error)
     require("active_run_id" in value, error)
-    result.update(role=value["role"], status=value["status"], leader=leader(value.get("leader"), error),
+    result.update(role=value["role"], status=value["status"],
+                  database_generation=identifier(value.get("database_generation"), error),
                   active_run_id=identifier(value["active_run_id"], error, nullable=True))
     return result
 
@@ -149,8 +183,10 @@ def plan(value):
         require(participant.get("account_id") == flat[index] and participant.get("team_id") == ids[team_index], error)
         side = participant.get("side")
         require(type(side) is int and side == rules.MAPS[result["map_id"]]["sides"][team_index][seat_index], error)
+        require("selection" in participant, error)
         entry = {"account_id": flat[index], "team_id": ids[team_index], "side": side,
-                 "leader": leader(participant.get("leader"), error)}
+                 "selection": selection(participant["selection"], error)}
+        require(entry["selection"] is not None or result["state"] in ("draft", "cancelled"), error)
         if "username" in participant:
             entry["username"] = text(participant["username"], USERNAME, error)
         result["participants"].append(entry)
@@ -202,7 +238,7 @@ def indexed(documents, validate, expected_ids, error):
 def plan_report(run, teams, accounts, areas):
     current = [teams.get(key) for key in run["team_ids"]]
     region = areas.get(run["area_id"])
-    validity = AllianceService._planning_validity(run, current, accounts, region)
+    validity = AllianceService(None)._planning_validity(run, current, accounts, region)
     result = {"id": run["_id"], "state": run["state"], "created_at": run["created_at"],
         "finished_at": run["finished_at"], "area_id": run["area_id"], "map_id": run["map_id"],
         "ruleset_matches_disk": run["ruleset_version"] == rules.RULESET_VERSION,
@@ -228,15 +264,25 @@ def plan_report(run, teams, accounts, areas):
     for saved in run["participants"]:
         present = accounts.get(saved["account_id"])
         current_team = teams.get(saved["team_id"])
+        selected = saved["selection"]
+        hero = present["_hero_rows"].get(selected["hero_id"]) if present and selected else None
+        current_selection = None
+        if hero and selected["form_id"] in hero["forms"]:
+            _, form = catalog_form(selected["hero_id"], selected["form_id"])
+            current_selection = {"hero_id": selected["hero_id"], "form_id": selected["form_id"],
+                "hero_level": hero_progress(hero["total_experience"])["hero_level"],
+                "hero_revision": hero["revision"], "unit_type": form["unit_type"], "unit_level": form["native_level"]}
         result["players"].append({"id": saved["account_id"], "saved_team_id": saved["team_id"],
             "saved_username": saved.get("username"), "current_username": present["username"] if present else None,
-            "side": saved["side"], "saved_unit_type": saved["leader"]["unit_type"],
-            "saved_level": saved["leader"]["level"], "saved_ready": saved["account_id"] in run["ready"],
+            "side": saved["side"], "saved_selection": selected,
+            "saved_ready": saved["account_id"] in run["ready"],
+            "current_hero_owned": bool(hero) if present and selected else None,
+            "current_hero_revision": hero["revision"] if hero else None,
             "currently_in_saved_team": bool(current_team and current_team["status"] == "active" and
                 saved["account_id"] in [member["account_id"] for member in current_team["members"]]),
             "current_account_found": present is not None,
             "current_account_active_player": bool(present and present["status"] == "active" and present["role"] == "player"),
-            "leader_snapshot_matches": present["leader"] == saved["leader"] if present else None})
+            "hero_snapshot_matches": current_selection == selected if present and selected else None})
         if present is None:
             errors.add("account_missing")
     result["context_errors"] = sorted(errors)
@@ -245,7 +291,7 @@ def plan_report(run, teams, accounts, areas):
 
 def read_snapshot(db, session, username, battle_id):
     schema = db.schema_metadata.find_one({"_id": "alliance"}, {"_id": 0, "version": 1}, session=session)
-    require(isinstance(schema, dict) and type(schema.get("version")) is int and schema["version"] == 1, "unsupported_database")
+    require(isinstance(schema, dict) and type(schema.get("version")) is int and schema["version"] == SCHEMA_VERSION, "unsupported_database")
     raw_actor = db.accounts.find_one({"username_key": username.casefold()}, ACCOUNT_FIELDS, session=session)
     require(raw_actor is not None, "account_missing")
     actor = account(raw_actor)
@@ -276,6 +322,25 @@ def read_snapshot(db, session, username, battle_id):
     account_ids.update(value["captain_id"] for value in teams.values() if value["captain_id"])
     accounts = indexed(bounded_find(db.accounts, {"_id": {"$in": sorted(account_ids)}}, ACCOUNT_FIELDS,
         session, 101, "invalid_account_record"), account, account_ids, "invalid_account_record") if account_ids else {}
+    # Fetch only exact heroes selected by these bounded saved plans. Never read
+    # the rest of a player's collection, credentials, session records or replay.
+    selected = {(player["account_id"], player["selection"]["hero_id"])
+                for run in runs for player in run["participants"] if player["selection"] is not None}
+    for value in accounts.values():
+        value["_hero_rows"] = {}
+    if selected:
+        rows = bounded_find(db.account_heroes,
+            {"$or": [{"account_id": actor_id, "hero_id": hero_id} for actor_id, hero_id in sorted(selected)]},
+            HERO_FIELDS, session, MAX_PLANS * 8 + 1, "invalid_hero_record")
+        require(len(rows) <= len(selected), "invalid_hero_record")
+        seen = set()
+        for raw in rows:
+            value = owned_hero(raw)
+            key = (value["account_id"], value["hero_id"])
+            require(key in selected and key not in seen, "invalid_hero_record")
+            seen.add(key)
+            if value["account_id"] in accounts:
+                accounts[value["account_id"]]["_hero_rows"][value["hero_id"]] = value
     area_ids = {run["area_id"] for run in runs}
     areas = indexed(bounded_find(db.areas, {"_id": {"$in": sorted(area_ids)}}, AREA_FIELDS,
         session, 11, "invalid_area_record"), area, area_ids, "invalid_area_record") if area_ids else {}
@@ -286,7 +351,7 @@ def read_snapshot(db, session, username, battle_id):
 
 def logic_hashes():
     result = {}
-    for name in ("alliance/domain.py", "alliance/rules.py"):
+    for name in ("alliance/domain.py", "alliance/product.py", "alliance/heroes.py", "alliance/rules.py", "alliance/schema.py", "alliance/hero_catalog.json"):
         with (ROOT / name).open("rb") as source:
             raw = source.read(1048577)
         require(len(raw) <= 1048576, "logic_unavailable")
@@ -295,7 +360,7 @@ def logic_hashes():
 
 
 def empty_report():
-    return {"format": 1, "purpose": "wesnoth-alliance-plan-state", "status": "failed",
+    return {"format": 2, "purpose": "wesnoth-alliance-plan-state", "status": "failed",
         "outcome": "unexpected_error", "collected_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "endpoint": "127.0.0.1:27018", "database": "wesnoth_game", "database_writes": False,
         "read_concern": "snapshot", "maximum_plans": MAX_PLANS, "account": None,
