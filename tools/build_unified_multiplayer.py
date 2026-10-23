@@ -15,7 +15,7 @@ from tools.build_alliance_bridge import BuildError, safe_path, digest, write_new
 ROOT = Path(__file__).resolve().parents[1]
 STAGE = ROOT / "build/windows-unified-mingw64"
 PURPOSE = "wesnoth-unified-native-multiplayer"
-VERSION = "WESNOTH_UNIFIED_MULTIPLAYER release=1192616 protocol=2"
+VERSION = "WESNOTH_UNIFIED_MULTIPLAYER release=1192617 protocol=2"
 
 
 def binding():

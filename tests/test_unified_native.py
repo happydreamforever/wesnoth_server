@@ -136,7 +136,7 @@ class Native(unittest.TestCase):
         return p,token,login['data']['account']
     def lobby(self,token,api,account):
         ticket=api.rpc('casual_ticket',{},token);self.assertTrue(ticket['ok'],ticket)
-        p=self.peer(15000);greeting=p.until('version');self.assertIn('alliance_protocol="2"',greeting);self.assertIn('implementation_release="1192616"',greeting)
+        p=self.peer(15000);greeting=p.until('version');self.assertIn('alliance_protocol="2"',greeting);self.assertIn('implementation_release="1192617"',greeting)
         p.send(wml('version',{'version':'1.19.26'}));p.until('mustlogin')
         p.send(wml('login',{'username':account['username'],'alliance_ticket':ticket['data']['ticket']}));p.until('join_lobby');p.until('gamelist')
         return p,ticket['data']['ticket']

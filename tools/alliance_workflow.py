@@ -32,7 +32,7 @@ STEPS = (("W02", "database", 27018, "Run-WindowsAllianceDatabase.ps1"),
          ("W04", "bridge", 15001, "Run-WindowsAllianceBridge.ps1"))
 BATTLE_STEP = ("W05", "battles", 15002, "Run-WindowsAllianceBattles.ps1")
 MULTIPLAYER_STEP = ("W06", "multiplayer", 15000, "Run-WindowsMultiplayer.ps1")
-EXPECTED_IMPLEMENTATION_RELEASE = 1192616
+EXPECTED_IMPLEMENTATION_RELEASE = 1192617
 BACKEND_RELEASE_ERROR = "W03_backend_release_mismatch"
 
 

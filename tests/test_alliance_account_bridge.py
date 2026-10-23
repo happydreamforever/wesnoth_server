@@ -461,7 +461,7 @@ class BridgeTests(unittest.TestCase):
             peer.sendall(struct.pack('!I', len(body)) + body)
             size, = struct.unpack('!I', self.read_exact(peer, 4))
             result = gzip.decompress(self.read_exact(peer, size)).decode()
-            self.assertEqual(result, '[alliance_health]\nservice="alliance-accounts"\napi="2"\nimplementation_release="1192616"\n[/alliance_health]\n')
+            self.assertEqual(result, '[alliance_health]\nservice="alliance-accounts"\napi="2"\nimplementation_release="1192617"\n[/alliance_health]\n')
         self.assertEqual(len(self.calls), before)
         for request in (b'[alliance_health]\ntoken="secret"\n[/alliance_health]\n',
                         b'[alliance_health]\n[/alliance_health]\n[login]\n[/login]\n'):

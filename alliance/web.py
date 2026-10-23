@@ -415,7 +415,7 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
         # Capability metadata is not a live native-client or game-daemon probe.
         return jsonify(status="ok", service="alliance", api_version=1,
                        game_bridge_integrated=True, campaign_content_ready=CAMPAIGN_CONTENT_READY,
-                       health_scope="backend_only", native_runtime_checked=False, implementation_release=1192616,
+                       health_scope="backend_only", native_runtime_checked=False, implementation_release=1192617,
                        product_schema_version=2)
 
     @internal_route("/register", player=False)

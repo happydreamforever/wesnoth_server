@@ -732,7 +732,7 @@ class BattleDaemon:
             node=root.children[0]
             if node.name=='alliance_health' and not node.attrs and not node.children:
                 await asyncio.to_thread(self.db.command,'ping')
-                await send(writer,message('alliance_health',service='alliance-battles',api=1,implementation_release=1192616))
+                await send(writer,message('alliance_health',service='alliance-battles',api=1,implementation_release=1192617))
                 return
             if node.name!='alliance_join' or set(node.attrs)!={'run_id','token','intent'} or node.children or node.attrs['intent'] not in ('play','result_retry','replay_download'):
                 raise WireError('Invalid join request.')

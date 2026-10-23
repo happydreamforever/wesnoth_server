@@ -906,7 +906,7 @@ class Session : public std::enable_shared_from_this<Session> {
         try {
             if(inflate_frame(incoming_) == "[alliance_health]\n[/alliance_health]\n") {
                 responding_ = true;
-                outgoing_ = compress_text_frame("[alliance_health]\nservice=\"alliance-accounts\"\napi=\"2\"\nimplementation_release=\"1192616\"\n[/alliance_health]\n");
+                outgoing_ = compress_text_frame("[alliance_health]\nservice=\"alliance-accounts\"\napi=\"2\"\nimplementation_release=\"1192617\"\n[/alliance_health]\n");
                 asio::async_write(client_, asio::buffer(outgoing_), [self=shared_from_this()](Error error, std::size_t) {
                     if(error) { self->close(); return; }
                     self->client_.async_shutdown([self](Error) { self->close(); });
