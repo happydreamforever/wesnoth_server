@@ -616,6 +616,10 @@ void server::load_config(bool reload)
 #endif
 
 	load_tls_config(cfg_);
+	if(cfg_["alliance_auth"].to_bool(false)) {
+		if(!alliance_) alliance_ = std::make_unique<alliance_casual::adapter>(cfg_);
+		if(dump_wml) throw std::runtime_error("WML dumping is disabled for authenticated multiplayer.");
+	}
 
 	if(cfg_["dummy_player_count"].to_int() > 0) {
 		for(int i = 0; i < cfg_["dummy_player_count"].to_int(); i++) {
@@ -769,7 +773,11 @@ void server::handle_new_client(tls_socket_ptr socket)
 template<class SocketPtr>
 void server::login_client(boost::asio::yield_context yield, SocketPtr socket)
 {
-	coro_send_doc(socket, version_query_response_, yield);
+	if(alliance_) {
+		simple_wml::document greeting; auto& version = greeting.root().add_child("version");
+		version.set_attr("alliance_protocol", "2").set_attr("implementation_release", "1192616");
+		coro_send_doc(socket, greeting, yield);
+	} else coro_send_doc(socket, version_query_response_, yield);
 
 	auto doc { coro_receive_doc(socket, yield) };
 	if(!doc) return;
@@ -915,6 +923,22 @@ void server::login_client(boost::asio::yield_context yield, SocketPtr socket)
 
 template<class SocketPtr> bool server::is_login_allowed(boost::asio::yield_context yield, SocketPtr socket, const simple_wml::node* const login, const std::string& username, bool& registered, bool& is_moderator)
 {
+	if(alliance_) {
+        registered = false; is_moderator = false;
+        try {
+            if constexpr(!utils::decayed_is_same<tls_socket_ptr, SocketPtr>)
+                throw std::runtime_error("TLS required");
+            if(player_connections_.get<name_t>().find(username) != player_connections_.get<name_t>().end())
+                throw std::runtime_error("Account already connected");
+            auto account = alliance_->admit((*login)["alliance_ticket"].to_string(), username);
+            alliance_accounts_[username] = std::string(account.at("account_id").as_string());
+            registered = true; return true;
+        } catch(const std::exception&) {
+            async_send_error(socket, "Your multiplayer admission expired or this account is already connected. Reopen Multiplayer.", MP_INVALID_CHARS_IN_NAME_ERROR);
+            return false;
+        }
+    }
+
 	// Check if the username is valid (all alpha-numeric plus underscore and hyphen)
 	if(!utils::isvalid_username(username)) {
 		async_send_error(socket,
@@ -1516,6 +1540,7 @@ void server::handle_create_game(player_iterator player, simple_wml::node& create
 	});
 
 	wesnothd::game& g = *player->get_game();
+	if(alliance_) { alliance_->create(g.id()); alliance_updates(g); }
 
 	DBG_SERVER << "initial bans: " << initial_bans;
 	if(initial_bans != "") {
@@ -1573,6 +1598,7 @@ void server::cleanup_game(game* game_ptr)
 
 	if(destructed) game_ptr->emergency_cleanup();
 
+	if(alliance_) alliance_->remove(game_ptr->id());
 	delete game_ptr;
 }
 
@@ -1624,6 +1650,7 @@ void server::handle_join_game(player_iterator player, simple_wml::node& join)
 		return;
 	}
 
+	if(alliance_) { simple_wml::document context; alliance_->context(g->id(), context); alliance_->selections(g->id(), context); send_to_player(player, context); }
 	bool joined = g->add_player(player, observer);
 	if(!joined) {
 		WRN_SERVER << player->client_ip() << "\t" << player->info().name()
@@ -1752,6 +1779,77 @@ void server::handle_leave_server_queue(player_iterator p, simple_wml::node& data
 	}
 }
 
+void server::alliance_updates(game& g)
+{
+    simple_wml::document message;
+    alliance_->context(g.id(), message);
+    alliance_->selections(g.id(), message);
+    g.send_data(message);
+}
+
+void server::alliance_reconcile(game& g)
+{
+    if(!alliance_ || !g.level_init() || g.started()) return;
+    auto& room=alliance_->get(g.id());
+    g.update_side_data();
+    std::string layout;
+    std::set<int> owned;
+    for(const auto* side:g.get_sides_list()) {
+        if((*side)["controller"].to_string()=="ai" || (*side)["controller"].to_string()=="null") continue;
+        const int n=(*side)["side"].to_int();
+        layout+=std::to_string(n)+":"+(*side)["player_id"].to_string()+";";
+        auto seat=room.seats.find(n);
+        if(seat!=room.seats.end() && seat->second.username==(*side)["player_id"].to_string()) owned.insert(n);
+    }
+    bool changed=!room.layout.empty() && room.layout!=layout;
+    room.layout=layout;
+    simple_wml::document removed;
+    for(auto it=room.seats.begin();it!=room.seats.end();) {
+        if(!owned.count(it->first)) {
+            changed=true;
+            if(!room.restored) {
+                auto& row=removed.root().add_child("alliance_selection");
+                row.set_attr_dup("game_id",room.id.c_str()).set_attr_int("side",it->first).set_attr("cleared","yes");
+                it=room.seats.erase(it);continue;
+            }
+        }
+        ++it;
+    }
+    if(changed) {
+        for(auto& [_,seat]:room.seats)seat.ready=false;
+        if(!removed.root().no_children())g.send_data(removed);
+        alliance_updates(g);
+    }
+}
+
+void server::alliance_start_guard(game& g)
+{
+    auto& room = alliance_->get(g.id());
+    if(g.started()) throw std::runtime_error("Already started");
+    auto* mp = g.level().child("multiplayer");
+    if(mp && (*mp)["shuffle_sides"].to_bool()) throw std::runtime_error("Fixed human sides cannot be shuffled");
+    alliance_reconcile(g);
+    g.update_side_data();
+    std::set<int> required;
+    std::set<std::string> accounts;
+    for(const auto* side : g.get_sides_list()) {
+        const auto controller = (*side)["controller"].to_string();
+        if(controller == "ai" || controller == "null") continue;
+        const int n = (*side)["side"].to_int();
+        if(n < 1 || !required.insert(n).second) throw std::runtime_error("Invalid human side");
+        const auto found = room.seats.find(n);
+        if(found == room.seats.end() || !found->second.ready) throw std::runtime_error("Every human must choose a hero and confirm Ready");
+        const auto& seat = found->second;
+        auto p = player_connections_.get<name_t>().find(seat.username);
+        if(p == player_connections_.get<name_t>().end() || p->get_game().get() != &g ||
+           !g.controls_side({n}, player_connections_.project<0>(p)) || alliance_accounts_.at(p->name()) != seat.account_id ||
+           !accounts.insert(seat.account_id).second) throw std::runtime_error("Fixed account side changed");
+        alliance_->validate_leader(*side, seat, room.restored);
+    }
+    if(required.empty() || required.size() != room.seats.size()) throw std::runtime_error("Human lineup changed");
+    alliance_->freeze(g.id());
+}
+
 void server::handle_player_in_game(player_iterator p, simple_wml::document& data)
 {
 	DBG_SERVER << "in process_data_game...";
@@ -1760,6 +1858,34 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 
 	game& g = *(p->get_game());
 	std::weak_ptr<game> g_ptr{p->get_game()};
+
+    if(alliance_ && (data.child("alliance_hero") || data.child("alliance_ready"))) {
+        try {
+            if(g.started() || !g.level_init()) throw std::runtime_error("Game is not staging");
+            alliance_reconcile(g);
+            g.update_side_data();
+            const auto account = alliance_accounts_.at(p->name());
+            if(const auto* choice = data.child("alliance_hero")) {
+                int side = (*choice)["side"].to_int();
+                if(side == 0) {
+                    for(const auto* candidate : g.get_sides_list()) {
+                        int n = (*candidate)["side"].to_int();
+                        if((*candidate)["controller"].to_string() != "ai" && g.controls_side({n}, p)) {
+                            if(side) throw std::runtime_error("Choose one human seat"); side=n;
+                        }
+                    }
+                }
+                if(side < 1 || !g.controls_side({side}, p)) throw std::runtime_error("Not this player's side");
+                alliance_->choose(g.id(), side, account, p->name(), (*choice)["ticket"].to_string());
+            } else {
+                const auto* request=data.child("alliance_ready"); const int side=(*request)["side"].to_int();
+                if(side < 1 || !g.controls_side({side}, p)) throw std::runtime_error("Not this player's side");
+                alliance_->ready(g.id(), side, account, (*request)["ready"].to_bool());
+            }
+            alliance_updates(g);
+        } catch(const std::exception&) { send_server_message(p, "Hero selection or Ready was refused. Refresh the game and choose your own hero again.", "error"); }
+        return;
+    }
 
 	// If this is data describing the level for a game.
 	if(data.child("snapshot") || data.child("scenario")) {
@@ -1840,8 +1966,13 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 			desc.child("modification")->set_attr_dup("require_modification", m->attr("require_modification"));
 		}
 
+        if(alliance_) {
+            try { alliance_->restore(g.id(), data.root()); }
+            catch(const std::exception&) { send_server_message(p, "This saved game has no matching authenticated hero snapshot. Start a new multiplayer game.", "error"); delete_game(g.id()); return; }
+        }
 		// Record the full scenario in g.level()
 		g.level().swap(data);
+        if(alliance_) alliance_updates(g);
 
 		// The host already put himself in the scenario so we just need
 		// to update_side_data().
@@ -1926,6 +2057,16 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 		// Record the full scenario in g.level()
 		g.level().clear();
 		scenario->copy_into(g.level().root());
+        if(alliance_) {
+            try {
+                alliance_->restore(g.id(), g.level().root());
+                for(auto& [_,seat]:alliance_->get(g.id()).seats) seat.ready=false;
+                alliance_updates(g);
+            } catch(const std::exception&) {
+                send_server_message(p, "The next scenario does not preserve this game's authenticated hero snapshot.", "error");
+                delete_game(g.id()); return;
+            }
+        }
 		g.next_db_id();
 
 		if(g.description() == nullptr) {
@@ -1983,6 +2124,17 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 			return;
 		}
 
+        if(alliance_) {
+            try { alliance_start_guard(g); }
+            catch(const std::exception& error) {
+                ERR_SERVER << "Unified multiplayer start guard: " << error.what();
+                simple_wml::document response; auto& ack=response.root().add_child("alliance_start");
+                ack.set_attr_dup("game_id", alliance_->get(g.id()).id.c_str()).set_attr("accepted", "no");
+                send_to_player(p, response);
+                send_server_message(p, "Start refused: every human side must belong to its signed-in account, use its selected hero, and be Ready. Saved games retain their original heroes.", "error");
+                return;
+            }
+        }
 		// perform controller tweaks, assigning sides as human for their owners etc.
 		g.perform_controller_tweaks();
 
@@ -1991,6 +2143,10 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 		// the [start_game] message has been sent
 		g.send_data(data, p);
 		g.start_game(p);
+        if(alliance_) {
+            simple_wml::document response; auto& ack=response.root().add_child("alliance_start");
+            ack.set_attr_dup("game_id", alliance_->get(g.id()).id.c_str()).set_attr("accepted", "yes");send_to_player(p,response);
+        }
 
 		if(user_handler_) {
 			const simple_wml::node& m = *g.level().root().child("multiplayer");
@@ -2107,7 +2263,9 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 			return;
 		}
 
+		if(alliance_ && g.started()) return;
 		g.level().root().apply_diff(*scenario_diff);
+		alliance_reconcile(g);
 		const simple_wml::node* cfg_change = scenario_diff->child("change_child");
 
 		if(cfg_change) {
@@ -2257,11 +2415,16 @@ void server::disconnect_player(player_iterator player)
 
 void server::remove_player(player_iterator iter)
 {
+	if(alliance_) alliance_accounts_.erase(iter->name());
 	std::string ip = iter->client_ip();
 
 	const std::shared_ptr<game> g = iter->get_game();
 	bool game_ended = false;
 	if(g) {
+        if(alliance_ && !g->started()) {
+            for(auto& [_,seat]:alliance_->get(g->id()).seats) if(seat.username==iter->name()) seat.ready=false;
+            alliance_updates(*g);
+        }
 		game_ended = g->remove_player(iter, true, false);
 	}
 
@@ -3405,6 +3568,9 @@ int main(int argc, char** argv)
 					  << "  -V, --version              Returns the server version.\n"
 					  << "  -w, --dump-wml             Print all WML sent to clients to stdout.\n";
 			return 0;
+		} else if(val == "--unified-version") {
+            std::cout << "WESNOTH_UNIFIED_MULTIPLAYER release=1192616 protocol=2\n";
+            return 0;
 		} else if(val == "--version" || val == "-V") {
 			std::cout << "Battle for Wesnoth server " << game_config::wesnoth_version.str() << "\n";
 			return 0;

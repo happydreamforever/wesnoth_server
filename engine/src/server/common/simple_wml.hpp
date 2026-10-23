@@ -184,6 +184,7 @@ public:
 
 	int nchildren() const;
 	int nattributes_recursive() const;
+	std::size_t nattributes() const { return attr_.size(); }
 
 private:
 	node(const node&) = delete;

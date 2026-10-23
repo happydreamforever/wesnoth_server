@@ -139,6 +139,7 @@ protected:
 	boost::asio::io_context io_service_;
 	boost::asio::ssl::context tls_context_ { boost::asio::ssl::context::sslv23 };
 	bool tls_enabled_ { false };
+	bool tls_required_ { false };
 	boost::asio::ip::tcp::acceptor acceptor_v6_;
 	boost::asio::ip::tcp::acceptor acceptor_v4_;
 

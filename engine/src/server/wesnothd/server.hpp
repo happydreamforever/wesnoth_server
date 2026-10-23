@@ -16,6 +16,7 @@
 #pragma once
 
 #include "config.hpp"
+#include "alliance_casual/adapter.hpp"
 #include "mt_rng.hpp"
 #include "server/common/user_handler.hpp"
 #include "server/wesnothd/metrics.hpp"
@@ -48,6 +49,11 @@ public:
 	}
 
 private:
+	std::unique_ptr<alliance_casual::adapter> alliance_;
+	std::map<std::string,std::string> alliance_accounts_;
+	void alliance_updates(game& g);
+	void alliance_reconcile(game& g);
+	void alliance_start_guard(game& g);
 	void handle_new_client(socket_ptr socket);
 	void handle_new_client(tls_socket_ptr socket);
 

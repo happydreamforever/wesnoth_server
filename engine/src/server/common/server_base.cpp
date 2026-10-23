@@ -176,6 +176,7 @@ void server_base::serve(const boost::asio::yield_context& yield, boost::asio::ip
 
 	switch(ntohl(protocol_version)) {
 		case 0:
+			if(tls_required_) return;
 			async_write(*socket, boost::asio::buffer(reinterpret_cast<std::byte*>(&handshake_response_), 4), yield[error]);
 			if(check_error(error, socket)) return;
 			final_socket = socket;
@@ -631,6 +632,10 @@ template void server_base::async_send_warning<tls_socket_ptr>(const tls_socket_p
 void server_base::load_tls_config(const config& cfg)
 {
 	tls_enabled_ = cfg["tls_enabled"].to_bool(false);
+	tls_required_ = cfg["alliance_auth"].to_bool(false);
+	if(tls_required_ && !tls_enabled_) throw std::runtime_error("Unified multiplayer requires TLS.");
+	if(tls_required_ && SSL_CTX_set_min_proto_version(tls_context_.native_handle(), TLS1_2_VERSION) != 1)
+		throw std::runtime_error("Could not require TLS 1.2.");
 	if(!tls_enabled_) return;
 
 	tls_context_.set_options(
