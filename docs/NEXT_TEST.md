@@ -6,13 +6,24 @@ Use the existing **one LDPlayer instance**, MSYS2, Python, SDK/NDK, supplied 1.1
 
 Report each step before continuing if you prefer. At the first unexpected result, stop that test and send its letter, exact message and sanitized log. Do not delete stages, journals, locks or runtime data. Record WAN status once per batch; keep local Ethernet and LDPlayer available.
 
-## Current checkpoint — A–E accepted; run F next
+## Current checkpoint — A–E accepted; update server and retry F
 
-The repository update and Git integrity checks passed at server `73460b1` / client `ee71821`. B's cold backup verified 110 files / 258,474,865 bytes, with WAN explicitly confirmed disconnected. Keep the exact private backup at `%LOCALAPPDATA%\WesnothAlliance\backups\before-1192617-20261023-100621-012` for F. C's bridge rebuild and D's 47-step native Multiplayer build passed.
+F reached the new administrator's private prompts but returned only `initialization_incomplete`. The cause is not yet known; the old helper hid several possible input/database/cleanup errors. `uni` is a valid username. Keep both runtimes and the verified backup unchanged. A–E do not need repeating.
 
-E now passes on Windows: both prior account stages were preserved, all 38 native steps and 33 offline Gradle tasks completed, and package/original-signer verification passed, followed by ANDROID ACCOUNT GAME REBUILD COMPLETE. Logs are recorded in BASELINE.md. The APK has not yet been installed or tested in this batch.
+A server-only correction now reports a safe `stage` and `reason`, with clear password-input guidance and no credential output. It is tested on the VPS, including real MongoDB failures and same-target recovery. Temporarily connect to GitHub and pull the server:
 
-Continue directly at **F** using the already pulled server helper and the exact B backup. It creates the authorized separate empty schema 2 runtime-v2 while retaining the old runtime/backup. Create the new administrator only at its private prompts; new game players come later. No additional pull, backup or rebuild is required. Keep all services stopped and WAN disconnected/local Ethernet retained through F. After F passes, continue G five-service startup and H installation. The Android rebuild helper's generic install suggestion does not bypass F/G. F–Z remain pending; A–E below are retained as reference and should not be repeated now.
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
+    & $bash --noprofile --norc -c 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server pull --ff-only origin main'
+    if ($LASTEXITCODE -ne 0) { throw 'Server pull failed. Stop and send the output.' }
+}
+```
+
+Disconnect WAN and retain local Ethernet. With all services stopped, retry **F below using exactly** `%LOCALAPPDATA%\WesnothAlliance\backups\before-1192617-20261023-100621-012`, previous `runtime` and the existing partial `runtime-v2`. The helper preserves the old database and backup and resumes existing new credentials; if the administrator already exists, it skips creating/replacing it. Do not delete files, change the target or make another backup to work around this error.
+
+Expected: `UNIFIED FRESH START VERIFIED`, schema 2, previous runtime preserved and database stopped. If it stops, send the safe stage/reason lines and console error, never passwords/private runtime files. Return this retry result before G service startup and H installation. No client pull, rebuild, OBB transfer or profile import is required. F–Z remain pending; A–E below are reference only.
 
 ## A. Stop services and pull both repositories
 
