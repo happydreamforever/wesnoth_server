@@ -6,11 +6,13 @@ Use the existing **one LDPlayer instance**, MSYS2, Python, SDK/NDK, supplied 1.1
 
 Report each step before continuing if you prefer. At the first unexpected result, stop that test and send its letter, exact message and sanitized log. Do not delete stages, journals, locks or runtime data. Record WAN status once per batch; keep local Ethernet and LDPlayer available.
 
-## Current checkpoint — A accepted; run B next
+## Current checkpoint — A–B accepted; run C next
 
-The returned Windows Git check confirms server `73460b1` and client `ee71821`, both full object checks exit0 without errors, empty staged diffs and only the existing README edits. Both reported pack/index pairs are absent. No current integrity failure was found; the earlier index-open errors' cause remains unconfirmed. Keep README edits intact.
+Step A reached server `73460b1` and client `ee71821`; the subsequent Git integrity checks passed with only the existing README edits. Step B now reports ALLIANCE BACKUP VERIFIED, 110 files / 258,474,865 bytes and MA03 completion. The user explicitly confirms WAN was disconnected while Ethernet stayed connected. `schema_checked: false` is expected for cold backup.
 
-Continue directly at **B** using the already pulled helper. Keep all services stopped, disconnect WAN while retaining local Ethernet, then create a new cold backup of the old runtime. No further pull, repair or diagnostic rerun is needed. This acceptance concerns the repositories; B–Z remain pending and the Git report does not establish service shutdown or WAN status. The commands in A below are retained as reference and should not be repeated now.
+Keep the exact private backup at `%LOCALAPPDATA%\WesnothAlliance\backups\before-1192617-20261023-100621-012` for F. The saved diagnostic is `diagnostics/alliance-maintenance-20261023-100621-819-6c2fb4025ae3458a900a03d4a6d9c8cf.txt`. No service was activated and the existing runtime was preserved.
+
+Continue directly at **C** using the existing checkout. No further pull or backup is required. Keep all services stopped and WAN disconnected/local Ethernet retained through F. C–Z remain pending; A and B below are retained as reference and should not be repeated now.
 
 ## A. Stop services and pull both repositories
 
@@ -63,7 +65,7 @@ Expected: `ALLIANCE BACKUP VERIFIED`, then MA03 completion. `schema_checked: fal
 }
 ```
 
-Expected: previous bridge retained, `ALLIANCE ACCOUNT BRIDGE REBUILD PASSED`. The new account protocol and hero catalogue require the coordinated client/server update.
+Expected: previous bridge retained, `ALLIANCE ACCOUNT BRIDGE REBUILD PASSED`. The new account protocol and hero catalogue require the coordinated client/server update. Keep services stopped afterward and continue at D; the wrapper's generic suggestion to run the bridge does not replace this batch order.
 
 ## D. Build authenticated ordinary Multiplayer
 
