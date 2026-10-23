@@ -6,13 +6,15 @@ Use the existing **one LDPlayer instance**, MSYS2, Python, SDK/NDK, supplied 1.1
 
 Report each step before continuing if you prefer. At the first unexpected result, stop that test and send its letter, exact message and sanitized log. Do not delete stages, journals, locks or runtime data. Record WAN status once per batch; keep local Ethernet and LDPlayer available.
 
-## Current checkpoint — A–F accepted; run G next
+## Current checkpoint — A–G accepted; run H next
 
-The successful F retry reports ALLIANCE INITIALIZATION PASSED and UNIFIED FRESH START VERIFIED, with schema_version 2, previous_runtime_preserved true, database_stopped true and reused false. The new administrator is `uni`. Use `%LOCALAPPDATA%\WesnothAlliance\runtime-v2` for every service from now on; the old runtime and B backup remain retained. The prior generic failure's cause was not identified and must not be inferred from this success.
+The returned G workflow and all five service windows confirm W02–W06 PASS and **W07 UNIFIED GAME SERVICES READY**, using runtime-v2. MongoDB, admin, account bridge, shared battles and authenticated native Multiplayer are ready. The immediate Multiplayer connection-closed / stream-truncated messages are consistent with the startup probes closing their connections after checking availability and the strict-TLS greeting; they do not invalidate the passed health check. Android admission and gameplay are not yet established by this result.
 
-Continue directly at **G** using the existing checked startup helper, current MSYS2 root and -IncludeBattles. No additional pull, backup, initialization or rebuild is required. Keep WAN disconnected and local Ethernet connected. Expect five service windows and **W07 UNIFIED GAME SERVICES READY** after W02–W06 pass. Leave all five windows open and return the workflow output before H installation. If startup stops, send its saved workflow text and JSON reports; preserve the service windows already running.
+Continue directly at **H** using Install-AndroidAccountGame.ps1 -KeepSavedProfile and the completed 1192617 APK. Keep all five service windows and the single LDPlayer instance open, WAN disconnected and local Ethernet connected. No new pull, backup, initialization, rebuild, restart or OBB transfer is required. Expect ANDROID ACCOUNT GAME INSTALL COMPLETE, verified installed version 1192617 and the existing Trusted server 100.99.99.14:15001. Send the installer output and confirm the saved trusted server before I. If the profile is missing/unusable, report its message without clearing data or reimporting.
 
-A–F below are retained as reference and should not be repeated. The Android 1192617 APK is built but not yet installed in this batch. G–Z acceptance remains pending.
+The install helper still prints an older Start game -> Alliance -> Log in suggestion. For this unified release, Start game requests login/signup at startup; no second Alliance login is required. Administrator uni belongs to the website; new player registration is step I. Old players remain in the retained old runtime and backup.
+
+A–G below are retained as reference and should not be repeated. H–Z Windows/LDPlayer acceptance remains pending.
 
 ## A. Stop services and pull both repositories
 
