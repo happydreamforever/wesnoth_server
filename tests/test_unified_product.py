@@ -16,6 +16,7 @@ from uuid import uuid4
 from urllib.parse import urlsplit
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from pymongo import MongoClient
+from bson.int64 import Int64
 from alliance.auth import AuthService, bootstrap_auth_schema, hash_password
 from alliance.domain import AllianceService, DomainError, _now
 from alliance.heroes import load_catalog, hero_progress, spent_experience, scaled_stat
@@ -35,6 +36,14 @@ class HeroMath(unittest.TestCase):
         self.assertEqual(scaled_stat(5,11,1),6)
         for value in [-1,True,1.2]:
             with self.assertRaises(ValueError):hero_progress(value)
+    def test_bson_int64_progression_and_public_json_integers(self):
+        for total in (0, 2147483648, 9223372036854775807):
+            result = hero_progress(Int64(total))
+            self.assertEqual(result, hero_progress(total))
+            self.assertTrue(all(type(value) is int for value in result.values()))
+            self.assertEqual(json.loads(json.dumps(result)), result)
+        for total in (-1, 9223372036854775808):
+            with self.assertRaises(ValueError): hero_progress(Int64(total))
     def test_catalogue_identities(self):
         c,d=load_catalog();self.assertEqual(len(d),64)
         self.assertGreater(len(c['heroes']),100);self.assertGreater(len(c['forms']),300)
@@ -84,6 +93,33 @@ class UnifiedProduct(unittest.TestCase):
         login=AuthService(self.db).authenticate('Player_1','test player password 1','player')
         self.assertEqual(login['account']['heroes'],[])
         self.assertEqual(login['account']['database_generation'],profile['database_generation'])
+    def test_stored_int64_hero_profile_training_and_team_rewards(self):
+        ps, ts, run = self.battle()
+        starting = 2147483648
+        actor = ps[0][0]
+        self.db.account_heroes.update_one({'account_id':actor,'hero_id':self.hero},
+                                         {'$set':{'total_experience':Int64(starting)}})
+        self.assertIsInstance(self.db.account_heroes.find_one({'account_id':actor})['total_experience'], Int64)
+        profile = self.domain.get_account(actor)['heroes'][0]
+        self.assertEqual(profile['total_experience'], starting)
+        self.assertIs(type(profile['total_experience']), int)
+        self.assertGreater(profile['hero_level'], 1000)
+        training = self.domain.progression_start(actor, MISSIONS[0], self.hero, self.form)['run']
+        self.assertEqual(training['hero_level'], profile['hero_level'])
+        args = dict(run_id=training['id'],mission_id=MISSIONS[0],mission_version=MISSION_VERSION,
+            nonce=training['nonce'],outcome='win',replay_sha256='c'*64,format='alliance-native-campaign-result-v1')
+        result = self.domain.progression_finish(actor, **args)
+        self.assertEqual(self.domain.progression_finish(actor, **args), result)
+        for player in sum(ps, []): self.domain.directory_select_hero(player, run, self.hero, self.form)
+        for player in sum(ps, []): self.domain.directory_battle_ready(player, run, True)
+        for captain in (ps[0][0], ps[1][0]): self.domain.directory_approve_battle(captain, run)
+        self.domain.start_battle(actor, run)
+        result = self.domain.finish_battle(run, ts[0])
+        self.assertEqual(self.domain.finish_battle(run, ts[0]), result)
+        hero = self.domain.get_account(actor)['heroes'][0]
+        self.assertEqual(hero['total_experience'], starting + 40)
+        self.assertIs(type(hero['total_experience']), int)
+        self.assertEqual(json.loads(json.dumps(hero)), hero)
     def test_victory_unlocks_and_exactly_once(self):
         a=self.player();run=self.begin(a);data=self.checkpoint(run)
         result=self.domain.story_checkpoint(a,data)

@@ -14,8 +14,11 @@ def spent_experience(level):
 
 
 def hero_progress(total):
-    if type(total) is not int or not 0 <= total <= MAX_XP:
+    # MongoDB decodes 64-bit stored integers as bson.int64.Int64. They are
+    # legitimate XP values; normalize the public projection to a JSON int.
+    if not isinstance(total, int) or isinstance(total, bool) or not 0 <= total <= MAX_XP:
         raise ValueError('Hero experience is outside the storage range.')
+    total = int(total)
     low, high = 1, 2
     while spent_experience(high) <= total:
         high *= 2
