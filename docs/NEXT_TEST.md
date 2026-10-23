@@ -6,13 +6,13 @@ Use the existing **one LDPlayer instance**, MSYS2, Python, SDK/NDK, supplied 1.1
 
 Report each step before continuing if you prefer. At the first unexpected result, stop that test and send its letter, exact message and sanitized log. Do not delete stages, journals, locks or runtime data. Record WAN status once per batch; keep local Ethernet and LDPlayer available.
 
-## Current checkpoint — A–D accepted; run E next
+## Current checkpoint — A–E accepted; run F next
 
-The repository update and Git integrity checks passed at server `73460b1` / client `ee71821`. B's cold backup verified 110 files / 258,474,865 bytes, with WAN explicitly confirmed disconnected. Keep the exact private backup at `%LOCALAPPDATA%\WesnothAlliance\backups\before-1192617-20261023-100621-012` for F. C's bridge rebuild and previous-stage preservation passed.
+The repository update and Git integrity checks passed at server `73460b1` / client `ee71821`. B's cold backup verified 110 files / 258,474,865 bytes, with WAN explicitly confirmed disconnected. Keep the exact private backup at `%LOCALAPPDATA%\WesnothAlliance\backups\before-1192617-20261023-100621-012` for F. C's bridge rebuild and D's 47-step native Multiplayer build passed.
 
-D now passes on Windows: all 47 native compile/link steps finished, followed by UNIFIED MULTIPLAYER ARTIFACT VERIFIED and UNIFIED MULTIPLAYER BUILD PASSED. The saved log is recorded in BASELINE.md. This establishes the native Multiplayer build, not listener startup or Android connectivity.
+E now passes on Windows: both prior account stages were preserved, all 38 native steps and 33 offline Gradle tasks completed, and package/original-signer verification passed, followed by ANDROID ACCOUNT GAME REBUILD COMPLETE. Logs are recorded in BASELINE.md. The APK has not yet been installed or tested in this batch.
 
-Continue directly at **E** using the already pulled client helper. No additional pull, backup or server rebuild is required. Keep all services stopped and WAN disconnected/local Ethernet retained through F. After E passes, continue F fresh runtime, G startup and H installation. The Android rebuild helper's generic installation suggestion does not bypass F/G. E–Z remain pending; A–D below are retained as reference and should not be repeated now.
+Continue directly at **F** using the already pulled server helper and the exact B backup. It creates the authorized separate empty schema 2 runtime-v2 while retaining the old runtime/backup. Create the new administrator only at its private prompts; new game players come later. No additional pull, backup or rebuild is required. Keep all services stopped and WAN disconnected/local Ethernet retained through F. After F passes, continue G five-service startup and H installation. The Android rebuild helper's generic install suggestion does not bypass F/G. F–Z remain pending; A–E below are retained as reference and should not be repeated now.
 
 ## A. Stop services and pull both repositories
 
