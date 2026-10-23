@@ -36,7 +36,7 @@ try {
     if (-not $CheckOnly) { $arguments += '--start' }
     if ($IncludeBattles) { $arguments += '--include-battles' }
     & $python @arguments | Out-Host
-    if ($LASTEXITCODE -ne 0) { throw 'Workflow stopped. Send this log and the JSON report; leave existing service windows open.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Workflow stopped. Follow the named step guidance and send this log plus the JSON report; keep unrelated service windows open.' }
     $result = 0
 } catch {
     Write-Host ('ERROR: ' + $_.Exception.Message) -ForegroundColor Red
