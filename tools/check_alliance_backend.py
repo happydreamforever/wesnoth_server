@@ -84,6 +84,7 @@ def result(outcome: str, *, error=None):
         "status": "passed" if outcome == "healthy" else "failed",
         "endpoint": "127.0.0.1:18765", "method": "GET", "path": "/internal/v1/health",
         "outcome": outcome, "http_status": None, "network_error": error,
+        "implementation_release": None,
         "checks": {"application_json": False, "status_ok": False,
                    "service_alliance": False, "api_v1": False},
     }
@@ -122,6 +123,12 @@ def request_health(secret: str):
             report["checks"]["status_ok"] = value.get("status") == "ok"
             report["checks"]["service_alliance"] = value.get("service") == "alliance"
             report["checks"]["api_v1"] = type(value.get("api_version")) is int and value["api_version"] == 1
+            # Optional public metadata only. This generic diagnostic remains
+            # compatible with older API1 services; release policy belongs to
+            # the versioned workflow launcher, not its health verdict.
+            release = value.get("implementation_release")
+            if type(release) is int and 1 <= release <= 2147483647:
+                report["implementation_release"] = release
         report["outcome"] = "healthy" if all(report["checks"].values()) else "unexpected_health"
         report["status"] = "passed" if report["outcome"] == "healthy" else "failed"
         return report

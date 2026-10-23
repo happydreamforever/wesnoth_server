@@ -106,6 +106,58 @@ class BackendCheckTests(unittest.TestCase):
         self.assertNotIn(self.secret, self.report.read_text() + output.getvalue())
         self.assertIn("ALLIANCE BACKEND CHECK PASSED", output.getvalue())
 
+    def test_optional_release_metadata_does_not_change_generic_health(self):
+        for release in (None, 1192614, 1192615, 1192616, True, "PRIVATE_RESPONSE", -1, 2147483648):
+            with self.subTest(release=release):
+                body = dict(HEALTH)
+                if release is not None: body["implementation_release"] = release
+                self.mode["body"] = json.dumps(body).encode()
+                report = self.collect()
+                self.assertEqual(report["status"], "passed")
+                expected = release if type(release) is int and 1 <= release <= 2147483647 else None
+                self.assertEqual(report["implementation_release"], expected)
+                self.assertNotIn("PRIVATE_RESPONSE", json.dumps(report))
+
+    def test_workflow_requires_exact_release_over_real_authenticated_http(self):
+        from tools import alliance_workflow as workflow
+        for release in (None, 1192614, 1192616, True, "1192615"):
+            with self.subTest(release=release):
+                body = dict(HEALTH)
+                if release is not None: body["implementation_release"] = release
+                self.mode["body"] = json.dumps(body).encode()
+                with self.assertRaisesRegex(workflow.WorkflowError, "^W03_backend_release_mismatch$"):
+                    workflow.backend_check(self.runtime)
+        self.mode["body"] = json.dumps({**HEALTH, "implementation_release": 1192615}).encode()
+        self.assertTrue(workflow.backend_check(self.runtime))
+        self.mode["status"] = 401
+        self.assertFalse(workflow.backend_check(self.runtime))
+        self.assertEqual(self.calls, [("/internal/v1/health", "Bearer " + self.secret)] * 7)
+        self.assertEqual(self.config.read_bytes(), self.original_config)
+
+    def test_stale_backend_stops_workflow_with_manual_guidance_and_no_launch(self):
+        from tools import alliance_workflow as workflow
+        output = io.StringIO()
+        with mock.patch.object(workflow, "validate_runtime", return_value=self.runtime), \
+                mock.patch.object(workflow, "public_profile", return_value={"server_address": "127.0.0.1"}), \
+                mock.patch.object(workflow, "database_check", return_value=True), \
+                mock.patch.object(workflow, "open_port", return_value=True), \
+                mock.patch.object(workflow, "bridge_check") as bridge, \
+                mock.patch.object(workflow, "launch") as launch, contextlib.redirect_stdout(output):
+            code = workflow.main(["--runtime", str(self.runtime), "--msys", str(self.root),
+                                  "--report", str(self.report), "--start"])
+        self.assertEqual(code, 1)
+        launch.assert_not_called(); bridge.assert_not_called()
+        report = json.loads(self.report.read_text())
+        self.assertEqual(report["error"], "W03_backend_release_mismatch")
+        self.assertEqual(report["expected_backend_implementation_release"], 1192615)
+        self.assertEqual(report["steps"][-1], {"id": "W03", "service": "backend", "status": "failed", "action": "none"})
+        self.assertEqual([row["id"] for row in report["steps"]], ["W01", "W02", "W03"])
+        self.assertIn("press Ctrl+C", output.getvalue())
+        self.assertIn("Restart Run-WindowsAlliance.ps1 with the same -RuntimeRoot", output.getvalue())
+        self.assertIn("No process was stopped or restarted automatically", output.getvalue())
+        self.assertNotIn(self.secret, output.getvalue() + self.report.read_text())
+        self.assertEqual(self.config.read_bytes(), self.original_config)
+
     def test_error_statuses_do_not_parse_or_return_error_bodies(self):
         self.mode.update(body=self.secret.encode(), header=self.secret)
         for status in (401, 404, 500):

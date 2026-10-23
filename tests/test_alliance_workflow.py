@@ -88,6 +88,23 @@ class WorkflowTests(unittest.TestCase):
         failed.kill.assert_not_called(); failed.terminate.assert_not_called()
         self.assertEqual(self.report["steps"][-1]["id"], "W03")
 
+    def test_newly_started_wrong_release_stops_without_retry_or_killing_child(self):
+        child = Mock(pid=1234); child.poll.return_value = None
+        workflow.backend_check.side_effect = workflow.WorkflowError(workflow.BACKEND_RELEASE_ERROR)
+        with patch.object(workflow, "open_port", side_effect=[True, False, True]), \
+                patch.object(workflow, "launch", return_value=child) as launch, \
+                patch.object(workflow.time, "sleep") as sleep:
+            with self.assertRaisesRegex(workflow.WorkflowError, "^W03_backend_release_mismatch$"):
+                self.run_helper(battles=True)
+        launch.assert_called_once()
+        self.assertEqual(launch.call_args.args[0], "Run-WindowsAlliance.ps1")
+        sleep.assert_not_called()
+        child.kill.assert_not_called(); child.terminate.assert_not_called()
+        self.assertEqual(self.report["steps"][-1]["id"], "W03")
+        self.assertEqual(self.report["steps"][-1]["status"], "failed")
+        self.assertEqual(self.report["steps"][-1]["action"], "started")
+        workflow.bridge_check.assert_not_called()
+
     def test_optional_battles_missing_helper_refuses_before_start(self):
         (self.root / "tools/Run-WindowsAllianceBattles.ps1").unlink()
         with patch.object(workflow, "launch") as launch:

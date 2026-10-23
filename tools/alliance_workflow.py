@@ -31,6 +31,8 @@ STEPS = (("W02", "database", 27018, "Run-WindowsAllianceDatabase.ps1"),
          ("W03", "backend", 18765, "Run-WindowsAlliance.ps1"),
          ("W04", "bridge", 15001, "Run-WindowsAllianceBridge.ps1"))
 BATTLE_STEP = ("W05", "battles", 15002, "Run-WindowsAllianceBattles.ps1")
+EXPECTED_IMPLEMENTATION_RELEASE = 1192615
+BACKEND_RELEASE_ERROR = "W03_backend_release_mismatch"
 
 
 class WorkflowError(Exception): pass
@@ -80,7 +82,12 @@ def database_check(runtime):
 
 
 def backend_check(runtime):
-    return collect(runtime)["status"] == "passed"
+    health = collect(runtime)
+    if health["status"] != "passed": return False
+    release = health.get("implementation_release")
+    if type(release) is not int or release != EXPECTED_IMPLEMENTATION_RELEASE:
+        raise WorkflowError(BACKEND_RELEASE_ERROR)
+    return True
 
 
 def public_profile():
@@ -188,8 +195,13 @@ def run(runtime, msys, start, report, *, include_battles=False):
                 (lambda: backend_check(runtime)) if name == "backend" else (lambda: bridge_check(profile, battles=name == "battles")))
             row = {"id": step, "service": name, "status": "checking", "action": "none"}
             report["steps"].append(row)
+            def checked():
+                try: return check()
+                except WorkflowError:
+                    row["status"] = "failed"
+                    raise
             if open_port(address, port):
-                if not check():
+                if not checked():
                     row["status"] = "failed"
                     raise WorkflowError(step + "_occupied_but_unhealthy")
                 row.update(status="passed", action="reused")
@@ -209,7 +221,7 @@ def run(runtime, msys, start, report, *, include_battles=False):
                 if child.poll() is not None:
                     row["status"] = "failed"
                     raise WorkflowError(step + "_launcher_exited")
-                if open_port(address, port) and check():
+                if open_port(address, port) and checked():
                     row["status"] = "passed"
                     break
                 time.sleep(1)
@@ -233,6 +245,7 @@ def main(argv=None):
     report = {"format": 1, "purpose": "wesnoth-alliance-service-workflow", "status": "failed", "steps": [],
         "created_at": datetime.now(timezone.utc).isoformat(), "report_path": str(args.report),
         "scope": "Local database identity/schema, authenticated HTTP health and pinned bridge TLS and optional battle-service health only; no player login or gameplay tested.",
+        "expected_backend_implementation_release": EXPECTED_IMPLEMENTATION_RELEASE,
         "wan_disconnected": "not_observed"}
     try:
         path = local_path(args.report)
@@ -246,6 +259,10 @@ def main(argv=None):
         return 1
     if report["status"] != "passed":
         print("ALLIANCE WORKFLOW STOPPED: " + report.get("error", "unconfirmed"))
+        if report.get("error") == BACKEND_RELEASE_ERROR:
+            print("W03: The admin service does not report required implementation release " + str(EXPECTED_IMPLEMENTATION_RELEASE) + ".")
+            print("In the admin service PowerShell window, press Ctrl+C and wait for its prompt. Restart Run-WindowsAlliance.ps1 with the same -RuntimeRoot, then rerun Start-WindowsAllianceStack.ps1.")
+            print("Keep the database and other service windows open. No process was stopped or restarted automatically.")
         print("Existing and newly started services were left running. Check the named step/log before retrying; no process was killed.")
     print("Workflow report: " + str(path))
     return 0 if report["status"] == "passed" else 1
