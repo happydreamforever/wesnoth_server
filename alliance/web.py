@@ -7,6 +7,7 @@ game integration must authenticate its transport before forwarding credentials.
 from datetime import timedelta
 from functools import wraps
 import hmac
+import re
 
 from flask import Flask, abort, flash, g, jsonify, redirect, render_template, request, session, url_for
 from flask_wtf.csrf import CSRFError, CSRFProtect
@@ -308,6 +309,21 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
         return render_template("account_password.html", account=account,
             revision=revision, reason=reason)
 
+    @app.route("/accounts/<account_id>/experience", methods=["GET", "POST"])
+    @admin_required
+    def account_experience(account_id):
+        account = domain.get_account(account_id)
+        if request.method == "POST":
+            revision = account_form("delta", "reason")
+            delta = account_form_text("delta", 6)
+            if not re.fullmatch(r'-?[0-9]{1,4}', delta):
+                abort(400)
+            domain.admin_correct_experience(g.admin["_id"], account_id, int(delta),
+                account_form_text("reason", 500), revision)
+            flash("Experience correction saved with an audit record. Leader type and team membership are unchanged.")
+            return redirect(url_for("account_detail", account_id=account_id))
+        return render_template("account_experience.html", account=account)
+
     @app.post("/accounts/<account_id>/status")
     @admin_required
     def account_status(account_id):
@@ -331,7 +347,25 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     @app.get("/areas")
     @admin_required
     def areas():
-        return render_template("areas.html", records=domain.list_areas())
+        return render_template("areas.html", records=list(db.areas.find({}).sort("name_key", 1).limit(500)))
+
+    @app.route("/areas/<area_id>/edit", methods=["GET", "POST"])
+    @admin_required
+    def area_edit(area_id):
+        area = db.areas.find_one({"_id": area_id})
+        if area is None:
+            abort(404)
+        if request.method == "POST":
+            revision = account_form("name", "enabled", "approved_maps", "reason")
+            enabled = form_text("enabled", 5)
+            if enabled not in ("true", "false"):
+                abort(400)
+            maps = form_text("approved_maps", 100).split(",")
+            domain.admin_edit_area(g.admin["_id"], area_id, form_text("name", 64), enabled == "true",
+                maps, form_text("reason", 500), revision)
+            flash("Area settings saved. Existing draft plans are checked against the updated area rules.")
+            return redirect(url_for("areas"))
+        return render_template("area_edit.html", area=area)
 
     @app.post("/areas")
     @admin_required
@@ -348,7 +382,19 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     @app.get("/runs/<run_id>")
     @admin_required
     def run_detail(run_id):
-        return render_template("run.html", run=domain.get_run(run_id))
+        run = domain.get_run(run_id)
+        return render_template("run.html", run=run,
+            review=domain._shared_review(run) if run.get("shared_room") else None)
+
+    @app.post("/runs/<run_id>/resolve")
+    @admin_required
+    def resolve_shared_result(run_id):
+        revision = account_form("result", "reason")
+        result = form_text("result", 36)
+        domain.admin_resolve_shared_result(g.admin["_id"], run_id,
+            None if result == "draw" else result, result == "draw", form_text("reason", 500), revision)
+        flash("Shared battle resolved with fixed rewards and an audit record. It cannot award twice.")
+        return redirect(url_for("run_detail", run_id=run_id))
 
     @app.post("/runs/<run_id>/cancel")
     @admin_required
@@ -395,6 +441,71 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     @internal_route("/me", methods=("GET",))
     def player_me():
         return jsonify(account=domain.get_account(g.player["_id"]))
+
+    def progression_payload(*allowed):
+        data = payload(*allowed)
+        if set(data) != set(allowed) or request.args:
+            abort(400)
+        return data
+
+    @internal_route("/progression/catalog")
+    def progression_catalog():
+        progression_payload()
+        return jsonify(domain.progression_catalog(g.player["_id"]))
+
+    @internal_route("/progression/start")
+    def progression_start():
+        data = progression_payload("mission_id")
+        return jsonify(domain.progression_start(g.player["_id"], text_field(data, "mission_id", maximum=64)))
+
+    @internal_route("/progression/status")
+    def progression_status():
+        data = progression_payload("run_id")
+        return jsonify(domain.progression_status(g.player["_id"], text_field(data, "run_id", maximum=36)))
+
+    @internal_route("/progression/history")
+    def progression_history():
+        progression_payload()
+        return jsonify(domain.progression_history(g.player["_id"]))
+
+    @internal_route("/progression/advance")
+    def progression_advance():
+        data = progression_payload("unit_type")
+        return jsonify(domain.progression_advance(g.player["_id"], text_field(data, "unit_type", maximum=100)))
+
+    @internal_route("/progression/cancel")
+    def progression_cancel():
+        data = progression_payload("run_id")
+        return jsonify(domain.progression_cancel(g.player["_id"], text_field(data, "run_id", maximum=36)))
+
+    @internal_route("/progression/finish")
+    def progression_finish():
+        keys = ("run_id", "mission_id", "mission_version", "nonce", "outcome", "replay_sha256", "format")
+        data = progression_payload(*keys)
+        return jsonify(domain.progression_finish(g.player["_id"], **{
+            key: text_field(data, key, maximum=100) for key in keys}))
+
+    @internal_route("/coordination/orders")
+    def team_orders():
+        data = progression_payload("team_id")
+        return jsonify(domain.team_orders(g.player["_id"], text_field(data, "team_id", maximum=36)))
+
+    @internal_route("/coordination/post")
+    def post_team_order():
+        data = progression_payload("team_id", "text")
+        return jsonify(domain.post_team_order(g.player["_id"], text_field(data, "team_id", maximum=36),
+            text_field(data, "text", maximum=500)))
+
+    @internal_route("/shared/review")
+    def shared_result_review():
+        data = progression_payload("run_id")
+        return jsonify(domain.shared_result_review(g.player["_id"], text_field(data, "run_id", maximum=36)))
+
+    @internal_route("/shared/confirm")
+    def shared_confirm_result():
+        data = progression_payload("run_id", "candidate_digest")
+        return jsonify(domain.shared_confirm_result(g.player["_id"], text_field(data, "run_id", maximum=36),
+            text_field(data, "candidate_digest", maximum=64)))
 
     def directory_payload(*keys):
         # The native directory is a separate bounded contract. Preserve the

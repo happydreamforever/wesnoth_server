@@ -7,9 +7,12 @@ Every mutation runs in a replica-set transaction; clients never submit XP/stats.
 from __future__ import annotations
 
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
+import hmac
+import json
 import re
+import secrets
 from uuid import uuid4
 
 from pymongo import ReadPreference
@@ -17,7 +20,8 @@ from pymongo.errors import DuplicateKeyError
 from pymongo.read_concern import ReadConcern
 from pymongo.write_concern import WriteConcern
 
-from .rules import (STARTERS, MAPS, MISSIONS, RULESET_VERSION, TEAM_CAPACITY, MAX_JOIN_REQUESTS,
+from .rules import (STARTERS, MAPS, MISSIONS, MISSION_VERSION, MISSION_NAMES, UNIT_TYPES,
+                    RULESET_VERSION, TEAM_CAPACITY, MAX_JOIN_REQUESTS,
                     LEADER_REWARDS, TEAM_REWARDS, new_leader, award_experience,
                     advance_leader, team_level, rating_delta)
 
@@ -122,6 +126,11 @@ class AllianceService:
         area = self.db.areas.find_one({'_id': area_id, 'enabled': True}, session=session)
         if area is None:
             raise DomainError('not_found', 'Enabled area not found.')
+        if session is not None:
+            # Serialize game/team mutations against disabling an area or
+            # changing its approved maps in an administrator transaction.
+            self.db.areas.update_one({'_id': area_id}, {'$inc': {'revision': 1}}, session=session)
+            area['revision'] = area.get('revision', 0) + 1
         return area
 
     def _run(self, run_id, session=None):
@@ -402,8 +411,12 @@ class AllianceService:
         if any(accounts[player['account_id']]['leader'] != player.get('leader') for player in run['participants']):
             return 'leader_changed'
         allowed_run = run['_id'] if run['state'] == 'running' else None
+        # Captains outside the fixed lineup approve and review the battle but
+        # do not occupy a gameplay seat. Their separate campaign must not block
+        # an already running team's authenticated players from reconnecting.
+        busy_ids = {player['account_id'] for player in run['participants']} if run['state'] == 'running' else ids
         if any(item.get('active_run_id') not in (None, allowed_run) for item in teams) or any(
-                accounts[key].get('active_run_id') not in (None, allowed_run) for key in ids):
+                accounts[key].get('active_run_id') not in (None, allowed_run) for key in busy_ids):
             return 'busy'
         return 'valid'
 
@@ -494,6 +507,7 @@ class AllianceService:
             self.db.teams.update_one({'_id': team['_id']}, {'$inc': {'revision': 1}}, session=session)
         for account_id in accounts:
             self._player(account_id, session)
+        return teams
 
     def directory_approve_battle(self, actor_id, battle_id):
         _directory_id(battle_id, uuid=True)
@@ -765,7 +779,7 @@ class AllianceService:
                                                         '$inc': {'revision': 1}}, session=session)
         return account
 
-    def start_campaign(self, actor_id, mission_id):
+    def start_campaign(self, actor_id, mission_id, *, native=False):
         if not isinstance(mission_id, str) or mission_id not in MISSIONS:
             raise DomainError('invalid_mission', 'This campaign mission is not approved.')
         def write(session):
@@ -779,8 +793,115 @@ class AllianceService:
                 'ruleset_version': RULESET_VERSION, 'mission_id': mission_id,
                 'participants': [{'account_id': actor_id, 'leader': account['leader']}],
                 'created_at': _now(), 'started_at': _now()}
+            if native:
+                run['native_campaign'] = {'mission_version': MISSION_VERSION,
+                    'nonce': secrets.token_hex(32), 'username': account['username']}
             self.db.game_runs.insert_one(run, session=session)
             return run
+        return self._tx(write)
+
+    @staticmethod
+    def _progression_profile(account):
+        leader = account['leader']
+        return {'id': account['_id'], 'username': account['username'],
+                **{key: deepcopy(leader[key]) for key in ('starter_id', 'unit_type', 'level',
+                    'experience', 'total_experience', 'advancement_choices')}}
+
+    @staticmethod
+    def _time(value):
+        # MongoDB stores milliseconds; initial and later projections must match.
+        return value.isoformat(timespec='milliseconds') if value is not None else ''
+
+    def _campaign_record(self, actor_id, run, *, nonce=False, session=None):
+        if run['kind'] != 'campaign' or len(run['participants']) != 1 or run['participants'][0]['account_id'] != actor_id:
+            raise DomainError('forbidden', 'Only the owner can access this campaign run.')
+        participant = run['participants'][0]
+        native = run.get('native_campaign', {})
+        receipt = self.db.settlements.find_one({'_id': run['_id']}, session=session)
+        award = receipt['rewards']['players'][0]['experience'] if receipt else 0
+        return {'id': run['_id'], 'account_id': actor_id, 'username': native.get('username', ''),
+                'mission_id': run['mission_id'], 'mission_name': MISSION_NAMES.get(run['mission_id'], ''),
+                'mission_version': native.get('mission_version', ''), 'ruleset_version': run['ruleset_version'],
+                'state': run['state'], 'unit_type': participant['leader']['unit_type'],
+                'leader_level': participant['leader']['level'],
+                'nonce': native.get('nonce', '') if nonce and run['state'] == 'running' else '',
+                'created_at': self._time(run['created_at']), 'finished_at': self._time(run.get('finished_at')),
+                'outcome': run.get('result', {}).get('outcome', ''), 'experience_awarded': award}
+
+    def progression_catalog(self, actor_id):
+        actor = self._directory_player(actor_id)
+        missions = [{'id': mission, 'name': MISSION_NAMES[mission], 'version': MISSION_VERSION,
+                     'unlocked': all(previous in actor['campaign_completed'] for previous in MISSIONS[:index]),
+                     'completed': mission in actor['campaign_completed'], 'victory_experience': 20}
+                    for index, mission in enumerate(MISSIONS)]
+        active = None
+        if actor['active_run_id']:
+            run = self._run(actor['active_run_id'])
+            if run['kind'] == 'campaign':
+                active = self._campaign_record(actor_id, run, nonce=True)
+        return {'profile': self._progression_profile(actor), 'missions': missions, 'active_run': active}
+
+    def progression_start(self, actor_id, mission_id):
+        run = self.start_campaign(actor_id, mission_id, native=True)
+        return {'run': self._campaign_record(actor_id, run, nonce=True)}
+
+    def progression_status(self, actor_id, run_id):
+        self._directory_player(actor_id)
+        _directory_id(run_id, uuid=True)
+        return {'run': self._campaign_record(actor_id, self._run(run_id), nonce=True)}
+
+    def progression_history(self, actor_id):
+        self._directory_player(actor_id)
+        rows = list(self.db.game_runs.find({'kind': 'campaign', 'participants.account_id': actor_id})
+                    .sort([('created_at', -1), ('_id', 1)]).limit(21))
+        return {'runs': [self._campaign_record(actor_id, row) for row in rows[:20]], 'has_more': len(rows) > 20}
+
+    def progression_advance(self, actor_id, unit_type):
+        return {'profile': self._progression_profile(self.choose_advancement(actor_id, unit_type))}
+
+    def progression_cancel(self, actor_id, run_id):
+        _directory_id(run_id, uuid=True)
+        def write(session):
+            self._player(actor_id, session)
+            run = self._run(run_id, session)
+            self._campaign_record(actor_id, run, session=session)
+            if not run.get('native_campaign'):
+                raise DomainError('invalid_state', 'This run was not created by the native campaign adapter.')
+            run = self._cancel(run_id, 'Player cancelled the native campaign', session)
+            return {'run': self._campaign_record(actor_id, run, session=session)}
+        return self._tx(write)
+
+    def progression_finish(self, actor_id, run_id, mission_id, mission_version, nonce, outcome, replay_sha256, format):
+        """Owned native result under the trusted-LAN model, not combat simulation.
+
+        A practice save cannot use this route: it has no native registered run
+        and nonce. The authenticated owner reports only a fixed win/loss; the
+        service chooses the reward. The replay hash identifies client evidence,
+        not proof that a recording was uploaded or independently verified.
+        """
+        _directory_id(run_id, uuid=True)
+        if (format != 'alliance-native-campaign-result-v1' or mission_version != MISSION_VERSION or
+                mission_id not in MISSIONS or outcome not in ('win', 'loss') or
+                not isinstance(nonce, str) or not re.fullmatch(r'[0-9a-f]{64}', nonce) or
+                not isinstance(replay_sha256, str) or not re.fullmatch(r'[0-9a-f]{64}', replay_sha256)):
+            raise DomainError('invalid_result', 'The native campaign result is invalid.')
+        def write(session):
+            self._player(actor_id, session)
+            run = self._run(run_id, session)
+            self._campaign_record(actor_id, run, session=session)
+            native = run.get('native_campaign', {})
+            if (run['mission_id'] != mission_id or native.get('mission_version') != mission_version or
+                    not hmac.compare_digest(native.get('nonce', ''), nonce)):
+                raise DomainError('invalid_result', 'The native campaign binding does not match.')
+            evidence = {'format': format, 'replay_sha256': replay_sha256, 'mission_version': mission_version,
+                        'source': 'trusted_native_client'}
+            if 'native_result' in run and run['native_result'] != evidence:
+                raise DomainError('result_conflict', 'This run already has different result evidence.')
+            receipt = self._finish_campaign(run_id, outcome, session)
+            self.db.game_runs.update_one({'_id': run_id}, {'$set': {'native_result': evidence}}, session=session)
+            return {'run': self._campaign_record(actor_id, self._run(run_id, session), session=session),
+                    'profile': self._progression_profile(self._account(actor_id, session)),
+                    'experience_awarded': receipt['rewards']['players'][0]['experience']}
         return self._tx(write)
 
     def create_battle(self, actor_id, opponent_team_id, map_id, lineups, *, expected_team_id=None, native_plan=False):
@@ -902,31 +1023,293 @@ class AllianceService:
         return self._tx(write)
 
     def start_battle(self, actor_id, run_id):
+        return self._tx(lambda session: self._start_battle(actor_id, run_id, session))
+
+    def _start_battle(self, actor_id, run_id, session, *, shared_authorized=False):
+        run = self._run(run_id, session)
+        self._draft(run)
+        if run.get('shared_room') and not shared_authorized:
+            raise DomainError('room_required', 'A prepared shared room must start through its all-loaded barrier.')
+        teams = [self._team(t, session) for t in run['team_ids']]
+        if actor_id not in [t['captain_id'] for t in teams]:
+            raise DomainError('forbidden', 'A participating captain must start the battle.')
+        self._player(actor_id, session)
+        self._validate_battle_teams(teams, run['map_id'], run['lineups'], session)
+        self._check_preview(run, session)
+        if teams[0]['area_id'] != run['area_id']:
+            raise DomainError('area_changed', 'The team area changed; create a new proposal.')
+        if any(run['approvals'].get(t['_id']) != t['captain_id'] for t in teams):
+            raise DomainError('approval_required', 'Both current captains must approve the map and lineups.')
+        if set(run['ready']) != {p['account_id'] for p in run['participants']}:
+            raise DomainError('not_ready', 'Every selected player must be ready.')
+        participants = self._participants(teams, run['map_id'], run['lineups'])
+        for participant in participants:
+            account = self._reserve_account(participant['account_id'], run_id, session)
+            participant['leader'] = account['leader']
+        for team in teams:
+            self.db.teams.update_one({'_id': team['_id']}, {'$set': {'active_run_id': run_id},
+                                                          '$inc': {'revision': 1}}, session=session)
+        self.db.game_runs.update_one({'_id': run_id}, {'$set': {
+            'state': 'running', 'participants': participants, 'started_at': _now()}}, session=session)
+        return self._run(run_id, session)
+
+    @staticmethod
+    def _shared_binding(run, generation):
+        _directory_id(generation, uuid=True)
+        room = run.get('shared_room')
+        if run['kind'] != 'alliance' or not room or room.get('generation') != generation:
+            raise DomainError('room_conflict', 'The shared room generation does not match.')
+        return room
+
+    def _shared_record(self, actor_id, run, session=None):
+        selected = next((p for p in run['participants'] if p['account_id'] == actor_id), None)
+        if selected is None:
+            raise DomainError('forbidden', 'Only a selected player may enter this shared battle.')
+        room = run.get('shared_room', {})
+        return {'battle': self._planning_record(run, session), 'generation': room.get('generation', ''),
+                'room_state': room.get('state', ''), 'assigned_side': selected['side'],
+                'scenario_sha256': room.get('scenario_sha256', ''),
+                'expires_at': self._time(room.get('expires_at'))}
+
+    def shared_prepare(self, actor_id, run_id, generation):
+        """Trusted daemon after socket authentication; preparation reserves nobody."""
+        _directory_id(run_id, uuid=True)
+        _directory_id(generation, uuid=True)
         def write(session):
+            self._player(actor_id, session)
             run = self._run(run_id, session)
             self._draft(run)
-            teams = [self._team(t, session) for t in run['team_ids']]
-            if actor_id not in [t['captain_id'] for t in teams]:
-                raise DomainError('forbidden', 'A participating captain must start the battle.')
-            self._player(actor_id, session)
-            self._validate_battle_teams(teams, run['map_id'], run['lineups'], session)
-            self._check_preview(run, session)
-            if teams[0]['area_id'] != run['area_id']:
-                raise DomainError('area_changed', 'The team area changed; create a new proposal.')
-            if any(run['approvals'].get(t['_id']) != t['captain_id'] for t in teams):
-                raise DomainError('approval_required', 'Both current captains must approve the map and lineups.')
+            self._shared_record(actor_id, run, session)
+            teams = self._planning_validate_mutation(run, session)
+            if any(run['approvals'].get(team['_id']) != team['captain_id'] for team in teams):
+                raise DomainError('approval_required', 'Both current captains must approve the shared battle.')
             if set(run['ready']) != {p['account_id'] for p in run['participants']}:
-                raise DomainError('not_ready', 'Every selected player must be ready.')
-            participants = self._participants(teams, run['map_id'], run['lineups'])
-            for participant in participants:
-                account = self._reserve_account(participant['account_id'], run_id, session)
-                participant['leader'] = account['leader']
-            for team in teams:
-                self.db.teams.update_one({'_id': team['_id']}, {'$set': {'active_run_id': run_id},
-                                                              '$inc': {'revision': 1}}, session=session)
-            self.db.game_runs.update_one({'_id': run_id}, {'$set': {
-                'state': 'running', 'participants': participants, 'started_at': _now()}}, session=session)
-            return self._run(run_id, session)
+                raise DomainError('not_ready', 'Every selected player must be ready for a shared battle.')
+            room = run.get('shared_room')
+            if room and room['state'] == 'preparing' and room['expires_at'] > _now():
+                if room['generation'] != generation:
+                    raise DomainError('room_conflict', 'Another daemon owns this prepared room.')
+            else:
+                if room and room['generation'] == generation:
+                    raise DomainError('room_expired', 'Use a fresh room generation after an expired or closed preparation.')
+                room = {'generation': generation, 'state': 'preparing',
+                        'expires_at': _now() + timedelta(minutes=5), 'scenario_sha256': '',
+                        'result_reports': {}, 'result_approvals': {}, 'revision': 0}
+                self.db.game_runs.update_one({'_id': run_id}, {'$set': {'shared_room': room}}, session=session)
+            return self._shared_record(actor_id, self._run(run_id, session), session)
+        return self._tx(write)
+
+    def shared_admission(self, actor_id, run_id, generation):
+        """Validate initial entry or same-seat reconnect; never choose a new seat."""
+        _directory_id(run_id, uuid=True)
+        def write(session):
+            self._player(actor_id, session)
+            run = self._run(run_id, session)
+            room = self._shared_binding(run, generation)
+            if run['state'] not in ('draft', 'running') or room['state'] not in ('preparing', 'running'):
+                raise DomainError('invalid_state', 'This shared battle is not accepting players.')
+            if run['state'] == 'draft' and room['expires_at'] <= _now():
+                raise DomainError('room_expired', 'The prepared room expired before the battle started.')
+            teams, accounts, area = self._planning_context(run, session)
+            if self._planning_validity(run, teams, accounts, area) != 'valid':
+                raise DomainError('stale_proposal', 'The saved shared-battle lineup is no longer valid.')
+            if run['state'] == 'running' and (any(team['active_run_id'] != run_id for team in teams) or any(
+                    accounts[player['account_id']]['active_run_id'] != run_id for player in run['participants'])):
+                raise DomainError('reservation_conflict', 'The running battle reservations no longer match.')
+            return self._shared_record(actor_id, run, session)
+        return self._tx(write)
+
+    def shared_start(self, run_id, generation, loaded_account_ids, scenario_sha256):
+        """Trusted daemon's all-loaded barrier, fenced and atomic with reservations."""
+        _directory_id(run_id, uuid=True)
+        if (not isinstance(loaded_account_ids, list) or not 4 <= len(loaded_account_ids) <= 8 or
+                not all(isinstance(p, str) for p in loaded_account_ids)
+                or len(loaded_account_ids) != len(set(loaded_account_ids)) or
+                not isinstance(scenario_sha256, str) or not re.fullmatch(r'[0-9a-f]{64}', scenario_sha256)):
+            raise DomainError('invalid_input', 'The loaded-seat proof is invalid.')
+        def write(session):
+            run = self._run(run_id, session)
+            room = self._shared_binding(run, generation)
+            if set(loaded_account_ids) != {p['account_id'] for p in run['participants']}:
+                raise DomainError('not_ready', 'All assigned seats must load the same scenario before start.')
+            if run['state'] == 'running':
+                if room['state'] != 'running' or room['scenario_sha256'] != scenario_sha256:
+                    raise DomainError('room_conflict', 'The running room has a different scenario.')
+                return {'run_id': run_id, 'state': 'running', 'generation': generation, 'scenario_sha256': scenario_sha256}
+            if room['state'] != 'preparing' or room['expires_at'] <= _now():
+                raise DomainError('room_expired', 'The prepared room expired before the battle started.')
+            captain = self._team(run['team_ids'][0], session)['captain_id']
+            self._start_battle(captain, run_id, session, shared_authorized=True)
+            self.db.game_runs.update_one({'_id': run_id}, {'$set': {'shared_room.state': 'running',
+                'shared_room.scenario_sha256': scenario_sha256, 'shared_room.captains': {team_id: self._team(team_id, session)['captain_id'] for team_id in run['team_ids']}}, '$inc': {'shared_room.revision': 1}}, session=session)
+            return {'run_id': run_id, 'state': 'running', 'generation': generation, 'scenario_sha256': scenario_sha256}
+        return self._tx(write)
+
+    def shared_cancel(self, run_id, generation, reason):
+        """Fenced daemon shutdown/abort; never expire or settle a running room."""
+        _directory_id(run_id, uuid=True)
+        reason = _reason(reason)
+        def write(session):
+            run = self._run(run_id, session)
+            self._shared_binding(run, generation)
+            if run['state'] == 'draft':
+                # No battle was started. Preserve the plan and consent for a
+                # later explicit room attempt, while fencing this room closed.
+                self.db.game_runs.update_one({'_id': run_id}, {'$set': {'shared_room.state': 'cancelled',
+                    'shared_room.cancel_reason': reason}, '$inc': {'shared_room.revision': 1}}, session=session)
+                return {'run_id': run_id, 'state': 'draft', 'room_state': 'cancelled'}
+            run = self._cancel(run_id, reason, session)
+            self.db.game_runs.update_one({'_id': run_id}, {'$set': {'shared_room.state': 'cancelled'},
+                                                          '$inc': {'shared_room.revision': 1}}, session=session)
+            return {'run_id': run_id, 'state': run['state'], 'room_state': 'cancelled'}
+        return self._tx(write)
+
+    @staticmethod
+    def _shared_candidate(run):
+        room = run['shared_room']
+        reports = room.get('result_reports', {})
+        expected = {p['account_id'] for p in run['participants']}
+        if set(reports) != expected:
+            return 'waiting_for_players', '', None, False
+        outcomes = {(value['winner_team_id'], value['draw']) for value in reports.values()}
+        if len(outcomes) != 1:
+            return 'disputed', '', None, False
+        winner, draw = next(iter(outcomes))
+        digest = hashlib.sha256(json.dumps({'run_id': run['_id'], 'generation': room['generation'],
+            'scenario_sha256': room['scenario_sha256'], 'reports': reports},
+            sort_keys=True, separators=(',', ':')).encode('utf-8')).hexdigest()
+        return 'awaiting_captains', digest, winner, draw
+
+    def _shared_review(self, run, session=None):
+        room = run['shared_room']
+        review, digest, winner, draw = self._shared_candidate(run)
+        approvals = room.get('result_approvals', {})
+        captains = room.get('captains', {})
+        count = sum(1 for team, captain in captains.items()
+                    if approvals.get(team) == {'captain_id': captain, 'digest': digest} and digest)
+        if review == 'awaiting_captains' and count == 2:
+            review = 'agreed'
+        if run['state'] == 'completed':
+            review = 'settled'
+            winner, draw = run['result']['winner_team_id'], run['result']['draw']
+        elif run['state'] == 'cancelled':
+            review = 'cancelled'
+        return {'run_id': run['_id'], 'state': run['state'], 'review_state': review,
+                'candidate_digest': digest, 'winner_team_id': winner or '', 'draw': draw,
+                'reports_received': len(room.get('result_reports', {})),
+                'required_reports': len(run['participants']), 'captains_approved': count,
+                'revision': room.get('revision', 0)}
+
+    def shared_result_review(self, actor_id, run_id):
+        self._directory_player(actor_id)
+        run = self._run(_directory_id(run_id, uuid=True))
+        if not run.get('shared_room'):
+            raise DomainError('not_found', 'This plan has no shared result to review.')
+        permitted = {p['account_id'] for p in run['participants']} | set(run['shared_room'].get('captains', {}).values())
+        if actor_id not in permitted:
+            raise DomainError('forbidden', 'Only battle players and captains can review its result.')
+        return self._shared_review(run)
+
+    def shared_report_result(self, actor_id, run_id, generation, winner_team_id, draw, replay_sha256):
+        """Trusted daemon forwards an authenticated actual game END report.
+
+        Reports are immutable and do not award XP. Every selected player must
+        report the same result, followed by both current captains' agreement.
+        A replay digest identifies evidence; it does not claim simulation proof.
+        """
+        _directory_id(run_id, uuid=True)
+        if (type(draw) is not bool or (draw and winner_team_id is not None) or
+                (not draw and not isinstance(winner_team_id, str)) or
+                not isinstance(replay_sha256, str) or not re.fullmatch(r'[0-9a-f]{64}', replay_sha256)):
+            raise DomainError('invalid_result', 'The shared result report is invalid.')
+        report = {'winner_team_id': winner_team_id, 'draw': draw, 'replay_sha256': replay_sha256}
+        def write(session):
+            self._player(actor_id, session)
+            run = self._run(run_id, session)
+            room = self._shared_binding(run, generation)
+            if actor_id not in {p['account_id'] for p in run['participants']}:
+                raise DomainError('forbidden', 'Only selected players may report this game result.')
+            if not draw and winner_team_id not in run['team_ids']:
+                raise DomainError('invalid_result', 'The winner must be a participating team.')
+            previous = room.get('result_reports', {}).get(actor_id)
+            if previous is not None:
+                if previous != report:
+                    raise DomainError('result_conflict', 'This player already submitted different result evidence.')
+                return self._shared_review(run, session)
+            if run['state'] != 'running' or room['state'] != 'running':
+                raise DomainError('invalid_state', 'Only a running shared game accepts result reports.')
+            self.db.game_runs.update_one({'_id': run_id}, {'$set': {'shared_room.result_reports.' + actor_id: report},
+                                                          '$inc': {'shared_room.revision': 1}}, session=session)
+            return self._shared_review(self._run(run_id, session), session)
+        return self._tx(write)
+
+    def shared_confirm_result(self, actor_id, run_id, candidate_digest):
+        _directory_id(run_id, uuid=True)
+        if not isinstance(candidate_digest, str) or not re.fullmatch(r'[0-9a-f]{64}', candidate_digest):
+            raise DomainError('invalid_result', 'A current result digest is required.')
+        def write(session):
+            run = self._run(run_id, session)
+            if not run.get('shared_room') or run['state'] != 'running':
+                raise DomainError('invalid_state', 'Only a running shared game can receive result agreement.')
+            teams = [self._team(team_id, session) for team_id in run['team_ids']]
+            team = next((t for t in teams if t['captain_id'] == actor_id), None)
+            if team is None:
+                raise DomainError('forbidden', 'Only a participating current captain may agree to a result.')
+            self._captain(actor_id, team, session)
+            state, digest, _, _ = self._shared_candidate(run)
+            if state != 'awaiting_captains' or digest != candidate_digest:
+                raise DomainError('result_conflict', 'The result is incomplete, disputed or changed. Review it again.')
+            self.db.game_runs.update_one({'_id': run_id}, {'$set': {'shared_room.result_approvals.' + team['_id']:
+                {'captain_id': actor_id, 'digest': digest}}, '$inc': {'shared_room.revision': 1}}, session=session)
+            return self._shared_review(self._run(run_id, session), session)
+        return self._tx(write)
+
+    def shared_finish(self, run_id, generation):
+        """Only the fenced game daemon can settle agreed actual END reports."""
+        _directory_id(run_id, uuid=True)
+        def write(session):
+            run = self._run(run_id, session)
+            self._shared_binding(run, generation)
+            if run['state'] == 'completed':
+                return self.db.settlements.find_one({'_id': run_id}, session=session)
+            review = self._shared_review(run, session)
+            if review['review_state'] != 'agreed':
+                raise DomainError('result_agreement_required', 'All game reports and both captain agreements are required.')
+            for team_id, captain in run['shared_room']['captains'].items():
+                if self._team(team_id, session)['captain_id'] != captain:
+                    raise DomainError('result_conflict', 'A team captain changed during result review.')
+            receipt = self._finish_battle(run_id, review['winner_team_id'] or None, review['draw'], session,
+                                          shared_authorized=True)
+            self.db.game_runs.update_one({'_id': run_id}, {'$set': {'shared_room.state': 'completed'}}, session=session)
+            return receipt
+        return self._tx(write)
+
+    def admin_resolve_shared_result(self, actor_id, run_id, winner_team_id, draw, reason, expected_revision):
+        reason = _reason(reason)
+        self._expected_account_revision(expected_revision)
+        if type(draw) is not bool or (draw and winner_team_id is not None) or (not draw and not isinstance(winner_team_id, str)):
+            raise DomainError('invalid_result', 'Choose a participating winner or a draw.')
+        def write(session):
+            self._admin(actor_id, session)
+            run = self._run(_directory_id(run_id, uuid=True), session)
+            room = run.get('shared_room')
+            if not room or run['state'] != 'running' or room['state'] != 'running':
+                raise DomainError('invalid_state', 'Only an unfinished shared battle can be reviewed.')
+            if room.get('revision', 0) != expected_revision:
+                raise DomainError('result_conflict', 'The result changed. Reload it before resolving.')
+            if set(room.get('result_reports', {})) != {p['account_id'] for p in run['participants']}:
+                raise DomainError('result_agreement_required', 'All player END reports must exist before operator resolution.')
+            if not draw and winner_team_id not in run['team_ids']:
+                raise DomainError('invalid_result', 'The winner must be a participating team.')
+            before = self._shared_review(run, session)
+            receipt = self._finish_battle(run_id, winner_team_id, draw, session, shared_authorized=True)
+            resolution = {'actor_id': actor_id, 'reason': reason, 'winner_team_id': winner_team_id,
+                          'draw': draw, 'created_at': _now()}
+            self.db.game_runs.update_one({'_id': run_id}, {'$set': {'shared_room.state': 'completed',
+                'shared_room.operator_resolution': resolution}}, session=session)
+            self._audit(actor_id, 'resolve_shared_result', run_id, reason, before,
+                        {'winner_team_id': winner_team_id, 'draw': draw}, session)
+            return receipt
         return self._tx(write)
 
     def _existing_settlement(self, run_id, result, session):
@@ -955,55 +1338,59 @@ class AllianceService:
         """Trusted bridge only. Defeat gives no XP; a completed replay may earn XP."""
         if outcome not in ('win', 'loss'):
             raise DomainError('invalid_result', 'Campaign outcome must be win or loss.')
+        return self._tx(lambda session: self._finish_campaign(run_id, outcome, session))
+
+    def _finish_campaign(self, run_id, outcome, session):
         result = {'kind': 'campaign', 'outcome': outcome}
-        def write(session):
-            previous = self._existing_settlement(run_id, result, session)
-            if previous is not None:
-                return previous
-            run = self._run(run_id, session)
-            self._require_ruleset(run)
-            if run['kind'] != 'campaign' or run['state'] != 'running':
-                raise DomainError('invalid_state', 'Only a running campaign can finish.')
-            reward = self._reward_player(run['participants'][0], run, 20 if outcome == 'win' else 0,
-                                         session, mission_complete=outcome == 'win')
-            return self._record_settlement(run, result, {'players': [reward], 'teams': []}, session)
-        return self._tx(write)
+        previous = self._existing_settlement(run_id, result, session)
+        if previous is not None:
+            return previous
+        run = self._run(run_id, session)
+        self._require_ruleset(run)
+        if run['kind'] != 'campaign' or run['state'] != 'running':
+            raise DomainError('invalid_state', 'Only a running campaign can finish.')
+        reward = self._reward_player(run['participants'][0], run, 20 if outcome == 'win' else 0,
+                                     session, mission_complete=outcome == 'win')
+        return self._record_settlement(run, result, {'players': [reward], 'teams': []}, session)
 
     def finish_battle(self, run_id, winner_team_id=None, draw=False):
         """Trusted bridge only; it must establish victory/surrender or mutual draw."""
         if type(draw) is not bool or (draw and winner_team_id is not None) or (not draw and not isinstance(winner_team_id, str)):
             raise DomainError('invalid_result', 'Provide one winning team or an agreed draw.')
+        return self._tx(lambda session: self._finish_battle(run_id, winner_team_id, draw, session))
+
+    def _finish_battle(self, run_id, winner_team_id, draw, session, *, shared_authorized=False):
         result = {'kind': 'alliance', 'winner_team_id': winner_team_id, 'draw': draw}
-        def write(session):
-            previous = self._existing_settlement(run_id, result, session)
-            if previous is not None:
-                return previous
-            run = self._run(run_id, session)
-            self._require_ruleset(run)
-            if run['kind'] != 'alliance' or run['state'] != 'running':
-                raise DomainError('invalid_state', 'Only a running alliance battle can finish.')
-            if not draw and winner_team_id not in run['team_ids']:
-                raise DomainError('invalid_result', 'The winner must be a participating team.')
-            teams = [self._team(t, session) for t in run['team_ids']]
-            if any(t['active_run_id'] != run_id for t in teams):
-                raise DomainError('reservation_conflict', 'A team reservation does not match the run.')
-            outcomes = {t['_id']: 'draw' if draw else ('win' if t['_id'] == winner_team_id else 'loss') for t in teams}
-            player_rewards = [self._reward_player(p, run, LEADER_REWARDS[outcomes[p['team_id']]], session)
-                              for p in run['participants']]
-            delta = rating_delta(teams[0]['rating'], teams[1]['rating'],
-                                 0.5 if draw else (1 if teams[0]['_id'] == winner_team_id else 0))
-            team_rewards = []
-            for team, change in zip(teams, (delta, -delta)):
-                amount = TEAM_REWARDS[outcomes[team['_id']]]
-                xp = team['experience'] + amount
-                rating = team['rating'] + change
-                self.db.teams.update_one({'_id': team['_id']}, {'$set': {'experience': xp,
-                    'level': team_level(xp), 'rating': rating, 'active_run_id': None},
-                    '$inc': {'revision': 1}}, session=session)
-                team_rewards.append({'team_id': team['_id'], 'experience': amount, 'total_experience': xp,
-                    'level': team_level(xp), 'rating': rating, 'rating_delta': change, 'revision': team['revision'] + 1})
-            return self._record_settlement(run, result, {'players': player_rewards, 'teams': team_rewards}, session)
-        return self._tx(write)
+        previous = self._existing_settlement(run_id, result, session)
+        if previous is not None:
+            return previous
+        run = self._run(run_id, session)
+        self._require_ruleset(run)
+        if run['kind'] != 'alliance' or run['state'] != 'running':
+            raise DomainError('invalid_state', 'Only a running alliance battle can finish.')
+        if run.get('shared_room') and not shared_authorized:
+            raise DomainError('result_agreement_required', 'Shared games require bound player reports and captain review.')
+        if not draw and winner_team_id not in run['team_ids']:
+            raise DomainError('invalid_result', 'The winner must be a participating team.')
+        teams = [self._team(t, session) for t in run['team_ids']]
+        if any(t['active_run_id'] != run_id for t in teams):
+            raise DomainError('reservation_conflict', 'A team reservation does not match the run.')
+        outcomes = {t['_id']: 'draw' if draw else ('win' if t['_id'] == winner_team_id else 'loss') for t in teams}
+        player_rewards = [self._reward_player(p, run, LEADER_REWARDS[outcomes[p['team_id']]], session)
+                          for p in run['participants']]
+        delta = rating_delta(teams[0]['rating'], teams[1]['rating'],
+                             0.5 if draw else (1 if teams[0]['_id'] == winner_team_id else 0))
+        team_rewards = []
+        for team, change in zip(teams, (delta, -delta)):
+            amount = TEAM_REWARDS[outcomes[team['_id']]]
+            xp = team['experience'] + amount
+            rating = team['rating'] + change
+            self.db.teams.update_one({'_id': team['_id']}, {'$set': {'experience': xp,
+                'level': team_level(xp), 'rating': rating, 'active_run_id': None},
+                '$inc': {'revision': 1}}, session=session)
+            team_rewards.append({'team_id': team['_id'], 'experience': amount, 'total_experience': xp,
+                'level': team_level(xp), 'rating': rating, 'rating_delta': change, 'revision': team['revision'] + 1})
+        return self._record_settlement(run, result, {'players': player_rewards, 'teams': team_rewards}, session)
 
     def _record_settlement(self, run, result, rewards, session):
         receipt = {'_id': run['_id'], 'ruleset_version': run['ruleset_version'], 'result': result,
@@ -1044,11 +1431,105 @@ class AllianceService:
         def write(session):
             self._admin(actor_id, session)
             area = {'_id': _id(), 'name': name, 'name_key': key, 'enabled': True,
-                    'approved_maps': list(MAPS), 'created_at': _now()}
+                    'approved_maps': list(MAPS), 'created_at': _now(), 'revision': 0}
             self.db.areas.insert_one(area, session=session)
             self._audit(actor_id, 'create_area', area['_id'], 'Create an area', None,
                         {'name': name}, session)
             return area
+        return self._tx(write)
+
+    def admin_edit_area(self, actor_id, area_id, name, enabled, approved_maps, reason, expected_revision):
+        name, key = _name(name, 'Area name')
+        reason = _reason(reason)
+        self._expected_account_revision(expected_revision)
+        if (type(enabled) is not bool or not isinstance(approved_maps, list) or
+                not approved_maps or any(not isinstance(value, str) or value not in MAPS for value in approved_maps) or
+                len(approved_maps) != len(set(approved_maps))):
+            raise DomainError('invalid_input', 'Choose at least one distinct approved map and a valid enabled setting.')
+        def write(session):
+            self._admin(actor_id, session)
+            area = self.db.areas.find_one({'_id': _directory_id(area_id)}, session=session)
+            if area is None:
+                raise DomainError('not_found', 'Area not found.')
+            if area.get('revision', 0) != expected_revision:
+                raise DomainError('stale_area', 'This area changed. Reload it before saving.')
+            if self.db.teams.find_one({'area_id': area_id, 'active_run_id': {'$ne': None}}, {'_id': 1}, session=session):
+                raise DomainError('busy', 'Finish or cancel the area\'s active team battles first.')
+            before = {key: area[key] for key in ('name', 'enabled', 'approved_maps')}
+            after = {'name': name, 'enabled': enabled, 'approved_maps': list(approved_maps)}
+            self.db.areas.update_one({'_id': area_id}, {'$set': {**after, 'name_key': key},
+                '$inc': {'revision': 1}}, session=session)
+            self._audit(actor_id, 'edit_area', area_id, reason, before, after, session)
+            return self.db.areas.find_one({'_id': area_id}, session=session)
+        return self._tx(write)
+
+    def team_orders(self, actor_id, team_id):
+        self._directory_player(actor_id)
+        team = self._team(_directory_id(team_id, uuid=True))
+        if actor_id not in {member['account_id'] for member in team['members']}:
+            raise DomainError('forbidden', 'Only current team members may read captain orders.')
+        # Retain fifty locally, but keep a single wire response well below the
+        # bridge's 32 KiB JSON bound even with escaped non-ASCII text.
+        history = team.get('orders', [])
+        return {'team_id': team_id, 'team_name': team['name'], 'has_more': len(history) > 10,
+                'orders': [{**{key: entry[key] for key in ('id', 'author_id', 'author_name', 'text')},
+                            'created_at': self._time(entry['created_at'])}
+                           for entry in reversed(history[-10:])]}
+
+    def post_team_order(self, actor_id, team_id, text):
+        team_id = _directory_id(team_id, uuid=True)
+        text = _reason(text)
+        try:
+            valid_size = len(text.encode('utf-8')) <= 500
+        except UnicodeEncodeError:
+            valid_size = False
+        if not valid_size:
+            raise DomainError('invalid_input', 'An order must fit within 500 UTF-8 bytes.')
+        if any(ord(char) < 32 and char not in '\n\t' for char in text):
+            raise DomainError('invalid_input', 'The order contains unsupported control characters.')
+        def write(session):
+            team = self._team(team_id, session)
+            actor = self._captain(actor_id, team, session)
+            order = {'id': _id(), 'author_id': actor_id, 'author_name': actor['username'],
+                     'text': text, 'created_at': _now()}
+            self.db.teams.update_one({'_id': team_id}, {'$push': {'orders': {'$each': [order], '$slice': -50}},
+                                                       '$inc': {'revision': 1}}, session=session)
+            return {'order': {**{key: order[key] for key in ('id', 'author_id', 'author_name', 'text')},
+                              'created_at': self._time(order['created_at'])}}
+        return self._tx(write)
+
+    def admin_correct_experience(self, actor_id, account_id, delta, reason, expected_revision):
+        """Bounded audited correction; never edits unit type, team or combat stats."""
+        reason = _reason(reason)
+        self._expected_account_revision(expected_revision)
+        if type(delta) is not int or not -1000 <= delta <= 1000 or delta == 0:
+            raise DomainError('invalid_input', 'An experience correction must be a nonzero integer from -1000 to 1000.')
+        def write(session):
+            account = self._admin_account_revision(actor_id, account_id, expected_revision, session)
+            if account['role'] != 'player':
+                raise DomainError('forbidden', 'Only player leaders receive experience corrections.')
+            self._idle(account)
+            before = deepcopy(account['leader'])
+            leader = deepcopy(before)
+            total = leader['total_experience'] + delta
+            current = leader['experience'] + delta
+            _, threshold, advances = UNIT_TYPES[leader['unit_type']]
+            pending = [(STARTERS[leader['starter_id']]['unit_type'], 0)]
+            spent = None
+            while pending:
+                unit, cost = pending.pop()
+                if unit == leader['unit_type']:
+                    spent = cost
+                    break
+                pending.extend((child, cost + UNIT_TYPES[unit][1]) for child in UNIT_TYPES[unit][2])
+            if spent is None or total < spent or (advances and current < 0):
+                raise DomainError('invalid_correction', 'This correction would remove experience already spent on advancement.')
+            leader['total_experience'] = total
+            leader['experience'] = current if advances else 0
+            leader['advancement_choices'] = list(advances) if advances and current >= threshold else []
+            self.db.accounts.update_one({'_id': account_id}, {'$set': {'leader': leader}, '$inc': {'revision': 1}}, session=session)
+            self._audit(actor_id, 'correct_leader_experience', account_id, reason, before, leader, session)
+            return self._progression_profile(self._account(account_id, session, active=False))
         return self._tx(write)
 
     def admin_move_team(self, actor_id, team_id, area_id, reason):

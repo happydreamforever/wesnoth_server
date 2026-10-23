@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="eyebrow">Competition settings</p><h1>Edit {{ area.name }}</h1>
+<section class="panel"><p>Disabled areas are hidden from new team and battle selections. Existing teams and history remain saved. An active team battle must finish or be cancelled before these settings can change.</p>
+<form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="revision" value="{{ area.revision | default(0) }}">
+<label for="name">Area name</label><input id="name" name="name" value="{{ area.name }}" maxlength="40" required>
+<label for="enabled">Availability</label><select id="enabled" name="enabled"><option value="true"{% if area.enabled %} selected{% endif %}>Enabled</option><option value="false"{% if not area.enabled %} selected{% endif %}>Disabled</option></select>
+<label for="approved_maps">Available battle maps</label><select id="approved_maps" name="approved_maps">
+{% for ids, label in [('isars-cross','Isar’s Cross — 2v2'),('hexcake','Hexcake — 3v3'),('mokena-prairie','Mokena Prairie — 4v4'),('isars-cross,hexcake','2v2 and 3v3'),('isars-cross,mokena-prairie','2v2 and 4v4'),('hexcake,mokena-prairie','3v3 and 4v4'),('isars-cross,hexcake,mokena-prairie','All three maps')] %}<option value="{{ ids }}"{% if ids.split(',') | sort == area.approved_maps | sort %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+<label for="reason">Reason</label><textarea id="reason" name="reason" minlength="3" maxlength="500" required></textarea><button type="submit">Save area settings</button> <a href="{{ url_for('areas') }}">Back without changes</a></form></section>
+{% endblock %}

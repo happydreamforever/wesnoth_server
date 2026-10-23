@@ -362,7 +362,7 @@ class ActualDeploymentTests(unittest.TestCase):
                         with urllib.request.urlopen(request, timeout=5) as response:
                             health = json.loads(response.read())
                         self.assertFalse(health["game_bridge_integrated"])
-                        self.assertFalse(health["campaign_content_ready"])
+                        self.assertTrue(health["campaign_content_ready"])
                     finally:
                         service.terminate()
                         service.wait(timeout=15)

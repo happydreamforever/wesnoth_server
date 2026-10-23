@@ -43,6 +43,10 @@ SCHEMAS = {
                 'join_requests': {'bsonType': 'array', 'maxItems': 64, 'uniqueItems': True, 'items': STRING},
                 'experience': INTEGER, 'level': INTEGER,
                 'rating': {'bsonType': ['int', 'long']}, 'active_run_id': NULLABLE_STRING,
+                'orders': {'bsonType': 'array', 'maxItems': 50, 'items': _object(
+                    ['id', 'author_id', 'author_name', 'text', 'created_at'], {
+                        'id': STRING, 'author_id': STRING, 'author_name': STRING,
+                        'text': {'bsonType': 'string', 'maxLength': 500}, 'created_at': {'bsonType': 'date'}})},
                 'status': {'enum': ['active', 'archived']}, 'revision': INTEGER,
             })},
         {'$expr': {'$eq': [{'$size': '$members'}, {'$size': {'$setUnion': ['$members.account_id', []]}}]}},
@@ -52,6 +56,7 @@ SCHEMAS = {
     ]},
     'areas': {'$jsonSchema': _object(['_id', 'name', 'name_key', 'enabled', 'approved_maps'], {
         '_id': STRING, 'name': STRING, 'name_key': STRING, 'enabled': {'bsonType': 'bool'},
+        'revision': INTEGER,
         'approved_maps': {'bsonType': 'array', 'items': {'enum': list(MAPS)}, 'uniqueItems': True},
     })},
     'game_runs': {'$jsonSchema': _object(['_id', 'kind', 'state', 'ruleset_version', 'participants', 'created_at'], {
