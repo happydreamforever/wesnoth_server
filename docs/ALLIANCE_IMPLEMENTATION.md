@@ -2,7 +2,7 @@
 
 ## Current v1 checklist — release1192615
 
-**Latest Windows result:** A's pulls pass at server `d5eaa2e` / client `a7be19a`; B's cold backup passes with 109 files / 257,632,893 bytes and user-confirmed WAN disconnection. Next pull the server-only bridge rebuild-helper correction, then perform C. Existing backup is valid; new builds, installation and gameplay remain pending.
+**Latest Windows result:** A's pulls, B's cold backup (109 files / 257,632,893 bytes, WAN disconnected by user confirmation) and C's actual Windows bridge artifact/build/rebuild checks pass. Continue at D without another pull; Android build/install and new gameplay remain pending.
 
 The implementation checklist and local acceptance checklist are separate. A checked implementation item means code plus the stated VPS verification; it does not mean Windows/LDPlayer1192615 has passed. Earlier dated sections below retain the project's evidence history. The user accepts1192614 local training;1192615 uses the A–Z sequence in [NEXT_TEST.md](NEXT_TEST.md).
 
@@ -20,8 +20,8 @@ The implementation checklist and local acceptance checklist are separate. A chec
 | Results and progression | Every player's END report/replay, outcome agreement, both captain approvals, transactionally unique settlement, fixed leader/team XP and Elo | R/S/U pending |
 | Replays | Durable local recording, authenticated bounded server upload/download, owner/captain access, verified native playback with no rewards | L/T pending |
 | Operator website | Accounts/password controls retained; area enabled/maps controls, bounded audited XP corrections, disputed-result resolution and no-reward cancellation | Y pending |
-| Backup and restore | Cold private runtime/database/replay backup; hash-checked restore into new storage; authenticated replica/schema/rollback verification; original runtime preserved | B/Z pending |
-| Delivery and diagnostics | Preserved1192608–1192614 upgrades,1192615 APK, exact receipts, four-service startup/health, sanitized combined test reports and targeted retest workflow | A–F pending |
+| Backup and restore | Cold private runtime/database/replay backup; hash-checked restore into new storage; authenticated replica/schema/rollback verification; original runtime preserved | B passed; Z pending |
+| Delivery and diagnostics | Preserved1192608–1192614 upgrades,1192615 APK, exact receipts, four-service startup/health, sanitized combined test reports and targeted retest workflow | A–C passed; D–F pending |
 
 - [x] Keep full-strength leaders for v1, using the actual six starter advancement trees and24 allowed unit types. Leader XP and team XP are separate; ordinary recruits remain battle-local.
 - [x] Preserve approved alliances: Isar's Cross1/4 vs2/3; Hexcake1/4/5 vs2/3/6; Mokena Prairie1/3/5/8 vs2/4/6/7.

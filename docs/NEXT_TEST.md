@@ -1,6 +1,6 @@
 # Alliance team battle — release 1192615
 
-**Current user checkpoint:** A's pulls passed at server `d5eaa2e` / client `a7be19a`. B's cold backup now passed with 109 files / 257,632,893 bytes; the user confirms WAN was disconnected. Continue at **C** after the targeted server-helper pull below. The backup remains valid. All new build/install/gameplay acceptance is still pending.
+**Current user checkpoint:** A's pulls, B's cold backup and C's actual Windows bridge rebuild have passed. Continue at **D** with the existing client checkout from `a7be19a`; no additional pull is needed. Keep Alliance services stopped and WAN disconnected/local Ethernet retained. Android build, installation and the new gameplay checks remain pending.
 
 This is the next complete Windows/LDPlayer acceptance batch. Earlier account, membership, planning and local-practice results remain accepted. The new campaign progression, shared battles, result settlement, replay retrieval and recovery must be tested on your computer. VPS results do not establish Windows acceptance.
 
