@@ -14,7 +14,7 @@ try {
     if ($env:OS -ne 'Windows_NT') { throw 'This helper requires Windows.' }
     if (-not $PSBoundParameters.ContainsKey('RuntimeRoot')) {
         if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) { throw 'LOCALAPPDATA is missing.' }
-        $RuntimeRoot = Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime'
+        $RuntimeRoot = Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2'
     }
     $RuntimeRoot = Resolve-AllianceRuntimeRoot -Path $RuntimeRoot
     $diagnostics = Join-Path $repo 'diagnostics'

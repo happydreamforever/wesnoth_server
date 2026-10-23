@@ -58,7 +58,8 @@ function Invoke-AllianceCommand {
             if ($PSBoundParameters.ContainsKey('RuntimeRoot')) {
                 $selectedRuntime = Resolve-AllianceRuntimeRoot -Path $RuntimeRoot
             } else {
-                $selectedRuntime = Join-Path $repoRoot 'runtime\alliance'
+                if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) { throw 'LOCALAPPDATA is missing.' }
+                $selectedRuntime = Resolve-AllianceRuntimeRoot -Path (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2')
             }
             if ($PythonPath) { throw 'Runtime commands use the isolated Alliance virtual environment.' }
             $PythonPath = Join-Path $repoRoot 'build\alliance-venv\Scripts\python.exe'

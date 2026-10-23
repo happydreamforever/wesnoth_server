@@ -24,7 +24,7 @@ try {
     $failureMessage = 'LOCALAPPDATA is missing; the existing profile runtime could not be selected.'
     if (-not $PSBoundParameters.ContainsKey('RuntimeRoot')) {
         if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) { throw $failureMessage }
-        $RuntimeRoot = Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime'
+        $RuntimeRoot = Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2'
     }
     $failureMessage = 'RuntimeRoot must be an existing local directory without redirected path components.'
     $RuntimeRoot = Resolve-AllianceRuntimeRoot -Path $RuntimeRoot

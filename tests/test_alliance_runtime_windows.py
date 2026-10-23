@@ -34,7 +34,7 @@ class RuntimeRootPowerShellTests(unittest.TestCase):
         self.drive.mkdir()
         self.caller.mkdir()
         (self.repo / "tools").mkdir(parents=True)
-        for name in ("Alliance-Common.ps1", *WRAPPERS.values()):
+        for name in ("Alliance-Common.ps1", *WRAPPERS.values(), "Run-WindowsAllianceBridge.ps1", "Run-WindowsAllianceBattles.ps1"):
             shutil.copy2(ROOT / "tools" / name, self.repo / "tools" / name)
         (self.repo / "tools/alliance_dependencies.py").touch()
         self.python = self.repo / "build/alliance-venv/Scripts/python.exe"
@@ -48,6 +48,11 @@ class RuntimeRootPowerShellTests(unittest.TestCase):
             'sys.exit(9 if os.environ.get("ALLIANCE_FAIL") in sys.argv[1:] else 0)\n'
         )
         self.python.chmod(0o755)
+        bridge = self.repo / "build/alliance-account-bridge/alliance-account-bridge.exe"
+        bridge.parent.mkdir(parents=True)
+        shutil.copy2(self.python, bridge)
+        for name in ("build_alliance_bridge.py", "run_alliance_battles.py"):
+            (self.repo / "tools" / name).touch()
         self.mongod = self.repo / "build/alliance-mongodb/bin/mongod.exe"
         self.mongod.parent.mkdir(parents=True)
         self.mongod.write_bytes(b"simulated mongod")
@@ -66,6 +71,7 @@ class RuntimeRootPowerShellTests(unittest.TestCase):
         self.driver.write_text(
             "$ErrorActionPreference = 'Stop'\n"
             "$null = New-PSDrive -Name C -PSProvider FileSystem -Root $env:ALLIANCE_DRIVE\n"
+            "$null = New-PSDrive -Name D -PSProvider FileSystem -Root $env:ALLIANCE_DRIVE\n"
             "if ($env:ALLIANCE_REMOTE -eq 'yes') {\n"
             " function Get-PSDrive {\n"
             "  param([string]$Name)\n"
@@ -83,6 +89,7 @@ class RuntimeRootPowerShellTests(unittest.TestCase):
         self.env = {
             **os.environ,
             "OS": "Windows_NT",
+            "LOCALAPPDATA": r"C:\Users\Uni\AppData\Local",
             "ALLIANCE_DRIVE": str(self.drive),
             "ALLIANCE_CALLS": str(self.calls),
         }
@@ -92,13 +99,13 @@ class RuntimeRootPowerShellTests(unittest.TestCase):
             self.assertEqual(path.read_bytes(), contents, path)
         self.temp.cleanup()
 
-    def invoke(self, command="check", *, root=None, failure="", remote=False):
+    def invoke(self, command="check", *, root=None, failure="", remote=False, wrapper=None):
         return subprocess.run(
             [str(PWSH), "-NoProfile", "-File", str(self.driver)],
             cwd=self.caller,
             env={
                 **self.env,
-                "ALLIANCE_WRAPPER": str(self.repo / "tools" / WRAPPERS[command]),
+                "ALLIANCE_WRAPPER": str(self.repo / "tools" / (wrapper or WRAPPERS[command])),
                 "ALLIANCE_EXPLICIT": "yes" if root is not None else "no",
                 "ALLIANCE_ROOT": root or "",
                 "ALLIANCE_FAIL": failure,
@@ -139,11 +146,29 @@ class RuntimeRootPowerShellTests(unittest.TestCase):
                 self.assertIn("MongoDB log: " + str(selected / "logs/mongodb.log"), result.stdout)
                 self.assertFalse(selected.exists(), "Wrapper must not create the runtime")
 
-    def test_default_runtime_remains_repository_location(self):
+    def test_default_runtime_uses_fresh_v2_profile_without_creating_it(self):
         result = self.invoke()
         self.assert_success(result)
         args = self.read_calls()[-1]["args"]
-        self.assertEqual(args[args.index("--runtime") + 1], str(self.repo / "runtime/alliance"))
+        selected = self.drive / "Users/Uni/AppData/Local/WesnothAlliance/runtime-v2"
+        self.assertEqual(args[args.index("--runtime") + 1], str(selected))
+        self.assertFalse(selected.exists())
+
+    def test_missing_default_profile_path_stops_before_native_programs(self):
+        self.env["LOCALAPPDATA"] = ""
+        self.assert_rejected_without_native(self.invoke())
+
+    def test_bridge_and_battles_defaults_and_explicit_runtime_agree(self):
+        for wrapper in ("Run-WindowsAllianceBridge.ps1", "Run-WindowsAllianceBattles.ps1"):
+            for explicit in (None, r"C:\Users\Uni\AppData\Local\WesnothAlliance\chosen runtime"):
+                with self.subTest(wrapper=wrapper, explicit=explicit):
+                    result = self.invoke(wrapper=wrapper, root=explicit)
+                    self.assert_success(result)
+                    args = self.read_calls()[-1]["args"]
+                    leaf = "chosen runtime" if explicit else "runtime-v2"
+                    selected = self.drive / "Users/Uni/AppData/Local/WesnothAlliance" / leaf
+                    self.assertEqual(args[args.index("--runtime") + 1], str(selected))
+                    self.assertFalse(selected.exists())
 
     def test_existing_directory_is_forwarded_without_change(self):
         selected = self.drive / "Users/Uni/AppData/Local/WesnothAlliance"

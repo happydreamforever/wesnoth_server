@@ -97,7 +97,7 @@ class OperationsWindowsTests(unittest.TestCase):
                 result = self.invoke(WRAPPERS[1], arguments)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 args = self.native_calls()[-1]
-                self.assertEqual(args[args.index("--runtime") + 1], str(self.sentinel.parent))
+                self.assertEqual(args[args.index("--runtime") + 1], str(self.sentinel.parent.with_name("runtime-v2")))
                 self.assertEqual("--start" in args, not arguments.get("CheckOnly", False))
                 self.assertEqual("--include-battles" in args, arguments.get("IncludeBattles", False))
                 self.assertIn("--report", args)
@@ -146,7 +146,8 @@ class OperationsWindowsTests(unittest.TestCase):
         names = {"quoted", "launcher_script"}
         module = ast.Module(body=[node for node in source.body if isinstance(node, ast.FunctionDef) and node.name in names], type_ignores=[])
         namespace = {"ROOT": self.repo, "STEPS": (("W02", "database", 27018, "Run-WindowsAllianceDatabase.ps1"),),
-                     "BATTLE_STEP": ("W05", "battles", 15002, "Run-WindowsAllianceBattles.ps1"), "WorkflowError": ValueError}
+                     "BATTLE_STEP": ("W05", "battles", 15002, "Run-WindowsAllianceBattles.ps1"),
+                     "MULTIPLAYER_STEP": ("W06", "multiplayer", 15000, "Run-WindowsMultiplayer.ps1"), "WorkflowError": ValueError}
         exec(compile(module, "production-launcher-generator", "exec"), namespace)
         wrapper = self.repo / "tools/Run-WindowsAllianceDatabase.ps1"
         wrapper.write_text("param([string]$RuntimeRoot)\nWrite-Host 'HOST READY'\n'FORMATTED READY' | Out-Host\nWrite-Output ('RUNTIME='+$RuntimeRoot)\nexit 7\n")

@@ -68,7 +68,7 @@ try {
     . (Join-Path $PSScriptRoot 'Alliance-Common.ps1')
     if (-not $PSBoundParameters.ContainsKey('RuntimeRoot')) {
         if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) { throw 'LOCALAPPDATA is missing.' }
-        $RuntimeRoot = Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime'
+        $RuntimeRoot = Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2'
     }
     $RuntimeRoot = Resolve-AllianceRuntimeRoot -Path $RuntimeRoot
     $python = Join-Path $repo 'build\alliance-venv\Scripts\python.exe'

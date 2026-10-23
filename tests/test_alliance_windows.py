@@ -567,13 +567,19 @@ class PowerShellTests(unittest.TestCase):
         mongod.parent.mkdir(parents=True)
         mongod.touch()
         self.calls = self.root / "calls.jsonl"
-        self.env = {**os.environ, "OS": "Windows_NT", "LOCALAPPDATA": str(self.root), "ALLIANCE_CALLS": str(self.calls)}
+        self.driver = self.root / "driver.ps1"
+        self.driver.write_text("param([string]$Wrapper,[switch]$Download)\n"
+            "$null=New-PSDrive -Name C -PSProvider FileSystem -Root $env:ALLIANCE_FIXTURE_ROOT\n"
+            "$arguments=@{}\nif ($Download) { $arguments.Download=$true }\n"
+            "& (Join-Path $env:ALLIANCE_FIXTURE_ROOT ('tools/'+$Wrapper)) @arguments\nexit $LASTEXITCODE\n")
+        self.env = {**os.environ, "OS": "Windows_NT", "LOCALAPPDATA": "C:\\", "ALLIANCE_CALLS": str(self.calls),
+                    "ALLIANCE_FIXTURE_ROOT": str(self.root)}
 
     def tearDown(self):
         self.temp.cleanup()
 
     def invoke(self, name, *args, failure=""):
-        return subprocess.run([str(PWSH), "-NoProfile", "-File", str(self.root / "tools" / name), *args], capture_output=True, text=True, env={**self.env, "ALLIANCE_FAIL": failure})
+        return subprocess.run([str(PWSH), "-NoProfile", "-File", str(self.driver), "-Wrapper", name, *args], capture_output=True, text=True, env={**self.env, "ALLIANCE_FAIL": failure})
 
     def read_calls(self):
         return [json.loads(line) for line in self.calls.read_text().splitlines()] if self.calls.exists() else []
@@ -602,7 +608,7 @@ class PowerShellTests(unittest.TestCase):
                 args = calls[-1]
                 self.assertEqual(args[:4], ["-E", "-s", "-m", "alliance"])
                 self.assertEqual(args[-1], command)
-                self.assertEqual(args[args.index("--runtime") + 1], str(self.root / "runtime/alliance"))
+                self.assertEqual(args[args.index("--runtime") + 1], str(self.root / "WesnothAlliance/runtime-v2"))
                 self.assertEqual("--mongod" in args, command in ("init", "database"))
                 if command == "init":
                     self.assertNotIn("Saved log:", result.stdout)

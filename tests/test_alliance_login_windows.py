@@ -128,7 +128,7 @@ class LoginWindowsTests(unittest.TestCase):
         self.diagnostic = self.tools / "check_alliance_login.py"
         self.diagnostic.write_text("# simulated safe diagnostic\n")
         self.drive = self.root / "profile drive"
-        self.runtime = self.drive / "Users/Uni/AppData/Local/WesnothAlliance/runtime"
+        self.runtime = self.drive / "Users/Uni/AppData/Local/WesnothAlliance/runtime-v2"
         self.runtime.mkdir(parents=True)
         for path, content in {
             self.repo / ".env": b"PRIVATE_ENV_SENTINEL",

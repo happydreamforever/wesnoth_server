@@ -104,7 +104,7 @@ class BackendWindowsTests(unittest.TestCase):
         self.diagnostic = self.tools / "check_alliance_backend.py"
         self.diagnostic.write_text("# simulated diagnostic module\n")
         self.drive = self.root / "profile drive"
-        self.runtime = self.drive / "Users/Uni/AppData/Local/WesnothAlliance/runtime"
+        self.runtime = self.drive / "Users/Uni/AppData/Local/WesnothAlliance/runtime-v2"
         self.runtime.mkdir(parents=True)
         sentinels = {
             self.repo / ".env": b"PRIVATE_ENV_SENTINEL",
