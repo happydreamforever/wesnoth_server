@@ -533,15 +533,20 @@ class UnifiedProduct:
                         not set(forms).issubset({f['form_id'] for a in campaign['aliases'] if a['hero_id'] == row['hero_id'] for f in a['forms']})):
                     raise DomainError('invalid_result', 'The reported hero or form is not in this campaign.')
                 amount = 0
-                if data['outcome'] == 'win' and data['scenario_id'] not in run['completed_scenarios']:
-                    amount = row['earned_experience'] + 20
+                if data['outcome'] == 'win':
+                    if data['scenario_id'] not in run['completed_scenarios']:
+                        amount = row['earned_experience'] + 20
                     current = self.db.account_heroes.find_one({'account_id': actor_id, 'hero_id': row['hero_id']}, session=session)
                     if current is not None and current['total_experience'] + amount > MAX_XP:
                         raise DomainError('invalid_result', 'The hero experience storage limit was reached.')
-                    self.db.account_heroes.update_one({'account_id': actor_id, 'hero_id': row['hero_id']}, {
-                        '$setOnInsert': {'_id': _id(), 'unlocked_at': _now()},
-                        '$inc': {'total_experience': amount, 'revision': 1},
-                        '$addToSet': {'forms': {'$each': forms}}}, upsert=True, session=session)
+                    # A real later visit can earn a new hero/form without
+                    # farming XP for an already completed scenario. Exact
+                    # checkpoint replays returned their immutable receipt above.
+                    if current is None or amount or not set(forms).issubset(current['forms']):
+                        self.db.account_heroes.update_one({'account_id': actor_id, 'hero_id': row['hero_id']}, {
+                            '$setOnInsert': {'_id': _id(), 'unlocked_at': _now()},
+                            '$inc': {'total_experience': amount, 'revision': 1},
+                            '$addToSet': {'forms': {'$each': forms}}}, upsert=True, session=session)
                 earned.append({'hero_id': row['hero_id'], 'experience_awarded': amount})
             update = {'$inc': {'next_checkpoint': 1}}
             if data['outcome'] == 'win':

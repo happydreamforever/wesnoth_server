@@ -183,6 +183,45 @@ class UnifiedProduct(unittest.TestCase):
         self.assertEqual(self.db.account_heroes.find_one()['total_experience'], 54)
         self.assertEqual(self.db.account_heroes.find_one()['revision'], 2)
         self.assertEqual(self.db.story_checkpoints.count_documents({'run_id':run['run_id']}), 3)
+    def repeat_hero_rows(self):
+        extra_form = next(f['form_id'] for f in self.alias['forms'] if f['form_id'] != self.form)
+        other = next(a for a in self.campaign['aliases'] if a['hero_id'] != self.hero)
+        return [{'hero_id':self.hero,'unit_id':self.alias['unit_id'],'form_id':extra_form,
+                 'unlocked_forms':[self.form,extra_form],'earned_experience':99},
+                {'hero_id':other['hero_id'],'unit_id':other['unit_id'],'form_id':other['forms'][0]['form_id'],
+                 'unlocked_forms':[other['forms'][0]['form_id']],'earned_experience':99}]
+    def test_new_loop_checkpoint_unlocks_forms_without_repeat_xp_or_replay_mutation(self):
+        actor = self.player(); run = self.begin(actor); first = self.campaign['first_scenario']
+        opening = self.checkpoint(run, next_scenario_id=first)
+        opening_result = self.domain.story_checkpoint(actor, opening)
+        rows = self.repeat_hero_rows()
+        loss = self.checkpoint(run, sequence=1, next_scenario_id=first, outcome='loss', heroes=rows)
+        self.domain.story_checkpoint(actor, loss)
+        self.assertEqual(self.db.account_heroes.count_documents({}), 1)
+        self.assertEqual(self.db.account_heroes.find_one()['forms'], [self.form])
+        loop = self.checkpoint(run, sequence=2, next_scenario_id=first, heroes=rows)
+        result = self.domain.story_checkpoint(actor, loop)
+        self.assertEqual([r['experience_awarded'] for r in result['rewards']], [0, 0])
+        heroes = {h['hero_id']:h for h in self.domain.get_account(actor)['heroes']}
+        self.assertEqual(heroes[self.hero]['total_experience'], 27)
+        self.assertEqual(heroes[self.hero]['revision'], 2)
+        self.assertEqual(set(heroes[self.hero]['forms']), set(rows[0]['unlocked_forms']))
+        self.assertEqual((heroes[rows[1]['hero_id']]['hero_level'], heroes[rows[1]['hero_id']]['total_experience']), (1, 0))
+        before = list(self.db.account_heroes.find({}).sort('_id', 1))
+        self.assertEqual(self.domain.story_checkpoint(actor, opening), opening_result)
+        self.assertEqual(self.domain.story_checkpoint(actor, loop), result)
+        forged = deepcopy(opening); forged['heroes'] = rows
+        self.code('result_conflict', lambda:self.domain.story_checkpoint(actor, forged))
+        self.domain.story_checkpoint(actor, self.checkpoint(run, sequence=3, heroes=rows))
+        self.assertEqual(before, list(self.db.account_heroes.find({}).sort('_id', 1)))
+    def test_later_invalid_hero_rolls_back_loop_unlock_and_sequence(self):
+        actor = self.player(); run = self.begin(actor); first = self.campaign['first_scenario']
+        self.domain.story_checkpoint(actor, self.checkpoint(run, next_scenario_id=first))
+        rows = self.repeat_hero_rows(); rows[1]['unlocked_forms'] = ['forged-form']
+        attempt = self.checkpoint(run, sequence=1, next_scenario_id=first, heroes=rows)
+        before = {name:list(self.db[name].find({}).sort('_id',1)) for name in self.db.list_collection_names()}
+        self.code('invalid_result', lambda:self.domain.story_checkpoint(actor, attempt))
+        self.assertEqual(before, {name:list(self.db[name].find({}).sort('_id',1)) for name in self.db.list_collection_names()})
     def test_checkpoint_waits_during_reserved_training(self):
         a=self.player(True);story=self.begin(a);training=self.domain.progression_start(a,MISSIONS[0],self.hero,self.form)['run']
         self.code('busy',lambda:self.domain.story_checkpoint(a,self.checkpoint(story)))
