@@ -6,13 +6,13 @@ Use the existing **one LDPlayer instance**, MSYS2, Python, SDK/NDK, supplied 1.1
 
 Report each step before continuing if you prefer. At the first unexpected result, stop that test and send its letter, exact message and sanitized log. Do not delete stages, journals, locks or runtime data. Record WAN status once per batch; keep local Ethernet and LDPlayer available.
 
-## Current checkpoint — A–B accepted; run C next
+## Current checkpoint — A–C accepted; run D next
 
-Step A reached server `73460b1` and client `ee71821`; the subsequent Git integrity checks passed with only the existing README edits. Step B now reports ALLIANCE BACKUP VERIFIED, 110 files / 258,474,865 bytes and MA03 completion. The user explicitly confirms WAN was disconnected while Ethernet stayed connected. `schema_checked: false` is expected for cold backup.
+The repository update and Git integrity checks passed at server `73460b1` / client `ee71821`. B's cold backup verified 110 files / 258,474,865 bytes, with WAN explicitly confirmed disconnected. Keep the exact private backup at `%LOCALAPPDATA%\WesnothAlliance\backups\before-1192617-20261023-100621-012` for F.
 
-Keep the exact private backup at `%LOCALAPPDATA%\WesnothAlliance\backups\before-1192617-20261023-100621-012` for F. The saved diagnostic is `diagnostics/alliance-maintenance-20261023-100621-819-6c2fb4025ae3458a900a03d4a6d9c8cf.txt`. No service was activated and the existing runtime was preserved.
+C now passes on Windows: the previous bridge was preserved, both compile/link steps finished, and ARTIFACT VERIFIED / BUILD PASSED / REBUILD PASSED appeared. Logs are recorded in BASELINE.md. This proves the bridge build, not startup or Android behavior.
 
-Continue directly at **C** using the existing checkout. No further pull or backup is required. Keep all services stopped and WAN disconnected/local Ethernet retained through F. C–Z remain pending; A and B below are retained as reference and should not be repeated now.
+Continue directly at **D** using the already pulled helper. No additional pull, backup or bridge rebuild is required. Keep all services stopped and WAN disconnected/local Ethernet retained through F. After D passes, continue E, then F and G. D–Z remain pending; A–C below are retained as reference and should not be repeated now.
 
 ## A. Stop services and pull both repositories
 
