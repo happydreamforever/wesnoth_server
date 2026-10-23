@@ -387,6 +387,13 @@ class ProgressionTests(unittest.TestCase):
         for actor in selected:review=self.service.shared_report_result(actor,run,generation,None,True,'a'*64)
         for captain in (members[0][0],members[1][0]):self.service.shared_confirm_result(captain,run,review['candidate_digest'])
         self.service.shared_finish(run,generation)
+        for actor in selected:
+            replay=self.service.shared_replay_access(actor,run)
+            self.assertEqual(replay,{'run_id':run,'account_id':actor,'generation':generation,'sha256':'a'*64})
+        side_one=min(self.service.get_run(run)['participants'],key=lambda item:item['side'])['account_id']
+        for captain in (members[0][0],members[1][0]):
+            self.assertEqual(self.service.shared_replay_access(captain,run)['account_id'],side_one)
+        self.assertDomain('forbidden',self.service.shared_replay_access,self.player(),run)
         for actor in selected:self.assertEqual(self.service.get_account(actor)['leader']['total_experience'],10)
         for captain in (members[0][0],members[1][0]):self.assertEqual(self.service.get_account(captain)['leader']['total_experience'],0)
         self.assertEqual(self.service.get_account(members[0][0])['active_run_id'],outside['id'])

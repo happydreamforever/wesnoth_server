@@ -17,6 +17,7 @@ from pathlib import Path
 import re
 import secrets
 import ssl
+import stat
 import sys
 from uuid import uuid4
 
@@ -567,6 +568,49 @@ class BattleDaemon:
                 except Exception as error:
                     print('BATTLE SETTLEMENT PENDING: '+type(error).__name__,flush=True)
 
+    async def download_replay(self, reader, writer, account_id, token, run_id):
+        """Stream an existing completed recording without loading a room."""
+        access = await asyncio.to_thread(self.domain.shared_replay_access, account_id, run_id)
+        if (not ID.fullmatch(access['account_id']) or
+                not re.fullmatch(r'[0-9a-f]{64}', access['sha256'])):
+            raise WireError('Stored replay binding is invalid.')
+        path = safe_path(self.storage/run_id/(access['account_id']+'-'+access['sha256']+'.replay'))
+        with path.open('rb') as stream:
+            metadata = os.fstat(stream.fileno())
+            if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1 or not 1 <= metadata.st_size <= MAX_REPLAY:
+                raise WireError('Stored replay size or type is invalid.')
+            digest = hashlib.sha256()
+            remaining = metadata.st_size
+            while remaining:
+                chunk = stream.read(min(65536, remaining))
+                if not chunk: raise WireError('Stored recording was truncated.')
+                digest.update(chunk)
+                remaining -= len(chunk)
+            if stream.read(1) or digest.hexdigest() != access['sha256']:
+                raise WireError('Stored recording differs from its completed result.')
+            stream.seek(0)
+            await send(writer, message('alliance_replay_info', run_id=run_id,
+                account_id=access['account_id'], bytes=metadata.st_size, sha256=access['sha256'],
+                format='wesnoth-replay-v1'))
+            offset = 0
+            while offset < metadata.st_size:
+                root = await receive(reader, 30)
+                request = root.one('alliance_replay_get')
+                if root.attrs or len(root.children) != 1 or set(request.attrs) != {'offset'} or request.children or request.attrs['offset'] != str(offset):
+                    raise WireError('Replay download sequence differs.')
+                actor = await asyncio.to_thread(self.auth.validate_token, token, 'player')
+                if actor['_id'] != account_id:
+                    raise WireError('Replay session identity changed.')
+                current = await asyncio.to_thread(self.domain.shared_replay_access, account_id, run_id)
+                if current != access:
+                    raise WireError('Replay authorization changed.')
+                chunk = stream.read(min(24000, metadata.st_size-offset))
+                if not chunk:
+                    raise WireError('Stored replay was truncated.')
+                await send(writer, message('alliance_replay_data', offset=offset,
+                                          data=base64.b64encode(chunk).decode('ascii')))
+                offset += len(chunk)
+
     async def handle(self, reader, writer):
         peer=room=None
         self.connections+=1
@@ -586,7 +630,7 @@ class BattleDaemon:
                 await asyncio.to_thread(self.db.command,'ping')
                 await send(writer,message('alliance_health',service='alliance-battles',api=1))
                 return
-            if node.name!='alliance_join' or set(node.attrs)!={'run_id','token','intent'} or node.children or node.attrs['intent'] not in ('play','result_retry'):
+            if node.name!='alliance_join' or set(node.attrs)!={'run_id','token','intent'} or node.children or node.attrs['intent'] not in ('play','result_retry','replay_download'):
                 raise WireError('Invalid join request.')
             token=node.attrs.pop('token')
             if not re.fullmatch(r'[A-Za-z0-9_-]{43}',token):
@@ -594,6 +638,9 @@ class BattleDaemon:
             account=await asyncio.to_thread(self.auth.validate_token,token,'player')
             if account.get('role')!='player':
                 raise WireError('A player account is required.')
+            if node.attrs['intent']=='replay_download':
+                await self.download_replay(reader,writer,account['_id'],token,node.attrs['run_id'])
+                return
             peer=Peer(reader,writer,account,token,node.attrs['intent']=='result_retry')
             room=await self.room(account['_id'],node.attrs['run_id'],peer.upload_only)
             await room.admit(peer)

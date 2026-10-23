@@ -282,9 +282,59 @@ class BattleDaemonTests(unittest.IsolatedAsyncioTestCase):
     async def upload(self,peer,run,winner,content):
         digest=hashlib.sha256(content).hexdigest()
         await peer.send(message('alliance_replay_begin',bytes=len(content),sha256=digest));await peer.read('alliance_replay_ready')
-        await peer.send(message('alliance_replay_chunk',offset=0,data=base64.b64encode(content).decode()));await peer.read('alliance_replay_ready')
+        for offset in range(0,len(content),24000):
+            await peer.send(message('alliance_replay_chunk',offset=offset,data=base64.b64encode(content[offset:offset+24000]).decode()))
+            await peer.read('alliance_replay_ready')
         await peer.send(message('alliance_result',winner_team_id=winner,draw='no',replay_sha256=digest))
         return await peer.read('alliance_result_saved')
+
+    async def settled(self,content):
+        run,teams,members,tokens,peers=await self.running()
+        for peer in peers.values():await self.upload(peer,run,teams[0],content)
+        review=self.service.shared_result_review(members[0][0],run)
+        for captain in (members[0][0],members[1][0]):self.service.shared_confirm_result(captain,run,review['candidate_digest'])
+        self.settlement=asyncio.create_task(self.daemon.settle_ready())
+        await self.until(lambda:self.service.get_run(run)['state']=='completed')
+        return run,teams,members,tokens,peers
+
+    async def test_completed_replay_download_is_exact_bounded_read_only_and_membership_independent(self):
+        content=b'Recorded fixture replay\n'*2500
+        run,teams,members,tokens,peers=await self.settled(content)
+        actor=members[0][1];self.service.leave_team(actor)
+        before={name:list(self.db[name].find({}).sort('_id',1)) for name in
+                ('accounts','teams','game_runs','settlements','admin_audit','auth_sessions')}
+        download=await self.connect(run,tokens[actor],'replay_download')
+        info=await download.read('alliance_replay_info')
+        self.assertEqual(info.attrs,{'run_id':run,'account_id':actor,'bytes':str(len(content)),
+            'sha256':hashlib.sha256(content).hexdigest(),'format':'wesnoth-replay-v1'})
+        received=b''
+        while len(received)<len(content):
+            await download.send(message('alliance_replay_get',offset=len(received)))
+            chunk=await download.read('alliance_replay_data')
+            self.assertEqual(int(chunk.attrs['offset']),len(received))
+            part=base64.b64decode(chunk.attrs['data'],validate=True);self.assertLessEqual(len(part),24000)
+            received+=part
+        self.assertEqual(received,content)
+        self.assertEqual(before,{name:list(self.db[name].find({}).sort('_id',1)) for name in before})
+        bad=await self.connect(run,tokens[actor],'replay_download');await bad.read('alliance_replay_info')
+        await bad.send(message('alliance_replay_get',offset=1));await bad.read('leave_game')
+        outsider=self.player();self.db.accounts.update_one({'_id':outsider},{'$set':{'password_hash':self.password_hash}})
+        outsider_token=self.auth.authenticate(self.service.get_account(outsider)['username'],self.password,'player')['token']
+        forbidden=await self.connect(run,outsider_token,'replay_download');await forbidden.read('leave_game')
+
+    async def test_replay_download_requires_completed_state_current_session_and_intact_file(self):
+        content=b'Private recorded fixture\n'*2500
+        run,teams,members,tokens,peers=await self.settled(content);actor=members[0][1]
+        peer=await self.connect(run,tokens[actor],'replay_download');await peer.read('alliance_replay_info')
+        await peer.send(message('alliance_replay_get',offset=0));await peer.read('alliance_replay_data')
+        self.auth.revoke_token(tokens[actor])
+        await peer.send(message('alliance_replay_get',offset=24000));await peer.read('leave_game')
+        other=members[1][1];path=self.storage/run/(other+'-'+hashlib.sha256(content).hexdigest()+'.replay')
+        path.write_bytes(b'Altered recording')
+        damaged=await self.connect(run,tokens[other],'replay_download');await damaged.read('leave_game')
+        for team in teams:self.db.teams.update_one({'_id':team},{'$set':{'name_key':str(uuid4())}})
+        draft,teams,members,tokens=self.plan();actor=members[0][0]
+        denied=await self.connect(draft,tokens[actor],'replay_download');await denied.read('leave_game')
 
     async def test_uploaded_results_restart_recovery_captain_agreement_and_once_rewards(self):
         run,teams,members,tokens,peers=await self.running()

@@ -1161,6 +1161,26 @@ class AllianceService:
             raise DomainError('invalid_state', 'Only an existing running or completed seat result can be retried.')
         return self._shared_record(actor_id, run)
 
+    def shared_replay_access(self, actor_id, run_id):
+        """Read one retained completed recording without granting a game seat."""
+        self._directory_player(actor_id)
+        run = self._run(_directory_id(run_id, uuid=True))
+        room = run.get('shared_room', {})
+        if run['state'] != 'completed' or room.get('state') != 'completed':
+            raise DomainError('invalid_state', 'A replay is available only after the shared result is settled.')
+        selected = {item['account_id']: item for item in run['participants']}
+        if actor_id in selected:
+            recording_actor = actor_id
+        elif actor_id in room.get('captains', {}).values():
+            recording_actor = min(run['participants'], key=lambda item: item['side'])['account_id']
+        else:
+            raise DomainError('forbidden', 'Only the recorded battle players and captains can retrieve its replay.')
+        report = room.get('result_reports', {}).get(recording_actor)
+        if not report:
+            raise DomainError('not_found', 'The completed recording is unavailable.')
+        return {'run_id': run['_id'], 'account_id': recording_actor,
+                'generation': room['generation'], 'sha256': report['replay_sha256']}
+
     def shared_cancel(self, run_id, generation, reason):
         """Fenced daemon shutdown/abort; never expire or settle a running room."""
         _directory_id(run_id, uuid=True)
