@@ -412,8 +412,10 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     @internal_route("/health", methods=("GET",), player=False)
     def health():
         db.command("ping")
+        # Capability metadata is not a live native-client or game-daemon probe.
         return jsonify(status="ok", service="alliance", api_version=1,
-                       game_bridge_integrated=False, campaign_content_ready=CAMPAIGN_CONTENT_READY)
+                       game_bridge_integrated=True, campaign_content_ready=CAMPAIGN_CONTENT_READY,
+                       health_scope="backend_only", native_runtime_checked=False, implementation_release=1192615)
 
     @internal_route("/register", player=False)
     def register():

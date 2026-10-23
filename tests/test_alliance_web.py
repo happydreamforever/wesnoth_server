@@ -184,11 +184,14 @@ class AllianceWebTests(unittest.TestCase):
         response = self.client.post("/internal/v1/login", headers=self.bridge, json={"username": {"$ne": ""}, "password": self.password})
         self.assertEqual(response.status_code, 400)
 
-    def test_bridge_health_reports_unintegrated_game_explicitly(self):
+    def test_bridge_health_reports_capability_without_claiming_native_runtime_probe(self):
         response = self.client.get("/internal/v1/health", headers=self.bridge)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json["status"], "ok")
-        self.assertFalse(response.json["game_bridge_integrated"])
+        self.assertTrue(response.json["game_bridge_integrated"])
+        self.assertEqual(response.json["health_scope"], "backend_only")
+        self.assertFalse(response.json["native_runtime_checked"])
+        self.assertEqual(response.json["implementation_release"], 1192615)
 
     def test_register_login_team_creation_and_logout(self):
         response = self.client.post("/internal/v1/register", headers=self.bridge, json={

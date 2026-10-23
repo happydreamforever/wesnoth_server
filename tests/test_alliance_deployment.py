@@ -361,7 +361,10 @@ class ActualDeploymentTests(unittest.TestCase):
                             headers={"Authorization": "Bearer " + settings.bridge_secret})
                         with urllib.request.urlopen(request, timeout=5) as response:
                             health = json.loads(response.read())
-                        self.assertFalse(health["game_bridge_integrated"])
+                        self.assertTrue(health["game_bridge_integrated"])
+                        self.assertEqual(health["health_scope"], "backend_only")
+                        self.assertFalse(health["native_runtime_checked"])
+                        self.assertEqual(health["implementation_release"], 1192615)
                         self.assertTrue(health["campaign_content_ready"])
                     finally:
                         service.terminate()
