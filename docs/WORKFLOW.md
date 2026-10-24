@@ -1,5 +1,7 @@
 # Offline Wesnoth development workflow
 
+**Current progress (2026-10-24):** A's repository update is accepted from the user's console: server67c31a6 and client4be9563. Continue at **B** using that existing checkout. Confirm services are stopped and disconnect WAN/retain Ethernet before building. This documentation record needs no additional pull. New Windows build/install/gameplay and this batch's post-pull WAN status remain pending.
+
 **Current1192620 UI delivery:** Native hero galleries, team roster/plan views and individual-room filters are implemented and VPS-verified. Follow [NEXT_TEST.md](NEXT_TEST.md) A–Z from the first visible test; [BATTLE_INTERFACE.md](BATTLE_INTERFACE.md) shows actual native-renderer previews and [VERIFICATION_1192620.json](VERIFICATION_1192620.json) records evidence/limits. Windows acceptance is pending.
 
 This batch is MSYS2 pull both repos → disconnect WAN/retain Ethernet → Android-only rebuild1192620 → checked five-service startup at runtime-v2 → KeepSavedProfile install → Welcome/hero/team/room/gameplay/recovery observations. The already verified1192619 native server build and private backup remain valid; no server/bridge rebuild, repeated backup, dependency upgrade, initialization, trust import or OBB transfer. Preserve existing accounts and earlier accepted foundation results. Record WAN once, stop at the first unexpected result, and retest affected behavior after a verified fix/commit/push. One-LDPlayer companions remain computer-controlled seats.
