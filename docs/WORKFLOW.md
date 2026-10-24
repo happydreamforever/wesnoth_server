@@ -1,6 +1,6 @@
 # Offline Wesnoth development workflow
 
-**Current progress (2026-10-24):** A's repository update is accepted from the user's console: server67c31a6 and client4be9563. Continue at **B** using that existing checkout. Confirm services are stopped and disconnect WAN/retain Ethernet before building. This documentation record needs no additional pull. New Windows build/install/gameplay and this batch's post-pull WAN status remain pending.
+**Current progress (2026-10-24):** A's repository update and B's Windows Android1192620 rebuild are accepted. All45 native steps,33 Gradle tasks and package/original-signer checks passed; both prior stages were preserved. The user confirms WAN was disconnected with local Ethernet retained. Continue at **C** using the existing server67c31a6 checkout and runtime-v2; keep WAN disconnected/Ethernet connected. Return checked five-service startup before D installation. This documentation record needs no additional pull or rebuild. C–Z Windows/LDPlayer acceptance remains pending.
 
 **Current1192620 UI delivery:** Native hero galleries, team roster/plan views and individual-room filters are implemented and VPS-verified. Follow [NEXT_TEST.md](NEXT_TEST.md) A–Z from the first visible test; [BATTLE_INTERFACE.md](BATTLE_INTERFACE.md) shows actual native-renderer previews and [VERIFICATION_1192620.json](VERIFICATION_1192620.json) records evidence/limits. Windows acceptance is pending.
 

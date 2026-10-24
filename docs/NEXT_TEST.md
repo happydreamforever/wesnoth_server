@@ -1,6 +1,6 @@
 # Windows / LDPlayer acceptance — interface 1192620
 
-**Current progress (2026-10-24):** A's repository update is accepted from the user's console: server67c31a6 and client4be9563. Continue at **B** using that existing checkout. Confirm services are stopped and disconnect WAN/retain Ethernet before building. This documentation record needs no additional pull. New Windows build/install/gameplay and this batch's post-pull WAN status remain pending.
+**Current progress (2026-10-24):** A's repository update and B's Windows Android1192620 rebuild are accepted. All45 native steps,33 Gradle tasks and package/original-signer checks passed; both prior stages were preserved. The user confirms WAN was disconnected with local Ethernet retained. Continue at **C** using the existing server67c31a6 checkout and runtime-v2; keep WAN disconnected/Ethernet connected. Return checked five-service startup before D installation. This documentation record needs no additional pull or rebuild. C–Z Windows/LDPlayer acceptance remains pending.
 
 Restart the visible product tests with this checklist. Your completed 1192619 native server build, Android build and verified runtime-v2 backup remain accepted; the corrected five-service startup and later 1192619 installation/gameplay were not yet accepted. This update rebuilds Android only and preserves the completed 1192619 account stages, existing accounts/heroes/teams, trusted profile, OBB and pinned dependencies. It does not initialize or migrate a database.
 
