@@ -1,0 +1,105 @@
+{
+  "release": 1192619,
+  "status": "passed_at_documented_vps_scopes",
+  "recorded_at": "2026-10-24T00:00:27.179902+00:00",
+  "start_rule": "Room must be full and every selected player explicitly Ready for the current settings revision.",
+  "production_commits": {
+    "client": [
+      "a9f241b",
+      "002adf3",
+      "6c7b531",
+      "39f3e47"
+    ],
+    "server": [
+      "9aaa8d2",
+      "f64c17f"
+    ]
+  },
+  "android": {
+    "network": "Docker --network none",
+    "ndk": "26.3.11579264",
+    "abi": "x86_64",
+    "min_api": 23,
+    "native_steps": 43,
+    "gradle_offline_tasks": 33,
+    "prepare_build_reuse_separate_verify": "passed",
+    "apk": {
+      "bytes": 38754285,
+      "sha256": "bc02bc5f2e12ee6d38599eef1151851707abfe2b7b16217b76ef481d156465d1"
+    },
+    "unstripped_libmain": {
+      "bytes": 522795928,
+      "sha256": "948f416c237deea51ba1b9514bc3f41ffe2f32b92d195f52bcaf77bdacc16335"
+    },
+    "device_executed": false
+  },
+  "delivery_tests": {
+    "android_builder_profile_cases": 66,
+    "linux_powershell_helper_simulations": 31,
+    "existing_shared_companion_cases": 42,
+    "real_cpp_account_response_tls_cases": 47,
+    "server_delivery_cases": 11,
+    "handoff_powershell_blocks_parsed": 8
+  },
+  "preservation": {
+    "status": "passed",
+    "files_verified": {
+      "foundation-before.json": 17731,
+      "account-before.json": 6203,
+      "pinned-engine-source-before.json": 1454
+    },
+    "trees_verified": 41,
+    "remap": {
+      "wesnoth_client/build/android-account-engine": "wesnoth_client/build/android-account-engine-before-individual-rooms-20261023T235144Z-c8234277ad6e43a2bff35947d3dc2b9a",
+      "wesnoth_client/build/android-account-game": "wesnoth_client/build/android-account-game-before-individual-rooms-20261023T235144Z-c8234277ad6e43a2bff35947d3dc2b9a"
+    },
+    "seconds": 80.989
+  },
+  "old_update_journals": 17,
+  "unrelated_readmes": "Both existing zero-byte working files preserved; excluded from commits.",
+  "independent_source_and_handoff_review": "passed; helper flags, one-LDPlayer path, Ready rules, runtime-v2 and verification limits reviewed",
+  "evidence": {
+    "wesnoth_client/build/audit-individual-client-20261024/validation.json": {
+      "sha256": "e65c5ee31ab0af5373fab308dcda6106dc88a80ef6afb9164dfef8c7cb729ed0"
+    },
+    "wesnoth_client/build/audit-individual-companion-20261024/validation.json": {
+      "sha256": "bf95f3038f43bdf43f1d331e9e300494259ede47429c3baa3a49c393b9b62bc8"
+    },
+    "wesnoth_server/build/audit-individual-rooms-20261024/validation.json": {
+      "sha256": "3e5a118fcbc882844aaaaf51def082fc0aa8fffd2120c297fdb52e99ea33f458"
+    }
+  },
+  "pending": [
+    "Windows PowerShell5.1 native rebuild and Android install",
+    "1192618 physical keyboard, task closure, authentication/recovery acceptance in LDPlayer",
+    "1192619 visible host, companion, automatic start and full individual-game acceptance",
+    "Multiple-human device acceptance; one-LDPlayer computer companions do not establish it"
+  ],
+  "scope_notes": [
+    "Actual native combat uses a scripted host and turn3 ending, production guest companion, two synchronized AI rounds per run; normal and settings-change reconsent pass.",
+    "Rendering uses actual pinned SDL engine with substituted network/account boundaries.",
+    "Full-room concurrency/protocol and actual combat are separate checks; no8-human combat claim.",
+    "Actual VPS upgrade1192618->1192619 passes; Windows1192617->1192619 remains user acceptance, supported by updater fixtures.",
+    "Original prior1192618 UI/input evidence remains valid for unchanged sources, with current session-monitor regressions rerun."
+  ],
+  "verification_summary": {
+    "native_protocol_cases": 20,
+    "native_combat_runs": 2,
+    "synchronized_rounds_per_run": 2,
+    "client_controller_sanitizer_groups": 45,
+    "session_monitor_thread_groups": 18,
+    "session_monitor_terminal_paths": 3,
+    "actual_sdl_captures": 38,
+    "resolutions": [
+      "1280x720",
+      "1920x1080"
+    ],
+    "individual_python_helper_cases": 10,
+    "cpp_companion_entry_sanitizer_cases": 11,
+    "account_hero_state_unchanged_after_individual_runs": true
+  },
+  "root_evidence": {
+    "path": "wesnoth_client/build/audit-individual-room-delivery-20261024/validation.json",
+    "sha256": "cc6d444256b077f7c8cf60a66a134afeca7c0531b46db46be97ca89e51fd6879"
+  }
+}

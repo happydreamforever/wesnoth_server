@@ -1,6 +1,6 @@
 # Unified game implementation and acceptance
 
-Release **1192617** implements the unified product. The schema is 2 and the account protocol is 2. Windows/LDPlayer acceptance is a separate A–Z batch in [NEXT_TEST.md](NEXT_TEST.md); it is not inferred from VPS tests.
+Release **1192619** includes the unified product, startup/input/session corrections and global individual battle rooms. The schema is 2 and the account/native protocol is 2. Windows/LDPlayer acceptance uses the combined A–Z in [NEXT_TEST.md](NEXT_TEST.md); it is not inferred from VPS tests. The individual-room implementation and evidence are in [INDIVIDUAL_BATTLES.md](INDIVIDUAL_BATTLES.md) and [VERIFICATION_1192619.json](VERIFICATION_1192619.json).
 
 ## Player flow
 
@@ -15,6 +15,8 @@ A story victory credits actual combat and reviewed explicit scriptedXP plus 20 X
 **Campaigns -> Hero training** integrates the three former progression missions into the same account and hero collection. Choose an owned hero/form. A confirmed training victory gives 20 XP to that hero only; local team practice gives no persistent rewards.
 
 **Multiplayer** opens the native trusted lobby with the startup account. Maps, recruitment, turn flow, saves and computer opponents use the existing engine. Select an owned hero/form before Ready. One-use account tickets and pinned TLS replace guest nickname admission. Ordinary multiplayer gives no permanentXP or rating. Saved games retain their frozen hero and combat state when resumed.
+
+**Individual rooms** are public standalone map battles in the Multiplayer dashboard, independent of permanent Teams/areas. Choose map, limits, gold and other reviewed rules; browse/filter live rooms and review before joining. Select an owned hero/form and explicitly Ready. Start is automatic only when all configured seats are filled and every player is Ready for the current revision. Settings, hero and membership changes invalidate consent. Standard manual/AI/saved multiplayer remains available. Individual battles grant no permanent XP/rating.
 
 **Teams** keeps areas, captains, applications, orders and 2v2/3v3/4v4 plans. Each selected player chooses an owned hero/form before Ready. A selection change clears every Ready flag and both captain approvals. Individual practice needs your own Ready and both approvals; a shared battle needs all selected players Ready and both approvals. Shared admission, reconnect, captain surrender/draw, result agreement and replays use the selected immutable heroes. Only those heroes receive the battle's permanentXP. Other heroes in the account remain unchanged.
 
