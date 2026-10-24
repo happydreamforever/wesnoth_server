@@ -1,5 +1,7 @@
 # 1192619 — individual rooms and startup corrections: Windows A–Z
 
+**Current user checkpoint (2026-10-24):** A's repository updates are accepted: server `f06509d`, client `3496238`. **Next is B**. The transcript did not confirm stopped services or subsequent WAN disconnection; ensure those preconditions before backup. No additional pull is needed for the documentation-only progress record. B–Z remain pending.
+
 This is the current test sequence. It includes the untested 1192618 Welcome, keyboard, logout, network-loss and Quit corrections. It adds global individual rooms to the existing **Multiplayer** dashboard. The native server and Android app need rebuilding; MongoDB schema, account bridge, shared Team service, source data/OBB and dependencies are unchanged.
 
 Use the existing **runtime-v2**, existing players and one LDPlayer. Do not rerun Initialize-WindowsUnifiedGame.ps1 or Initialize-WindowsAlliance.ps1. Do not reset the app, reimport trust, copy another OBB, upgrade tools or create replacement accounts. Existing README edits, backups and update journals stay in place. Record WAN status once for the batch; disconnect WAN after the Git pulls and retain local Ethernet. No result below is assumed passed until you report it.
