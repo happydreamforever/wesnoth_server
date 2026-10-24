@@ -1,6 +1,6 @@
 # 1192619 — individual rooms and startup corrections: Windows A–Z
 
-**Current user checkpoint (2026-10-24):** A's repository updates are accepted: server `f06509d`, client `3496238`. **Next is B**. The transcript did not confirm stopped services or subsequent WAN disconnection; ensure those preconditions before backup. No additional pull is needed for the documentation-only progress record. B–Z remain pending.
+**Current user checkpoint (2026-10-24):** A's repository updates and B's cold runtime-v2 backup are accepted. The backup verified103files/215,573,486bytes and preserved the runtime; WAN disconnected/local Ethernet retained is explicitly confirmed. **Next is C** using the existing server `f06509d` and client `3496238` checkout. Keep services stopped and WAN disconnected. No extra pull or repeated backup is needed for this documentation-only record. C–Z remain pending.
 
 This is the current test sequence. It includes the untested 1192618 Welcome, keyboard, logout, network-loss and Quit corrections. It adds global individual rooms to the existing **Multiplayer** dashboard. The native server and Android app need rebuilding; MongoDB schema, account bridge, shared Team service, source data/OBB and dependencies are unchanged.
 
