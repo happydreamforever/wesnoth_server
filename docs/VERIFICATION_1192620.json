@@ -1,0 +1,110 @@
+{
+  "release": 1192620,
+  "status": "passed_at_documented_vps_scopes",
+  "recorded_at": "2026-10-24T05:39:19.564477+00:00",
+  "feature_commit": "50f8d69",
+  "scope": "Native visual hero/team/individual-room UI; existing server rules and schema unchanged",
+  "android": {
+    "network": "Docker --network none",
+    "ndk": "26.3.11579264",
+    "abi": "x86_64",
+    "min_api": 23,
+    "native_steps": 45,
+    "gradle_offline_tasks": 33,
+    "prepare_build_reuse_separate_verify": "passed",
+    "package_version_original_signer": "passed",
+    "apk": {
+      "bytes": 38816833,
+      "sha256": "e6a5c7ae5bb3c9674be8543957624eb10275a74b1ca1d2b57687fbb244cad353"
+    },
+    "unstripped_libmain": {
+      "bytes": 524225488,
+      "sha256": "5a0a5f26a1e2dcc060e458cc933096c3f3d3726dc4dbbd4c455832dd334a5085"
+    },
+    "device_executed": false,
+    "original_objects_relinked": 552,
+    "owned_source_replacements": 16
+  },
+  "focused_checks": {
+    "builder_profile_cases": 67,
+    "linux_powershell_helper_simulations": 32,
+    "companion_delivery_cases": 52,
+    "hero_gallery_sanitizer_cases": 21,
+    "startup_controller_groups": 26,
+    "planning_controller_groups": 21,
+    "practice_controller_groups": 37,
+    "team_model_ordered_lineup_groups": 5,
+    "current_captain_orders_groups": 9,
+    "individual_controller_sanitizer_groups": 49,
+    "actual_native_dashboard_translation_units": 8,
+    "actual_team_translation_units": 2,
+    "handoff_powershell_blocks_parsed": 6
+  },
+  "gui_renderer": {
+    "actual_pinned_gui2_sdl": true,
+    "network": "Docker --network none",
+    "resolutions": [
+      "1280x720",
+      "1920x1080"
+    ],
+    "shared_browser_captures": 38,
+    "native_dashboard_staging_captures": 14,
+    "screen_and_child_bounds": "passed",
+    "search_empty_selection_back_explicit_action_enter": "passed",
+    "all_three_maps_portable_hero_art_eight_seat_scroll": "passed",
+    "independent_visual_review": "passed",
+    "boundaries": "Illustrative account/room state; network/account boundaries substituted. Real production view models and actual native GUI widgets execute."
+  },
+  "preservation": {
+    "status": "passed",
+    "files_verified": {
+      "foundation-before.json": 17731,
+      "account-before.json": 6582,
+      "pinned-engine-source-before.json": 1454,
+      "pins-before.json": 20
+    },
+    "trees_verified": 43,
+    "remap": {
+      "wesnoth_client/build/android-account-engine": "wesnoth_client/build/android-account-engine-before-battle-ui-20261024T053143Z-9ee9b272aa714bcd8171866ddefb2e18",
+      "wesnoth_client/build/android-account-game": "wesnoth_client/build/android-account-game-before-battle-ui-20261024T053143Z-9ee9b272aa714bcd8171866ddefb2e18"
+    },
+    "seconds": 84.546
+  },
+  "old_update_journals": 18,
+  "unrelated_readmes": "Both existing zero-byte user edits preserved and excluded from commits.",
+  "pending": [
+    "Windows1192620 rebuild and LDPlayer installation/input/rendering",
+    "Current combined A-Z visible gameplay acceptance",
+    "Multiple-human Android acceptance; one-instance computer companions do not establish it"
+  ],
+  "scope_notes": [
+    "No server production, database schema, account protocol, combat/reward logic, native server rebuild or dependency upgrade in this release.",
+    "The existing old progression-UI fixture assumes the pre-unified single-leader Profile and is not claimed to pass; the changed captain-orders path has a new current-protocol nine-group test.",
+    "Actual rendering found and corrected offscreen coordinates/grid mismatch before freeze; failed attempts retained.",
+    "An existing disabled-audio track warning appears in render fixtures; final runs have no WML/layout/image errors.",
+    "PowerShell7.4.6 syntax/helper simulations are not Windows5.1 execution.",
+    "Windows1192619 native and Android builds and private backup remain accepted; service startup/install/gameplay acceptance was still pending when the redesign was requested."
+  ],
+  "evidence": {
+    "wesnoth_client/build/audit-battle-ui-20261024/validation.json": {
+      "sha256": "f056042c1618dcdec808f7bc5c0c5d94115d314be447a7af7968d82c199591f0"
+    },
+    "wesnoth_client/build/audit-team-ui-1192620-20261024/validation.json": {
+      "sha256": "b9b0d548635d9c00e3f594b4f06daee8e175ff3da7af68a112131186c0a81f06"
+    },
+    "wesnoth_client/build/audit-battle-ui-individual-20261024/validation.json": {
+      "sha256": "f63441c7677dccc29db19f7e69f70c8627dc0c9b1972eec098575aa47cacbc48"
+    },
+    "wesnoth_client/build/audit-battle-ui-delivery-20261024/preservation-release.json": {
+      "sha256": "829f109cfc7b3bf8fcd3f4779b7a2a121c547ee86f8979044d4206f5c297a949"
+    },
+    "wesnoth_client/build/audit-battle-ui-delivery-20261024/handoff-blocks.json": {
+      "sha256": "a5113cb5b72984d3649dbc70a87d264a7d8a7bceef47c973d419c69cacd8cfa7"
+    },
+    "wesnoth_client/build/audit-battle-ui-delivery-20261024/validation.json": {
+      "sha256": "5a2cd0d83c8ade1ac3de8ae485e9ceb2528841d5013183c735bcbed44dd8f20e"
+    }
+  },
+  "delivery_commit": "f2e7924458c77ac04bc7625910dcd71454088d47",
+  "frozen_project_inputs": 160
+}

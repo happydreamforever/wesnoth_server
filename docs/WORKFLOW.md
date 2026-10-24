@@ -1,5 +1,11 @@
 # Offline Wesnoth development workflow
 
+**Current1192620 UI delivery:** Native hero galleries, team roster/plan views and individual-room filters are implemented and VPS-verified. Follow [NEXT_TEST.md](NEXT_TEST.md) A–Z from the first visible test; [BATTLE_INTERFACE.md](BATTLE_INTERFACE.md) shows actual native-renderer previews and [VERIFICATION_1192620.json](VERIFICATION_1192620.json) records evidence/limits. Windows acceptance is pending.
+
+This batch is MSYS2 pull both repos → disconnect WAN/retain Ethernet → Android-only rebuild1192620 → checked five-service startup at runtime-v2 → KeepSavedProfile install → Welcome/hero/team/room/gameplay/recovery observations. The already verified1192619 native server build and private backup remain valid; no server/bridge rebuild, repeated backup, dependency upgrade, initialization, trust import or OBB transfer. Preserve existing accounts and earlier accepted foundation results. Record WAN once, stop at the first unexpected result, and retest affected behavior after a verified fix/commit/push. One-LDPlayer companions remain computer-controlled seats.
+
+Earlier records below are historical; the current1192620 checklist supersedes their delivery order.
+
 **Pre-E correction (2026-10-24):** Windows A–D are accepted. A server-only startup-check fix is required before E because the old checker rejected the new individual_rooms greeting. Pull the server correction per NEXT_TEST.md E, then disconnect WAN/retain Ethernet and start the existing five-service runtime-v2 stack. The correction passed19 workflow cases and a real pinned-TLS native-server check; all10 individual protocol cases also pass. Completed native/Android builds are retained; no rebuild or repeated backup is required. Windows E remains pending.
 
 **Current release1192619 (2026-10-24):** Global individual rooms and the pending1192618 startup/input/logout/network/Quit fixes are ready for the combined [NEXT_TEST.md](NEXT_TEST.md) A–Z. VPS native, rendering, offline Android, artifact and preservation verification passes; Windows/LDPlayer acceptance is pending. Rules and scope are in [INDIVIDUAL_BATTLES.md](INDIVIDUAL_BATTLES.md), evidence in [VERIFICATION_1192619.json](VERIFICATION_1192619.json).
