@@ -132,19 +132,20 @@ def valid_service_health(raw, *, battles=False):
 
 
 def valid_multiplayer_health(raw):
-    """Read only the bounded unsolicited authenticated-lobby version greeting."""
+    """Require the bounded authenticated-lobby greeting and individual rooms."""
     try:
         lines = [line.strip() for line in raw.decode("utf-8").splitlines() if line.strip()]
     except UnicodeError:
         return False
-    if len(lines) != 4 or lines[0] != "[version]" or lines[-1] != "[/version]":
+    if len(lines) != 5 or lines[0] != "[version]" or lines[-1] != "[/version]":
         return False
     fields = {}
     for line in lines[1:-1]:
-        match = re.fullmatch(r'(alliance_protocol|implementation_release)\s*=\s*"([0-9]+)"', line)
+        match = re.fullmatch(r'(alliance_protocol|implementation_release|individual_rooms)\s*=\s*"([0-9]+)"', line)
         if not match or match[1] in fields: return False
         fields[match[1]] = match[2]
-    return fields == {"alliance_protocol": "2", "implementation_release": str(EXPECTED_IMPLEMENTATION_RELEASE)}
+    return fields == {"alliance_protocol": "2", "implementation_release": str(EXPECTED_IMPLEMENTATION_RELEASE),
+                      "individual_rooms": "1"}
 
 
 def bridge_check(profile, *, battles=False, multiplayer=False):

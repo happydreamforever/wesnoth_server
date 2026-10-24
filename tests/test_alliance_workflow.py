@@ -16,6 +16,56 @@ from tools import alliance_workflow as workflow
 from tools.alliance_transport import prepare_identity, server_context
 
 
+MULTIPLAYER_GREETING = (b'[version]\nalliance_protocol="2"\n'
+                       b'implementation_release="1192617"\nindividual_rooms="1"\n[/version]\n')
+
+
+class MultiplayerGreetingTests(unittest.TestCase):
+    def test_current_individual_server_required_with_attribute_order_independent(self):
+        self.assertTrue(workflow.valid_multiplayer_health(MULTIPLAYER_GREETING))
+        self.assertTrue(workflow.valid_multiplayer_health(
+            b'\r\n[version]\r\n\tindividual_rooms = "1"\r\nalliance_protocol="2"\r\n'
+            b'implementation_release="1192617"\r\n[/version]\r\n'))
+
+    def test_missing_disabled_or_unknown_capability_refused(self):
+        for value in (b'0', b'2', b'01', b'yes', b'', b'-1'):
+            with self.subTest(capability=value):
+                self.assertFalse(workflow.valid_multiplayer_health(
+                    MULTIPLAYER_GREETING.replace(b'individual_rooms="1"', b'individual_rooms="' + value + b'"')))
+        self.assertFalse(workflow.valid_multiplayer_health(
+            MULTIPLAYER_GREETING.replace(b'individual_rooms="1"\n', b'')))
+        self.assertFalse(workflow.valid_multiplayer_health(
+            MULTIPLAYER_GREETING.replace(b'individual_rooms', b'other_rooms')))
+
+    def test_wrong_protocol_release_duplicate_or_extra_field_refused(self):
+        rejected = (
+            MULTIPLAYER_GREETING.replace(b'alliance_protocol="2"', b'alliance_protocol="1"'),
+            MULTIPLAYER_GREETING.replace(b'1192617', b'1192615'),
+            MULTIPLAYER_GREETING.replace(b'1192617', b'1192619'),
+            MULTIPLAYER_GREETING.replace(b'alliance_protocol="2"', b'individual_rooms="1"'),
+            MULTIPLAYER_GREETING.replace(b'[/version]', b'individual_rooms="1"\n[/version]'),
+            MULTIPLAYER_GREETING.replace(b'[/version]', b'unknown="1"\n[/version]'),
+        )
+        for raw in rejected:
+            with self.subTest(greeting=raw):
+                self.assertFalse(workflow.valid_multiplayer_health(raw))
+
+    def test_malformed_nested_trailing_or_non_utf8_greeting_refused(self):
+        rejected = (
+            MULTIPLAYER_GREETING.replace(b'individual_rooms="1"', b'individual_rooms=1'),
+            MULTIPLAYER_GREETING.replace(b'individual_rooms="1"', b'individual_rooms="1" trailing'),
+            MULTIPLAYER_GREETING.replace(b'individual_rooms="1"', b'[individual_rooms]'),
+            MULTIPLAYER_GREETING.replace(b'[/version]', b'[/other]'),
+            MULTIPLAYER_GREETING + b'[version]\n[/version]\n',
+            b'junk\n' + MULTIPLAYER_GREETING,
+            MULTIPLAYER_GREETING + b'\xff',
+            b'',
+        )
+        for raw in rejected:
+            with self.subTest(greeting=raw):
+                self.assertFalse(workflow.valid_multiplayer_health(raw))
+
+
 class WorkflowTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="alliance workflow ")
@@ -195,11 +245,13 @@ class RealTlsHealthTests(unittest.TestCase):
         self.assertFalse(self.check(battles=True, reply=reply.replace(b'1192617', b'1192616'))[0])
 
     def test_actual_native_multiplayer_release_greeting_without_login(self):
-        greeting=b'[version]\nalliance_protocol="2"\nimplementation_release="1192617"\n[/version]\n'
+        greeting = MULTIPLAYER_GREETING
         result,requests,errors=self.check(multiplayer=True,reply=greeting)
         self.assertTrue(result);self.assertEqual(errors,[])
         self.assertEqual(requests,[b"\0\0\0\1"])
         for bad in (greeting.replace(b'1192617',b'1192615'),greeting.replace(b'1192617',b'1192616'),
+                    greeting.replace(b'individual_rooms="1"\n', b''),
+                    greeting.replace(b'individual_rooms="1"', b'individual_rooms="0"'),
                     greeting.replace(b'[/version]',b'alliance_protocol="2"\n[/version]'),b'x'*16385):
             self.assertFalse(self.check(multiplayer=True,reply=bad)[0])
 
