@@ -101,5 +101,30 @@
   "root_evidence": {
     "path": "wesnoth_client/build/audit-individual-room-delivery-20261024/validation.json",
     "sha256": "cc6d444256b077f7c8cf60a66a134afeca7c0531b46db46be97ca89e51fd6879"
+  },
+  "pre_e_startup_correction": {
+    "date": "2026-10-24",
+    "commit": "9e69d7b",
+    "scope": "Python startup greeting validator only",
+    "reason": "Native greeting gained individual_rooms=1; old startup parser rejected it",
+    "required_fields": {
+      "alliance_protocol": "2",
+      "implementation_release": "1192617",
+      "individual_rooms": "1"
+    },
+    "workflow_cases_passed": 19,
+    "actual_native_health_passed": true,
+    "wrong_pin_rejected": true,
+    "individual_native_protocol_cases_passed": 10,
+    "native_binary_before_after_sha256": "a0b7f662acf8a02a6945665bfa4786f6cc7f7e16b79cff04aeed54a93de03776",
+    "compiled_artifacts_unchanged": true,
+    "windows_acceptance": "E pending; A-D user reports accepted",
+    "evidence": [
+      "wesnoth_server/build/audit-individual-workflow-greeting-20261024/validation.json",
+      "wesnoth_server/build/audit-individual-workflow-native-20261024/validation.json"
+    ],
+    "retained_fixture_failure": "An initial post-fix test reached the socket before its test-owned listener; bounded fixture readiness fixed, production timeouts unchanged.",
+    "native_regression_test_commit": "8d1d136",
+    "handoff_powershell_blocks_parsed": 9
   }
 }

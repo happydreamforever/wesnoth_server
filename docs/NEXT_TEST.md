@@ -1,6 +1,6 @@
 # 1192619 — individual rooms and startup corrections: Windows A–Z
 
-**Current user checkpoint (2026-10-24):** A–C are accepted: repository updates, cold runtime-v2 backup and the47-step Windows native Multiplayer build with prior-stage preservation. **Next is D** using the existing client `3496238` checkout. Keep services stopped and WAN disconnected/local Ethernet retained under the confirmed batch workflow. No extra pull, repeated backup or native rebuild is needed. After D, do E service startup before F installation. D–Z remain pending.
+**Current user checkpoint (2026-10-24):** A–D are accepted, including the Windows Android1192619 rebuild. Before **E**, pull the server-only startup-check correction below: the original checker rejected the new individual-room greeting. The fix is verified on VPS; both completed Windows builds remain valid. After the pull, disconnect WAN/retain local Ethernet, start the five existing runtime-v2 services and return W07 readiness before F installation. No repeated backup, rebuild or initialization is needed. E–Z remain pending.
 
 This is the current test sequence. It includes the untested 1192618 Welcome, keyboard, logout, network-loss and Quit corrections. It adds global individual rooms to the existing **Multiplayer** dashboard. The native server and Android app need rebuilding; MongoDB schema, account bridge, shared Team service, source data/OBB and dependencies are unchanged.
 
@@ -77,6 +77,21 @@ Expected: the previous native Multiplayer stage is preserved, followed by UNIFIE
 Expected: prior completed account stages are preserved, then ANDROID ACCOUNT ENGINE BUILD PASS, ANDROID ACCOUNT GAME BUILD PASS and ANDROID ACCOUNT GAME REBUILD COMPLETE. Original dependency/engine foundations are reused. Do not rename or remove interrupted stages/journals; send the first failure.
 
 ## E. Start the five existing services
+
+Before this first E run, temporarily connect Windows to GitHub and pull the startup-helper correction. Keep the five services stopped while updating:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $bash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
+    & $bash --noprofile --norc -c 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server pull --ff-only origin main'
+    if ($LASTEXITCODE -ne 0) { throw 'Server pull failed. Stop and send the output.' }
+    & $bash --noprofile --norc -c '/usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server rev-parse --short HEAD'
+    if ($LASTEXITCODE -ne 0) { throw 'Could not read the server commit.' }
+}
+```
+
+Expected: successful server update including fix9e69d7b and its regression tests. Only the startup checker changes production behavior; the verified native server, Android APK, bridge and database remain valid. Do not repeat B, C or D. Disconnect WAN again while retaining local Ethernet, then run:
 
 ```powershell
 & {
