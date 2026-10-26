@@ -96,6 +96,112 @@ class FlexibleProduct(unittest.TestCase):
         self.assertEqual(self.db.teams.find_one({'_id':ts[1]})['experience'],50)
         self.assertEqual(self.db.settlements.count_documents({}),2)
         self.assertEqual(self.db.accounts.count_documents({'active_run_id':{'$ne':None}}),0)
+    def test_preparation_clears_only_competing_ready_atomically(self):
+        from bson import BSON
+        ps,ts=self.teams();other=self.publish(ps,ts,False)
+        players=[ps[0][0],ps[1][0],ps[1][1],ps[0][1]]
+        for side,actor in enumerate(players,1):
+            other=self.domain.directory_join_plan(actor,other['id'],other['revision'],side)
+            other=self.domain.directory_select_plan_hero(actor,other['id'],other['revision'],self.hero,self.form)
+        for actor in (ps[0][0],ps[1][0]):other=self.domain.directory_approve_plan(actor,other['id'],other['revision'])
+        for actor in (ps[0][0],ps[1][0],ps[0][1]):other=self.domain.directory_ready_plan(actor,other['id'],other['revision'],True)
+        before=self.db.game_runs.find_one({'_id':other['id']})
+        candidate=self.publish(ps,ts)
+        for side,actor in enumerate((ps[0][0],ps[1][0]),1):
+            candidate=self.domain.directory_join_plan(actor,candidate['id'],candidate['revision'],side)
+            candidate=self.domain.directory_select_plan_hero(actor,candidate['id'],candidate['revision'],self.hero,self.form)
+        for actor in (ps[0][0],ps[1][0]):candidate=self.domain.directory_approve_plan(actor,candidate['id'],candidate['revision'])
+        candidate=self.domain.directory_ready_plan(ps[0][0],candidate['id'],candidate['revision'],True)
+        game,generation=str(uuid4()),str(uuid4())
+        self.domain.network_prepare(game,generation,[ps[1][0],ps[1][1]])
+        self.code('busy',lambda:self.domain.directory_ready_plan(ps[1][0],candidate['id'],candidate['revision'],True))
+        self.assertEqual(BSON.encode(self.db.game_runs.find_one({'_id':other['id']})),BSON.encode(before))
+        self.assertIsNone(self.db.network_battle_reservations.find_one({'_id':ps[0][0]}))
+        self.assertEqual(self.db.accounts.find_one({'_id':ps[0][0]})['active_run_id'],None)
+        self.domain.network_release(game,generation)
+        candidate=self.domain.directory_ready_plan(ps[1][0],candidate['id'],candidate['revision'],True)
+        after=self.db.game_runs.find_one({'_id':other['id']})
+        self.assertEqual(after['ready'],[ps[0][1]])
+        before['ready']=[ps[0][1]];self.assertEqual(after,before)
+        prepared=BSON.encode(self.db.game_runs.find_one({'_id':candidate['id']}))
+        disjoint,_=self.fill(ps,self.publish(ps,ts),offset=1)
+        self.assertEqual(disjoint['room_state'],'preparing')
+        self.assertEqual(BSON.encode(self.db.game_runs.find_one({'_id':candidate['id']})),prepared)
+        self.assertEqual(self.db.game_runs.find_one({'_id':other['id']})['ready'],[])
+
+    def test_recorded_captains_keep_only_their_history_after_leaving(self):
+        ps,ts=self.teams();battle=self.publish(ps,ts)
+        old=ps[0][0];successor=ps[0][1]
+        self.domain.transfer_captain(old,ts[0],successor);self.domain.leave_team(old)
+        battle=self.domain.directory_battle_detail(old,battle['id'])
+        self.assertIn(battle['id'],[b['id'] for b in self.domain.directory_my_battles(old)['battles']])
+        self.code('forbidden',lambda:self.domain.directory_approve_plan(old,battle['id'],battle['revision']))
+        battle=self.domain.directory_approve_plan(successor,battle['id'],battle['revision'])
+        newcomer=self.player(True);self.domain.request_join(newcomer,ts[0]);self.domain.approve_member(successor,ts[0],newcomer)
+        self.domain.transfer_captain(successor,ts[0],newcomer);self.domain.leave_team(successor)
+        self.domain.directory_cancel_battle(newcomer,battle['id'])
+        for actor in (old,successor):
+            self.assertEqual(self.domain.directory_battle_detail(actor,battle['id'])['state'],'cancelled')
+            self.assertIn(battle['id'],[b['id'] for b in self.domain.directory_my_battles(actor)['battles']])
+        next_plan=self.domain.directory_publish_plan(newcomer,ts[0],ts[1],'isars-cross',DEFAULT_SETTINGS,self.slots())
+        for actor in (old,successor,self.player()):
+            self.code('forbidden',lambda:self.domain.directory_battle_detail(actor,next_plan['id']))
+        self.assertEqual(set(self.db.game_runs.find_one({'_id':battle['id']})['recorded_captains']),{old,successor,ps[1][0]})
+
+    def test_legacy_cancelled_approval_is_history_evidence_without_rewriting(self):
+        from bson import BSON
+        ps,ts=self.teams();extra=self.player(True)
+        self.domain.request_join(extra,ts[0]);self.domain.approve_member(ps[0][0],ts[0],extra)
+        lineups={ts[0]:[ps[0][1],extra],ts[1]:ps[1]}
+        battle=self.domain.create_battle(ps[0][0],ts[1],'isars-cross',lineups,native_plan=True)
+        for actor in [ps[0][1],extra,*ps[1]]:self.domain.directory_select_hero(actor,battle['id'],self.hero,self.form)
+        self.domain.directory_approve_battle(ps[0][0],battle['id'])
+        self.domain.directory_cancel_battle(ps[0][0],battle['id'])
+        original=BSON.encode(self.db.game_runs.find_one({'_id':battle['id']}))
+        self.domain.transfer_captain(ps[0][0],ts[0],ps[0][1]);self.domain.leave_team(ps[0][0])
+        self.assertEqual(self.domain.directory_battle_detail(ps[0][0],battle['id'])['state'],'cancelled')
+        self.assertIn(battle['id'],[b['id'] for b in self.domain.directory_my_battles(ps[0][0])['battles']])
+        self.code('forbidden',lambda:self.domain.directory_battle_detail(self.player(),battle['id']))
+        self.assertEqual(BSON.encode(self.db.game_runs.find_one({'_id':battle['id']})),original)
+
+    def test_both_captains_can_repair_departed_reserved_members(self):
+        ps,ts=self.teams();slots=self.slots();slots[3].update(kind='reserved',account_id=ps[0][1])
+        battle=self.domain.directory_publish_plan(ps[0][0],ts[0],ts[1],'isars-cross',DEFAULT_SETTINGS,slots)
+        slots[2].update(kind='reserved',account_id=ps[1][1])
+        battle=self.domain.directory_edit_plan(ps[1][0],battle['id'],battle['revision'],'isars-cross',DEFAULT_SETTINGS,slots)
+        self.domain.leave_team(ps[0][1]);self.domain.leave_team(ps[1][1])
+        battle=self.read(ps[0][0],battle);self.assertEqual(battle['validity'],'roster_changed')
+        slots[3].update(kind='open',account_id='')
+        battle=self.domain.directory_edit_plan(ps[0][0],battle['id'],battle['revision'],'isars-cross',DEFAULT_SETTINGS,slots)
+        self.assertEqual(battle['validity'],'roster_changed')
+        self.assertEqual(battle['teams'][1]['slots'][1]['account_id'],ps[1][1])
+        bad=deepcopy(slots);bad[3].update(kind='reserved',account_id=ps[0][1])
+        self.code('not_member',lambda:self.domain.directory_edit_plan(ps[0][0],battle['id'],battle['revision'],'isars-cross',DEFAULT_SETTINGS,bad))
+        slots[2].update(kind='open',account_id='')
+        battle=self.domain.directory_edit_plan(ps[1][0],battle['id'],battle['revision'],'isars-cross',DEFAULT_SETTINGS,slots)
+        self.assertEqual(battle['validity'],'valid')
+
+    def test_migrated_plan_preserves_heroes_but_requires_fresh_start_consent(self):
+        from bson import BSON
+        ps,ts=self.teams()
+        battle=self.domain.create_battle(ps[0][0],ts[1],'isars-cross',dict(zip(ts,ps)),native_plan=True)
+        for actor in sum(ps,[]):self.domain.directory_select_hero(actor,battle['id'],self.hero,self.form)
+        for actor in sum(ps,[]):self.domain.directory_battle_ready(actor,battle['id'],True)
+        for actor in (ps[0][0],ps[1][0]):self.domain.directory_approve_battle(actor,battle['id'])
+        original=BSON.encode(self.db.game_runs.find_one({'_id':battle['id']}))
+        self.db.schema_metadata.update_one({'_id':'alliance'},{'$set':{'version':2}})
+        self.db.drop_collection('network_battle_reservations')
+        migrate_schema_2_to_3(self.db,'a'*64)
+        battle=self.read(ps[0][0],battle)
+        self.assertEqual(battle['format'],2);self.assertEqual(battle['room_state'],'')
+        for actor in sum(ps,[]):battle=self.domain.directory_ready_plan(actor,battle['id'],battle['revision'],True)
+        self.assertEqual(battle['room_state'],'')
+        for actor in (ps[0][0],ps[1][0]):battle=self.domain.directory_approve_plan(actor,battle['id'],battle['revision'])
+        self.assertEqual(battle['room_state'],'preparing');self.assertTrue(battle['ranked'])
+        self.assertEqual(self.db.network_battle_reservations.count_documents({'run_id':battle['id']}),4)
+        self.assertEqual(bytes(self.db.game_runs.find_one({'_id':battle['id']})['legacy_plan_snapshot']['bson']),original)
+        self.start(battle,sum(ps,[]));receipt=self.finish(battle,ps,ts,sum(ps,[]))
+        self.assertEqual([r['rating_delta'] for r in receipt['rewards']['teams']],[12,-12])
     def test_concurrent_ranked_team_results_use_current_rating_once(self):
         ps,ts=self.teams()
         for team,players in zip(ts,ps):

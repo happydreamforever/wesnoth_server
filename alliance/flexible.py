@@ -136,7 +136,7 @@ class FlexibleProduct:
             self.db.teams.update_one({'_id': team['_id']}, {'$inc': {'revision': 1}}, session=session)
         return teams
 
-    def _flex_slots(self, map_id, slots, teams):
+    def _flex_slots(self, map_id, slots, teams, *, retained_opponent_reservations=frozenset()):
         from .domain import DomainError, _directory_id
         if map_id not in MAPS or not isinstance(slots, list) or len(slots) != MAPS[map_id]['size'] * 2:
             raise DomainError('invalid_lineup', 'Provide each approved map side exactly once.')
@@ -153,7 +153,8 @@ class FlexibleProduct:
                 raise DomainError('invalid_lineup', 'Slot identities must be text.')
             if kind == 'reserved':
                 account = _directory_id(slot['account_id'], uuid=True)
-                if account in reserved or account not in {m['account_id'] for m in by_side[side]['members']}:
+                if account in reserved or (account not in {m['account_id'] for m in by_side[side]['members']}
+                        and (side, account) not in retained_opponent_reservations):
                     raise DomainError('not_member', 'Reserve a different current member of this side’s team.')
                 reserved.add(account)
             elif slot['account_id']:
@@ -182,6 +183,7 @@ class FlexibleProduct:
                    'ruleset_version': RULESET_VERSION, 'revision': 1, 'map_id': map_id,
                    'area_id': teams[0]['area_id'], 'team_ids': [team_id, opponent_team_id],
                    'settings': settings, 'participants': [], 'approvals': {}, 'ready': [],
+                   'recorded_captains': [t['captain_id'] for t in teams],
                    'created_at': _now(), 'planning_teams': [{'id': t['_id'], 'name': t['name']} for t in teams]}
             self._flex_teams(run, session)
             for team in teams:
@@ -220,7 +222,12 @@ class FlexibleProduct:
                 raise DomainError('forbidden', 'Only a participating captain may edit this plan.')
             proposed = deepcopy(run); proposed['map_id'] = map_id
             teams = self._flex_teams(proposed, session)
-            proposed_slots = self._flex_slots(map_id, slots, teams)
+            # Each captain can repair their own stale reservations even when
+            # the opponent also has departed members. The unchanged opposing
+            # slots remain invalid for preparation until that captain fixes them.
+            retained = {(s['side'], s['account_id']) for s in run['slots']
+                if map_id == run['map_id'] and s['team_id'] != own_team['_id'] and s['kind'] == 'reserved'}
+            proposed_slots = self._flex_slots(map_id, slots, teams, retained_opponent_reservations=retained)
             old = {s['side']: s for s in run['slots']}
             for slot in proposed_slots:
                 if slot['team_id'] != own_team['_id']:
@@ -299,6 +306,7 @@ class FlexibleProduct:
                 raise DomainError('forbidden', 'Only the current captain approves their team.')
             self._flex_teams(run, session)
             run['approvals'][team['_id']] = actor_id
+            run['recorded_captains'] = sorted(set(run.get('recorded_captains', [])) | {actor_id})
             self.db.game_runs.replace_one({'_id': battle_id}, run, session=session)
             self._flex_prepare_if_ready(run, session)
             return self._planning_record(self._run(battle_id, session), session)
@@ -349,6 +357,12 @@ class FlexibleProduct:
                 raise DomainError('not_member', 'A player left their team before preparation.')
             self._network_reserve(p['account_id'], 'team', run['_id'], generation, session)
             self._reserve_account(p['account_id'], run['_id'], session)
+        # Reservation and withdrawal of consent elsewhere commit together. A
+        # failed reservation leaves every competing plan unchanged. Never alter
+        # a prepared generation or another participant's consent/configuration.
+        self.db.game_runs.update_many({'_id': {'$ne': run['_id']}, 'kind': 'alliance', 'state': 'draft',
+            'shared_room.state': {'$ne': 'preparing'}, 'ready': {'$in': list(humans)}},
+            {'$pull': {'ready': {'$in': list(humans)}}}, session=session)
         host = min(run['participants'], key=lambda p: p['side'])['account_id']
         owner = {str(p['side']): p['account_id'] for p in run['participants']}
         owner.update({str(s['side']): host for s in run['slots'] if s['kind'] == 'ai'})
@@ -391,6 +405,8 @@ class FlexibleProduct:
             if team is None: return 'team_unavailable'
             if team['area_id'] != run['area_id']: return 'area_changed'
             members = {m['account_id'] for m in team['members']}
+            if any(s['kind'] == 'reserved' and s['account_id'] not in members
+                   for s in run['slots'] if s['team_id'] == team_id): return 'roster_changed'
             if any(p['account_id'] not in members for p in run['participants'] if p['team_id'] == team_id): return 'roster_changed'
         for p in run['participants']:
             account = self.db.accounts.find_one({'_id': p['account_id'], 'status': 'active'}, session=session)
@@ -576,7 +592,8 @@ class FlexibleProduct:
         from .domain import _directory_id
         self._directory_player(actor_id); _directory_id(after, empty=True, uuid=True)
         team = self.db.teams.find_one({'members.account_id': actor_id, 'status': 'active'}, {'_id': 1})
-        branches = [{'participants.account_id': actor_id},
+        branches = [{'participants.account_id': actor_id}, {'recorded_captains': actor_id},
+                    {'$expr': {'$in': [actor_id, {'$map': {'input': {'$objectToArray': {'$ifNull': ['$approvals', {}]}}, 'as': 'approval', 'in': '$$approval.v'}}]}},
                     {'$expr': {'$in': [actor_id, {'$map': {'input': {'$objectToArray': {'$ifNull': ['$shared_room.captains', {}]}}, 'as': 'captain', 'in': '$$captain.v'}}]}}]
         if team: branches.append({'team_ids': team['_id']})
         query = {'kind': 'alliance', '$or': branches}
@@ -585,7 +602,9 @@ class FlexibleProduct:
         return {'battles': [self._planning_summary(r) for r in rows[:20]], 'next': rows[19]['_id'] if len(rows) > 20 else ''}
 
     def _history_access(self, actor_id, run, session=None):
-        if actor_id in {p['account_id'] for p in run['participants']} | set(run.get('shared_room', {}).get('captains', {}).values()): return
+        recorded = (set(run.get('recorded_captains', [])) | set(run.get('approvals', {}).values())
+                    | set(run.get('shared_room', {}).get('captains', {}).values()))
+        if actor_id in {p['account_id'] for p in run['participants']} | recorded: return
         self._planning_access(actor_id, run, session)
 
     def directory_battle_detail(self, actor_id, battle_id):

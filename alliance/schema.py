@@ -98,8 +98,8 @@ SCHEMAS['network_battle_reservations'] = {'$jsonSchema': _object(
         'generation': STRING, 'created_at': {'bsonType': 'date'}, 'expires_at': {'bsonType': 'date'}})}
 
 
-# Legacy records remain byte-for-byte readable. New plans have their own strict
-# shape; schema activation is explicit and never reinterprets old run history.
+# Terminal legacy records remain byte-for-byte readable. New and explicitly
+# migrated drafts have their own strict shape; history is never reinterpreted.
 FLEX_SETTINGS = _object(['gold', 'base_income', 'turns', 'fog', 'shroud', 'observers'], {
     'gold': {'bsonType': ['int', 'long'], 'minimum': 0, 'maximum': 1000},
     'base_income': {'bsonType': ['int', 'long'], 'minimum': 0, 'maximum': 20},
@@ -119,12 +119,72 @@ SCHEMAS['game_runs'] = {'$and': [SCHEMAS['game_runs'], {'$or': [
 ]}]}
 
 
-def migrate_schema_2_to_3(db, backup_digest, *, checkpoint=None):
-    """Resume a fenced, additive migration; caller owns the stopped runtime.
+def _migration_idle(db, session=None):
+    """A stopped listener alone does not prove that a durable battle is idle."""
+    if (db.game_runs.find_one({'kind': 'alliance', '$or': [
+            {'state': 'running'}, {'state': 'draft', 'shared_room.state': 'preparing'}]},
+            {'_id': 1}, session=session)
+            or db.accounts.find_one({'active_run_id': {'$ne': None}}, {'_id': 1}, session=session)
+            or db.teams.find_one({'active_run_id': {'$ne': None}}, {'_id': 1}, session=session)
+            or db.network_battle_reservations.find_one({}, {'_id': 1}, session=session)):
+        raise RuntimeError('Finish or cancel active battles and preparations before migration.')
 
-    Only validators/indexes and metadata change. Neither records, identity nor
-    account reservations are rewritten. The checkpoint hook enables real fault
-    injection against a disposable replica set.
+
+def _migrate_legacy_draft(db, run, generation, session):
+    """Preserve the exact source BSON and replace only draft launch semantics."""
+    from copy import deepcopy
+    from hashlib import sha256
+    from bson import BSON, Binary
+    from .flexible import DEFAULT_SETTINGS, PLAN_FORMAT
+    from .rules import RULESET_VERSION
+
+    teams = run.get('team_ids', [])
+    map_info = MAPS.get(run.get('map_id'))
+    if (run.get('ruleset_version') != RULESET_VERSION or map_info is None
+            or not isinstance(teams, list) or len(teams) != 2 or len(set(teams)) != 2
+            or 'legacy_plan_snapshot' in run):
+        raise RuntimeError('An existing draft cannot be converted safely; preserve it for review.')
+    sides = {side: team for team, group in zip(teams, map_info['sides']) for side in group}
+    participants = deepcopy(run['participants'])
+    seen_sides, seen_accounts, slots = set(), set(), []
+    for player in participants:
+        side, actor = player.get('side'), player.get('account_id')
+        if (type(side) is not int or side not in sides or player.get('team_id') != sides[side]
+                or side in seen_sides or actor in seen_accounts):
+            raise RuntimeError('An existing draft lineup is inconsistent; preserve it for review.')
+        account = db.accounts.find_one({'_id': actor, 'role': 'player'}, {'username': 1}, session=session)
+        if account is None:
+            raise RuntimeError('An existing draft player is unavailable; preserve it for review.')
+        seen_sides.add(side); seen_accounts.add(actor)
+        player.setdefault('username', account['username'])
+        player.setdefault('selection', None)
+        slots.append({'side': side, 'team_id': sides[side], 'kind': 'reserved',
+                      'account_id': actor, 'ai_faction': '', 'ai_leader': ''})
+    if seen_sides != set(sides):
+        raise RuntimeError('An existing draft has missing sides; preserve it for review.')
+    raw = BSON.encode(run)
+    updated = deepcopy(run)
+    captains = set(run.get('approvals', {}).values()) | set(run.get('shared_room', {}).get('captains', {}).values())
+    for team in db.teams.find({'_id': {'$in': teams}}, {'captain_id': 1}, session=session):
+        if team.get('captain_id'): captains.add(team['captain_id'])
+    updated.update(plan_format=PLAN_FORMAT, revision=int(run.get('revision', 0)) + 1,
+        settings=deepcopy(DEFAULT_SETTINGS), slots=sorted(slots, key=lambda slot: slot['side']),
+        participants=participants, approvals={}, ready=[], recorded_captains=sorted(captains),
+        legacy_plan_snapshot={'schema_version': 2, 'database_generation': generation,
+                              'bson': Binary(raw), 'sha256': sha256(raw).hexdigest()})
+    # Old cancelled/expired transport state is evidence only. It cannot admit a
+    # participant into the converted plan; fresh consent creates a new binding.
+    updated.pop('shared_room', None)
+    db.game_runs.replace_one({'_id': run['_id'], 'state': 'draft', 'plan_format': {'$exists': False}},
+                             updated, session=session)
+
+
+def migrate_schema_2_to_3(db, backup_digest, *, checkpoint=None):
+    """Resume a fenced migration; caller owns the stopped runtime.
+
+    Terminal records, account data and identity stay exact. Legacy drafts gain
+    reserved slots and fresh consent while retaining their original BSON. The
+    checkpoint hook enables real fault injection against a disposable set.
     """
     import re
     if not isinstance(backup_digest, str) or not re.fullmatch(r'[0-9a-f]{64}', backup_digest):
@@ -142,6 +202,7 @@ def migrate_schema_2_to_3(db, backup_digest, *, checkpoint=None):
         return {'schema_version': 3, 'status': 'already_complete', 'database_generation': current['database_generation']}
     if journal and journal.get('backup_digest') != backup_digest:
         raise RuntimeError('Resume with the original verified migration backup.')
+    _migration_idle(db)
     db.schema_metadata.update_one({'_id': journal_id}, {'$setOnInsert': {
         'version': 3, 'phase': 'started', 'backup_digest': backup_digest,
         'database_generation': current['database_generation'], 'created_at': datetime.now(timezone.utc)}}, upsert=True)
@@ -160,11 +221,29 @@ def migrate_schema_2_to_3(db, backup_digest, *, checkpoint=None):
     db.game_runs.create_index([('team_ids', ASCENDING), ('state', ASCENDING), ('created_at', -1), ('_id', ASCENDING)], name='team_run_history')
     db.schema_metadata.update_one({'_id': journal_id}, {'$set': {'phase': 'indexes'}})
     if checkpoint: checkpoint('indexes')
+    drafts = db.game_runs.find({'kind': 'alliance', 'state': 'draft',
+                               'plan_format': {'$exists': False}}, {'_id': 1}).sort('_id', 1)
+    for draft in drafts:
+        with db.client.start_session() as session:
+            def convert(s):
+                if not db.schema_metadata.find_one({'_id': 'alliance', 'version': 2,
+                        'database_generation': current['database_generation']}, session=s):
+                    raise RuntimeError('The database identity changed during migration.')
+                _migration_idle(db, s)
+                original = db.game_runs.find_one({'_id': draft['_id'], 'kind': 'alliance',
+                    'state': 'draft', 'plan_format': {'$exists': False}}, session=s)
+                if original is not None:
+                    _migrate_legacy_draft(db, original, current['database_generation'], s)
+            session.with_transaction(convert)
+        if checkpoint: checkpoint('draft_converted')
+    db.schema_metadata.update_one({'_id': journal_id}, {'$set': {'phase': 'drafts', 'draft_conversion_version': 1}})
+    if checkpoint: checkpoint('drafts')
     with db.client.start_session() as session:
         def commit(s):
             owned = db.schema_metadata.find_one({'_id': 'alliance', 'version': 2,
                 'database_generation': current['database_generation']}, session=s)
             if owned is None: raise RuntimeError('The database identity changed during migration.')
+            _migration_idle(db, s)
             db.schema_metadata.update_one({'_id': 'alliance'}, {'$set': {'version': 3}}, session=s)
             db.schema_metadata.update_one({'_id': journal_id}, {'$set': {'phase': 'complete',
                 'completed_at': datetime.now(timezone.utc)}}, session=s)
