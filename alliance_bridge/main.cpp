@@ -223,6 +223,7 @@ std::size_t utf8_characters(const std::string& value) {
 }
 struct Request {
     std::string id, operation, token, body, target;
+    unsigned protocol = 3;
     http::verb method = http::verb::post;
 };
 Request account_request(const std::vector<unsigned char>& bytes) {
@@ -230,11 +231,19 @@ Request account_request(const std::vector<unsigned char>& bytes) {
     if(!value.is_object()) invalid();
     const auto& root = value.as_object();
     fields(root, {"v", "id", "op", "body"}, {"token"});
-    if(!root.at("v").is_int64() || root.at("v").as_int64() != 3) invalid();
+    if(!root.at("v").is_int64() || (root.at("v").as_int64() != 3 && root.at("v").as_int64() != 2)) invalid();
     Request result;
+    result.protocol = static_cast<unsigned>(root.at("v").as_int64());
     result.id = text(root.at("id"), 32); if(!request_id(result.id)) invalid();
     result.operation = text(root.at("op"), 24);
     if(!root.at("body").is_object()) invalid();
+    if(result.protocol == 2) {
+        // Recognize only the bounded envelope so the previous client receives
+        // an explicit upgrade rejection. Never interpret or dispatch its body.
+        if(!ascii_word(result.operation, 1, 24)) invalid();
+        if(root.contains("token") && !ascii_word(text(root.at("token"), 43), 43, 43)) invalid();
+        return result;
+    }
     const auto& body = root.at("body").as_object();
     if(result.operation == "register" || result.operation == "login") {
         if(root.contains("token")) invalid();
@@ -930,6 +939,12 @@ class Session : public std::enable_shared_from_this<Session> {
                 return;
             }
             request_ = account_request(incoming_);
+            if(request_.protocol == 2) {
+                std::cout << "ALLIANCE ACCOUNT CLIENT UPDATE REQUIRED protocol=2 required_protocol=3 implementation_release=1192621" << std::endl;
+                send(json::object{{"v",2},{"id",request_.id},{"ok",false},{"status",426},
+                    {"data",json::object{{"code","protocol"},{"message","Update the game to release 1192621 before connecting to this server."}}}});
+                return;
+            }
             backend_request_.method(request_.method);
             backend_request_.target(request_.target);
             backend_request_.version(11);

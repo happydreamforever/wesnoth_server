@@ -486,6 +486,36 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(self.exchange(self.request("logout"))["data"], {"status": "logged_out"})
         self.assertEqual(self.exchange(self.request())["status"], 401)
 
+    def test_protocol2_receives_upgrade_rejection_without_backend_dispatch(self):
+        before = len(self.calls)
+        password = 'old-client-private-password'
+        requests = [self.request('login', {'username': 'BridgePlayer', 'password': password}),
+                    self.request('register', {'username': 'BridgePlayer', 'password': password}),
+                    self.request('battle_ready', {'battle_id': BATTLE['id'], 'ready': True}),
+                    self.request('logout')]
+        for value in requests:
+            value['v'] = 2
+            reply = self.exchange(value)
+            self.assertEqual(reply, {'v': 2, 'id': value['id'], 'ok': False, 'status': 426,
+                'data': {'code': 'protocol', 'message': 'Update the game to release 1192621 before connecting to this server.'}})
+        self.assertEqual(len(self.calls), before)
+        self.assertFalse(type(self).revoked)
+        log = self.log_path.read_text()
+        self.assertIn('ALLIANCE ACCOUNT CLIENT UPDATE REQUIRED protocol=2 required_protocol=3 implementation_release=1192621', log)
+        for private in (password, self.token, self.secret):
+            self.assertNotIn(private, log)
+        # This rejection is not a compatibility parser for malformed/unknown
+        # envelopes, and must not weaken the current protocol validation.
+        for change in ({'v': 1}, {'v': 4}, {'v': '2'}, {'id': 'A'*32},
+                       {'body': []}, {'op': 'unsafe\noperation'}, {'token': 'invalid'}, {'extra': True}):
+            malformed = dict(requests[0], **change)
+            with self.subTest(change=change), self.connect() as peer:
+                body = gzip.compress(json.dumps(malformed).encode())
+                peer.sendall(struct.pack('!I', len(body))+body)
+                with self.assertRaises((EOFError, ssl.SSLError, ConnectionError)):
+                    self.read_exact(peer, 4)
+        self.assertEqual(len(self.calls), before)
+
     def test_invalid_requests_never_reach_backend(self):
         samples = []
         base = self.request()
