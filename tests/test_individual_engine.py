@@ -41,6 +41,9 @@ class Engine(Individual):
             thread=threading.Thread(target=capture,daemon=True);thread.start();threads.append(thread)
             payload={'intent':'individual_play','account_id':actor['id'],'token':token,
                 'room_id':room,'hero_id':self.hero,'form_id':self.form['id']}
+            if index == 1 and os.environ.get('INDIVIDUAL_FIXTURE_ROOM_NAME'):
+                payload.pop('room_id')
+                payload['room_name'] = 'Individual actual engine fixture'
             process.stdin.write(json.dumps(payload)+'\n');process.stdin.flush()
             return process
         try:
@@ -83,6 +86,7 @@ class Engine(Individual):
             self.assertEqual(before,after)
             self.assertEqual(self.db.settlements.count_documents({}),0)
             result={'status':'passed','actual_engine_clients':2,'ai_rounds':2,'owned_hero_state_unchanged':True,
+                'selected_by_unique_room_name':bool(os.environ.get('INDIVIDUAL_FIXTURE_ROOM_NAME')),
                 'changed_settings_reconsent':bool(os.environ.get('INDIVIDUAL_FIXTURE_REVIEW_CHANGE')),
                 'reviews':[{'action':x['action'],'revision':x['room_revision']} for x in reviews],'scope':__doc__}
             (output/'validation.json').write_text(json.dumps(result,indent=2)+'\n')
