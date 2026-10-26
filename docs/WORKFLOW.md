@@ -1,3 +1,13 @@
+# Current release: 1192621
+
+The approved product UI/flexible-battle release supersedes the historical instructions below. Read [PRODUCT_UI_1192621.md](PRODUCT_UI_1192621.md) for current behavior, [PRODUCT_ACCEPTANCE_1192621.md](PRODUCT_ACCEPTANCE_1192621.md) for the exact Windows A–Z commands, and [VERIFICATION_1192621.json](VERIFICATION_1192621.json) for VPS evidence and its limits. **1192621 Windows/LDPlayer acceptance is pending.**
+
+This is a coordinated client/server update: schema 2 → 3 in the existing runtime-v2, account/native protocol 3, a fresh private cold backup, preserved bridge/native/Android rebuilds and all five services. The ignored client `.env` supplies only the public profile path; the APK bundles validated public trust and interface assets. No fresh runtime initialization, trust import, OBB transfer, dependency upgrade or data reset is required. Follow A–Z in order and retain the exact backup for migration resume and isolated recovery. Current source, package identity, original signer, prior stages and user README edits are preserved.
+
+The existing single LDPlayer plus authenticated computer companions is the Windows test setup. Record WAN once per batch, stop at the first unexpected result, retain relevant logs and state, then fix/retest only the failed step and affected regressions. Earlier successful tests remain scoped to their release; they do not establish new Windows acceptance.
+
+## Historical record
+
 # Offline Wesnoth development workflow
 
 **Current progress (2026-10-24):** A repository update, B Windows Android1192620 rebuild and C five-service startup pass. W02–W06 PASS and W07 UNIFIED GAME SERVICES READY are supplied alongside all five running-service outputs using runtime-v2. Continue at **D**: install the completed1192620 APK with KeepSavedProfile; keep all five service windows and the existing LDPlayer open. Retain the batch's WAN-disconnected/local-Ethernet setting. This documentation record needs no extra pull, build, restart or initialization. D–Z Windows/LDPlayer acceptance remains pending.

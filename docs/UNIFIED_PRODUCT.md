@@ -1,3 +1,13 @@
+# Current release: 1192621
+
+The approved product UI/flexible-battle release supersedes the historical instructions below. Read [PRODUCT_UI_1192621.md](PRODUCT_UI_1192621.md) for current behavior, [PRODUCT_ACCEPTANCE_1192621.md](PRODUCT_ACCEPTANCE_1192621.md) for the exact Windows A–Z commands, and [VERIFICATION_1192621.json](VERIFICATION_1192621.json) for VPS evidence and its limits. **1192621 Windows/LDPlayer acceptance is pending.**
+
+This is a coordinated client/server update: schema 2 → 3 in the existing runtime-v2, account/native protocol 3, a fresh private cold backup, preserved bridge/native/Android rebuilds and all five services. The ignored client `.env` supplies only the public profile path; the APK bundles validated public trust and interface assets. No fresh runtime initialization, trust import, OBB transfer, dependency upgrade or data reset is required. Follow A–Z in order and retain the exact backup for migration resume and isolated recovery. Current source, package identity, original signer, prior stages and user README edits are preserved.
+
+The existing single LDPlayer plus authenticated computer companions is the Windows test setup. Record WAN once per batch, stop at the first unexpected result, retain relevant logs and state, then fix/retest only the failed step and affected regressions. Earlier successful tests remain scoped to their release; they do not establish new Windows acceptance.
+
+## Historical record
+
 # Unified game implementation and acceptance
 
 Release **1192619** includes the unified product, startup/input/session corrections and global individual battle rooms. The schema is 2 and the account/native protocol is 2. Windows/LDPlayer acceptance uses the combined A–Z in [NEXT_TEST.md](NEXT_TEST.md); it is not inferred from VPS tests. The individual-room implementation and evidence are in [INDIVIDUAL_BATTLES.md](INDIVIDUAL_BATTLES.md) and [VERIFICATION_1192619.json](VERIFICATION_1192619.json).

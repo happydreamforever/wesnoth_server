@@ -1,0 +1,1711 @@
+{
+  "release": 1192621,
+  "recorded_at": "2026-10-26T08:02:24.499295+00:00",
+  "status": "verified_at_recorded_vps_scope",
+  "windows_ldplayer_acceptance": "pending_A_through_Z",
+  "schema_version": 3,
+  "account_native_protocol": 3,
+  "team_descriptor_format": 2,
+  "source_heads_before_documentation_commit": {
+    "wesnoth_client": "7c6595d1ef8ad50e1a9bf4103cda90c03ef39f24",
+    "wesnoth_server": "7a84bb2745745e3cd6c77837206174fc25424c78"
+  },
+  "backend_and_migration": {
+    "receipt": {
+      "path": "wesnoth_server/build/audit-flexible-1192621/validation.json",
+      "bytes": 16913,
+      "sha256": "5b2b6c006bf5b28d43521a04c2b0aa08adb4009db33962d74694bbbb007bca53"
+    },
+    "environment": {
+      "network": "Docker --network none",
+      "database": "MongoDB 8.0.32 disposable replica sets",
+      "python": "3.14.3",
+      "native_compiler": "GCC 16.2.0",
+      "powershell": "Linux-hosted helper simulations; not Windows execution"
+    },
+    "checks": [
+      {
+        "name": "flexible_domain_and_daemon",
+        "status": "passed",
+        "test_groups": 14,
+        "seconds": 21.997,
+        "evidence": {
+          "path": "build/audit-flexible-1192621/domain-final-attempt13.log",
+          "bytes": 2254,
+          "sha256": "401ffe070cf0733c879c8b0b22a75b459bdf4fa2db6c75cf48c1af956a0c49b5"
+        },
+        "scope": "Earlier 14-group iteration; final production domain corrections are covered by the 18-group suite plus the newly added migrated-plan lifecycle below."
+      },
+      {
+        "name": "actual_native_tls_individual_and_protocol",
+        "status": "passed",
+        "test_groups": 21,
+        "seconds": 31.256,
+        "evidence": {
+          "path": "build/audit-flexible-1192621/native-final-attempt14.log",
+          "bytes": 3416,
+          "sha256": "933920ab8249c086d663cedd1ec19f9167e35a69dd9e5531d2c43046195e3ede"
+        }
+      },
+      {
+        "name": "actual_account_bridge_tls",
+        "status": "passed",
+        "test_groups": 38,
+        "seconds": 21.595,
+        "evidence": {
+          "path": "build/audit-flexible-1192621/bridge-attempt-final.log",
+          "bytes": 6363,
+          "sha256": "60bac9df58ace9731fbf4ae7434073c65d96301af37a351059c1abca9d489fb9"
+        },
+        "scope": "Full38-group actual TLS suite passed before the isolated v2 rejection change; final5 groups cover the changed request envelope and current protocol regression."
+      },
+      {
+        "name": "authenticated_cold_migration_restore_and_delivery",
+        "status": "passed",
+        "test_groups": 41,
+        "seconds": 48.441,
+        "evidence": {
+          "path": "build/audit-flexible-1192621/migration-delivery-attempt2.log",
+          "bytes": 7849,
+          "sha256": "b90f99c6a0abd550334244c807b0510462a9048d80ee9b5e8e26405935dcda69"
+        },
+        "scope": "Earlier 41-group migration/delivery iteration before legacy draft conversion was added. Final changed migration behavior is covered by the authenticated cold migration/restore test below; unrelated delivery wrappers are unchanged."
+      },
+      {
+        "name": "five_service_readiness_contract",
+        "status": "passed",
+        "test_groups": 19,
+        "seconds": 0.455,
+        "evidence": {
+          "path": "build/audit-flexible-1192621/workflow-attempt2.log",
+          "bytes": 3196,
+          "sha256": "1703c4fb806768bc26d866cdb35c43266c38f1b18e909e673f56b380da5dbd2c"
+        }
+      },
+      {
+        "name": "bridge_and_native_build_receipts",
+        "status": "passed",
+        "test_groups": 20,
+        "seconds": 0.24,
+        "evidence": {
+          "path": "build/audit-flexible-1192621/build-delivery-final.log",
+          "bytes": 4319,
+          "sha256": "71e644ab472658d7a94bcd042c6f251580adf44f142ee3a96aec41709005ad95"
+        }
+      },
+      {
+        "name": "powershell_bridge_stage_preservation",
+        "status": "passed",
+        "test_groups": 30,
+        "seconds": 30.934,
+        "evidence": {
+          "path": "build/audit-flexible-1192621/bridge-rebuild-powershell-attempt2.log",
+          "bytes": 4556,
+          "sha256": "0e14c124548f8f429ab5cf9c35d9365e83baaa71e9ba9521529ac142a1c73bf7"
+        }
+      },
+      {
+        "name": "actual_tls_previous_protocol_upgrade_rejection",
+        "status": "passed",
+        "test_groups": 5,
+        "seconds": 0.863,
+        "evidence": {
+          "path": "build/audit-flexible-1192621/bridge-upgrade-rejection-tls.log",
+          "bytes": 955,
+          "sha256": "924f1944bfff002e52744d7efd7ecc5e617174c9cfe23325f413bca4b80e4924"
+        }
+      },
+      {
+        "name": "final_flexible_domain_and_daemon",
+        "status": "passed",
+        "test_groups": 18,
+        "seconds": 25.743,
+        "evidence": {
+          "path": "build/audit-flexible-1192621/final-gap-domain-attempt2.log",
+          "bytes": 2926,
+          "sha256": "124866e7e33578d553325c67f797d7430fbbf4293db8a15fa52e3646fa869fb3"
+        },
+        "scope": "Includes competing Ready transaction rollback/disjoint preparations, immutable recorded captain history, legacy cancelled approval evidence and two-captain stale reservation repair."
+      },
+      {
+        "name": "final_authenticated_cold_draft_migration_restore",
+        "status": "passed",
+        "test_groups": 1,
+        "seconds": 24.228,
+        "evidence": {
+          "path": "build/audit-flexible-1192621/final-draft-migration-attempt1.log",
+          "bytes": 293,
+          "sha256": "6ace44ff27225141f194790d3e3492bb29395404269713619a0f0281843f5520"
+        },
+        "scope": "Actual authenticated cold backup, two legacy drafts, completed/cancelled/story retention, active/preparing refusal before journal, interruption after one conversion, generation mismatch refusal, exactly-once resume, exact original BSON snapshots, unchanged other collections and mandatory isolated schema2 restore without activation."
+      },
+      {
+        "name": "final_migrated_plan_start_and_settlement",
+        "status": "passed",
+        "test_groups": 1,
+        "seconds": 1.558,
+        "evidence": {
+          "path": "build/audit-flexible-1192621/final-migrated-plan-lifecycle.log",
+          "bytes": 282,
+          "sha256": "afd24692f2d6b179f30debeb852315dffc9791e0a341e0b70c9689eea150701b"
+        },
+        "scope": "Legacy participants and selected heroes survive conversion; fresh Ready alone cannot prepare, both fresh captain approvals then prepare/start; ranked settlement and original snapshot remain valid."
+      }
+    ],
+    "native_build": {
+      "status": "passed",
+      "initial_steps": 45,
+      "final_incremental_steps": 4,
+      "evidence": [
+        "build/audit-flexible-1192621/native-attempt1.log",
+        "build/audit-flexible-1192621/native-attempt5.log"
+      ],
+      "artifact": {
+        "path": "build/audit-flexible-1192621/native/bin/wesnothd",
+        "bytes": 5595040,
+        "sha256": "e22a3d966e34cfbb4a05918880c1f7fb4780b9c6cf0da6118afd03896a4bb34b"
+      }
+    },
+    "bridge_build": {
+      "status": "passed",
+      "evidence": "build/audit-flexible-1192621/bridge-upgrade-rejection-build.log",
+      "artifact": {
+        "path": "build/audit-flexible-1192621/bridge/alliance-account-bridge",
+        "bytes": 1501136,
+        "sha256": "793f0709e8a8b5fd2f575d4c15e5245552984ce39101d85b2d3dc3d3a969e949"
+      }
+    },
+    "legacy_regression": {
+      "status": "passed_on_preceding_iteration",
+      "test_groups": 56,
+      "evidence": {
+        "path": "build/audit-flexible-1192621/native-domain-attempt10.log",
+        "bytes": 8387,
+        "sha256": "4b532d7fb6778a297a7a092dd2cce2dd504147bd937f591b05707cb3a4b961f0"
+      },
+      "scope": "Includes 24 existing UnifiedProduct campaign/hero/training/settlement groups; later native retirement and lease changes are covered by final21 and domain14 above."
+    },
+    "limits": [
+      "No Windows execution, LDPlayer installation, physical LAN or multiple-human acceptance claimed.",
+      "Individual running rooms reject rejoin and saved network uploads; local save/replay readers remain.",
+      "Native Individual leases expire after120seconds without successful renewal; daemon room failure releases only its generation.",
+      "Prior failed attempts remain in audit and are not claimed as passing; attempt9 was a fixture file-descriptor limit and final suites used65536.",
+      "Root owns actual client replay/observer/reconnect verification and Android build evidence.",
+      "Already installed protocol2 clients may display their compiled unsupported-response text; the server returns426/code protocol with an update message and a fixed credential-free diagnostic marker, without backend dispatch."
+    ]
+  },
+  "startup_and_android": {
+    "receipt": {
+      "path": "wesnoth_client/build/audit-startup-profile-1192621/validation.json",
+      "bytes": 12747,
+      "sha256": "4c323f1ef3848dc4bbd15f74c2db165e75adc04417606d423f71f86af757fb69"
+    },
+    "result": {
+      "release": 1192621,
+      "commit": "835d4ed",
+      "status": "passed",
+      "tests": {
+        "builder_and_preservation": {
+          "count": 70,
+          "log": "builder-07.log",
+          "scope": "Includes native touch header mutation invalidating an owned stage without rewriting its files."
+        },
+        "public_config_assets_and_java": {
+          "count": 18,
+          "log": "public-tests-08.log",
+          "scope": "Includes actual installer interruption/resume/tamper with progress boundary, and executed production Activity percent-only callback with substituted Android widgets."
+        },
+        "windows_helper_simulations": {
+          "count": 33,
+          "logs": [
+            "windows-02.log",
+            "windows-startup-failure.log"
+          ]
+        },
+        "companion_delivery": {
+          "count": 52,
+          "log": "companions-03.log"
+        },
+        "actual_android_java_api_compile": {
+          "passed": true,
+          "log": "java-api-compile-02/compile.log"
+        },
+        "product_protocol_errors": {
+          "groups": 4,
+          "cases": 54,
+          "log": "protocol-ai-final-03.log",
+          "build_log": "protocol-ai-build-03.log",
+          "binary": "protocol-final-build/account_response_probe",
+          "scope": "Production C++ client over disposable loopback TLS:43 pinned Default AI choices, cross-faction rejection,9 actionable errors,401 normalization."
+        },
+        "windows_handoff": {
+          "parsed_blocks": 11,
+          "parse_log": "handoff-parse.log",
+          "exact_append_only_cases": 5,
+          "preservation_log": "handoff-env-preservation.json",
+          "scope": "Original draft command parsing only; corrected final acceptance document is owned and revalidated by server agent."
+        },
+        "individual_name_companion": {
+          "groups": 17,
+          "log": "individual-name-helper-02.log",
+          "scope": "Real private stdin pipes and PowerShell wrapper with substituted Android child; production C++ selector and native/generated greeting expressions executed under ASan/UBSan. Root owns actual authenticated engine integration."
+        },
+        "actual_individual_name_integration": {
+          "passed": true,
+          "receipt": "../audit-product-individual-1192621/name-reconsent01/validation.json",
+          "scope": "Root-operated current production companion over authenticated nativeTLS/Mongo; exact room name, two real engines/two AI rounds, changed gold causes renewed Ready, hero BSON unchanged and settlements zero."
+        },
+        "keyboard_and_task_close": {
+          "groups": 3,
+          "log": "keyboard-task-close-01.log",
+          "scope": "Production Java keyboard/task closure against substituted Android APIs; no LDPlayer claim."
+        }
+      },
+      "limits": [
+        "Android activities/storage APIs compiled against Android35; focused Java storage and progress fixtures substitute Android Context/AtomicFile/widgets.",
+        "No Windows or LDPlayer execution, physical-keyboard acceptance, or live user accounts exercised. Android launcher/loading visuals remain a device acceptance item; actual native SDL GUI evidence is linked separately.",
+        "VPS build uses a disposable public certificate, not the user server identity. Existing .env and private runtime were not read. Windows builds consume the local public profile selected by the preserved .env."
+      ],
+      "retained_failed_attempts": [
+        "builder-initial.log: expected previous-version set needed1192620; test assertion corrected",
+        "public-tests-host-initial.log: host had no Java and expired fixture used unsupported negative days",
+        "public-tests.log: expired fixture generation unsupported; corrected to real dated certificate with openssl ca",
+        "windows-01.log: timeout fixture anchor outdated after command argument refactor; corrected fixture only",
+        "companions-02.log: mismatch assertion selected noncanonical fixed port; changed to otherwise valid different address",
+        "protocol-errors-before.log: new plan errors were not mapped in team_failure and probe allowlist; production mapping and probe corrected by root",
+        "protocol-ai-final-02.log: concurrent probe allowlist edit raced shared object compilation; fresh separate probe build and final rerun passed",
+        "individual-name-helper-01.log: host had no C++ compiler; complete suite rerun in pinned native GCC16/Python3.14 image passed",
+        "builder-06.log: new binding fixture reused one mutable mocked prerequisite mapping; corrected to fresh mappings matching production and all70passed"
+      ],
+      "source_files": {
+        ".env.example": {
+          "bytes": 331,
+          "sha256": "928b4dd2343ba2960a6830e10724b98f143fb3806445c7ddabdda0fb3b6a0370"
+        },
+        "tests/test_android_account_game.py": {
+          "bytes": 55046,
+          "sha256": "73782db940a993b54c5bc55c0905905e554a5ebaff2bc6c15a69d89553bdcbf4"
+        },
+        "tests/test_android_account_windows.py": {
+          "bytes": 27913,
+          "sha256": "81df838fc49caf2d5b1df64d222f3c284ca3416c2d2cc7eb625db1ad95d1d902"
+        },
+        "tests/test_android_alliance_companion.py": {
+          "bytes": 45691,
+          "sha256": "28c722a9bd5ad9e4758c1589687c5a75a0eacc952152c2b3f4abf227360bd959"
+        },
+        "tests/test_android_public_bundle.py": {
+          "bytes": 28452,
+          "sha256": "48f88fdac914fafdaedf4b4a6d018c69af76e902892bd80d1a7fecc038dad516"
+        },
+        "tools/Build-WindowsAndroidAccountGame.ps1": {
+          "bytes": 8524,
+          "sha256": "573b199a8290eada57502c67bfe3efa5f241279cfc1b7e6e11b5e1132364a88d"
+        },
+        "tools/Install-AndroidAccountGame.ps1": {
+          "bytes": 12072,
+          "sha256": "aebed1761675200c9b4028e5a3bca9d385e966d24afb6c5aa53e65350d37b20a"
+        },
+        "tools/Rebuild-WindowsAndroidAccountGame.ps1": {
+          "bytes": 3531,
+          "sha256": "40584bbf1d3ff41304dc5d80f03d4013d184f100b5f61eada38bfb0e1c1126e0"
+        },
+        "tools/Run-AndroidAllianceCompanion.ps1": {
+          "bytes": 2801,
+          "sha256": "fecf7c5db36968e4cda538b3312929a5900e2d4b769c39bcf7d8cd7ee110d2c0"
+        },
+        "tools/Run-AndroidIndividualCompanion.ps1": {
+          "bytes": 2255,
+          "sha256": "2eb539ba4ce02818ff7d7f4cba5a165036951c3f6a4a6a2555f95dbc28183262"
+        },
+        "tools/android_public_bundle.py": {
+          "bytes": 8508,
+          "sha256": "ea71ff54475b813c8230707248b31a381bce9696dbe31270092552886513ff90"
+        },
+        "tools/build_android_account_game.py": {
+          "bytes": 50365,
+          "sha256": "3df9da03d038e3eddf990922620b33880899e7bc8503df82ef5abc6594a40a7a"
+        },
+        "tools/native-account-game/AndroidManifest.xml": {
+          "bytes": 1512,
+          "sha256": "868c6c738250295376ff251e47b0c246c05706c9031863572642edbb90631d01"
+        },
+        "tools/native-account-game/BundledStartup.java": {
+          "bytes": 5621,
+          "sha256": "fe6289546c3a18e971648c66b54ed3ff4c71f4657f00a71237b6364326805d4c"
+        },
+        "tools/native-account-game/OfflineGameActivity.java": {
+          "bytes": 10442,
+          "sha256": "aa38ee5cb7c0bf420d980c75d070d41bc4b314f529dac6ec7c3d843fe5d175db"
+        },
+        "tools/native-account-game/OfflineInitActivity.java": {
+          "bytes": 10434,
+          "sha256": "f93efda3ca3431c7baef5574f10e0d621f81cb08816b03c36368e782f9a4eec8"
+        },
+        "tools/native-account-game/StartupProgress.java": {
+          "bytes": 441,
+          "sha256": "e70a93e8ca190454184b1029815f2b1a578ffc2ca5d036e3e3dc0eb568553f3b"
+        },
+        "tools/native-account-game/app.build.gradle": {
+          "bytes": 795,
+          "sha256": "cb0d7bbed43e2834425a98e597b7cb4aca32d9787093edacb02450ca1399a8fb"
+        },
+        "tools/run_android_alliance_companion.py": {
+          "bytes": 31719,
+          "sha256": "9ce2574ebee695379e66ae3cc7eee4d6029e636a446ca628cfc96d70cbb6fd43"
+        },
+        "tools/run_android_individual_companion.py": {
+          "bytes": 16070,
+          "sha256": "c3084bd9e03fea5c7846c0ddda0ecab646e237436701aff4765e9543b2005f98"
+        },
+        "tools/native-account-game/CMakeLists.txt": {
+          "bytes": 8564,
+          "sha256": "f10193f2615202458a9a298f28dd76f7f6589deb809bef20e3bbd0079feeee25"
+        },
+        "tests/test_product_protocol_errors.py": {
+          "bytes": 4205,
+          "sha256": "624a9ca481992c84561e4dbf8941f12f3dde7db952b47e3a576de0402f1466bd"
+        },
+        "docs/PRODUCT_ACCEPTANCE_1192621.md": {
+          "bytes": 35596,
+          "sha256": "0ffbdce9003c7ce68c725bbff749ecc256a7fdae1a60455a7bf5ae739764fdc4"
+        },
+        "alliance_game/individual_companion.cpp": {
+          "bytes": 15339,
+          "sha256": "bc002f568263240752545862eea1e56438f9f46f993f0abca2e6daf1455b3b8c"
+        },
+        "tests/test_android_individual_companion.py": {
+          "bytes": 19262,
+          "sha256": "627494d5bbb2d0da48aba591ed5e177978b216f81fb623c241b138f3191a7f5f"
+        }
+      },
+      "commits": [
+        "600a7d7",
+        "7ac66bc",
+        "1d42b24",
+        "0b21cae",
+        "975e543",
+        "d2d6d84",
+        "305bc2f",
+        "6872580",
+        "efd8cf4",
+        "d2ddb65",
+        "835d4ed"
+      ],
+      "retained_intermediate_android_attempt": {
+        "scope": "Unpublished1192621 before required campaign48px control correction; not final product acceptance.",
+        "native_steps": 46,
+        "gradle_tasks": 33,
+        "build_passed": true,
+        "reuse_passed": true,
+        "separate_verify_interrupted": true,
+        "stages": "android-intermediate-01",
+        "logs": [
+          "android-prepare.log",
+          "android-build.log",
+          "android-reuse.log",
+          "android-verify.log"
+        ],
+        "preservation": "android-intermediate-01/verified.json"
+      },
+      "retained_intermediate_android_attempt_02": {
+        "scope": "Campaign touch fix included; native Room dashboard/staging touch coverage and stale filter label still required correction. Not final product acceptance.",
+        "native_steps": 46,
+        "gradle_tasks": 33,
+        "build_passed": true,
+        "reuse_passed": true,
+        "separate_verify_started": false,
+        "stages": "android-intermediate-02",
+        "logs": [
+          "android-prepare-02.log",
+          "android-build-02.log",
+          "android-reuse-02.log"
+        ],
+        "preservation": "android-intermediate-02/verified.json"
+      },
+      "journal_recovery": {
+        "first": "journal-recovery.json",
+        "second": "journal-recovery-02.json",
+        "scope": "Both unpublished intermediate1192621 journals retained byte-for-byte with complete stage inventories; original1192620 backups reverified; all19 historical journals and production-helper safeguards retained."
+      },
+      "separate_backend_acceptance": "Backend-only legacy-draft format2 conversion and competing Ready revocation are recorded separately in root/server evidence; they do not change the Android build contract.",
+      "final_android_pipeline": {
+        "status": "passed",
+        "source_freeze_commit": "7c6595d1ef8ad50e1a9bf4103cda90c03ef39f24",
+        "network": "Docker --network none for prepare/build/reuse/verify and independent package tools",
+        "logs": [
+          "android-prepare-03.log",
+          "android-build-03.log",
+          "android-reuse-03.log",
+          "android-verify-03.log",
+          "independent-apk-check.log"
+        ],
+        "journal": "build/.wesnoth-account-game-update-1192621.json",
+        "journal_sha256": "6e384b9febf8c34a38b2256a2d58ace3a8757eb5da14f5a4daeb0325e5f90fc6",
+        "native_compile_link_steps": 46,
+        "offline_gradle_tasks": 33,
+        "same_input_reuse_passed": true,
+        "separate_verify_only_passed": true,
+        "independent_package_receipt": "independent-apk-validation.json",
+        "build_receipt_fingerprints": "final-receipts.json",
+        "apk": {
+          "path": "build/android-account-game/app/build/outputs/apk/debug/app-debug.apk",
+          "bytes": 44919335,
+          "sha256": "5af74065a36e7259c013be21c554806b7f4d2c889dab9bd764f3009dad30c97a"
+        },
+        "launcher": "org.wesnoth.offline.OfflineInitActivity",
+        "version_code": 1192621,
+        "original_signer_sha256": "7e346dc5ec05098674444abdb61508270da51de9e57421133340c07834343074",
+        "scope": "Independent aapt2/apksigner and exact ZIP bytes; disposable public build trust, no Windows/LDPlayer execution."
+      },
+      "final_ui_evidence": {
+        "receipt": "../audit-product-ui-1192621/validation.json",
+        "sha256": "264b683473e2faf34a32f563a5c5e3dc2b2a5d712b1f9f46df8d25528d66bfd7",
+        "scope": "Separate final actual SDL product/native Room renderer receipt. Three native Room captures and geometry were independently reviewed in native-room-review/. Network and account boundaries in the renderer are fixture substitutions; live engine/protocol evidence is recorded separately.",
+        "bytes": 36337
+      },
+      "build_source_commit": "7c6595d1ef8ad50e1a9bf4103cda90c03ef39f24",
+      "preservation": {
+        "receipt": "../audit-product-preservation-1192621/final-verification.json",
+        "bytes": 585,
+        "sha256": "9718c3d7c0a78aae7ab5999e583ba926a1f2c9983397ea6b4e0d2ce8c2e1ba9f",
+        "status": "passed",
+        "counts": {
+          "foundation-before.json": 17731,
+          "account-before.json": 6965,
+          "pinned-engine-source-before.json": 1454,
+          "pins-before.json": 20
+        },
+        "trees_verified": 45,
+        "scope": "Root independent inventory using the final canonical journal mapping to original1192620 backups. Both unrelated README edits retained."
+      }
+    }
+  },
+  "rendering_and_controller_checks": {
+    "receipt": {
+      "path": "wesnoth_client/build/audit-product-ui-1192621/validation.json",
+      "bytes": 36337,
+      "sha256": "264b683473e2faf34a32f563a5c5e3dc2b2a5d712b1f9f46df8d25528d66bfd7"
+    },
+    "result": {
+      "release": 1192621,
+      "status": "PASS",
+      "ui_commit": "7c6595d1ef8ad50e1a9bf4103cda90c03ef39f24",
+      "sources": [
+        {
+          "path": "alliance_game/account_ui.cpp",
+          "bytes": 116646,
+          "sha256": "dc794280af65402a48ac75f18eb54c13ed229d665234c6fdb391375ab974c84e"
+        },
+        {
+          "path": "alliance_game/account_ui.hpp",
+          "bytes": 1261,
+          "sha256": "1799fcf804512aa0fe3423b9a282d9db8727ffd3ab09a35a2eeac28a6c847778"
+        },
+        {
+          "path": "alliance_game/battle_ui.cpp",
+          "bytes": 15303,
+          "sha256": "761ea2eddabbd3a7e6f8514d491a57ab17f915c0fa2ee8414442a9f5620e009f"
+        },
+        {
+          "path": "alliance_game/battle_ui.hpp",
+          "bytes": 1670,
+          "sha256": "df10a53830ce49f186bf563a51154940f76f16eef891c072543e8b31c7217077"
+        },
+        {
+          "path": "alliance_game/campaign_rewards.hpp",
+          "bytes": 2762,
+          "sha256": "47c64aa9d64fdce093ae6daecd08cfb909d6b1d20dcf56bec089130698a07dbb"
+        },
+        {
+          "path": "alliance_game/campaign_selection_overlay.py",
+          "bytes": 1109,
+          "sha256": "fd3b258355ba523d69794db2f3f436056f7ae39fd4a5bd2220a12110ac271acd"
+        },
+        {
+          "path": "alliance_game/engine_overlay.py",
+          "bytes": 11846,
+          "sha256": "c6546958c9b0b91e515e84b932839a0215ed193668b8bb214be3f5b324784b32"
+        },
+        {
+          "path": "alliance_game/hero_gallery.inc",
+          "bytes": 8819,
+          "sha256": "66ddb2a046fd254550fc5fd85fd1edeec409409b5d2808481c0ae85b88dd9825"
+        },
+        {
+          "path": "alliance_game/individual_creation.inc",
+          "bytes": 8213,
+          "sha256": "68843c81e5b0500e66f0b8337d1ebce657b69839ba7da97186c9c79e8df66bc1"
+        },
+        {
+          "path": "alliance_game/individual_rooms.cpp",
+          "bytes": 16653,
+          "sha256": "3b5253285ca6dc1580167c7681313bbd8c49cd917b6a4fdb340b22f2accc18c4"
+        },
+        {
+          "path": "alliance_game/individual_rooms.hpp",
+          "bytes": 1870,
+          "sha256": "ac380e0c8bdee28f339aae9dcc065c6962059e707ddf095f2a99ecbabd844ffe"
+        },
+        {
+          "path": "alliance_game/native_touch_layout.hpp",
+          "bytes": 8557,
+          "sha256": "c50dad22cd6dec01f92b14a45efc4cb1e90b192ce4b21dc8916f128372f6e591"
+        },
+        {
+          "path": "alliance_game/ordinary_mp_auth_overlay.py",
+          "bytes": 12335,
+          "sha256": "4d90b9a5261c7638b2bdb60b6b821650c57c92dc05771ff7d41edb4adf5f771f"
+        },
+        {
+          "path": "alliance_game/ordinary_mp_sides_overlay.py",
+          "bytes": 19285,
+          "sha256": "54ca91a42ab472434642c704e35e0798147d6bd10dc2435c578e168ad98e6c73"
+        },
+        {
+          "path": "alliance_game/product_ui_layout.hpp",
+          "bytes": 11218,
+          "sha256": "ffbe9a9188d9e794aa2f2e65a5499e0ce728bbf619f1ce386a45cf166840e490"
+        },
+        {
+          "path": "alliance_game/team_extension_ui.inc",
+          "bytes": 9157,
+          "sha256": "eb73f2dabcb7df596095f1bc5d33c4ac01c4e6b5d715fd1aa50427a0269589fc"
+        },
+        {
+          "path": "alliance_game/team_views.cpp",
+          "bytes": 6473,
+          "sha256": "269020dac4745847ad1e5c30ac6357a541f4d7e72810d02f280843696225512e"
+        },
+        {
+          "path": "alliance_game/team_views.hpp",
+          "bytes": 1714,
+          "sha256": "1c6ab5498dd868b77e10cc77f2045bc11558599f4a74867c5889243dc99d3539"
+        },
+        {
+          "path": "alliance_game/team_workspace.inc",
+          "bytes": 19560,
+          "sha256": "eba3a420ec2d7dc925ec4a16d47dd103c2a208cee5058df3ee55cca0e62f75d1"
+        },
+        {
+          "path": "alliance_game/title_overlay.py",
+          "bytes": 3422,
+          "sha256": "b8d176d8185e55b0fb93cc5e0c846174e5316357be90416ea229477734b88abf"
+        },
+        {
+          "path": "tests/hero_gallery_ui_fixture.cpp.in",
+          "bytes": 6347,
+          "sha256": "d95ef47f532de748552491a3056c724f2b381670465e6ee710fe1e81aadd191b"
+        },
+        {
+          "path": "tests/team_views_fixture.cpp.in",
+          "bytes": 5372,
+          "sha256": "95159d57b889638c2561427d810aab0dfbb17e6a94d4e74e5504eb246fb390f1"
+        },
+        {
+          "path": "tests/test_account_management_ui.py",
+          "bytes": 4005,
+          "sha256": "75fbecd25b21538f8ed76bfd0811b4d0f783dc78f286349c7290aed7ff0f580d"
+        },
+        {
+          "path": "tests/test_hero_gallery_ui.py",
+          "bytes": 3629,
+          "sha256": "211cdea18a94cf670023f9ee94e8bcbe7c4e8c45bd3f83368c317752997e9221"
+        },
+        {
+          "path": "tests/test_team_views.py",
+          "bytes": 2339,
+          "sha256": "3aff02f7a9a0a029c751f429fd775f4a214d81fa3014729a6fd881d2794f63b3"
+        },
+        {
+          "path": "tests/test_unified_startup_ui.py",
+          "bytes": 2049,
+          "sha256": "f2def4f66e077666d9e21045e1b889f9fc1caafe5c9a915a7533a693251d01c9"
+        },
+        {
+          "path": "tests/unified_casual_ui_fixture.cpp.in",
+          "bytes": 27393,
+          "sha256": "2f974c28fee2bbe7aef85bea9883b7f92ad8f7fed8de2a9bcc2c1a92f168d480"
+        },
+        {
+          "path": "tests/unified_startup_ui_fixture.cpp.in",
+          "bytes": 8410,
+          "sha256": "d9699c61cecac4a6447c9611e0160d0b82ae40f9615421eb7610aceae1a25623"
+        },
+        {
+          "path": "tests/generate_native_room_render.py",
+          "bytes": 14761,
+          "sha256": "c05f4bc43537373459262a81428138a347713bdde6c58e46dc74551f7c5673dc"
+        },
+        {
+          "path": "tests/generate_product_ui_render.py",
+          "bytes": 17815,
+          "sha256": "1ace4fefe155ac4ff2ba064c9829ac1a8ec915f92557b755c2f90c5df35c2299"
+        },
+        {
+          "path": "tests/test_product_plan_ui.py",
+          "bytes": 9439,
+          "sha256": "b467e919379eeabf2aba29cd4e1bd83bcea61c62202870d7b7a6b886693bc326"
+        }
+      ],
+      "dependencies": [
+        {
+          "path": "alliance_game/hero_presentation.hpp",
+          "bytes": 692,
+          "sha256": "0d625ca0d27aa7b9e3a99751668e53f55e1bc72d36cbcb1fc0a2bfc2a962c7a3"
+        },
+        {
+          "path": "alliance_game/hero_presentation_data.inc",
+          "bytes": 25851,
+          "sha256": "b96e6e72ff26ae1404ee8d3b1ff09dddbc7f1d801a81c3a868f4a6053def380d"
+        },
+        {
+          "path": "alliance_game/hero_presentation.json",
+          "bytes": 102468,
+          "sha256": "54d4db07970a537d68a44744b084e839a4cf09efe3ed21f5a1b833361cc2e3bf"
+        },
+        {
+          "path": "alliance_game/hero_catalog_data.inc",
+          "bytes": 336723,
+          "sha256": "470a9472145c4e2da57cc06dc823e8c8e0139a0b0703325f5c271ff1349db584"
+        },
+        {
+          "path": "alliance_game/hero_unit_data.inc",
+          "bytes": 2219353,
+          "sha256": "a02ec08991c9a62aa3d6cd35683e33735697cfb46b8d63a103bd29b05a234bdb"
+        },
+        {
+          "path": "alliance_native/account_client.hpp",
+          "bytes": 4879,
+          "sha256": "7546ff0520b6130d805043e52f9d4ee7778e4181c39840c53fdd81ae182e771c"
+        },
+        {
+          "path": "tests/test_team_hub_ui.py",
+          "bytes": 10012,
+          "sha256": "a4a59c9f8fd18ac0916136b61ec68a7c0e038cda7dc885cde906964e11a70499"
+        },
+        {
+          "path": "tools/native-account-game/ui-assets.json",
+          "bytes": 340,
+          "sha256": "30066e32f273b4256ebc4984093a0ed33644566d18c6c539c047e9cff2d049e1"
+        }
+      ],
+      "controllers": {
+        "unittest_groups": 25,
+        "log": {
+          "path": "build/audit-product-ui-1192621/controllers-final.log",
+          "bytes": 4649,
+          "sha256": "273a9549edc7edde6df799f371e1de867f85a998a645a6ad6d95cd871c7446cf"
+        },
+        "final_startup_navigation_log": {
+          "path": "build/audit-product-ui-1192621/startup-navigation-final.log",
+          "bytes": 990,
+          "sha256": "ba6d96e62f349d6d5bfe325e07b792e1673bc265ce72720d2719cc1609305732"
+        },
+        "final_startup_navigation_cases": 16,
+        "cases": [
+          "login-first signup/session recovery/X/local-first bounded Quit",
+          "117-entry catalogue gallery and selected native forms",
+          "Team acknowledgement settings/slot/actor/session/revision guards",
+          "empty draft vs unrelated room generation",
+          "archived opponent terminal history",
+          "current teammate replay admission; no download after fresh battle-detail authorization fails",
+          "pending and acknowledged terminal result review without auto-reconnect",
+          "Individual review/Ready/autostart/current revision and effective income",
+          "capacity filters and Team Plans/History/Roster/More with filtered-page pagination"
+        ],
+        "boundary": "Production controller functions executed with scripted transport/account/native-dialog boundaries; sanitizer-enabled C++ fixtures."
+      },
+      "actual_renderer": {
+        "engine": "Pinned Wesnoth1.19.26 GUI2/SDL3 software renderer",
+        "network": "Docker --network none; SDL dummy video; no Windows/LDPlayer execution",
+        "compile_logs": [
+          {
+            "path": "build/audit-product-ui-1192621/render-build-25.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "build/audit-product-room-render-1192621/build-10.log",
+            "bytes": 133,
+            "sha256": "d125a776a2c66e230fab2ab3a65dec510f7a84d792b12bc7d19a6b85983cdf04"
+          }
+        ],
+        "command_receipts": [
+          {
+            "path": "build/audit-product-ui-1192621/render-build-commands.json",
+            "bytes": 46140,
+            "sha256": "989b127b926594870c927e933d5a3f457732feda31c72aadb78439d9c770a1ad"
+          },
+          {
+            "path": "build/audit-product-room-render-1192621/render-build-commands.json",
+            "bytes": 46114,
+            "sha256": "72ee2f99c417e0e41b23998bc7aeed3b3c8aff8be096fb18a3ca419db248ca86"
+          }
+        ],
+        "product": [
+          {
+            "directory": "build/audit-product-ui-1192621/final-v5-1280x720",
+            "count": 23,
+            "geometry": {
+              "path": "build/audit-product-ui-1192621/final-v5-1280x720/geometry.txt",
+              "bytes": 6117,
+              "sha256": "882d4bdc873898627f6b76b4c82369fd110784b5557a91848491edeaed38c030"
+            },
+            "engine_log": {
+              "path": "build/audit-product-ui-1192621/final-v5-1280x720/engine.log",
+              "bytes": 396,
+              "sha256": "1ff227bd8d6874f48959e00a5b74a4b460d544764d358e569a085de17124b534"
+            },
+            "images": [
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/01-home.png",
+                "bytes": 832134,
+                "sha256": "a0a674fd5da2a3a899a1690a6835606d2faa7761493462c688a59ec9ac2e8fe9"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/02-login.png",
+                "bytes": 476191,
+                "sha256": "775b3f7b2e5234fce3cfc60f7b043bb93e6bb59bbfd450e090d2b54c95810136"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/03-signup.png",
+                "bytes": 476451,
+                "sha256": "d3f8a889c488f4d4aa33844c6d8f51b4c898ce2d609c0acf69fd8a85bb610c2b"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/04-team-editor.png",
+                "bytes": 144386,
+                "sha256": "0fa9f8a944f8a50d3c2072489a8b46906eea58f332120d530943677c89894544"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/05-team-workspace.png",
+                "bytes": 148567,
+                "sha256": "69de12fb8120077873d41fd48a5d2b65e653adc53e9548b13cb086141c65677d"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/06-room-create.png",
+                "bytes": 111538,
+                "sha256": "50f1ea5724d9b82e0043f8814ffd19cb139eb80a035049e854f09cd75917790f"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/07-heroes.png",
+                "bytes": 119843,
+                "sha256": "f91a28bbb5f76d94bbe77a16788cd7b3abb0b3c67af7473598e4284b40789e69"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/08-campaign.png",
+                "bytes": 497638,
+                "sha256": "2e588b6d341ead81dcea078407efefc666251d6d51bf000e84d73e02dd37752c"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/09-hero-search.png",
+                "bytes": 57249,
+                "sha256": "6c45252143605b8f225e64b85666f966886f3881cec050fc5bc50260f99e7d13"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/10-hero-empty.png",
+                "bytes": 18907,
+                "sha256": "c89859f372af747ce04cb79b918290e34694cdb013979d50486518d1e1ddc397"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/11-hero-page.png",
+                "bytes": 114410,
+                "sha256": "c9e51f29b9db34365c31f2772854b5a0d6ee92c7a7962a1679cc4a901e7d3680"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/12-refumee.png",
+                "bytes": 62811,
+                "sha256": "a0fc38b8b42b58779f37cc9a48cad0ca54f6c14619616955c002f8a8568dbc3b"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/13-team-results.png",
+                "bytes": 89988,
+                "sha256": "7b4a044ece166b8f34a7d6fa873840275e7548c74da8dfbe7974d57355d4e44c"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/14-team-watch.png",
+                "bytes": 88746,
+                "sha256": "02d01484481b3824f43f19ab15277a222d92b3a28e223eb99701d3e113a9aa0b"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/15-team-hub.png",
+                "bytes": 112514,
+                "sha256": "92ae6b57a6da2814bfe13cd2629862e24961ece08dac1ce18b1404b7337e14d8"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/16-team-roster.png",
+                "bytes": 123192,
+                "sha256": "b9147342af265c72bf8514a828299ae1e7ff30549dfbbba806057b402a3d0443"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/17-plan-input.png",
+                "bytes": 82734,
+                "sha256": "c367015b3c2898daaf58562163c03d1043640f508c9c86b473b94c38de411dbd"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/18-room-input.png",
+                "bytes": 113002,
+                "sha256": "9298184155ccb2a5ec23e247ec08af7fccce8cc4f9185fb2addac2a2ce53549e"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/19-room-filters.png",
+                "bytes": 75519,
+                "sha256": "c7e6f941cc0bdfa1812cf27c265975a37eedc13c12e3175364c22d421069410d"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/20-room-capacity.png",
+                "bytes": 42219,
+                "sha256": "3388b5db135516280c784d80ea7b5a6b607073521d59309df1651dc42b454b9d"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/21-room-filtered.png",
+                "bytes": 76866,
+                "sha256": "763fbc8003e160de2eb0f08c9304c7de06f0d4a10c9ccae3be378439141b7b17"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/22-team-more.png",
+                "bytes": 111720,
+                "sha256": "903111e452df93bb8b7520cd6cf361a8e2b579844c8654df88e97168ca7139c3"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1280x720/23-campaign-celes.png",
+                "bytes": 318930,
+                "sha256": "fe03239b9d7f73c94d1eff3cd385638ab7d0a77e00dd14b34ef8d148f20c7267"
+              }
+            ]
+          },
+          {
+            "directory": "build/audit-product-ui-1192621/final-v5-1920x1080",
+            "count": 23,
+            "geometry": {
+              "path": "build/audit-product-ui-1192621/final-v5-1920x1080/geometry.txt",
+              "bytes": 6261,
+              "sha256": "f3f37d6b896f5f9417fe4b974050b1b36b41a8c7d0b3c37fecf47a1d2e310829"
+            },
+            "engine_log": {
+              "path": "build/audit-product-ui-1192621/final-v5-1920x1080/engine.log",
+              "bytes": 397,
+              "sha256": "f9cb95654f105696ab1950747c3c573920acd88aeccbf21278768107bb165428"
+            },
+            "images": [
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/01-home.png",
+                "bytes": 1578373,
+                "sha256": "5297d87899a3da765ba1b76c4be9294da33ff67be524633717986080fdba0c3e"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/02-login.png",
+                "bytes": 1063946,
+                "sha256": "048468ac0b6f784260b7711bd5e0db040f381b7cc91e072e4ab89862d1931523"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/03-signup.png",
+                "bytes": 1063974,
+                "sha256": "4a4bc38f22b1e53ed42ade6cd2dfd4e66a0bc7314e165306e59f456dda19e21f"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/04-team-editor.png",
+                "bytes": 513670,
+                "sha256": "3736a261517eedef003ebc0727073bf71dbb8f2016f9f2492e2ab837a268f3e6"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/05-team-workspace.png",
+                "bytes": 502415,
+                "sha256": "1df292babd491f26e8fc00c3b43256e280699e344283c22828e070c14a2ee4cc"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/06-room-create.png",
+                "bytes": 228916,
+                "sha256": "4c8792a9415ca88306d8ace1ef97b569e93b09ff38bdaedbcd21f69a1308ccde"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/07-heroes.png",
+                "bytes": 143452,
+                "sha256": "1ae78681331456b1b63b23e925705ef0b70dc957280195a09da3eed5d02ba9e2"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/08-campaign.png",
+                "bytes": 549485,
+                "sha256": "b448d9755b3e01d65c462a87e6af7114e3a23650059e11260430d88da592da79"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/09-hero-search.png",
+                "bytes": 66781,
+                "sha256": "c5e2f6a67e0f4e43ab07c8bd598a1c6e15160174012469e38d1e8af030320f9f"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/10-hero-empty.png",
+                "bytes": 27664,
+                "sha256": "63962e105e409798ee93c9099a7d8aa78d0a0fe732d70fbe75aedfed32c1a979"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/11-hero-page.png",
+                "bytes": 141665,
+                "sha256": "53a5358da4d3d4d811dce2ad9382aca7dc4918f5ee53b9974a44f3552c95969c"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/12-refumee.png",
+                "bytes": 74387,
+                "sha256": "14a6f51b651b7f22a0ee288c80c16dc99c4b6d9d85d37379e6f9a14e47d0bd31"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/13-team-results.png",
+                "bytes": 122364,
+                "sha256": "788e246a834c60a2fc215815845e2be15b825e7135d1fb2277d7203e44bb40ba"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/14-team-watch.png",
+                "bytes": 120995,
+                "sha256": "ffe726e33792d03e76da3b8cf697c7d5bd6355e40e5cea466b422700fd415b84"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/15-team-hub.png",
+                "bytes": 126194,
+                "sha256": "0deaef034871d8a8eb320d578e1d2f6addcc015fe2d9db936ef9ecb11876a5f2"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/16-team-roster.png",
+                "bytes": 181097,
+                "sha256": "cf529402b0f4a03d96a071ce2e8c71391d2784feaa1536d12c4d3265fe205c4f"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/17-plan-input.png",
+                "bytes": 130038,
+                "sha256": "16f9c4d8f8d0efcd4c71178238540ff3a6b09c65817623d733baba131ef174bd"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/18-room-input.png",
+                "bytes": 230327,
+                "sha256": "18f6a55749f1c017399734290daa1bf0749507835d1ddc5e10fb56b759fb7457"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/19-room-filters.png",
+                "bytes": 89466,
+                "sha256": "9ef3ccc3d12d856123ff0252e41e270f2584a07b4ff81ac023b8a2ec7c2f017b"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/20-room-capacity.png",
+                "bytes": 103977,
+                "sha256": "dc4accfc35bffc714116e751b99d8c229d9147167f4434cf31baae811d5c717e"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/21-room-filtered.png",
+                "bytes": 89473,
+                "sha256": "294f3b59e4eec01e395e60b0074f0b403644609c2f00b800e0a3b2839cbda6aa"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/22-team-more.png",
+                "bytes": 125153,
+                "sha256": "83b0b3a4fce6bbf9dbef49c30f303bf82cf5d97f505aa365711fc6e6b1379fe8"
+              },
+              {
+                "path": "build/audit-product-ui-1192621/final-v5-1920x1080/23-campaign-celes.png",
+                "bytes": 351045,
+                "sha256": "4cf5eb56f259c07e1a293c4a3c5620359157517d169e66bdac3ca957fb00b6a6"
+              }
+            ]
+          }
+        ],
+        "room": [
+          {
+            "directory": "build/audit-product-room-render-1192621/final-1280x720",
+            "count": 18,
+            "geometry": {
+              "path": "build/audit-product-room-render-1192621/final-1280x720/geometry.txt",
+              "bytes": 12048,
+              "sha256": "a65016477ac96e7dc56f9dffb9985716aab7f9ebc9c32ee99c608ef281022cb0"
+            },
+            "engine_log": {
+              "path": "build/audit-product-room-render-1192621/final-1280x720/engine.log",
+              "bytes": 462,
+              "sha256": "802aaf01ea5af13e3c449da7093e5326a1098cbea58c55b164a36ffc392a82b6"
+            },
+            "images": [
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/1-Dashboard default .png",
+                "bytes": 262835,
+                "sha256": "8af6e20308f041216e5d0c55204743913baad9d5f4ad37e160328e27768b9702"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/10-Dashboard modern playing.png",
+                "bytes": 180508,
+                "sha256": "e11bf2833a9868bbecd5994e8434e528c717386de730ccff79027db37ac679b0"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/11-Staging modern 2.png",
+                "bytes": 162251,
+                "sha256": "bd4b4096b2c7750a53442fdc4bab62e7fa5ddf4c983463fe87ddc2fcac90c00e"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/12-Joined modern 2.png",
+                "bytes": 159556,
+                "sha256": "700030137671a184e872618cb9ce3a3e74816d9df70fe1aff883beb48ed6a2c2"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/13-Staging modern 8 bottom.png",
+                "bytes": 191623,
+                "sha256": "92f18f5fba2a2dac382bfd8efb15e78ac60ecc2b9f4aebb00a32b322d5999f6b"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/13-Staging modern 8.png",
+                "bytes": 191614,
+                "sha256": "ee80d62646f23ed2875eca689b08269f51a50914a80436723644c83c6a73d085"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/14-Joined modern 8 bottom.png",
+                "bytes": 172589,
+                "sha256": "fd79252869fbedb300924728adee91661a1abb52d896f9d0924ae431e8eb149e"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/14-Joined modern 8.png",
+                "bytes": 178060,
+                "sha256": "f491646a3ce25a60b9ed43f67960424825b939f0e64cd34a7a3814edb00521d8"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/2-Dashboard default open.png",
+                "bytes": 193060,
+                "sha256": "7e043230375b3fc062798d5e8454d7ff08f9b6677d0d94eb9eb384b7110e5d97"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/3-Dashboard default playing.png",
+                "bytes": 193084,
+                "sha256": "8463bdb5d420ba38b2924f20ebf92d3df19a9a5267b96b7fc03867f7d66bb7ca"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/4-Staging default 2.png",
+                "bytes": 179951,
+                "sha256": "5782f3c04b215f0aa2ea1e3d4096a16e61e076a25f4e16ac70bfdd53a0c65327"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/5-Joined default 2.png",
+                "bytes": 163149,
+                "sha256": "f924cc4a022463eab92356aaa74a2cca38fd659423b947ee640b8627377f8699"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/6-Staging default 8 bottom.png",
+                "bytes": 222801,
+                "sha256": "3e181b2e7b26f9b33ad72ce9ffdacd3c089822c072a49402cffbf45feb69be5c"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/6-Staging default 8.png",
+                "bytes": 221264,
+                "sha256": "66d9e4e28181da4a899b1ca4fd01e68db9214b9bb5c52182487ebd9fca4967ac"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/7-Joined default 8 bottom.png",
+                "bytes": 171066,
+                "sha256": "66c52723d284d921c82b7aec92617dde960ecd5f564ccdaec33e29e185c48c64"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/7-Joined default 8.png",
+                "bytes": 181577,
+                "sha256": "e54eaa214ba9352babe72b634565867a466c598f1f4b1a07d2f5183a9cdded53"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/8-Dashboard modern .png",
+                "bytes": 250064,
+                "sha256": "77164a12ba33c6c8ea161e0e06e5cb6154897df20d4ca7d4d4fc42b7645ca872"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1280x720/9-Dashboard modern open.png",
+                "bytes": 180290,
+                "sha256": "a2ad8c02945d88d853106b102a2ad19365227205d53ac6f2243665737650a201"
+              }
+            ]
+          },
+          {
+            "directory": "build/audit-product-room-render-1192621/final-1920x1080",
+            "count": 18,
+            "geometry": {
+              "path": "build/audit-product-room-render-1192621/final-1920x1080/geometry.txt",
+              "bytes": 12136,
+              "sha256": "e8d6df98073aeba1e4deb39e790b650a6da6a23cef9bc2b92642d8ae51e46c2d"
+            },
+            "engine_log": {
+              "path": "build/audit-product-room-render-1192621/final-1920x1080/engine.log",
+              "bytes": 463,
+              "sha256": "5b569d87ec9aefe8b8419a9f101c8ba683815566bb803913992e0da15dee08f3"
+            },
+            "images": [
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/1-Dashboard default .png",
+                "bytes": 318481,
+                "sha256": "c6c43b2b9977884f660ccc9f497026510630cf9a0bdcf39117a58701822fc94f"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/10-Dashboard modern playing.png",
+                "bytes": 231611,
+                "sha256": "ef73c332c61ae10f2eb9436c07640fcfebc92dd8a5dc9432d4cbf12cf4e5034b"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/11-Staging modern 2.png",
+                "bytes": 225545,
+                "sha256": "14190ab0817a879b00f347d5fe4c774beefe7369eb50afda9fb1e6a6b64c565c"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/12-Joined modern 2.png",
+                "bytes": 221345,
+                "sha256": "7edc9a651db5cfe9295f98e95d07a2e34dc9285abd5f6023dca7cce77604f788"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/13-Staging modern 8 bottom.png",
+                "bytes": 278740,
+                "sha256": "15369fa7ff5d4325169f16532ecdc297e0a06be81575a5fbc581a97ec1125bd5"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/13-Staging modern 8.png",
+                "bytes": 278980,
+                "sha256": "122586ef3575f0d72a4fabcab0540da799439cfe0f656d277212367bd099d6c7"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/14-Joined modern 8 bottom.png",
+                "bytes": 264920,
+                "sha256": "7ce3952aa88c83917f606f4fbe005c8c2c1e11a7e823cab8b251e653fb2b5ea4"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/14-Joined modern 8.png",
+                "bytes": 266036,
+                "sha256": "58aa16db81ee0a07396926a52f9b0d3e963d0b01c3672288187fa3e60650a430"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/2-Dashboard default open.png",
+                "bytes": 246220,
+                "sha256": "fd26bc986063269b91f97b2bfe989462dbdb889a618f8efa0d41193912105cb2"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/3-Dashboard default playing.png",
+                "bytes": 246594,
+                "sha256": "a60551f25574636f61b89968971160bfaa4e33881fac5f4b22ec8fd175734d33"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/4-Staging default 2.png",
+                "bytes": 246185,
+                "sha256": "4afe692667b750599deeab7e2094e481630bdd4896952d9c5ca07ba9f50eb6ef"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/5-Joined default 2.png",
+                "bytes": 224655,
+                "sha256": "6c86e2d7e725d767468c283d64f3e3803b29fa84d7fbe2c0ea881d201843b630"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/6-Staging default 8 bottom.png",
+                "bytes": 331305,
+                "sha256": "3606f1d1fd3209772dd2f63dc979ff2fac2c96ae097ecfad4496bf98f147ae0a"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/6-Staging default 8.png",
+                "bytes": 329409,
+                "sha256": "cf58a19ec93bc39967e496c8e50f44e4b206bf10698302144f7e03bdf62f6c9a"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/7-Joined default 8 bottom.png",
+                "bytes": 266603,
+                "sha256": "f0644041bda852e0742a7b2b656a33ca9153469ebb59b83d7b210b46cc05c7ce"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/7-Joined default 8.png",
+                "bytes": 270550,
+                "sha256": "9d4908ef7fac28b99a12c33127d8dc889d94a27a3e5976e3b7949e2e2c9f8b9b"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/8-Dashboard modern .png",
+                "bytes": 305181,
+                "sha256": "32f92e28b438470ad96128f572e1bab3edc31122f6802f6c2c2c7db226b54d17"
+              },
+              {
+                "path": "build/audit-product-room-render-1192621/final-1920x1080/9-Dashboard modern open.png",
+                "bytes": 231305,
+                "sha256": "d85c6ec1781f57913c46c61e5a0fb7763072b09bfa111c468b6aaff8daa1c4f2"
+              }
+            ]
+          }
+        ],
+        "assertions": [
+          "All captured windows fit1280x720 and1920x1080",
+          "Measured primary buttons/menu/toggle/search/password/chat controls at least48px; no Campaign exemption",
+          "Native default and Celes theme fallback renders Campaign, Room dashboard, host staging and joined staging",
+          "Login receives SDL text input, retains focus and exact secret through reveal/hide; capture masks it; outer X returns distinct Quit13 and Signup Back returns11",
+          "Native chat accepts SDL text and preserves it while scrolling",
+          "Search/empty-selection/pagination/Enter/cancel; all117 heroes and generated Thea/Refumee images",
+          "Native room maps present; invalid turn0 rejected; Unlimited and zero effective income accepted",
+          "All43 pinned AI faction-leader options; saved plan settings preserve values",
+          "Capacity8 filter applies; hidden Standard/unsupported controls stay inaccessible",
+          "Human Room staging has no obsolete Random faction/gender/dice; effective base income displayed",
+          "Full-room automatic start remains disabled as a manual action; eight-seat host/join lists scroll",
+          "Title ink checked from raw BMP bytes independently of image-tool cache"
+        ],
+        "title_pixels": {
+          "final-v5-1280x720": [
+            {
+              "screen": "05-team-workspace",
+              "ink_y_min": 37,
+              "ink_y_max": 65,
+              "bright_title_pixels_above_label": 0
+            },
+            {
+              "screen": "15-team-hub",
+              "ink_y_min": 37,
+              "ink_y_max": 58,
+              "bright_title_pixels_above_label": 0
+            }
+          ],
+          "final-v5-1920x1080": [
+            {
+              "screen": "05-team-workspace",
+              "ink_y_min": 37,
+              "ink_y_max": 65,
+              "bright_title_pixels_above_label": 0
+            },
+            {
+              "screen": "15-team-hub",
+              "ink_y_min": 37,
+              "ink_y_max": 58,
+              "bright_title_pixels_above_label": 0
+            }
+          ]
+        },
+        "limits": [
+          "Renderer account, roster and network data are fixtures; real transport/gameplay are separate parent-agent audits.",
+          "Rendered account/Team/hero values are coherent illustrative data, not claims about user accounts.",
+          "The replay controller fixture scripts fresh battle-detail authorization success/refusal. It does not model departure authorization; retained participant/captain rights are established by separate server tests. Its retained stdout label mentioning departed-participant replay admission is imprecise.",
+          "Native hero definitions are re-appended after config refresh to mirror the production game_config_manager overlay.",
+          "Chatbox touch styling is intentionally shared within the active theme; source OBB/native assets are unchanged.",
+          "Native scrollbars and disabled sliders retain native styling. Only captured primary controls are covered by the48px measurements.",
+          "No physical keyboard, Android task lifecycle, emulator, Windows or LAN gameplay acceptance is claimed.",
+          "Retained render16 emitted PASS then exceeded the initial60-second process bound; final runs use120 seconds and require exit0."
+        ],
+        "retained_attempts": {
+          "product": [
+            "render-01.log",
+            "render-02.log",
+            "render-03.log",
+            "render-04.log",
+            "render-05.log",
+            "render-06.log",
+            "render-07.log",
+            "render-08.log",
+            "render-09.log",
+            "render-10.log",
+            "render-11.log",
+            "render-12.log",
+            "render-13.log",
+            "render-14.log",
+            "render-15.log",
+            "render-16.log",
+            "render-17.log",
+            "render-18.log",
+            "render-19.log",
+            "render-20.log",
+            "render-build-02.log",
+            "render-build-03.log",
+            "render-build-04.log",
+            "render-build-05.log",
+            "render-build-06.log",
+            "render-build-07.log",
+            "render-build-08.log",
+            "render-build-09.log",
+            "render-build-10.log",
+            "render-build-11.log",
+            "render-build-12.log",
+            "render-build-13.log",
+            "render-build-14.log",
+            "render-build-15.log",
+            "render-build-16.log",
+            "render-build-17.log",
+            "render-build-18.log",
+            "render-build-19.log",
+            "render-build-20.log",
+            "render-build-21.log",
+            "render-build-22.log",
+            "render-build-23.log",
+            "render-build-24.log",
+            "render-build-25.log",
+            "render-build.log"
+          ],
+          "room": [
+            "build-01.log",
+            "build-02.log",
+            "build-03.log",
+            "build-04.log",
+            "build-05.log",
+            "build-06.log",
+            "build-07.log",
+            "build-08.log",
+            "build-09.log",
+            "build-10.log",
+            "render-01.log",
+            "render-02.log",
+            "render-03.log",
+            "render-04.log",
+            "render-05.log",
+            "render-06.log",
+            "render-07.log",
+            "render-08.log"
+          ]
+        }
+      },
+      "source_policy": "Owned UI sources/tests only. Original engine tree, OBB, prior completed stages and pre-existing README edits preserved. No push."
+    }
+  },
+  "actual_shared_engine": {
+    "wesnoth_client/build/audit-flexible-engine-1192621/run03/result.json": {
+      "sha256": "f97465ed220e3b830725a55ab7341612e406f09192e0b21fbdcd45ad4c42b916",
+      "result": {
+        "size": 3,
+        "map_id": "hexcake",
+        "clients": 2,
+        "seconds": 43.31,
+        "binary_sha256": "4d11d6a50f7ef245bf1660adc4f5692395d4131fd5158eb1edbcdfd256f46b62",
+        "records": [
+          {
+            "side": 4,
+            "exit": 0,
+            "timed_out": false,
+            "started": true,
+            "initial_config_verified": true,
+            "network_round_verified": true,
+            "finished": true,
+            "acknowledged": true,
+            "failed": false,
+            "journal_acknowledged": true,
+            "journal_draw_false": true,
+            "journal_winner_matches_opponent": true,
+            "replay_hash_verified": true,
+            "replay_end_turn_commands": 10
+          },
+          {
+            "side": 2,
+            "exit": 0,
+            "timed_out": false,
+            "started": true,
+            "initial_config_verified": true,
+            "network_round_verified": true,
+            "finished": true,
+            "acknowledged": true,
+            "failed": false,
+            "journal_acknowledged": true,
+            "journal_draw_false": true,
+            "journal_winner_matches_opponent": true,
+            "replay_hash_verified": true,
+            "replay_end_turn_commands": 10
+          }
+        ],
+        "flexible_slots": true,
+        "scope": "Real Linux host engine, strict TLS daemon and disposable MongoDB; one scripted human captain plus computer-controlled seats. Fixture prestart assertions and explicit surrender at round3; not Android rendering or multiple-human acceptance."
+      }
+    },
+    "wesnoth_client/build/audit-flexible-engine-1192621/recovery06/validation.json": {
+      "sha256": "e78830f32894b3258c5392551361e4c66e60764b148ec0efaa60dc901fdfff6f",
+      "result": {
+        "records": [
+          {
+            "side": 4,
+            "observer": false,
+            "exit": 0,
+            "timed_out": false,
+            "started": true,
+            "initial": true,
+            "round": true,
+            "finished": true,
+            "acknowledged": true,
+            "failed": false
+          },
+          {
+            "side": 2,
+            "observer": false,
+            "exit": 0,
+            "timed_out": false,
+            "started": true,
+            "initial": true,
+            "round": true,
+            "finished": true,
+            "acknowledged": true,
+            "failed": false
+          },
+          {
+            "side": 0,
+            "observer": true,
+            "exit": 0,
+            "timed_out": false,
+            "started": true,
+            "initial": true,
+            "round": true,
+            "finished": true,
+            "acknowledged": false,
+            "failed": false
+          }
+        ],
+        "host_pause_verified": true,
+        "same_account_reconnect": true,
+        "scope": "actual Linux engine and strict TLS/Mongo; scripted participants, not multiple human or Android acceptance"
+      }
+    },
+    "wesnoth_client/build/audit-flexible-engine-1192621/replay06/validation.json": {
+      "sha256": "32b51f454a65ef22cf47483ac9de43d5fd5fe442162f2e5c3e619785ab2cf50d",
+      "result": {
+        "status": "passed",
+        "native_download": true,
+        "native_replay_end": true,
+        "canonical_scaled_hero_verified": true,
+        "no_account_admission_for_playback": true,
+        "source_unchanged": true,
+        "sha256": "81ed533fb623392254212c08f0a3ea303dd0a16e6545062a761c80e3f35395d1",
+        "bytes": 15661
+      }
+    },
+    "wesnoth_client/build/audit-flexible-engine-1192621/legacy-playback-final/validation.json": {
+      "sha256": "b5c9d4c76d71836e988b36fabe4369c7b2584b9938489738aa4fd70c9754af8c",
+      "result": {
+        "source_sha256": "0f5dbe5476d9a4362b96a89082a15f4d16e37f4290e983d3970f35afb8af49df",
+        "source_unchanged": true,
+        "exit": 0,
+        "native_end": true,
+        "legacy_format": "alliance-shared-v1"
+      }
+    },
+    "wesnoth_server/build/audit-flexible-shared-1192621/attempt06/fixture/settlement-validation.json": {
+      "sha256": "af755a597ea11502c29d978545bcdd958f00cbaf95d3d28210fef22aa030ecc2",
+      "result": {
+        "status": "passed",
+        "catalog_sha256": "716cc8e34cfb9c68e735c8cccdc74af6ae233f3487b2b87e575e209cc0c5041c",
+        "size": 3,
+        "native_reports_and_two_captain_agreements": true,
+        "exactly_once_settlement_and_release": true,
+        "selected_hero_rewards": [
+          {
+            "side": 4,
+            "selected_hero": "konrad",
+            "xp_awarded": 10,
+            "total_experience": 37,
+            "unchanged_other_heroes": 1
+          },
+          {
+            "side": 2,
+            "selected_hero": "konrad",
+            "xp_awarded": 10,
+            "total_experience": 37,
+            "unchanged_other_heroes": 1
+          }
+        ],
+        "draw": true,
+        "expected_draw_checked": true,
+        "rating_total": 2000
+      }
+    }
+  },
+  "actual_individual_engine": {
+    "receipt": {
+      "path": "wesnoth_client/build/audit-product-individual-1192621/name-reconsent01/validation.json",
+      "bytes": 706,
+      "sha256": "1d233b8a5941aaf1fa14f677ca07d52729fc5c1d18d9cff8a30441eac0974039"
+    },
+    "result": {
+      "status": "passed",
+      "actual_engine_clients": 2,
+      "ai_rounds": 2,
+      "owned_hero_state_unchanged": true,
+      "selected_by_unique_room_name": true,
+      "changed_settings_reconsent": true,
+      "reviews": [
+        {
+          "action": "join",
+          "revision": 2
+        },
+        {
+          "action": "ready",
+          "revision": 5
+        },
+        {
+          "action": "ready",
+          "revision": 6
+        }
+      ],
+      "scope": "Opt-in real native host + production individual companion over actual TLS.\n\nFixture uses two disposable accounts with server-owned heroes, a real map and\ntwo synchronized AI rounds. Host choices and turn-3 ending are scripted. No\nAndroid execution or human-input acceptance is claimed by this Linux test.\n"
+    }
+  },
+  "preservation": {
+    "receipt": {
+      "path": "wesnoth_client/build/audit-product-preservation-1192621/final-verification.json",
+      "bytes": 585,
+      "sha256": "9718c3d7c0a78aae7ab5999e583ba926a1f2c9983397ea6b4e0d2ce8c2e1ba9f"
+    },
+    "result": {
+      "status": "passed",
+      "files_verified": {
+        "foundation-before.json": 17731,
+        "account-before.json": 6965,
+        "pinned-engine-source-before.json": 1454,
+        "pins-before.json": 20
+      },
+      "trees_verified": 45,
+      "remap": {
+        "wesnoth_client/build/android-account-engine": "wesnoth_client/build/android-account-engine-before-product-ui-20261026T064410Z-e3e7c194b9144126afae1a8e68a7f068",
+        "wesnoth_client/build/android-account-game": "wesnoth_client/build/android-account-game-before-product-ui-20261026T064410Z-e3e7c194b9144126afae1a8e68a7f068"
+      },
+      "seconds": 89.532
+    }
+  },
+  "windows_command_review": {
+    "document": "docs/PRODUCT_ACCEPTANCE_1192621.md",
+    "sha256": "0ffbdce9003c7ce68c725bbff749ecc256a7fdae1a60455a7bf5ae739764fdc4",
+    "utc": "2026-10-26T07:59:08.032229+00:00",
+    "az_order": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+      "F",
+      "G",
+      "H",
+      "I",
+      "J",
+      "K",
+      "L",
+      "M",
+      "N",
+      "O",
+      "P",
+      "Q",
+      "R",
+      "S",
+      "T",
+      "U",
+      "V",
+      "W",
+      "X",
+      "Y",
+      "Z"
+    ],
+    "command_blocks": 11,
+    "execution_scope": "parse only; no Windows/private runtime commands executed",
+    "source_review": [
+      "existing runtime-v2 explicit for backup/migration/start/restore",
+      "schema2 cold backup reused exactly by migration, journal resumable",
+      "bridge/native/Android preserve completed prior artifacts",
+      "Individual companion exact unique authenticated RoomName selector",
+      "Team companion UUID from administrator tools only",
+      "isolated restore fresh destination, verifies original/backup unchanged, no activation",
+      "Z prints only schema_version from nonsecret receipt and asserts 2",
+      "E/R explicitly require Reserved-human draft conversion with retained original snapshot and renewed consent",
+      "W explicitly verifies transactional competing Ready clearing and failed-preparation rollback",
+      "Y historical access retains recorded captains only; never-recorded legacy identities are not invented",
+      "Final frozen UI button paths reviewed: native Cancel/Close, Signup Back/X, Room filter leave/recreate, Save plan and completed replay download/reopen",
+      "Locked hero cards distinguish discovery from owned-only forms and statistics"
+    ],
+    "limitations": [
+      "No Windows or LDPlayer acceptance established by this review"
+    ],
+    "parse_status": "PASS",
+    "parser": "PowerShell 7.4.6 System.Management.Automation.Language.Parser",
+    "remaining_findings": [],
+    "command_block_recheck": "All 11 current commands match the exact previously parsed blocks; later changes were prose only, so unchanged commands were not rerun."
+  },
+  "native_preview_images": [
+    {
+      "name": "home",
+      "source": "build/audit-product-ui-1192621/final-v5-1280x720/01-home.png",
+      "file": "images/product-1192621-home-a0a674fd5da2.png",
+      "sha256": "a0a674fd5da2a3a899a1690a6835606d2faa7761493462c688a59ec9ac2e8fe9",
+      "bytes": 832134
+    },
+    {
+      "name": "login",
+      "source": "build/audit-product-ui-1192621/final-v5-1280x720/02-login.png",
+      "file": "images/product-1192621-login-775b3f7b2e52.png",
+      "sha256": "775b3f7b2e5234fce3cfc60f7b043bb93e6bb59bbfd450e090d2b54c95810136",
+      "bytes": 476191
+    },
+    {
+      "name": "heroes",
+      "source": "build/audit-product-ui-1192621/final-v5-1280x720/07-heroes.png",
+      "file": "images/product-1192621-heroes-f91a28bbb5f7.png",
+      "sha256": "f91a28bbb5f76d94bbe77a16788cd7b3abb0b3c67af7473598e4284b40789e69",
+      "bytes": 119843
+    },
+    {
+      "name": "team-plan",
+      "source": "build/audit-product-ui-1192621/final-v5-1280x720/04-team-editor.png",
+      "file": "images/product-1192621-team-plan-0fa9f8a944f8.png",
+      "sha256": "0fa9f8a944f8a50d3c2072489a8b46906eea58f332120d530943677c89894544",
+      "bytes": 144386
+    },
+    {
+      "name": "team-workspace",
+      "source": "build/audit-product-ui-1192621/final-v5-1280x720/05-team-workspace.png",
+      "file": "images/product-1192621-team-workspace-69de12fb8120.png",
+      "sha256": "69de12fb8120077873d41fd48a5d2b65e653adc53e9548b13cb086141c65677d",
+      "bytes": 148567
+    },
+    {
+      "name": "campaign",
+      "source": "build/audit-product-ui-1192621/final-v5-1280x720/08-campaign.png",
+      "file": "images/product-1192621-campaign-2e588b6d341e.png",
+      "sha256": "2e588b6d341ead81dcea078407efefc666251d6d51bf000e84d73e02dd37752c",
+      "bytes": 497638
+    },
+    {
+      "name": "room-create",
+      "source": "build/audit-product-ui-1192621/final-v5-1280x720/06-room-create.png",
+      "file": "images/product-1192621-room-create-50f1ea5724d9.png",
+      "sha256": "50f1ea5724d9b82e0043f8814ffd19cb139eb80a035049e854f09cd75917790f",
+      "bytes": 111538
+    },
+    {
+      "name": "team-hub",
+      "source": "build/audit-product-ui-1192621/final-v5-1280x720/15-team-hub.png",
+      "file": "images/product-1192621-team-hub-92ae6b57a6da.png",
+      "sha256": "92ae6b57a6da2814bfe13cd2629862e24961ece08dac1ce18b1404b7337e14d8",
+      "bytes": 112514
+    },
+    {
+      "name": "room-dashboard",
+      "source": "build/audit-product-room-render-1192621/final-1280x720/1-Dashboard-default-8af6e20308f0.png",
+      "file": "images/product-1192621-room-dashboard-8af6e20308f0.png",
+      "sha256": "8af6e20308f041216e5d0c55204743913baad9d5f4ad37e160328e27768b9702",
+      "bytes": 262835
+    },
+    {
+      "name": "room-staging",
+      "source": "build/audit-product-room-render-1192621/final-1280x720/4-Staging-default-2-5782f3c04b21.png",
+      "file": "images/product-1192621-room-staging-5782f3c04b21.png",
+      "sha256": "5782f3c04b215f0aa2ea1e3d4096a16e61e076a25f4e16ac70bfdd53a0c65327",
+      "bytes": 179951
+    },
+    {
+      "name": "signup",
+      "source": "build/audit-product-ui-1192621/final-v5-1280x720/03-signup-d3f8a889c488.png",
+      "file": "images/product-1192621-signup-d3f8a889c488.png",
+      "sha256": "d3f8a889c488f4d4aa33844c6d8f51b4c898ce2d609c0acf69fd8a85bb610c2b",
+      "bytes": 476451
+    }
+  ],
+  "hero_presentation": {
+    "canonical_heroes": 117,
+    "advancement_forms": 346,
+    "pinned_portraits": 115,
+    "new_original_portraits": 2,
+    "metadata": {
+      "path": "wesnoth_client/alliance_game/hero_presentation.json",
+      "bytes": 102468,
+      "sha256": "54d4db07970a537d68a44744b084e839a4cf09efe3ed21f5a1b833361cc2e3bf"
+    },
+    "asset_manifest": {
+      "path": "wesnoth_client/tools/native-account-game/ui-assets.json",
+      "bytes": 340,
+      "sha256": "30066e32f273b4256ebc4984093a0ed33644566d18c6c539c047e9cff2d049e1"
+    },
+    "gameplay_catalog_unchanged": true
+  },
+  "limits": [
+    "Windows service operation, LDPlayer installation/rendering, physical keyboard and local Ethernet/WAN behavior await user acceptance.",
+    "Native renderer uses real GUI2/SDL and pinned artwork with fixture account/network state; Java widget/storage tests substitute Android framework boundaries.",
+    "Native engine networking uses disposable authenticated accounts and scripted/computer controllers, not multiple human players.",
+    "VPS Android build embeds a disposable public-only certificate fixture; the Windows build reads the existing public server profile through its ignored .env.",
+    "Individual running rooms reject player rejoin; Team same-account reconnect is implemented and exercised.",
+    "The local service enforces identity, admission, controller ownership, ordering and settlement; it does not independently simulate all combat.",
+    "Intermediate unpublished1192621 APKs, receipts and journals are retained in audit; only the final source-bound artifact is delivered.",
+    "Earlier failed test/build attempts remain retained; only explicitly passing final or unchanged-scope results are claimed."
+  ]
+}
