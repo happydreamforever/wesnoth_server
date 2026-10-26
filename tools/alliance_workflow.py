@@ -32,7 +32,7 @@ STEPS = (("W02", "database", 27018, "Run-WindowsAllianceDatabase.ps1"),
          ("W04", "bridge", 15001, "Run-WindowsAllianceBridge.ps1"))
 BATTLE_STEP = ("W05", "battles", 15002, "Run-WindowsAllianceBattles.ps1")
 MULTIPLAYER_STEP = ("W06", "multiplayer", 15000, "Run-WindowsMultiplayer.ps1")
-EXPECTED_IMPLEMENTATION_RELEASE = 1192617
+EXPECTED_IMPLEMENTATION_RELEASE = 1192621
 BACKEND_RELEASE_ERROR = "W03_backend_release_mismatch"
 
 
@@ -127,7 +127,7 @@ def valid_service_health(raw, *, battles=False):
         if not match or match[1] in fields: return False
         fields[match[1]] = match[2]
     return fields == {"service": "alliance-battles" if battles else "alliance-accounts",
-                      "api": "1" if battles else "2",
+                      "api": "1" if battles else "3",
                       "implementation_release": str(EXPECTED_IMPLEMENTATION_RELEASE)}
 
 
@@ -144,7 +144,7 @@ def valid_multiplayer_health(raw):
         match = re.fullmatch(r'(alliance_protocol|implementation_release|individual_rooms)\s*=\s*"([0-9]+)"', line)
         if not match or match[1] in fields: return False
         fields[match[1]] = match[2]
-    return fields == {"alliance_protocol": "2", "implementation_release": str(EXPECTED_IMPLEMENTATION_RELEASE),
+    return fields == {"alliance_protocol": "3", "implementation_release": str(EXPECTED_IMPLEMENTATION_RELEASE),
                       "individual_rooms": "1"}
 
 

@@ -123,8 +123,14 @@ exit $LASTEXITCODE
     def test_legacy_three_input_stage_rebuilds_with_current_builder_inputs(self):
         self.assertIn(HEADER, INPUTS)
         self.assert_success()
-    def test_current_five_input_stage_rebuilds_and_preserves_old_build(self):
+    def test_current_six_input_stage_rebuilds_and_preserves_old_build(self):
         self.current_old_stage()
+        self.assert_success()
+    def test_previous_five_input_stage_is_preserved_before_v3_rebuild(self):
+        previous = [name for name in INPUTS if name != 'alliance_bridge/flexible_protocol.hpp']
+        self.old_owner['inputs'] = {name: sha(('old ' + name).encode()) for name in previous}
+        self.old_receipt = self.complete_stage(self.stage, self.old_owner, b'completed old bridge')
+        self.before = {p.name:p.read_bytes() for p in self.stage.iterdir()}
         self.assert_success()
     def test_previous_four_input_stage_is_preserved_before_v2_rebuild(self):
         self.old_owner['inputs'] = {name: sha(('old ' + name).encode()) for name in (*LEGACY_INPUTS, HEADER)}

@@ -51,7 +51,7 @@ def checked_backup(archive):
     manifest = json.loads(maintenance.read_small(archive / "manifest.json", 8 * 1024**2))
     if (manifest.get("purpose") != maintenance.PURPOSE or manifest.get("format") != 1
             or manifest.get("mongodb_version") != maintenance.MONGO_VERSION
-            or manifest.get("producer_schema_version") not in (1, SCHEMA_VERSION)):
+            or manifest.get("producer_schema_version") not in (1, 2, SCHEMA_VERSION)):
         raise maintenance.MaintenanceError("unsupported_backup_version")
     files = manifest.get("files")
     if not isinstance(files, dict) or set(maintenance.CONTROLS) - files.keys():

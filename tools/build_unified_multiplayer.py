@@ -15,7 +15,8 @@ from tools.build_alliance_bridge import BuildError, safe_path, digest, write_new
 ROOT = Path(__file__).resolve().parents[1]
 STAGE = ROOT / "build/windows-unified-mingw64"
 PURPOSE = "wesnoth-unified-native-multiplayer"
-VERSION = "WESNOTH_UNIFIED_MULTIPLAYER release=1192617 protocol=2"
+VERSION = "WESNOTH_UNIFIED_MULTIPLAYER release=1192621 protocol=3"
+PRESERVABLE_VERSIONS = {VERSION, "WESNOTH_UNIFIED_MULTIPLAYER release=1192617 protocol=2"}
 
 
 def binding():
@@ -76,7 +77,7 @@ def preserve_previous():
     receipt = read_metadata(STAGE / "receipt.json")
     executable = safe_path(STAGE / "bin/wesnothd.exe")
     if (not isinstance(receipt, dict) or set(receipt) != {"binding", "executable", "version"}
-            or receipt["binding"] != owner or receipt["version"] != VERSION
+            or receipt["binding"] != owner or receipt["version"] not in PRESERVABLE_VERSIONS
             or receipt["executable"] != {"bytes": executable.stat().st_size,
                                         "sha256": digest(executable)}):
         raise BuildError("Previous native lobby is incomplete or changed. Existing stage was preserved.")

@@ -65,6 +65,14 @@ class NativeDelivery(unittest.TestCase):
                                  for p in backup.rglob('*') if p.is_file()})
         self.assertIn('-before-update-', backup.name)
 
+    def test_previous_protocol2_release_is_preserved_before_protocol3_build(self):
+        self.receipt['version']='WESNOTH_UNIFIED_MULTIPLAYER release=1192617 protocol=2';self.save_receipt()
+        old_receipt=(self.stage/'receipt.json').read_bytes()
+        (self.root/'engine/source.cpp').write_text('new flexible protocol source')
+        backup=build.preserve_previous()
+        self.assertEqual((backup/'receipt.json').read_bytes(),old_receipt)
+        self.assertFalse(self.stage.exists())
+
     def test_same_input_completed_or_incomplete_stage_stays_for_reuse(self):
         self.assertIsNone(build.preserve_previous())
         (self.stage/'receipt.json').unlink()

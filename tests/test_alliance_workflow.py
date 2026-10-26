@@ -16,16 +16,16 @@ from tools import alliance_workflow as workflow
 from tools.alliance_transport import prepare_identity, server_context
 
 
-MULTIPLAYER_GREETING = (b'[version]\nalliance_protocol="2"\n'
-                       b'implementation_release="1192617"\nindividual_rooms="1"\n[/version]\n')
+MULTIPLAYER_GREETING = (b'[version]\nalliance_protocol="3"\n'
+                       b'implementation_release="1192621"\nindividual_rooms="1"\n[/version]\n')
 
 
 class MultiplayerGreetingTests(unittest.TestCase):
     def test_current_individual_server_required_with_attribute_order_independent(self):
         self.assertTrue(workflow.valid_multiplayer_health(MULTIPLAYER_GREETING))
         self.assertTrue(workflow.valid_multiplayer_health(
-            b'\r\n[version]\r\n\tindividual_rooms = "1"\r\nalliance_protocol="2"\r\n'
-            b'implementation_release="1192617"\r\n[/version]\r\n'))
+            b'\r\n[version]\r\n\tindividual_rooms = "1"\r\nalliance_protocol="3"\r\n'
+            b'implementation_release="1192621"\r\n[/version]\r\n'))
 
     def test_missing_disabled_or_unknown_capability_refused(self):
         for value in (b'0', b'2', b'01', b'yes', b'', b'-1'):
@@ -39,10 +39,10 @@ class MultiplayerGreetingTests(unittest.TestCase):
 
     def test_wrong_protocol_release_duplicate_or_extra_field_refused(self):
         rejected = (
-            MULTIPLAYER_GREETING.replace(b'alliance_protocol="2"', b'alliance_protocol="1"'),
-            MULTIPLAYER_GREETING.replace(b'1192617', b'1192615'),
-            MULTIPLAYER_GREETING.replace(b'1192617', b'1192619'),
-            MULTIPLAYER_GREETING.replace(b'alliance_protocol="2"', b'individual_rooms="1"'),
+            MULTIPLAYER_GREETING.replace(b'alliance_protocol="3"', b'alliance_protocol="1"'),
+            MULTIPLAYER_GREETING.replace(b'1192621', b'1192615'),
+            MULTIPLAYER_GREETING.replace(b'1192621', b'1192619'),
+            MULTIPLAYER_GREETING.replace(b'alliance_protocol="3"', b'individual_rooms="1"'),
             MULTIPLAYER_GREETING.replace(b'[/version]', b'individual_rooms="1"\n[/version]'),
             MULTIPLAYER_GREETING.replace(b'[/version]', b'unknown="1"\n[/version]'),
         )
@@ -228,31 +228,31 @@ class RealTlsHealthTests(unittest.TestCase):
         return result, requests, errors
 
     def test_actual_pinned_tls_existing_bridge_no_account_data(self):
-        reply = b'[alliance_health]\nservice="alliance-accounts"\napi="2"\nimplementation_release="1192617"\n[/alliance_health]\n'
+        reply = b'[alliance_health]\nservice="alliance-accounts"\napi="3"\nimplementation_release="1192621"\n[/alliance_health]\n'
         result, requests, errors = self.check(reply=reply)
         self.assertTrue(result); self.assertEqual(errors, [])
         self.assertEqual(requests, [b"\0\0\0\1", b"[alliance_health]\n[/alliance_health]\n"])
-        for bad in (reply.replace(b'1192617', b'1192615'), reply.replace(b'1192617', b'1192616'),
-                    reply.replace(b'api="2"', b'api="1"')):
+        for bad in (reply.replace(b'1192621', b'1192615'), reply.replace(b'1192621', b'1192616'),
+                    reply.replace(b'api="3"', b'api="1"')):
             self.assertFalse(self.check(reply=bad)[0])
 
     def test_actual_battle_health_fixed_bounded_read_only_request(self):
-        reply = b'[alliance_health]\nservice="alliance-battles"\napi="1"\nimplementation_release="1192617"\n[/alliance_health]\n'
+        reply = b'[alliance_health]\nservice="alliance-battles"\napi="1"\nimplementation_release="1192621"\n[/alliance_health]\n'
         result, requests, errors = self.check(battles=True, reply=reply)
         self.assertTrue(result); self.assertEqual(errors, [])
         self.assertEqual(requests[1], b"[alliance_health]\n[/alliance_health]\n")
-        self.assertFalse(self.check(battles=True, reply=reply.replace(b'1192617', b'1192615'))[0])
-        self.assertFalse(self.check(battles=True, reply=reply.replace(b'1192617', b'1192616'))[0])
+        self.assertFalse(self.check(battles=True, reply=reply.replace(b'1192621', b'1192615'))[0])
+        self.assertFalse(self.check(battles=True, reply=reply.replace(b'1192621', b'1192616'))[0])
 
     def test_actual_native_multiplayer_release_greeting_without_login(self):
         greeting = MULTIPLAYER_GREETING
         result,requests,errors=self.check(multiplayer=True,reply=greeting)
         self.assertTrue(result);self.assertEqual(errors,[])
         self.assertEqual(requests,[b"\0\0\0\1"])
-        for bad in (greeting.replace(b'1192617',b'1192615'),greeting.replace(b'1192617',b'1192616'),
+        for bad in (greeting.replace(b'1192621',b'1192615'),greeting.replace(b'1192621',b'1192616'),
                     greeting.replace(b'individual_rooms="1"\n', b''),
                     greeting.replace(b'individual_rooms="1"', b'individual_rooms="0"'),
-                    greeting.replace(b'[/version]',b'alliance_protocol="2"\n[/version]'),b'x'*16385):
+                    greeting.replace(b'[/version]',b'alliance_protocol="3"\n[/version]'),b'x'*16385):
             self.assertFalse(self.check(multiplayer=True,reply=bad)[0])
 
     def test_downgrade_and_wrong_identity_fail_closed(self):
