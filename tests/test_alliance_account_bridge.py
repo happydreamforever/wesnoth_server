@@ -96,7 +96,7 @@ class BridgeIdentityTests(unittest.TestCase):
                     return
                 cls.calls.append(self.path)
                 if self.path == "/internal/v1/health":
-                    value = {"status": "ok", "service": "alliance", "api_version": 1}
+                    value = {"status": "ok", "service": "alliance", "api_version": 1, "product_schema_version": 3, "implementation_release": 1192621}
                 else:
                     value = {"account": ACCOUNT}
                 data = json.dumps(value).encode()
@@ -186,7 +186,7 @@ class BridgeIdentityTests(unittest.TestCase):
             self.assertEqual(BridgeTests.read_exact(raw, 4), b"\0\0\0\0")
             context = ssl.create_default_context(cadata=self.profile["certificate_pem"])
             with context.wrap_socket(raw, server_hostname="127.0.0.1") as peer:
-                value = {"v": 2, "id": "b" * 32, "op": "me", "body": {},
+                value = {"v": 3, "id": "b" * 32, "op": "me", "body": {},
                          "token": secrets.token_urlsafe(32)}
                 encoded = gzip.compress(json.dumps(value).encode())
                 peer.sendall(struct.pack("!I", len(encoded)) + encoded)
@@ -298,7 +298,7 @@ class BridgeTests(unittest.TestCase):
                     code, response = 401, {"error": "wrong bridge credential"}
                 elif self.path == "/internal/v1/health":
                     code, response = 200, {"status": "ok", "service": "alliance",
-                                           "api_version": 2 if parent.mode == "badhealth" else 1}
+                                           "api_version": 2 if parent.mode == "badhealth" else 1, "product_schema_version": 3, "implementation_release": 1192621}
                 elif parent.mode == "outage":
                     code, response = 503, {"error": {"code": "private_config", "message": "must-not-leave-backend"}}
                 elif parent.mode == "oversized":
@@ -431,7 +431,7 @@ class BridgeTests(unittest.TestCase):
         return data
 
     def request(self, operation="me", body=None, token=None):
-        value = {"v": 2, "id": "a" * 32, "op": operation, "body": body or {}}
+        value = {"v": 3, "id": "a" * 32, "op": operation, "body": body or {}}
         if operation in ("me", "logout", "areas", "teams", "my_team", "create_team", "team_detail",
                          "my_applications", "team_applicants", "apply_team", "withdraw_application",
                          "approve_application", "reject_application", "application_decisions", "ack_decision",
@@ -461,7 +461,7 @@ class BridgeTests(unittest.TestCase):
             peer.sendall(struct.pack('!I', len(body)) + body)
             size, = struct.unpack('!I', self.read_exact(peer, 4))
             result = gzip.decompress(self.read_exact(peer, size)).decode()
-            self.assertEqual(result, '[alliance_health]\nservice="alliance-accounts"\napi="2"\nimplementation_release="1192617"\n[/alliance_health]\n')
+            self.assertEqual(result, '[alliance_health]\nservice="alliance-accounts"\napi="3"\nimplementation_release="1192621"\n[/alliance_health]\n')
         self.assertEqual(len(self.calls), before)
         for request in (b'[alliance_health]\ntoken="secret"\n[/alliance_health]\n',
                         b'[alliance_health]\n[/alliance_health]\n[login]\n[/login]\n'):
@@ -492,9 +492,9 @@ class BridgeTests(unittest.TestCase):
         for change in ({"op": "settle"}, {"id": "A" * 32}, {"path": "/internal/v1/runs"},
                        {"body": {"xp": 999}}, {"token": "x\r\nHeader: unsafe"}):
             samples.append(json.dumps(dict(base, **change)).encode())
-        samples.append(json.dumps(base).replace('"v": 2', '"v": 2, "v": 2').encode())
-        samples.append(json.dumps(base).replace('"v": 2', '"v": 2, "\\u0076": 2').encode())
-        samples.append(json.dumps({"v": 2, "id": "a" * 32, "op": "register", "token": self.token,
+        samples.append(json.dumps(base).replace('"v": 3', '"v": 3, "v": 3').encode())
+        samples.append(json.dumps(base).replace('"v": 3', '"v": 3, "\\u0076": 3').encode())
+        samples.append(json.dumps({"v": 3, "id": "a" * 32, "op": "register", "token": self.token,
                                    "body": {"username": "BridgePlayer", "password": "example-pass-1234"}}).encode())
         for value in samples:
             with self.subTest(value=value), self.connect() as peer:

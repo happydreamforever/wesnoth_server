@@ -16,6 +16,9 @@ import time
 from pymongo import MongoClient
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--flexible', action='store_true')
+parser.add_argument('--observers', action='store_true')
+parser.add_argument('--turns', type=int, default=-1)
 parser.add_argument('--size', type=int, choices=(2, 3, 4), required=True)
 parser.add_argument('--root', type=Path)
 args = parser.parse_args()
@@ -48,7 +51,7 @@ try:
     else: raise RuntimeError('Fixture primary timed out')
     env = os.environ.copy()
     env['ALLIANCE_TEST_MONGO_URI'] = 'mongodb://127.0.0.1:27019/?replicaSet=shared_fixture'
-    subprocess.run([sys.executable, str(Path(__file__).with_name('shared_engine_fixture.py')), '--size', str(args.size), '--root', str(root / 'fixture')], env=env, check=True)
+    subprocess.run([sys.executable, str(Path(__file__).with_name('shared_engine_fixture.py')), '--size', str(args.size), '--root', str(root / 'fixture'), '--turns', str(args.turns), *(['--flexible'] if args.flexible else []), *(['--observers'] if args.observers else [])], env=env, check=True)
 finally:
     client.close()
     if mongo.poll() is None:

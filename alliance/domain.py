@@ -1140,7 +1140,7 @@ class LegacyAllianceService:
     def shared_start(self, run_id, generation, loaded_account_ids, scenario_sha256):
         """Trusted daemon's all-loaded barrier, fenced and atomic with reservations."""
         _directory_id(run_id, uuid=True)
-        if (not isinstance(loaded_account_ids, list) or not 4 <= len(loaded_account_ids) <= 8 or
+        if (not isinstance(loaded_account_ids, list) or not 2 <= len(loaded_account_ids) <= 8 or
                 not all(isinstance(p, str) for p in loaded_account_ids)
                 or len(loaded_account_ids) != len(set(loaded_account_ids)) or
                 not isinstance(scenario_sha256, str) or not re.fullmatch(r'[0-9a-f]{64}', scenario_sha256)):
@@ -1237,7 +1237,7 @@ class LegacyAllianceService:
             if team is None or room.get('captains', {}).get(team['_id']) != actor_id:
                 raise DomainError('forbidden', 'Only a recorded current captain may act.')
             self._captain(actor_id, team, session)
-            if any(item['active_run_id'] != run_id for item in teams):
+            if not flexible(run) and any(item['active_run_id'] != run_id for item in teams):
                 raise DomainError('reservation_conflict', 'The shared team reservations changed.')
             if len(room.get('captain_commands', {})) >= 128:
                 raise DomainError('limit_reached', 'This battle has reached its captain-command limit.')
@@ -1796,7 +1796,8 @@ class LegacyAllianceService:
 # The historical domain remains the team/settlement foundation. V2 replaces
 # every single-leader boundary with the owned-hero model and explicit reset.
 from .product import UnifiedProduct
+from .flexible import FlexibleProduct, flexible
 
 
-class AllianceService(UnifiedProduct, LegacyAllianceService):
+class AllianceService(FlexibleProduct, UnifiedProduct, LegacyAllianceService):
     pass

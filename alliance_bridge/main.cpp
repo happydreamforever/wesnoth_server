@@ -8,6 +8,7 @@
 #include <boost/json/src.hpp>
 #include "progression_protocol.hpp"
 #include "unified_protocol.hpp"
+#include "flexible_protocol.hpp"
 #include <openssl/crypto.h>
 #include <openssl/sha.h>
 #include <openssl/x509v3.h>
@@ -229,7 +230,7 @@ Request account_request(const std::vector<unsigned char>& bytes) {
     if(!value.is_object()) invalid();
     const auto& root = value.as_object();
     fields(root, {"v", "id", "op", "body"}, {"token"});
-    if(!root.at("v").is_int64() || root.at("v").as_int64() != 2) invalid();
+    if(!root.at("v").is_int64() || root.at("v").as_int64() != 3) invalid();
     Request result;
     result.id = text(root.at("id"), 32); if(!request_id(result.id)) invalid();
     result.operation = text(root.at("op"), 24);
@@ -249,6 +250,11 @@ Request account_request(const std::vector<unsigned char>& bytes) {
         result.token = text(root.at("token"), 43);
         if(!ascii_word(result.token, 43, 43)) invalid();
         if(result.operation == "me") result.method = http::verb::get;
+    } else if(alliance::flexible_protocol::operation(result.operation)) {
+        if(!root.contains("token")) invalid();
+        result.token=text(root.at("token"),43);
+        if(!ascii_word(result.token,43,43)) invalid();
+        alliance::flexible_protocol::request(result.operation,body);
     } else if(alliance::unified_protocol::operation(result.operation)) {
         if(!root.contains("token")) invalid();
         result.token=text(root.at("token"),43);
@@ -312,7 +318,9 @@ Request account_request(const std::vector<unsigned char>& bytes) {
         if(body.contains("name")) directory_name(text(body.at("name"), 64));
     } else invalid();
     result.body = json::serialize(body);
-    if(alliance::unified_protocol::operation(result.operation)) {
+    if(alliance::flexible_protocol::operation(result.operation)) {
+        result.target="/internal/v1/team-directory/"+result.operation;return result;
+    } else if(alliance::unified_protocol::operation(result.operation)) {
         result.target="/internal/v1/product/"+result.operation;return result;
     }
     if(alliance::progression_protocol::operation(result.operation)) {
@@ -332,7 +340,7 @@ json::object safe_error(const std::string& id, unsigned status) {
     else if(status == 409) { code = "conflict"; message = "The username is unavailable or the account request conflicts with current state."; }
     else if(status == 429) { code = "rate_limited"; message = "Too many attempts. Wait before trying again."; }
     else status = 503;
-    return {{"v", 2}, {"id", id}, {"ok", false}, {"status", status},
+    return {{"v", 3}, {"id", id}, {"ok", false}, {"status", status},
             {"data", {{"code", code}, {"message", message}}}};
 }
 json::object public_account(const json::value& value) {
@@ -451,7 +459,7 @@ json::object directory_error(const Request& request, unsigned status, const std:
         else if(source == "conflict") { code = "conflict"; message = "The team name or membership changed. Refresh My team before another change."; }
         else status = 503;
     } else status = 503;
-    return {{"v", 2}, {"id", request.id}, {"ok", false}, {"status", status},
+    return {{"v", 3}, {"id", request.id}, {"ok", false}, {"status", status},
             {"data", {{"code", code}, {"message", message}}}};
 }
 json::object public_battle_map(const json::value& value) {
@@ -470,6 +478,10 @@ json::object public_battle_map(const json::value& value) {
     return {{"id", id}, {"name", name}, {"scenario_id", scenario}, {"size", size}, {"sides", sides}};
 }
 json::object public_battle(const json::value& value, bool detail) {
+    if(detail && value.is_object() && value.as_object().contains("format")) {
+        alliance::flexible_protocol::battle(value); return value.as_object();
+    }
+
     if(!value.is_object()) invalid();
     const auto& source = value.as_object();
     if(detail) fields(source, {"id", "area_id", "state", "created_at", "map", "validity", "teams"});
@@ -715,11 +727,12 @@ json::object directory_data(const Request& request, const json::object& root) {
     return {{"team", std::move(team)}};
 }
 json::value account_response(const Request& request, unsigned status, const std::string& body) {
-    const unsigned expected = request.operation == "register" || request.operation == "create_team" ||
+    const unsigned expected = request.operation == "publish_plan" || request.operation == "register" || request.operation == "create_team" ||
                               request.operation == "propose_battle" ? 201 : 200;
     const bool unified=alliance::unified_protocol::operation(request.operation);
+    const bool flex=alliance::flexible_protocol::operation(request.operation);
     const bool progression = alliance::progression_protocol::operation(request.operation);
-    if((progression||unified) && status != expected) {
+    if((progression||unified||flex) && status != expected) {
         if(status==401||status>=500) return safe_error(request.id,status);
         const auto parsed = parse_json(body);
         if(!parsed.is_object()||!parsed.as_object().contains("error")||!parsed.as_object().at("error").is_object()) return safe_error(request.id,status);
@@ -728,7 +741,7 @@ json::value account_response(const Request& request, unsigned status, const std:
         const auto code=text(error.at("code"),64);
         const auto message=alliance::progression_protocol::public_error(code);
         if(message.empty()) return safe_error(request.id,status);
-        return json::object{{"v",2},{"id",request.id},{"ok",false},{"status",status},{"data",json::object{{"code",code},{"message",message}}}};
+        return json::object{{"v",3},{"id",request.id},{"ok",false},{"status",status},{"data",json::object{{"code",code},{"message",message}}}};
     }
     if(status != expected) return directory_operation(request.operation)
         ? directory_error(request, status, body) : safe_error(request.id, status);
@@ -736,7 +749,9 @@ json::value account_response(const Request& request, unsigned status, const std:
     if(!value.is_object()) invalid();
     const auto& root = value.as_object();
     json::object data;
-    if(unified) {
+    if(flex) {
+        alliance::flexible_protocol::response(request.operation,root); data=root;
+    } else if(unified) {
         alliance::unified_protocol::response(request.operation,root);
         if(request.operation=="battle_select_hero") {fields(root,{"battle"});data["battle"]=public_battle(root.at("battle"),true);}
         else data=root;
@@ -756,7 +771,7 @@ json::value account_response(const Request& request, unsigned status, const std:
             data["token"] = token;
         }
     }
-    return json::object{{"v", 2}, {"id", request.id}, {"ok", true}, {"status", status}, {"data", std::move(data)}};
+    return json::object{{"v", 3}, {"id", request.id}, {"ok", true}, {"status", status}, {"data", std::move(data)}};
 }
 struct Settings {
     std::string secret, address;
@@ -853,7 +868,8 @@ void check_backend(const std::string& secret) {
                         const auto value = parse_json(response.get().body());
                         const auto& data = value.as_object();
                         if(text(data.at("status"), 16) != "ok" ||
-                           text(data.at("service"), 32) != "alliance" || data.at("api_version") != 1) invalid();
+                           text(data.at("service"), 32) != "alliance" || data.at("api_version") != 1 || data.at("product_schema_version") != 3 ||
+                           data.at("implementation_release") != 1192621) invalid();
                         passed = true;
                     } catch(...) {}
                 }
@@ -906,7 +922,7 @@ class Session : public std::enable_shared_from_this<Session> {
         try {
             if(inflate_frame(incoming_) == "[alliance_health]\n[/alliance_health]\n") {
                 responding_ = true;
-                outgoing_ = compress_text_frame("[alliance_health]\nservice=\"alliance-accounts\"\napi=\"2\"\nimplementation_release=\"1192617\"\n[/alliance_health]\n");
+                outgoing_ = compress_text_frame("[alliance_health]\nservice=\"alliance-accounts\"\napi=\"3\"\nimplementation_release=\"1192621\"\n[/alliance_health]\n");
                 asio::async_write(client_, asio::buffer(outgoing_), [self=shared_from_this()](Error error, std::size_t) {
                     if(error) { self->close(); return; }
                     self->client_.async_shutdown([self](Error) { self->close(); });
@@ -1012,7 +1028,7 @@ int main(int argc, char** argv) {
     const char* phase = "arguments";
     try {
         if(argc == 2 && std::string(argv[1]) == "--version") {
-            std::cout << "WESNOTH_ALLIANCE_ACCOUNT_BRIDGE protocol=2 max_connections=32 timeout_seconds=10\n";
+            std::cout << "WESNOTH_ALLIANCE_ACCOUNT_BRIDGE protocol=3 max_connections=32 timeout_seconds=10\n";
             return 0;
         }
         std::map<std::string, std::string> args;

@@ -159,6 +159,53 @@ class Individual(base.Native):
         # carries this same revision and serves as the ordered server barrier.
         return room, host, other
 
+    def launch(self,room,host,other):
+        self.ready(room,host);self.ready(room,other)
+        hint=self.receive(room['peer'],lambda value:bool(descendants(value,'individual_start'))).one('individual_start')
+        room['peer'].send(base.wml('start_game',{'room_revision':hint.attrs['room_revision']}))
+        return self.receive(room['peer'],lambda value:bool(descendants(value,'alliance_start'))).one('alliance_start')
+
+    def test_individual_hero_stat_and_modifier_tampering_rejected(self):
+        for variant in ('hitpoints','attack','hitpoint_effect'):
+            with self.subTest(variant=variant):
+                room,host,other=self.fully_selected();scenario=self.finalized_scenario(room)
+                leader=next(row for row in scenario.children if row.name=='side').one('leader')
+                if variant=='hitpoints':leader.attrs['max_hitpoints']='9999'
+                elif variant=='attack':leader.one('modifications').one('object').children[-1].attrs['increase_damage']='99'
+                else:leader.one('modifications').one('object').children[0].attrs['set_total']='99999'
+                self.update_scenario(room,scenario)
+                self.assertEqual(self.launch(room,host,other).attrs['accepted'],'no')
+                self.assertIsNone(self.db.casual_games.find_one({'_id':room['game']}))
+                room['peer'].send(base.wml('leave_game'));self.receive(room['peer'],lambda value:bool(descendants(value,'gamelist')))
+
+    def test_individual_authored_identity_and_reused_ticket_guard(self):
+        room=self.create_room();other=self.join_room(room);host=self.host_seat(room)
+        selected=self.select(room,host);self.select(room,other)
+        room['peer'].send(base.wml('alliance_hero',{'side':1,'ticket':selected['selection_ticket']}))
+        self.receive(room['peer'],lambda value:any('refused' in row.attrs.get('message','').lower() for row in descendants(value,'message')))
+        scenario=self.finalized_scenario(room);scenario.children[0].one('leader').attrs.update(id='authored-protagonist',name='Authored protagonist',gender='female')
+        self.update_scenario(room,scenario)
+        self.assertEqual(self.launch(room,host,other).attrs['accepted'],'yes')
+        self.receive(other['peer'],lambda value:bool(descendants(value,'start_game')))
+        frozen=self.domain.casual_restore(room['game']);self.assertEqual(len(frozen['players']),2)
+        room['peer'].send(base.wml('store_next_scenario',{'alliance_casual_game_id':room['game']},serialize(scenario)))
+        self.receive(room['peer'],lambda value:bool(descendants(value,'leave_game')))
+        self.assertEqual(self.db.network_battle_reservations.count_documents({'run_id':room['game']}),0)
+
+    def test_individual_saved_snapshot_and_per_side_economy_rejected(self):
+        for variant in ('snapshot','gold','income'):
+            with self.subTest(variant=variant):
+                room=self.create_room();scenario=copy.deepcopy(room['level'].children[1])
+                if variant=='snapshot':
+                    upload=copy.deepcopy(room['level']);upload.children[1].name='snapshot'
+                    room['peer'].send(serialize(upload))
+                else:
+                    scenario.children[1].attrs[variant]='101' if variant=='gold' else '3'
+                    self.update_scenario(room,scenario)
+                self.receive(room['peer'],lambda value:bool(descendants(value,'leave_game')))
+                self.assertIsNone(self.db.casual_games.find_one({'_id':room['game']}))
+                self.assertEqual(self.db.network_battle_reservations.count_documents({'run_id':room['game']}),0)
+
     def test_individual_live_global_room_settings_and_occupancy(self):
         room = self.create_room(gold=150, turns=30)
         api, token, actor = self.account(False); watcher, _ = self.lobby(token, api, actor)
@@ -167,6 +214,8 @@ class Individual(base.Native):
         self.assertEqual(row.attrs['room_status'], 'waiting')
         self.assertEqual((row.attrs['room_members'], row.attrs['room_capacity'], row.attrs['room_ready']), ('1', '2', '0'))
         self.assertEqual((row.attrs['room_gold'], row.attrs['room_turns']), ('150', '30'))
+        self.assertEqual(row.attrs['room_base_income'],'4')
+        self.assertTrue(all(side.attrs['base_income']=='4' for side in descendants(row,'room_side')))
         self.assertEqual((row.attrs['mp_fog'], row.attrs['mp_shroud']), ('yes', 'no'))
         self.assertEqual(len(descendants(row, 'room_side')), 2)
         self.assertNotIn('area_id', row.attrs)
@@ -195,6 +244,7 @@ class Individual(base.Native):
         self.assertEqual(room['context'].attrs['room_ready'], '1')
         self.ready(room, other)
         hint = self.receive(room['peer'], lambda value: bool(descendants(value, 'individual_start'))).one('individual_start')
+        self.assertEqual(self.db.network_battle_reservations.count_documents({'run_id':room['game'],'kind':'individual'}),2)
         self.assertEqual(hint.attrs['game_id'], room['game'])
         self.assertEqual(hint.attrs['room_revision'], room['context'].attrs['room_revision'])
         room['peer'].send(base.wml('start_game', {'room_revision': hint.attrs['room_revision']}))
@@ -242,7 +292,23 @@ class Individual(base.Native):
         ack = self.receive(room['peer'], lambda value: bool(descendants(value, 'alliance_start'))).one('alliance_start')
         self.assertEqual(ack.attrs['accepted'], 'no')
         self.assertIsNone(self.db.casual_games.find_one({'_id': room['game']}))
+        self.assertEqual(self.db.network_battle_reservations.count_documents({'run_id':room['game']}),0)
 
+    def test_individual_expired_native_lease_closes_running_room(self):
+        from datetime import timedelta
+        from alliance.domain import _now
+        room,host,other=self.fully_selected();self.ready(room,host);self.ready(room,other)
+        hint=self.receive(room['peer'],lambda value:bool(descendants(value,'individual_start'))).one('individual_start')
+        room['peer'].send(base.wml('start_game',{'room_revision':hint.attrs['room_revision']}))
+        self.receive(room['peer'],lambda value:bool(descendants(value,'alliance_start')))
+        other_room,other_host,other_guest=self.fully_selected();self.ready(other_room,other_host);self.ready(other_room,other_guest)
+        self.db.network_battle_reservations.update_many({'run_id':room['game']},{'$set':{'expires_at':_now()-timedelta(seconds=1)}})
+        room['peer'].sock.settimeout(18)
+        self.receive(room['peer'],lambda value:bool(descendants(value,'leave_game')))
+        self.assertEqual(self.db.network_battle_reservations.count_documents({'run_id':room['game']}),0)
+        self.assertEqual(self.db.settlements.count_documents({'_id':room['game']}),0)
+        self.assertEqual(self.db.network_battle_reservations.count_documents({'run_id':other_room['game']}),2)
+        self.ready(other_room,other_guest,False)
 
     def test_individual_socket_disconnect_reopens_seat_and_revokes_consent(self):
         room, host, other = self.fully_selected(); self.ready(room, host)

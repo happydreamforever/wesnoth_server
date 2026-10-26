@@ -245,6 +245,8 @@ private:
 	}
 
 	boost::asio::steady_timer dump_stats_timer_;
+	boost::asio::steady_timer network_lease_timer_;
+	void start_network_lease_updates();
 	void start_dump_stats();
 	void dump_stats(const boost::system::error_code& ec);
 

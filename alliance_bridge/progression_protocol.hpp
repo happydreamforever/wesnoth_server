@@ -20,7 +20,12 @@ inline bool operation(const std::string& op) {
         op == "coordination_orders" || op == "coordination_post" || op == "shared_review" || op == "shared_confirm";
 }
 inline std::string public_error(const std::string& code) {
+    if(code == "unbalanced_sides") return "Both teams need the same number of enabled sides.";
     static const std::map<std::string,std::string> messages={
+        {"stale_proposal","The plan changed. Refresh before confirming this action."},
+        {"invalid_lineup","Choose valid slots for both teams."},
+        {"human_required","Each team needs at least one human slot."},
+        {"limit_reached","The team has reached its active plan limit."},
         {"hero_required","Every selected player must choose an owned hero before approval and Ready."},
         {"hero_locked","Complete a story scenario controlling this hero to unlock it."},
         {"form_locked","This hero form has not been earned yet."},
@@ -169,7 +174,7 @@ inline void review(const json::object& body) {
     if(status!="waiting_for_players"&&status!="disputed"&&status!="awaiting_captains"&&status!="agreed"&&status!="settled"&&status!="cancelled") invalid();
     const auto digest=text(body,"candidate_digest",64,true);if(!digest.empty()&&!hex(digest,64)) invalid();
     const auto winner=text(body,"winner_team_id",36,true);if(!winner.empty()&&!uuid(winner)) invalid();
-    boolean(body,"draw");number(body,"reports_received",0,8);number(body,"required_reports",4,8);
+    boolean(body,"draw");number(body,"reports_received",0,8);number(body,"required_reports",2,8);
     number(body,"revision");
     number(body,"captains_approved",0,2);
 }

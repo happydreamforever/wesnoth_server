@@ -21,6 +21,7 @@ static std::string str(const json::object&o,const char*k){return wire::text(o,k,
 static std::int64_t number(const json::object&o,const char*k){return wire::integer(o,k);}
 static int scaled(std::int64_t base,std::int64_t level,std::int64_t percent){require(base>0&&level>0&&level<100000000);auto value=(base*(100+percent*(level-1))+50)/100;require(value>0&&value<=std::numeric_limits<int>::max());return static_cast<int>(value);}
 adapter::adapter(const config&cfg){
+ network_generation_=boost::uuids::to_string(boost::uuids::random_generator()());
  require(cfg["tls_enabled"].to_bool());
  auto settings=json::parse(read_file(cfg["alliance_runtime"].str()+"/config.json",65536)).as_object();
  const auto& service=settings.at("service").as_object();secret_=str(service,"bridge_secret");
@@ -28,6 +29,8 @@ adapter::adapter(const config&cfg){
  require(cfg["alliance_backend_port"].to_int(18765)==port_);
  catalog_=json::parse(read_file(cfg["alliance_catalog"].str(),4194304)).as_object();
  require(str(catalog_,"version")=="unified-heroes-v1");
+ const auto capabilities=call("capabilities",{});wire::keys(capabilities,{"protocol","implementation_release","schema_version"});
+ require(number(capabilities,"protocol")==3&&number(capabilities,"implementation_release")==1192621&&number(capabilities,"schema_version")==3);
 }
 json::object adapter::call(const std::string& op,const json::object& body){
  asio::io_context io;asio::ip::tcp::socket socket(io);boost::beast::flat_buffer buffer;
@@ -47,7 +50,22 @@ json::object adapter::call(const std::string& op,const json::object& body){
 json::object adapter::admit(const std::string&ticket,const std::string&username){auto value=call("admit",{{"ticket",ticket},{"username",username}});require(str(value,"username")==username);str(value,"account_id");str(value,"database_generation");return value;}
 room& adapter::create(int game){require(rooms_.find(game)==rooms_.end());room value;value.id=boost::uuids::to_string(boost::uuids::random_generator()());return rooms_.emplace(game,std::move(value)).first->second;}
 room& adapter::get(int game){return rooms_.at(game);}
-void adapter::remove(int game){rooms_.erase(game);}
+void adapter::remove(int game){auto found=rooms_.find(game);if(found!=rooms_.end()&&found->second.network_reserved){try{call("network_release",{{"game_id",found->second.id},{"generation",network_generation_}});}catch(const std::exception&){} }rooms_.erase(game);}
+void adapter::prepare(int game){auto&state=get(game);if(!state.individual||state.network_reserved)return;json::array ids;for(const auto&[_,s]:state.seats){require(s.ready);ids.emplace_back(s.account_id);}require(ids.size()>=2&&ids.size()<=8);call("network_prepare",{{"game_id",state.id},{"generation",network_generation_},{"account_ids",ids}});state.network_reserved=true;}
+std::vector<int> adapter::heartbeat(){
+ json::array ids;std::map<std::string,int> requested;
+ for(const auto&[game,r]:rooms_)if(r.network_reserved){ids.emplace_back(r.id);requested.emplace(r.id,game);}
+ if(ids.empty())return {};
+ const auto response=call("network_heartbeat",{{"generation",network_generation_},{"game_ids",ids}});
+ wire::keys(response,{"generation","renewed","expired"});require(str(response,"generation")==network_generation_);
+ std::set<std::string> seen;std::vector<int> expired;
+ for(const auto* key:{"renewed","expired"})for(const auto& item:wire::array(response,key,64)){
+  require(item.is_string());const std::string id(item.as_string());require(requested.count(id)&&seen.insert(id).second);
+  if(std::string(key)=="expired")expired.push_back(requested.at(id));
+ }
+ require(seen.size()==requested.size());return expired;
+}
+
 void adapter::restore(int game,simple_wml::node&level){
  auto& state=get(game);auto* scenario=level.child("snapshot");if(!scenario)scenario=level.child("scenario");require(scenario);
  auto saved=level["alliance_casual_game_id"].to_string();if(saved.empty())saved=(*scenario)["alliance_casual_game_id"].to_string();
@@ -62,9 +80,9 @@ void adapter::choose(int game,int side,const std::string&account,const std::stri
  auto& value=state.seats[side];auto selection=response.at("selection").as_object();
  if(value.account_id!=account||value.selection!=selection){changed(game);value={account,username,selection,false};}
 }
-void adapter::changed(int game,bool reset_ready){auto&state=get(game);require(state.revision<std::numeric_limits<std::int64_t>::max());++state.revision;state.launch_revision=0;if(reset_ready)for(auto&[_,s]:state.seats)s.ready=false;}
+void adapter::changed(int game,bool reset_ready){auto&state=get(game);if(state.network_reserved&&!state.restored){call("network_release",{{"game_id",state.id},{"generation",network_generation_}});state.network_reserved=false;}require(state.revision<std::numeric_limits<std::int64_t>::max());++state.revision;state.launch_revision=0;if(reset_ready)for(auto&[_,s]:state.seats)s.ready=false;}
 void adapter::ready(int game,int side,const std::string&account,bool value){auto&state=get(game);auto&s=state.seats.at(side);require(s.account_id==account);s.ready=value;}
-void adapter::freeze(int game){auto&state=get(game);json::array players;for(const auto&[side,s]:state.seats){require(s.ready);players.push_back(json::object{{"account_id",s.account_id},{"username",s.username},{"side",side},{"selection",s.selection}});}call("freeze",{{"game_id",state.id},{"players",players}});state.restored=true;}
+void adapter::freeze(int game){prepare(game);auto&state=get(game);if(state.network_reserved){const auto response=call("network_heartbeat",{{"generation",network_generation_},{"game_ids",json::array{state.id}}});wire::keys(response,{"generation","renewed","expired"});require(str(response,"generation")==network_generation_&&wire::array(response,"expired",1).empty()&&wire::array(response,"renewed",1)==json::array{state.id});}json::array players;for(const auto&[side,s]:state.seats){require(s.ready);players.push_back(json::object{{"account_id",s.account_id},{"username",s.username},{"side",side},{"selection",s.selection}});}call("freeze",{{"game_id",state.id},{"players",players}});state.restored=true;}
 void adapter::context(int game,simple_wml::document&output)const{const auto&state=rooms_.at(game);auto&n=output.root().add_child("alliance_game");n.set_attr_dup("id",state.id.c_str());n.set_attr("resume",state.restored?"yes":"no");if(state.individual){n.set_attr("individual_room","yes");n.set_attr_dup("room_revision",std::to_string(state.revision).c_str());}}
 void adapter::selections(int game,simple_wml::document&output)const{const auto&state=rooms_.at(game);for(const auto&[side,s]:state.seats){auto&n=output.root().add_child("alliance_selection");n.set_attr_dup("game_id",state.id.c_str());n.set_attr_int("side",side);n.set_attr_dup("account_id",s.account_id.c_str());n.set_attr_dup("username",s.username.c_str());n.set_attr("ready",s.ready?"yes":"no");for(const auto*key:{"hero_id","form_id","unit_type"})n.set_attr_dup(key,str(s.selection,key).c_str());for(const auto*key:{"hero_level","hero_revision","unit_level"})n.set_attr_dup(key,std::to_string(number(s.selection,key)).c_str());}}
 void adapter::validate_leader(const simple_wml::node& side,const seat& selected,bool restored)const{

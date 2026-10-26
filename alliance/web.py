@@ -412,11 +412,13 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     @internal_route("/health", methods=("GET",), player=False)
     def health():
         db.command("ping")
+        # Fence the actual database before advertising the current product.
+        domain._generation()
         # Capability metadata is not a live native-client or game-daemon probe.
         return jsonify(status="ok", service="alliance", api_version=1,
                        game_bridge_integrated=True, campaign_content_ready=CAMPAIGN_CONTENT_READY,
-                       health_scope="backend_only", native_runtime_checked=False, implementation_release=1192617,
-                       product_schema_version=2)
+                       health_scope="backend_only", native_runtime_checked=False, implementation_release=1192621,
+                       product_schema_version=3, flexible_teams=True)
 
     @internal_route("/register", player=False)
     def register():
@@ -496,6 +498,24 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     def casual_hero():
         data = progression_payload('ticket', 'account_id', 'game_id', 'side')
         return jsonify(domain.casual_consume_hero(**data))
+
+    @internal_route('/casual/capabilities', player=False)
+    def casual_capabilities():
+        progression_payload()
+        domain._generation()
+        return jsonify(protocol=3, implementation_release=1192621, schema_version=3)
+
+    @internal_route('/casual/network_prepare', player=False)
+    def casual_network_prepare():
+        return jsonify(domain.network_prepare(**progression_payload('game_id', 'generation', 'account_ids')))
+
+    @internal_route('/casual/network_heartbeat', player=False)
+    def casual_network_heartbeat():
+        return jsonify(domain.network_heartbeat(**progression_payload('generation', 'game_ids')))
+
+    @internal_route('/casual/network_release', player=False)
+    def casual_network_release():
+        return jsonify(domain.network_release(**progression_payload('game_id', 'generation')))
 
     @internal_route('/casual/freeze', player=False)
     def casual_freeze():
@@ -670,6 +690,41 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     def directory_battle_detail():
         data = directory_payload("battle_id")
         return jsonify(battle=domain.directory_battle_detail(g.player["_id"], data["battle_id"]))
+
+    @internal_route("/team-directory/publish_plan")
+    def directory_publish_plan():
+        data = directory_payload('team_id', 'opponent_team_id', 'map_id', 'settings', 'slots')
+        return jsonify(battle=domain.directory_publish_plan(g.player["_id"], data['team_id'], data['opponent_team_id'], data['map_id'], data['settings'], data['slots'])), 201
+
+    @internal_route("/team-directory/edit_plan")
+    def directory_edit_plan():
+        data = directory_payload('battle_id', 'revision', 'map_id', 'settings', 'slots')
+        return jsonify(battle=domain.directory_edit_plan(g.player["_id"], data['battle_id'], data['revision'], data['map_id'], data['settings'], data['slots']))
+
+    @internal_route("/team-directory/join_plan")
+    def directory_join_plan():
+        data = directory_payload('battle_id', 'revision', 'side')
+        return jsonify(battle=domain.directory_join_plan(g.player["_id"], data['battle_id'], data['revision'], data['side']))
+
+    @internal_route("/team-directory/leave_plan")
+    def directory_leave_plan():
+        data = directory_payload('battle_id', 'revision')
+        return jsonify(battle=domain.directory_leave_plan(g.player["_id"], data['battle_id'], data['revision']))
+
+    @internal_route("/team-directory/approve_plan")
+    def directory_approve_plan():
+        data = directory_payload('battle_id', 'revision')
+        return jsonify(battle=domain.directory_approve_plan(g.player["_id"], data['battle_id'], data['revision']))
+
+    @internal_route("/team-directory/ready_plan")
+    def directory_ready_plan():
+        data = directory_payload('battle_id', 'revision', 'ready')
+        return jsonify(battle=domain.directory_ready_plan(g.player["_id"], data['battle_id'], data['revision'], data['ready']))
+
+    @internal_route("/team-directory/select_plan_hero")
+    def directory_select_plan_hero():
+        data = directory_payload('battle_id', 'revision', 'hero_id', 'form_id')
+        return jsonify(battle=domain.directory_select_plan_hero(g.player["_id"], data['battle_id'], data['revision'], data['hero_id'], data['form_id']))
 
     @internal_route("/team-directory/propose_battle")
     def directory_propose_battle():

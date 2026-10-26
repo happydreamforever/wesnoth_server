@@ -62,7 +62,7 @@ class Peer:
             if '['+tag+']' in value:return value
             if '[error]' in value or 'was refused' in value:raise AssertionError(value)
         raise AssertionError('Missing '+tag)
-    def rpc(self,op,body,token=None,version=2):
+    def rpc(self,op,body,token=None,version=3):
         self.close();self.__init__(self.port,self.profile)
         value={'v':version,'id':uuid4().hex,'op':op,'body':body}
         if token:value['token']=token
@@ -111,7 +111,7 @@ class Native(unittest.TestCase):
             try:p.wait(timeout=8)
             except subprocess.TimeoutExpired:p.kill();p.wait()
         for log in cls.logs:
-            log.flush();log.seek(0);(ROOT/'build'/('unified-native-'+Path(log.name).name)).write_text(log.read());log.close()
+            log.flush();log.seek(0);(Path(os.environ.get('ALLIANCE_TEST_LOG_ROOT',ROOT/'build'))/('unified-native-'+Path(log.name).name)).write_text(log.read());log.close()
         cls.http.shutdown();cls.thread.join(3);cls.http.server_close();cls.client.drop_database(cls.name);cls.client.close();cls.tmp.cleanup()
     def setUp(self):self.peers=[]
     def tearDown(self):
@@ -136,7 +136,7 @@ class Native(unittest.TestCase):
         return p,token,login['data']['account']
     def lobby(self,token,api,account):
         ticket=api.rpc('casual_ticket',{},token);self.assertTrue(ticket['ok'],ticket)
-        p=self.peer(15000);greeting=p.until('version');self.assertIn('alliance_protocol="2"',greeting);self.assertIn('implementation_release="1192617"',greeting)
+        p=self.peer(15000);greeting=p.until('version');self.assertIn('alliance_protocol="3"',greeting);self.assertIn('implementation_release="1192621"',greeting)
         p.send(wml('version',{'version':'1.19.26'}));p.until('mustlogin')
         p.send(wml('login',{'username':account['username'],'alliance_ticket':ticket['data']['ticket']}));p.until('join_lobby');p.until('gamelist')
         return p,ticket['data']['ticket']
@@ -146,6 +146,32 @@ class Native(unittest.TestCase):
         catalog=api.rpc('hero_catalog',{},token);self.assertTrue(catalog['ok'],catalog);self.assertEqual(catalog['data']['catalog_sha256'],self.digest)
         training=api.rpc('progression_catalog',{},token);self.assertTrue(training['ok'],training);self.assertEqual(training['data']['profile']['heroes'],[])
         with self.assertRaises(EOFError):api.rpc('me',{},token,version=1)
+    def test_flexible_plan_bridge_roundtrip_and_revision_fence(self):
+        from alliance.flexible import DEFAULT_SETTINGS
+        a=self.account();z=self.account()
+        team_a=self.domain.create_team(a[2]['id'],'Plan '+str(self.counter)+' A')['_id']
+        team_z=self.domain.create_team(z[2]['id'],'Plan '+str(self.counter)+' Z')['_id']
+        slots=[dict(side=n,kind='open',account_id='',ai_faction='',ai_leader='') for n in range(1,5)]
+        slots[3].update(kind='ai',ai_faction='Northerners',ai_leader='Orcish Warrior')
+        published=a[0].rpc('publish_plan',{'team_id':team_a,'opponent_team_id':team_z,'map_id':'isars-cross','settings':DEFAULT_SETTINGS,'slots':slots},a[1])
+        self.assertTrue(published['ok'],published);battle=published['data']['battle'];self.assertEqual(battle['format'],2)
+        slots[2].update(kind='ai',ai_faction='Dunefolk',ai_leader='Dune Apothecary')
+        response=z[0].rpc('edit_plan',{'battle_id':battle['id'],'revision':battle['revision'],'map_id':'isars-cross','settings':DEFAULT_SETTINGS,'slots':slots},z[1])
+        self.assertTrue(response['ok'],response);battle=response['data']['battle']
+        old=battle['revision']
+        for side,seat in [(1,a),(2,z)]:
+            for op,fields in [('join_plan',{'side':side}),('select_plan_hero',{'hero_id':self.hero,'form_id':self.form['id']})]:
+                response=seat[0].rpc(op,{'battle_id':battle['id'],'revision':battle['revision'],**fields},seat[1])
+                self.assertTrue(response['ok'],response);battle=response['data']['battle']
+        stale=a[0].rpc('approve_plan',{'battle_id':battle['id'],'revision':old},a[1]);self.assertFalse(stale['ok']);self.assertEqual(stale['data']['code'],'stale_proposal')
+        for op in ['approve_plan','ready_plan']:
+            for seat in [a,z]:
+                response=seat[0].rpc(op,{'battle_id':battle['id'],'revision':battle['revision'],**({'ready':True} if op=='ready_plan' else {})},seat[1])
+                self.assertTrue(response['ok'],response);battle=response['data']['battle']
+        self.assertEqual(battle['room_state'],'preparing');self.assertFalse(battle['ranked'])
+        detail=a[0].rpc('battle_detail',{'battle_id':battle['id']},a[1]);self.assertTrue(detail['ok'],detail);self.assertEqual(detail['data']['battle'],battle)
+        review=a[0].rpc('shared_review',{'run_id':battle['id']},a[1]);self.assertTrue(review['ok'],review);self.assertEqual(review['data']['required_reports'],2)
+
     def test_tls_only_and_ticket_required(self):
         raw=socket.create_connection(('127.0.0.1',15000),timeout=3);raw.sendall(b'\0'*4)
         self.assertEqual(raw.recv(4),b'');raw.close()
@@ -163,128 +189,18 @@ class Native(unittest.TestCase):
         variables=wml('variables',{'alliance_hero_id':self.hero,'alliance_form_id':f['id'],'alliance_hero_level':level})
         mods=wml('modifications',children=wml('object',{'id':'unified_hero_scaling','duration':'forever','silent':'yes'},effects))
         return wml('leader',{'type':f['unit_type'],'canrecruit':'yes','random_traits':'no'},variables+mods)
-    def level(self,account,selection=None):
-        attrs={'side':1,'controller':'human','current_player':account['username'],'player_id':account['username'],'save_id':account['username'],'team_name':'one','allow_player':'yes'}
-        leader=wml('leader',{'type':'Spearman'})
-        if selection:
-            attrs.update(alliance_account_id=account['id'],alliance_hero_id=selection['hero_id'],alliance_form_id=selection['form_id'],alliance_hero_level=selection['hero_level'],alliance_hero_revision=selection['hero_revision'])
-            leader=self.leader(selection)
-        side=wml('side',attrs,leader);side+=wml('side',{'side':2,'controller':'ai','team_name':'two','allow_player':'no'},wml('leader',{'type':'Orcish Grunt'}))
-        return wml('multiplayer',{'mp_scenario':'test','mp_scenario_name':'Unified test','shuffle_sides':'no'})+wml('scenario',{'id':'test','map_data':'Gg,Gg,Gg\nGg,Gg,Gg\nGg,Gg,Gg'},side)
-    def test_selected_owned_hero_ready_gate_frozen_game_no_xp(self):
-        api,token,account=self.account();p,_=self.lobby(token,api,account)
-        p.send(wml('create_game',{'name':'Unified test'}));context=p.until('alliance_game');game=re.search(r'id="([0-9a-f-]+)"',context)[1]
-        selected=api.rpc('casual_select',{'game_id':game,'side':1,'hero_id':self.hero,'form_id':self.form['id']},token)
-        self.assertTrue(selected['ok'],selected);selection=selected['data']['selection']
-        p.send(self.level(account,selection));p.until('alliance_game')
-        p.send(wml('start_game'));self.assertIn('accepted="no"',p.until('alliance_start'))
-        p.send(wml('alliance_hero',{'ticket':selected['data']['selection_ticket']}));self.assertIn('ready="no"',p.until('alliance_selection'))
-        p.send(wml('alliance_ready',{'side':1,'ready':'yes'}));self.assertIn('ready="yes"',p.until('alliance_selection'))
-        p.send(wml('start_game'));self.assertIn('accepted="yes"',p.until('alliance_start'))
-        frozen=self.domain.casual_restore(game);self.assertEqual(frozen['players'][0]['selection'],selection)
-        self.assertEqual(self.db.account_heroes.find_one({'account_id':account['id']})['total_experience'],20)
-    def prepared(self, mutation=None):
-        api,token,account=self.account();p,_=self.lobby(token,api,account)
-        p.send(wml('create_game',{'name':'Guard test'}));game=re.search(r'id="([0-9a-f-]+)"',p.until('alliance_game'))[1]
-        reply=api.rpc('casual_select',{'game_id':game,'side':1,'hero_id':self.hero,'form_id':self.form['id']},token)
-        self.assertTrue(reply['ok'],reply);selected=reply['data'];level=self.level(account,selected['selection'])
-        p.send(mutation(level) if mutation else level);p.until('alliance_game')
-        p.send(wml('alliance_hero',{'ticket':selected['selection_ticket']}));p.until('alliance_selection')
-        return api,token,account,p,game,selected,level
 
-    def test_host_cannot_add_stats_or_extra_effect_modifiers(self):
-        variants=[lambda s:s.replace('random_traits="no"','max_hitpoints="9999"\nrandom_traits="no"'),
-                  lambda s:re.sub(r'(?m)^(damage="[0-9]+"\n)',r'\1increase_damage="99"\n',s),
-                  lambda s:s.replace('set_total="'+str(scaled_stat(self.form['base_hitpoints'],2,2))+'"','set_total="99999"')]
-        for mutate in variants:
-            with self.subTest(kind=variants.index(mutate)):
-                api,token,account,p,game,selected,level=self.prepared(mutate)
-                p.send(wml('alliance_ready',{'side':1,'ready':'yes'}));p.until('alliance_selection')
-                p.send(wml('start_game'));self.assertIn('accepted="no"',p.until('alliance_start'))
-                self.assertIsNone(self.db.casual_games.find_one({'_id':game}))
-                p.close()
+    def test_backend_capability_refuses_unmigrated_database(self):
+        client=self.app.test_client();headers={'Authorization':'Bearer '+self.secret}
+        self.assertEqual(client.get('/internal/v1/health',headers=headers).status_code,200)
+        self.db.schema_metadata.update_one({'_id':'alliance'},{'$set':{'version':2}})
+        try:
+            self.assertNotEqual(client.get('/internal/v1/health',headers=headers).status_code,200)
+            self.assertNotEqual(client.post('/internal/v1/casual/capabilities',json={},headers=headers).status_code,200)
+        finally:self.db.schema_metadata.update_one({'_id':'alliance'},{'$set':{'version':3}})
 
-    def test_authored_leader_identity_preserved_without_relaxing_stats(self):
-        identity = 'gender="female"\nid="story-protagonist"\nname="Authored protagonist"\n'
-        api, token, account, peer, game, selected, level = self.prepared(
-            lambda level: level.replace('random_traits="no"', identity + 'random_traits="no"', 1))
-        peer.send(wml('alliance_ready', {'side': 1, 'ready': 'yes'})); peer.until('alliance_selection')
-        peer.send(wml('start_game')); self.assertIn('accepted="yes"', peer.until('alliance_start'))
-        peer.close()
-        for identity in ('id="' + 'x' * 257 + '"\n', 'gender="random"\n', 'profile="unapproved"\n'):
-            api, token, account, peer, game, selected, level = self.prepared(
-                lambda level: level.replace('random_traits="no"', identity + 'random_traits="no"', 1))
-            peer.send(wml('alliance_ready', {'side': 1, 'ready': 'yes'})); peer.until('alliance_selection')
-            peer.send(wml('start_game')); self.assertIn('accepted="no"', peer.until('alliance_start'))
-            self.assertIsNone(self.db.casual_games.find_one({'_id': game}))
-            peer.close()
-
-    def test_wrong_seat_and_reused_hero_ticket_rejected(self):
-        api,token,account,p,game,selected,level=self.prepared()
-        p.send(wml('alliance_ready',{'side':2,'ready':'yes'}));self.assertIn('was refused',p.until('message'))
-        p.send(wml('alliance_hero',{'ticket':selected['selection_ticket']}));self.assertIn('was refused',p.until('message'))
-        p.send(wml('start_game'));self.assertIn('accepted="no"',p.until('alliance_start'))
-
-    def test_saved_resume_keeps_frozen_hero_after_growth_and_requires_ready(self):
-        api,token,account,p,game,selected,level=self.prepared()
-        p.send(wml('alliance_ready',{'side':1,'ready':'yes'}));p.until('alliance_selection')
-        p.send(wml('start_game'));self.assertIn('accepted="yes"',p.until('alliance_start'))
-        p.send(wml('leave_game'));p.until('gamelist')
-        admin=self.domain.bootstrap_admin('ResumeAdmin',hash_password('resume admin password'))['_id']
-        self.domain.admin_correct_hero_experience(admin,account['id'],self.hero,100,'Resume fixture growth',1)
-        p.send(wml('create_game',{'name':'Resume test'}));p.until('alliance_game')
-        p.send('alliance_casual_game_id="'+game+'"\n'+level)
-        restored=p.until('alliance_game');self.assertIn('resume="yes"',restored);self.assertIn('ready="no"',restored)
-        self.assertIn('hero_level="2"',restored)
-        p.send(wml('start_game'));self.assertIn('accepted="no"',p.until('alliance_start'))
-        p.send(wml('alliance_ready',{'side':1,'ready':'yes'}));p.until('alliance_selection')
-        p.send(wml('start_game'));self.assertIn('accepted="yes"',p.until('alliance_start'))
-        self.assertEqual(self.domain.casual_restore(game)['players'][0]['selection'],selected['selection'])
-        self.assertEqual(self.domain.get_account(account['id'])['heroes'][0]['total_experience'],120)
-
-    def test_next_scenario_preserves_snapshot_and_requires_fresh_ready(self):
-        api,token,account,p,game,selected,level=self.prepared()
-        p.send(wml('alliance_ready',{'side':1,'ready':'yes'}));p.until('alliance_selection')
-        p.send(wml('start_game'));self.assertIn('accepted="yes"',p.until('alliance_start'))
-        p.send(wml('store_next_scenario',{'alliance_casual_game_id':game},level))
-        context=p.until('alliance_game');self.assertIn('resume="yes"',context);self.assertIn('ready="no"',context)
-        p.send(wml('start_game'));self.assertIn('accepted="no"',p.until('alliance_start'))
-        p.send(wml('alliance_ready',{'side':1,'ready':'yes'}));p.until('alliance_selection')
-        p.send(wml('start_game'));self.assertIn('accepted="yes"',p.until('alliance_start'))
-        self.assertEqual(self.db.account_heroes.find_one({'account_id':account['id']})['total_experience'],20)
-    def test_two_authenticated_human_sides_and_fixed_owner_guard(self):
-        api1,token1,a1=self.account();api2,token2,a2=self.account()
-        p1,_=self.lobby(token1,api1,a1);p2,_=self.lobby(token2,api2,a2)
-        p1.send(wml('create_game',{'name':'Two humans'}));game=re.search(r'id="([0-9a-f-]+)"',p1.until('alliance_game'))[1]
-        selections=[]
-        for api,token,side in [(api1,token1,1),(api2,token2,2)]:
-            value=api.rpc('casual_select',{'game_id':game,'side':side,'hero_id':self.hero,'form_id':self.form['id']},token)
-            self.assertTrue(value['ok'],value);selections.append(value['data'])
-        second=wml('side',{'side':2,'controller':'human','current_player':a2['username'],'player_id':a2['username'],
-            'save_id':a2['username'],'team_name':'two','allow_player':'yes','alliance_account_id':a2['id'],
-            'alliance_hero_id':self.hero,'alliance_form_id':self.form['id'],'alliance_hero_level':2,
-            'alliance_hero_revision':selections[1]['selection']['hero_revision']},self.leader(selections[1]['selection']))
-        level=self.level(a1,selections[0]['selection'])
-        old=wml('side',{'side':2,'controller':'ai','team_name':'two','allow_player':'no'},wml('leader',{'type':'Orcish Grunt'}))
-        self.assertIn(old,level);p1.send(level.replace(old,second));p1.until('alliance_game')
-        numeric=None
-        for _ in range(30):
-            value=p2.receive()
-            for node in re.findall(r'\[game\]\n(.*?)\[/game\]',value,re.S):
-                if 'name="Two humans"' in node:numeric=re.search(r'^id="([0-9]+)"',node,re.M)[1]
-            if numeric:break
-        self.assertIsNotNone(numeric)
-        p2.send(wml('join',{'id':numeric,'observe':'no'}));p2.until('scenario')
-        p1.send(wml('alliance_hero',{'ticket':selections[0]['selection_ticket'],'side':1}));p1.until('alliance_selection')
-        p2.send(wml('alliance_hero',{'ticket':selections[1]['selection_ticket'],'side':2}));p2.until('alliance_selection')
-        p2.send(wml('alliance_ready',{'side':1,'ready':'yes'}));self.assertIn('was refused',p2.until('message'))
-        for peer,side in [(p1,1),(p2,2)]:
-            peer.send(wml('alliance_ready',{'side':side,'ready':'yes'}))
-            for _ in range(30):
-                value=peer.receive()
-                if any(f'side="{side}"' in n and 'ready="yes"' in n for n in re.findall(r'\[alliance_selection\]\n(.*?)\[/alliance_selection\]',value,re.S)):break
-            else:self.fail('Readiness acknowledgement missing')
-        p1.send(wml('start_game'));self.assertIn('accepted="yes"',p1.until('alliance_start'));p2.until('start_game')
-        frozen=self.domain.casual_restore(game)
-        self.assertEqual({p['account_id'] for p in frozen['players']},{a1['id'],a2['id']})
-        self.assertEqual(self.db.settlements.count_documents({'_id':game}),0)
+    def test_authenticated_listener_refuses_standard_create(self):
+        api,token,account=self.account();peer,_=self.lobby(token,api,account)
+        peer.send(wml('create_game',{'name':'Retired Standard'}))
+        peer.until('leave_game');peer.until('gamelist')
+        self.assertEqual(self.db.network_battle_reservations.count_documents({'_id':account['id']}),0)

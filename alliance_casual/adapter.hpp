@@ -4,13 +4,14 @@
 #include <map>
 #include <cstdint>
 #include <string>
+#include <vector>
 #include "config.hpp"
 #include "server/common/simple_wml.hpp"
 namespace alliance_casual {
 struct seat {std::string account_id, username; boost::json::object selection; bool ready=false;};
 struct room {
  std::string id, layout, settings;
- bool restored=false, individual=false;
+ bool restored=false, individual=false, network_reserved=false;
  std::int64_t revision=1, launch_revision=0;
  std::map<int,seat> seats;
 };
@@ -24,6 +25,8 @@ public:
  void restore(int game,simple_wml::node& level);
  void choose(int game,int side,const std::string& account,const std::string& username,const std::string& ticket);
  void ready(int game,int side,const std::string& account,bool value);
+ void prepare(int game);
+ std::vector<int> heartbeat();
  void freeze(int game);
  void validate_leader(const simple_wml::node& side,const seat& selected,bool restored) const;
  void context(int game,simple_wml::document& output) const;
@@ -31,6 +34,7 @@ public:
  void changed(int game, bool reset_ready=true);
 private:
  boost::json::object call(const std::string& op,const boost::json::object& body);
+ std::string network_generation_;
  std::string secret_; unsigned short port_=18765;
  boost::json::object catalog_;
  std::map<int,room> rooms_;

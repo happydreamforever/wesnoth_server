@@ -8,7 +8,7 @@ from pymongo.errors import CollectionInvalid
 
 from .rules import MAPS
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def _object(required, properties):
@@ -92,8 +92,88 @@ SCHEMAS = {
 }
 
 
+SCHEMAS['network_battle_reservations'] = {'$jsonSchema': _object(
+    ['_id', 'kind', 'run_id', 'generation', 'created_at'], {
+        '_id': STRING, 'kind': {'enum': ['team', 'individual']}, 'run_id': STRING,
+        'generation': STRING, 'created_at': {'bsonType': 'date'}, 'expires_at': {'bsonType': 'date'}})}
+
+
+# Legacy records remain byte-for-byte readable. New plans have their own strict
+# shape; schema activation is explicit and never reinterprets old run history.
+FLEX_SETTINGS = _object(['gold', 'base_income', 'turns', 'fog', 'shroud', 'observers'], {
+    'gold': {'bsonType': ['int', 'long'], 'minimum': 0, 'maximum': 1000},
+    'base_income': {'bsonType': ['int', 'long'], 'minimum': 0, 'maximum': 20},
+    'turns': {'bsonType': ['int', 'long'], 'minimum': -1, 'maximum': 1000},
+    'fog': {'bsonType': 'bool'}, 'shroud': {'bsonType': 'bool'}, 'observers': {'bsonType': 'bool'}})
+FLEX_SLOT = _object(['side', 'kind', 'team_id', 'account_id', 'ai_faction', 'ai_leader'], {
+    'side': {'bsonType': ['int', 'long'], 'minimum': 1, 'maximum': 8},
+    'kind': {'enum': ['open', 'reserved', 'ai', 'closed']}, 'team_id': STRING,
+    'account_id': STRING, 'ai_faction': STRING, 'ai_leader': STRING})
+SCHEMAS['game_runs'] = {'$and': [SCHEMAS['game_runs'], {'$or': [
+    {'plan_format': {'$exists': False}},
+    {'$jsonSchema': _object(['plan_format', 'revision', 'settings', 'slots', 'team_ids', 'approvals', 'ready'], {
+        'plan_format': {'enum': [2]}, 'revision': INTEGER, 'settings': FLEX_SETTINGS,
+        'slots': {'bsonType': 'array', 'minItems': 4, 'maxItems': 8, 'items': FLEX_SLOT},
+        'team_ids': {'bsonType': 'array', 'minItems': 2, 'maxItems': 2, 'uniqueItems': True, 'items': STRING},
+        'approvals': {'bsonType': 'object'}, 'ready': {'bsonType': 'array', 'uniqueItems': True, 'maxItems': 8, 'items': STRING}})}
+]}]}
+
+
+def migrate_schema_2_to_3(db, backup_digest, *, checkpoint=None):
+    """Resume a fenced, additive migration; caller owns the stopped runtime.
+
+    Only validators/indexes and metadata change. Neither records, identity nor
+    account reservations are rewritten. The checkpoint hook enables real fault
+    injection against a disposable replica set.
+    """
+    import re
+    if not isinstance(backup_digest, str) or not re.fullmatch(r'[0-9a-f]{64}', backup_digest):
+        raise RuntimeError('A verified cold backup digest is required.')
+    current = db.schema_metadata.find_one({'_id': 'alliance'})
+    if current is None or current['version'] not in (2, 3):
+        raise RuntimeError('Only the existing schema 2 database can be upgraded.')
+    journal_id = 'migration-2-to-3'
+    journal = db.schema_metadata.find_one({'_id': journal_id})
+    if journal and journal.get('database_generation') != current.get('database_generation'):
+        raise RuntimeError('The migration database identity differs from its original journal.')
+    if current['version'] == 3:
+        if not journal or journal.get('phase') != 'complete' or journal.get('backup_digest') != backup_digest:
+            raise RuntimeError('The completed migration receipt differs from this backup.')
+        return {'schema_version': 3, 'status': 'already_complete', 'database_generation': current['database_generation']}
+    if journal and journal.get('backup_digest') != backup_digest:
+        raise RuntimeError('Resume with the original verified migration backup.')
+    db.schema_metadata.update_one({'_id': journal_id}, {'$setOnInsert': {
+        'version': 3, 'phase': 'started', 'backup_digest': backup_digest,
+        'database_generation': current['database_generation'], 'created_at': datetime.now(timezone.utc)}}, upsert=True)
+    if checkpoint: checkpoint('started')
+    for name, validator in SCHEMAS.items():
+        if name not in db.list_collection_names():
+            if name != 'network_battle_reservations':
+                raise RuntimeError('Schema 2 is incomplete; migration will not initialize missing data.')
+            db.create_collection(name, validator=validator, validationLevel='strict', validationAction='error')
+        # Existing documents must satisfy the new backwards-compatible validator.
+        if db[name].find_one({'$nor': [validator]}, {'_id': 1}) is not None:
+            raise RuntimeError('An existing record is incompatible; preserve the migration for review.')
+        db.command('collMod', name, validator=validator, validationLevel='strict', validationAction='error')
+    db.schema_metadata.update_one({'_id': journal_id}, {'$set': {'phase': 'validators'}})
+    if checkpoint: checkpoint('validators')
+    db.game_runs.create_index([('team_ids', ASCENDING), ('state', ASCENDING), ('created_at', -1), ('_id', ASCENDING)], name='team_run_history')
+    db.schema_metadata.update_one({'_id': journal_id}, {'$set': {'phase': 'indexes'}})
+    if checkpoint: checkpoint('indexes')
+    with db.client.start_session() as session:
+        def commit(s):
+            owned = db.schema_metadata.find_one({'_id': 'alliance', 'version': 2,
+                'database_generation': current['database_generation']}, session=s)
+            if owned is None: raise RuntimeError('The database identity changed during migration.')
+            db.schema_metadata.update_one({'_id': 'alliance'}, {'$set': {'version': 3}}, session=s)
+            db.schema_metadata.update_one({'_id': journal_id}, {'$set': {'phase': 'complete',
+                'completed_at': datetime.now(timezone.utc)}}, session=s)
+        session.with_transaction(commit)
+    return {'schema_version': 3, 'status': 'complete', 'database_generation': current['database_generation']}
+
+
 def bootstrap_schema(db):
-    """Install v2 only in a fresh owned database; never migrate v1 implicitly.
+    """Install the current schema only in a fresh owned database; never migrate implicitly.
 
     Caller must first validate local MongoDB configuration and authorization. No
     document migrations or destructive collection changes are performed here.
@@ -119,6 +199,7 @@ def bootstrap_schema(db):
                          name='one_team_per_account')
     db.teams.create_index([('area_id', ASCENDING), ('status', ASCENDING), ('rating', -1)], name='area_standings')
     db.areas.create_index([('name_key', ASCENDING)], unique=True, name='unique_area_name')
+    db.game_runs.create_index([('team_ids', ASCENDING), ('state', ASCENDING), ('created_at', -1), ('_id', ASCENDING)], name='team_run_history')
     db.game_runs.create_index([('state', ASCENDING), ('created_at', -1)], name='run_status')
     db.game_runs.create_index([('participants.account_id', ASCENDING), ('created_at', -1)], name='account_runs')
     db.account_heroes.create_index([('account_id', ASCENDING), ('hero_id', ASCENDING)], unique=True, name='owned_hero')

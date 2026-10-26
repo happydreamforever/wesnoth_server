@@ -116,13 +116,14 @@ def process_lock(path):
 
 
 class Peer:
-    def __init__(self, reader, writer, account, token, upload_only=False):
+    def __init__(self, reader, writer, account, token, upload_only=False, observer=False):
         self.reader, self.writer, self.account = reader, writer, account
         self.token = token
         self.upload = None
         self.side = 0
         self.loaded = False
         self.upload_only = upload_only
+        self.observer = observer
         self.lock = asyncio.Lock()
 
     async def send(self, node):
@@ -138,12 +139,13 @@ class Room:
         self.daemon, self.run_id, self.directory, self.record = daemon, run_id, directory, record
         self.generation = record['generation']
         self.peers = {}
+        self.observers = {}
         self.lock = asyncio.Lock()
         self.history = []
         self.history_bytes = 0
         self.replay_bytes = 0
         self.replay_commands = 0
-        self.current_side = 1
+        self.current_side = min(self.active_sides)
         self.current_turn = 1
         self.last_choice = -1
         self.choices = {}
@@ -185,12 +187,37 @@ class Room:
                             next_side = self.current_side + 1
                         if not 1 <= next_side <= self.size + 1:
                             raise WireError('Invalid next side.')
-                        if next_side > self.size:
+                        next_side = self.next_active_side(next_side)
+                        if next_side <= self.current_side:
                             self.current_turn += 1
-                        self.current_side = (next_side - 1) % self.size + 1
+                        self.current_side = next_side
                     if value.name == 'random_seed':
                         self.last_choice = max(self.last_choice, int(value.attrs['request_id']))
                         self.choices[int(value.attrs['request_id'])] = node
+
+    def next_active_side(self, proposed):
+        # Native replay records the next map side before skip_empty_sides().
+        # Closed sides have no engine team and must never acquire turn authority.
+        if not 1 <= proposed <= self.size + 1:
+            raise WireError('Invalid next side.')
+        side = (proposed - 1) % self.size + 1
+        active = self.active_sides
+        for _ in range(self.size):
+            if side in active:
+                return side
+            side = side % self.size + 1
+        raise WireError('The battle has no enabled side.')
+
+    @property
+    def human_count(self):
+        return sum(len(t['players']) for t in self.record['battle']['teams'])
+
+    @property
+    def active_sides(self):
+        battle = self.record['battle']
+        if battle.get('format') == 2:
+            return sorted(s['side'] for t in battle['teams'] for s in t['slots'] if s['kind'] != 'closed')
+        return list(range(1, battle['map']['size'] * 2 + 1))
 
     @property
     def size(self):
@@ -214,7 +241,7 @@ class Room:
 
     def freeze(self):
         self.failed = True
-        for peer in self.peers.values(): peer.close()
+        for peer in (*self.peers.values(), *self.observers.values()): peer.close()
 
     def append(self, node):
         event = {'previous': self.chain, 'wml': serialize(node)}
@@ -241,6 +268,13 @@ class Room:
         # Separate writer locks retain frame boundaries. One failed peer does not
         # discard already persisted commands; that exact side can reconnect.
         peers = [peer for aid, peer in self.peers.items() if aid != exclude and peer.loaded]
+        for actor, peer in list(self.observers.items()):
+            if not peer.loaded: continue
+            try:
+                await asyncio.to_thread(self.daemon.auth.validate_token, peer.token, 'player')
+                await asyncio.to_thread(self.daemon.domain.shared_observer_admission, actor, self.run_id, self.generation)
+                peers.append(peer)
+            except (AuthError, DomainError): peer.close()
         replies = await asyncio.gather(*(peer.send(node) for peer in peers), return_exceptions=True)
         for peer, reply in zip(peers, replies):
             if isinstance(reply, BaseException):
@@ -251,21 +285,30 @@ class Room:
             if self.failed:
                 raise WireError('Retained room writes require review before reconnecting.')
             aid = peer.account['_id']
-            if aid in self.peers:
-                raise WireError('This player already has a connected seat.')
-            admission = self.daemon.domain.shared_evidence_admission if peer.upload_only else self.daemon.domain.shared_admission
+            target = self.observers if peer.observer else self.peers
+            if aid in target:
+                raise WireError('This account already has this room connection.')
+            admission = self.daemon.domain.shared_observer_admission if peer.observer else self.daemon.domain.shared_evidence_admission if peer.upload_only else self.daemon.domain.shared_admission
             result = await asyncio.to_thread(admission, aid, self.run_id, self.generation)
             if result['battle']['id'] != self.run_id:
                 raise WireError('Room identifier differs.')
             peer.side = result['assigned_side']
-            self.peers[aid] = peer
+            peer.controlled_sides = set(result.get('controlled_sides', [peer.side]))
+            target[aid] = peer
             reconnect = result['room_state'] in ('running', 'completed')
             if reconnect and self.record['state'] != result['room_state']:
                 self.record['state']=result['room_state']
                 self.persist()
-            await peer.send(message('alliance_room', descriptor=json.dumps(self.record['battle'], separators=(',', ':')),
+            descriptor = dict(self.record['battle'])
+            descriptor['state'] = result['battle']['state']
+            if descriptor.get('format') == 2:
+                descriptor['room_state'] = result['room_state']
+            await peer.send(message('alliance_room', descriptor=json.dumps(descriptor, separators=(',', ':')),
                                     seed=self.record['seed'], side=peer.side, current_side=self.current_side,
-                                    current_turn=self.current_turn, reconnect='yes' if reconnect else 'no'))
+                                    current_turn=self.current_turn, reconnect='yes' if reconnect else 'no',
+                                    controlled_sides=','.join(str(n) for n in sorted(peer.controlled_sides)),
+                                    engine_host='yes' if result.get('engine_host', peer.side == 1) else 'no',
+                                    observer='yes' if peer.observer else 'no'))
             return reconnect
 
     async def loaded(self, peer, digest):
@@ -275,7 +318,8 @@ class Room:
             actor = await asyncio.to_thread(self.daemon.auth.validate_token, peer.token, 'player')
             if actor['_id'] != peer.account['_id']:
                 raise WireError('Battle session identity changed.')
-            await asyncio.to_thread(self.daemon.domain.shared_admission, actor['_id'], self.run_id, self.generation)
+            admission = self.daemon.domain.shared_observer_admission if peer.observer else self.daemon.domain.shared_admission
+            await asyncio.to_thread(admission, actor['_id'], self.run_id, self.generation)
             if not re.fullmatch(r'[0-9a-f]{64}', digest):
                 raise WireError('Invalid scenario digest.')
             expected = self.record.get('scenario_sha256', '')
@@ -291,8 +335,8 @@ class Room:
                         await peer.send(event)
                 await peer.send(message('alliance_start', reconnect='yes'))
                 return
-            if len(self.peers) != self.size or any(not other.loaded for other in self.peers.values()):
-                await peer.send(message('alliance_waiting', connected=len(self.peers), required=self.size))
+            if len(self.peers) != self.human_count or any(not other.loaded for other in self.peers.values()):
+                await peer.send(message('alliance_waiting', connected=len(self.peers), required=self.human_count))
                 return
             # Each seat may have waited while the other players loaded. A
             # password reset/logout during that wait must not start its game.
@@ -321,6 +365,12 @@ class Room:
                 raise WireError('Invalid loaded acknowledgement.')
             await self.loaded(peer, node.attrs['scenario_sha256'])
             return
+        if peer.observer:
+            await asyncio.to_thread(self.daemon.auth.validate_token, peer.token, 'player')
+            await asyncio.to_thread(self.daemon.domain.shared_observer_admission, peer.account['_id'], self.run_id, self.generation)
+            if node.name not in ('leave_game', 'stop_updates') or node.attrs or node.children:
+                raise WireError('Team observers cannot issue game commands or results.')
+            peer.close(); return
         async with self.lock:
             if self.failed:
                 raise WireError('Retained room writes require review before continuing.')
@@ -415,16 +465,20 @@ class Room:
                     if command.name!='command' or not command.children:
                         raise WireError('Invalid turn command.')
                     source = command.attrs.get('from_side')
-                    if source is not None and source != str(peer.side):
+                    try:
+                        command_side = int(source) if source is not None else simulated_side
+                    except (ValueError, TypeError):
+                        raise WireError('Invalid command side.')
+                    if command_side not in peer.controlled_sides:
                         raise WireError('A command cannot impersonate another side.')
                     names = [item.name for item in command.children]
                     if any(name in ('random_seed','change_controller','change_controller_wml','add_side') or
                            name.startswith('debug_') for name in names):
                         raise WireError('A client cannot change fixed battle ownership.')
                     permitted_async = len(names)==1 and names[0] in ('speak','label','clear_labels','rename','countdown_update')
-                    dependent = (command.attrs.get('dependent')=='yes' and source==str(peer.side) and
+                    dependent = (command.attrs.get('dependent')=='yes' and source==str(command_side) and
                                  len(names)==1 and names[0] not in ('end_turn','init_side'))
-                    if peer.side != simulated_side and not permitted_async and not dependent:
+                    if command_side != simulated_side and not permitted_async and not dependent:
                         raise WireError('The command does not belong to this turn.')
                     for child in command.children:
                         if child.name=='speak':
@@ -440,7 +494,7 @@ class Room:
                             next_side=next_side if next_side>0 else simulated_side+1
                             if not 1<=next_side<=self.size+1:
                                 raise WireError('Invalid next side.')
-                            simulated_side=(next_side-1)%self.size+1
+                            simulated_side=self.next_active_side(next_side)
                 if captain_event:
                     replay = {'previous': self.chain, 'wml': serialize(root)}
                     binding = hashlib.sha256(json.dumps(replay, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
@@ -498,7 +552,7 @@ class BattleDaemon:
             raise WireError('Room metadata is missing or exceeds its limit.')
         record = json.loads(marker.read_text(encoding='utf-8'))
         binding = run.get('shared_room', {})
-        if (record.get('format') != 1 or record.get('run_id') != run_id or
+        if (record.get('format') not in (1, 2) or record.get('run_id') != run_id or
                 not ID.fullmatch(record.get('generation', '')) or record['generation'] != binding.get('generation') or
                 not re.fullmatch(r'[0-9a-f]{8}', record.get('seed', '')) or record['battle'].get('id') != run_id):
             raise WireError('Room metadata differs from its database binding.')
@@ -506,6 +560,13 @@ class BattleDaemon:
                  for team in record['battle']['teams'] for p in team['players']}
         actual = {(p['account_id'], p['team_id'], p['side'], json.dumps(p['selection'], sort_keys=True))
                   for p in run['participants']}
+        if run.get('plan_format') == 2 and (record.get('format') != 2 or
+                record.get('controllers') != binding.get('controllers') or
+                record['battle'].get('revision') != run['revision'] or
+                record['battle'].get('settings') != run['settings'] or
+                [s for t in record['battle']['teams'] for s in t['slots']] !=
+                [dict((k,v) for k,v in s.items() if k != 'team_id') for team in run['team_ids'] for s in run['slots'] if s['team_id'] == team]):
+            raise WireError('Retained flexible configuration differs.')
         if saved != actual or record['battle']['map']['id'] != run['map_id']:
             raise WireError('Retained fixed lineup differs from the database.')
         if run['state'] == 'running':
@@ -596,7 +657,7 @@ class BattleDaemon:
         if len(self.rooms) >= MAX_ROOMS:
             raise WireError('Room limit reached.')
 
-    async def room(self, account_id, run_id, upload_only=False):
+    async def room(self, account_id, run_id, upload_only=False, observer=False):
         if not ID.fullmatch(run_id):
             raise WireError('Invalid battle identifier.')
         async with self.room_lock:
@@ -604,7 +665,18 @@ class BattleDaemon:
             marker=safe_path(directory/'room.json')
             run = await asyncio.to_thread(self.domain.get_run, run_id)
             binding = run.get('shared_room', {})
-            renew = run['state'] == 'draft' and (binding.get('state') == 'cancelled' or
+            if run.get('plan_format') == 2:
+                if binding.get('state') not in ('preparing', 'running', 'completed'):
+                    raise WireError('The current plan is not prepared. Refresh its readiness.')
+                cached = self.rooms.get(run_id)
+                if cached is not None and cached.generation != binding['generation']:
+                    for old_peer in cached.peers.values(): old_peer.close()
+                    self.rooms.pop(run_id)
+                if marker.exists():
+                    retained = json.loads(marker.read_text())
+                    if retained.get('generation') != binding['generation']:
+                        os.replace(directory, safe_path(self.storage/(run_id+'-before-'+uuid4().hex)))
+            renew = run.get('plan_format') != 2 and run['state'] == 'draft' and (binding.get('state') == 'cancelled' or
                 (binding.get('expires_at') and binding['expires_at'] <= datetime.now(timezone.utc)))
             if renew and not upload_only:
                 generation = str(uuid4())
@@ -625,7 +697,7 @@ class BattleDaemon:
             await self.reserve_room_slot()
             if marker.exists():
                 record = self.load_record(run_id, directory, run)
-                admission = self.domain.shared_evidence_admission if upload_only else self.domain.shared_admission
+                admission = self.domain.shared_observer_admission if observer else self.domain.shared_evidence_admission if upload_only else self.domain.shared_admission
                 await asyncio.to_thread(admission,account_id,run_id,record['generation'])
             else:
                 if run['state'] != 'draft' or upload_only:
@@ -639,8 +711,9 @@ class BattleDaemon:
                 if directory.exists():
                     os.replace(directory,safe_path(self.storage/(run_id+'-incomplete-'+uuid4().hex)))
                 directory.mkdir(mode=0o700,exist_ok=False)
-                record={'format':1,'run_id':run_id,'generation':generation,'battle':result['battle'],
-                        'seed':secrets.token_hex(4),'state':'preparing','scenario_sha256':''}
+                record={'format':2 if run.get('plan_format') == 2 else 1,'run_id':run_id,'generation':generation,'battle':result['battle'],
+                        'seed':secrets.token_hex(4),'state':'preparing','scenario_sha256':'',
+                        'controllers':binding.get('controllers', {})}
                 write_json(marker,record)
             room=Room(self,run_id,directory,record)
             self.recover_captain_commands(room, run)
@@ -651,6 +724,7 @@ class BattleDaemon:
         while True:
             await asyncio.sleep(2)
             try:
+                await asyncio.to_thread(self.domain.expire_preparations)
                 await self.recover_running()
             except Exception as error:
                 print('BATTLE RECOVERY PENDING: '+type(error).__name__,flush=True)
@@ -732,9 +806,9 @@ class BattleDaemon:
             node=root.children[0]
             if node.name=='alliance_health' and not node.attrs and not node.children:
                 await asyncio.to_thread(self.db.command,'ping')
-                await send(writer,message('alliance_health',service='alliance-battles',api=1,implementation_release=1192617))
+                await send(writer,message('alliance_health',service='alliance-battles',api=1,implementation_release=1192621))
                 return
-            if node.name!='alliance_join' or set(node.attrs)!={'run_id','token','intent'} or node.children or node.attrs['intent'] not in ('play','result_retry','replay_download'):
+            if node.name!='alliance_join' or set(node.attrs)!={'run_id','token','intent'} or node.children or node.attrs['intent'] not in ('play','result_retry','replay_download','observe'):
                 raise WireError('Invalid join request.')
             token=node.attrs.pop('token')
             if not re.fullmatch(r'[A-Za-z0-9_-]{43}',token):
@@ -745,8 +819,8 @@ class BattleDaemon:
             if node.attrs['intent']=='replay_download':
                 await self.download_replay(reader,writer,account['_id'],token,node.attrs['run_id'])
                 return
-            peer=Peer(reader,writer,account,token,node.attrs['intent']=='result_retry')
-            room=await self.room(account['_id'],node.attrs['run_id'],peer.upload_only)
+            peer=Peer(reader,writer,account,token,node.attrs['intent']=='result_retry',node.attrs['intent']=='observe')
+            room=await self.room(account['_id'],node.attrs['run_id'],peer.upload_only,peer.observer)
             await room.admit(peer)
             while True:
                 await room.command(peer,await receive(reader))
@@ -763,8 +837,9 @@ class BattleDaemon:
         finally:
             if peer and room:
                 async with room.lock:
-                    if room.peers.get(peer.account['_id']) is peer:
-                        del room.peers[peer.account['_id']]
+                    target = room.observers if peer.observer else room.peers
+                    if target.get(peer.account['_id']) is peer:
+                        del target[peer.account['_id']]
             self.connections-=1
             writer.close()
             try:

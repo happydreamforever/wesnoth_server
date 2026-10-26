@@ -15,6 +15,7 @@ from alliance.rules import LEADER_REWARDS, TEAM_REWARDS
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--fixture', type=Path, required=True)
+parser.add_argument('--draw', action='store_true')
 args = parser.parse_args()
 f = json.loads(args.fixture.read_text())
 assert f['purpose'] == 'disposable-shared-engine-fixture'
@@ -26,6 +27,8 @@ run_id = f['run_id']
 before = {a['account_id']: domain.get_account(a['account_id']) for a in f['players']}
 review = domain.shared_result_review(f['players'][0]['account_id'], run_id)
 assert review['review_state'] in ('awaiting_captains', 'settled'), review
+if args.draw:
+    assert review['draw'] is True and not review['winner_team_id']
 if review['review_state'] == 'awaiting_captains':
     assert all(next(h for h in row['heroes'] if h['hero_id'] == 'konrad')['total_experience'] == 27 for row in before.values())
     for index in f['captain_indices']:
@@ -38,7 +41,9 @@ for _ in range(200):
 else:
     raise RuntimeError('Settlement timed out')
 receipt = db.settlements.find_one({'_id': run_id})
-assert receipt and len(receipt['rewards']['players']) == f['size'] * 2
+assert receipt and len(receipt['rewards']['players']) == len(f['players'])
+if args.draw:
+    assert receipt['result']['draw'] is True and receipt['result']['winner_team_id'] is None
 assert db.settlements.count_documents({'_id': run_id}) == 1
 assert domain.shared_finish(run_id, f['generation']) == receipt
 assert domain.shared_finish(run_id, f['generation']) == receipt
@@ -61,11 +66,12 @@ for team_id in f['teams']:
     team = domain.get_team(f['players'][0]['account_id'], team_id)
     outcome = 'draw' if receipt['result']['draw'] else 'win' if team_id == receipt['result']['winner_team_id'] else 'loss'
     assert team['experience'] == TEAM_REWARDS[outcome] and team['active_run_id'] is None
+    if f.get('flexible'): assert team['rating'] == 1000
 catalogue_hashes = sorted(db.game_runs.distinct('catalog_sha256', {'kind': 'campaign'}))
 assert len(catalogue_hashes) == 1
 result = {'status': 'passed', 'catalog_sha256': catalogue_hashes[0], 'size': f['size'], 'native_reports_and_two_captain_agreements': True,
           'exactly_once_settlement_and_release': True, 'selected_hero_rewards': records,
-          'draw': receipt['result']['draw'], 'rating_total': sum(domain.get_team(f['players'][0]['account_id'], t)['rating'] for t in f['teams'])}
+          'draw': receipt['result']['draw'], 'expected_draw_checked': args.draw, 'rating_total': sum(domain.get_team(f['players'][0]['account_id'], t)['rating'] for t in f['teams'])}
 assert result['rating_total'] == 2000
 (args.fixture.parent / 'settlement-validation.json').write_text(json.dumps(result, indent=2) + '\n')
 print('PASS actual native END reports, both captain approvals, selected-hero XP, team XP/rating and exactly-once settlement', flush=True)

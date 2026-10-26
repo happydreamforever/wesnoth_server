@@ -260,6 +260,7 @@ server::server(int port,
 	, games_and_users_list_("[gamelist]\n[/gamelist]\n", simple_wml::INIT_STATIC)
 	, metrics_()
 	, dump_stats_timer_(io_service_)
+	, network_lease_timer_(io_service_)
 	, tournaments_timer_(io_service_)
 	, cmd_handlers_()
 	, timer_(io_service_)
@@ -274,6 +275,7 @@ server::server(int port,
 	start_server();
 
 	start_dump_stats();
+	start_network_lease_updates();
 	start_tournaments_timer();
 	if(user_handler_) {
 		uuid_ = user_handler_->get_uuid();
@@ -673,6 +675,25 @@ utils::optional<server_base::login_ban_info> server::is_ip_banned(const std::str
 	return {};
 }
 
+void server::start_network_lease_updates()
+{
+    network_lease_timer_.expires_after(10s);
+    network_lease_timer_.async_wait([this](const boost::system::error_code& error) {
+        if(error) return;
+        if(alliance_) {
+            try { for(int id:alliance_->heartbeat()) delete_game(id,"The network battle reservation expired. Preserve your local save."); }
+            catch(const std::exception&) {
+                // A lost backend lease is fail-closed: no continued commands
+                // can race another network battle's account reservation.
+                std::vector<int> expired;
+                for(const auto& game_ptr:games()) if(alliance_->get(game_ptr->id()).network_reserved) expired.push_back(game_ptr->id());
+                for(int id:expired) delete_game(id,"The network battle reservation was lost. Preserve your local save.");
+            }
+        }
+        start_network_lease_updates();
+    });
+}
+
 void server::start_dump_stats()
 {
 	dump_stats_timer_.expires_after(5min);
@@ -775,7 +796,7 @@ void server::login_client(boost::asio::yield_context yield, SocketPtr socket)
 {
 	if(alliance_) {
 		simple_wml::document greeting; auto& version = greeting.root().add_child("version");
-		version.set_attr("alliance_protocol", "2").set_attr("implementation_release", "1192617").set_attr("individual_rooms", "1");
+		version.set_attr("alliance_protocol", "3").set_attr("implementation_release", "1192621").set_attr("individual_rooms", "1");
 		coro_send_doc(socket, greeting, yield);
 	} else coro_send_doc(socket, version_query_response_, yield);
 
@@ -1524,6 +1545,13 @@ void server::handle_create_game(player_iterator player, simple_wml::node& create
 	const std::string game_name = create_game["name"].to_string();
 	const std::string game_password = create_game["password"].to_string();
 	const bool individual=alliance_ && create_game["individual_room"].to_bool();
+	if(alliance_ && !individual) {
+        simple_wml::document refused("[leave_game]\n[/leave_game]\n",simple_wml::INIT_STATIC);
+        send_to_player(player,refused);
+        send_server_message(player,"Create a new Individual room. Saved games can be viewed locally.","error");
+        send_to_player(player,games_and_users_list_);
+        return;
+    }
 	if(individual && (game_name.empty() || game_name.size()>256 || game_name.find_first_of("\r\n")!=std::string::npos || !game_password.empty())) {
         simple_wml::document refused("[leave_game]\n[/leave_game]\n",simple_wml::INIT_STATIC);
         send_to_player(player,refused);
@@ -1840,13 +1868,17 @@ std::string individual_settings(const simple_wml::node& level)
         "mp_countdown_init_time","mp_countdown_reservoir_time","mp_countdown_turn_bonus",
         "mp_countdown_action_bonus","mp_village_gold","mp_village_support","experience_modifier",
         "random_start_time","shuffle_sides","mp_use_map_settings"}) field(*mp,key);
-    int expected=1;
+    int expected=1, common_gold=-1, common_income=-100;
     std::set<std::string> owners;
     for(const auto* side:sides) {
         if((*side)["side"].to_int()!=expected++ || (*side)["controller"].to_string()!="human"
            || !(*side)["allow_player"].to_bool(true) || individual_number(*side,"gold",100)<0
            || individual_number(*side,"gold",100)>1000)
             throw std::runtime_error("Individual room seats must remain human with valid gold");
+        const int gold=individual_number(*side,"gold",100), income=individual_number(*side,"income",0);
+        if(income < -2 || income > 18 || (common_gold >= 0 && (gold != common_gold || income != common_income)))
+            throw std::runtime_error("Individual room economy must be common to every human side");
+        common_gold=gold; common_income=income;
         const auto owner=(*side)["player_id"].to_string();
         if(!owner.empty() && !owners.insert(owner).second) throw std::runtime_error("Each individual player controls one seat");
         for(const auto* key:{"side","controller","player_id","team_name","gold","income",
@@ -1885,6 +1917,7 @@ void server::individual_publish(game& g)
     desc.set_attr_dup("map_data",desc["mp_shroud"].to_bool()?simple_wml::string_span(""):(*scenario)["map_data"]);
     while(!desc.children("room_side").empty()) desc.remove_child("room_side",0);
     std::string gold;
+    if(!sides.empty()) desc.set_attr_int("room_base_income",individual_number(*sides.front(),"income",0)+2);
     for(const auto* side:sides) {
         const auto value=std::to_string(individual_number(*side,"gold",100));
         if(gold.empty()) gold=value;
@@ -1893,6 +1926,7 @@ void server::individual_publish(game& g)
         for(const auto* key:{"side","team_name","player_id","income","village_gold","village_support","fog","shroud"})
             detail.set_attr_dup(key,(*side)[key]);
         detail.set_attr_dup("gold",value.c_str());
+        detail.set_attr_int("base_income",individual_number(*side,"income",0)+2);
         const auto participant=player_connections_.get<name_t>().find((*side)["player_id"].to_string());
         detail.set_attr("connected",participant!=player_connections_.get<name_t>().end()
             && participant->get_game().get()==&g?"yes":"no");
@@ -1918,6 +1952,7 @@ void server::individual_launch_hint(game& g)
         const auto player=player_connections_.get<name_t>().find(it->second.username);
         if(player==player_connections_.get<name_t>().end() || player->get_game().get()!=&g) return;
     }
+    alliance_->prepare(g.id());
     for(const auto& member:g.all_game_users()) if(g.is_owner(member)) {
         room.launch_revision=room.revision;
         simple_wml::document message;
@@ -1936,7 +1971,7 @@ void server::individual_context(game& g,simple_wml::document& message)
     individual_publish(g);
     context->set_attr_int("room_id",g.id());
     for(const auto* key:{"individual_room","room_revision","room_members","room_capacity","room_ready",
-        "room_status","room_gold","room_turns","name","mp_scenario","mp_scenario_name","mp_era","mp_fog",
+        "room_status","room_gold","room_base_income","room_turns","name","mp_scenario","mp_scenario_name","mp_era","mp_fog",
         "mp_shroud","observer","mp_countdown","mp_countdown_init_time","mp_countdown_reservoir_time",
         "mp_countdown_turn_bonus","mp_countdown_action_bonus"})
         context->set_attr_dup(key,(*g.description())[key]);
@@ -2095,6 +2130,10 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 		if(!g.is_owner(p)) {
 			return;
 		}
+        if(alliance_ && (data.child("snapshot") || (data.child("multiplayer") && data.child("multiplayer")->attr("savegame").to_bool()))) {
+            send_server_message(p,"Saved network games cannot be resumed. View the recording locally or create a new Individual room.","error");
+            delete_game(g.id());return;
+        }
 
 		// If this game is having its level data initialized
 		// for the first time, and is ready for players to join.
@@ -3823,7 +3862,7 @@ int main(int argc, char** argv)
 					  << "  -w, --dump-wml             Print all WML sent to clients to stdout.\n";
 			return 0;
 		} else if(val == "--unified-version") {
-            std::cout << "WESNOTH_UNIFIED_MULTIPLAYER release=1192617 protocol=2\n";
+            std::cout << "WESNOTH_UNIFIED_MULTIPLAYER release=1192621 protocol=3\n";
             return 0;
 		} else if(val == "--version" || val == "-V") {
 			std::cout << "Battle for Wesnoth server " << game_config::wesnoth_version.str() << "\n";
