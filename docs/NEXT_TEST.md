@@ -1,3 +1,5 @@
+**Current Windows status (2026-10-27): 1192623 rebuild PASS; installation stopped before app changes.** All 49 native steps and 33 Gradle tasks passed, followed by package/original-signer verification. ADB endpoint `127.0.0.1:5555` refused the connection; the selected device was not found. Open the existing LDPlayer instance, wait for Android home, then rerun only `Install-AndroidAccountGame.ps1 -KeepSavedProfile`. Return INSTALL COMPLETE/version 1192623 output before UI1. No pull/rebuild/reset/server restart is required. If refusal repeats with Android home visible, stop and report it. WAN status for this batch remains unconfirmed. The full release update instructions below are historical for the already completed build; do not repeat them.
+
 # Next Windows test — Emerald Court 1192623
 
 The user rejected the 1192622 visual design; its completed Windows rebuild/install remains accepted at that scope. The replacement follows the uploaded Emerald Court reference. **1192623 Windows acceptance is pending.**
