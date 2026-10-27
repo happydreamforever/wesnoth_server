@@ -1,3 +1,5 @@
+**Current Windows status (2026-10-27):1192622 rebuild and installation PASS.** The returned console verifies49 native steps,33 Gradle tasks, original signer, successful in-place installation and version1192622 startup launch. WAN-disconnected/local-Ethernet is explicitly confirmed once for this batch. Next is **UI1** in the installed app: citadel background/title/progress and eventual Login, with no import step or visual error. No new pull/build/install/service restart is needed for this documentation-only record. UI1–UI10 and subsequent N remain pending; follow the visible checks below without repeating the completed update commands.
+
 # Current release:1192622 — client-only Citadel UI
 
 Follow [CITADEL_ACCEPTANCE_1192622.md](CITADEL_ACCEPTANCE_1192622.md) and [NEXT_TEST.md](NEXT_TEST.md). Save/Quit the game; keep all five healthy services running; MSYS2 pull only the client; record WAN status once; preserve/rebuild/install1192622 in place; then run UI1–UI10. The signed public configuration, protocol3, schema3, runtime-v2, rewards and game saves remain unchanged. No server build, migration, initialization, profile import or OBB transfer is part of this update.

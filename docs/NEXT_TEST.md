@@ -1,3 +1,5 @@
+**Current Windows status (2026-10-27):1192622 rebuild and installation PASS.** The returned console verifies49 native steps,33 Gradle tasks, original signer, successful in-place installation and version1192622 startup launch. WAN-disconnected/local-Ethernet is explicitly confirmed once for this batch. Next is **UI1** in the installed app: citadel background/title/progress and eventual Login, with no import step or visual error. No new pull/build/install/service restart is needed for this documentation-only record. UI1–UI10 and subsequent N remain pending; follow the visible checks below without repeating the completed update commands.
+
 # Next Windows test — Citadel menus1192622
 
 Use [CITADEL_ACCEPTANCE_1192622.md](CITADEL_ACCEPTANCE_1192622.md) for exact commands, expected outputs, report paths and UI1–UI10. This is a **client-only** update; keep the existing five services and schema3 runtime-v2. Save the current campaign and Quit before updating.

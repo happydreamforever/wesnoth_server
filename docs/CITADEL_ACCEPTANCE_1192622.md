@@ -1,3 +1,5 @@
+**Current Windows status (2026-10-27):1192622 rebuild and installation PASS.** The returned console verifies49 native steps,33 Gradle tasks, original signer, successful in-place installation and version1192622 startup launch. WAN-disconnected/local-Ethernet is explicitly confirmed once for this batch. Next is **UI1** in the installed app: citadel background/title/progress and eventual Login, with no import step or visual error. No new pull/build/install/service restart is needed for this documentation-only record. UI1–UI10 and subsequent N remain pending; follow the visible checks below without repeating the completed update commands.
+
 # Citadel menu acceptance — 1192622
 
 This is a client-only menu update. Retain the accepted 1192621 A–M observations as historical evidence, including their limits: startup failure Retry/Close was NOT RUN, and empty-Owned guidance remains open feedback. The next gameplay check remains N, using existing campaign saves after this UI batch passes. Protocol, schema 3, rewards, account data and server services are unchanged.
