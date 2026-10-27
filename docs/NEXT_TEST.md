@@ -1,3 +1,22 @@
+# Next Windows test — Emerald Court 1192623
+
+The user rejected the 1192622 visual design; its completed Windows rebuild/install remains accepted at that scope. The replacement follows the uploaded Emerald Court reference. **1192623 Windows acceptance is pending.**
+
+Use [EMERALD_ACCEPTANCE_1192623.md](EMERALD_ACCEPTANCE_1192623.md) for exact commands, expected markers, log locations and ordered UI1–UI10 checks. This is a client-only update. Save the current campaign and Quit; keep all five existing services and the schema-3 `runtime-v2` running.
+
+1. Pull only the client using the existing MSYS2 Git; record its commit and preserve local README edits.
+2. Disconnect WAN while retaining local Ethernet. Record network status once for this new batch.
+3. Run the existing preserving Android rebuild, then install in place with `-KeepSavedProfile`. Expect `ANDROID ACCOUNT GAME REBUILD COMPLETE`, `ANDROID ACCOUNT GAME INSTALL COMPLETE` and version **1192623**.
+4. Check startup/Login, the reference-based home, all nine actions, profile accuracy, default/Celes and nested menu surfaces, unchanged heroes/saves, network recovery and Quit/reopening.
+5. Stop at the first unexpected result. Retain logs/state, reproduce and fix on the VPS, then retest only that step and affected regressions.
+6. After UI1–UI10 pass, resume pending **N** using the existing campaign saves. Record actual before/after hero values and retain a pre-victory checkpoint; report one legitimate scenario completion before the guided duplicate check.
+
+No server rebuild, database migration/initialization, account reset, profile reimport, OBB transfer or dependency upgrade is required. Preserve historical 1192621 A–M functional evidence and its limits. The 180 VPS native captures and offline APK verification do not replace LDPlayer acceptance.
+
+---
+
+## Historical workflow, superseded by the Emerald Court instructions above
+
 **Current Windows status (2026-10-27):1192622 rebuild and installation PASS.** The returned console verifies49 native steps,33 Gradle tasks, original signer, successful in-place installation and version1192622 startup launch. WAN-disconnected/local-Ethernet is explicitly confirmed once for this batch. Next is **UI1** in the installed app: citadel background/title/progress and eventual Login, with no import step or visual error. No new pull/build/install/service restart is needed for this documentation-only record. UI1–UI10 and subsequent N remain pending; follow the visible checks below without repeating the completed update commands.
 
 # Next Windows test — Citadel menus1192622

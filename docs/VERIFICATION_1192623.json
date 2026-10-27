@@ -1,0 +1,391 @@
+{
+  "release": 1192623,
+  "date": "2026-10-27",
+  "vps_verification": "passed",
+  "windows_acceptance": "pending",
+  "implementation_head": "6536813f41ffe2ea3f542974e369946cd1e0a7c0",
+  "implementation_commits": [
+    "dd82243",
+    "00e9f0d",
+    "a60324a",
+    "6536813"
+  ],
+  "compatibility": {
+    "package": "org.wesnoth.offline",
+    "wire_release": 1192621,
+    "protocol": 3,
+    "schema": 3,
+    "server_production_changes": false,
+    "migration_required": false,
+    "public_trust_unchanged": true,
+    "reward_rules_unchanged": true,
+    "gameplay_hud_maps_units_editor_canvas_unchanged": true
+  },
+  "design": {
+    "reference": {
+      "path": "docs/design/emerald-court-reference.png",
+      "bytes": 2815342,
+      "sha256": "e6931c88dd13c7403cd371958df0356f4ffef64efa5569746e665e75ad6f6ae4"
+    },
+    "actual_native_previews": [
+      {
+        "path": "docs/previews/emerald-home-1280.png",
+        "bytes": 1763095,
+        "sha256": "869b29518954c84fb8e3a24157dceecd644752dc7ec53e106f5454e08d67625a"
+      },
+      {
+        "path": "docs/previews/emerald-login-1280.png",
+        "bytes": 1015593,
+        "sha256": "84db651364cea1fbccfe99719b03b009584eca29f0198e0ff1b60bd71c2d9496"
+      },
+      {
+        "path": "docs/previews/emerald-signup-1280.png",
+        "bytes": 1014913,
+        "sha256": "4fbfeb5f6e36059f3af7b47b921158111a8ef4bd34ee5f48ec536df115e5019e"
+      }
+    ],
+    "reference_adaptation": "Emerald surfaces, gold frames/leaves, serif title, labeled plaques and parchment Campaign centerpiece. Existing nine destinations and live profile retained; concept-sheet headings/sample account are not application data.",
+    "original_background_sha256": "ff3271e5ac176041517c42739ab15afbd2d57c69b56fbf290164d793e42b36ce"
+  },
+  "actual_native_rendering": {
+    "total_captures": 180,
+    "resolutions": [
+      "1280x720",
+      "1920x1080"
+    ],
+    "themes": [
+      "default",
+      "Celes"
+    ],
+    "integrated": {
+      "path": "build/audit-emerald-ui-1192623/validation.json",
+      "bytes": 16369,
+      "sha256": "5c15afceef3c928b20f7550e47d2ab0b1287e41575392468fdec319d0a968472"
+    },
+    "focused_auth_preferences": {
+      "path": "build/audit-emerald-preferences-1192623/verification.json",
+      "bytes": 11340,
+      "sha256": "c348480aa6ceb10e584aa49deb1d324cfc6c95338956c7bf05c1f9750b06029e"
+    },
+    "checks": [
+      "Nine original home callbacks, zero and117 canonical heroes, long-name ellipsis and full hover/hold tooltip",
+      "Actual native injected keyboard Tab/arrows/activation; long press does not activate; labeled footer focus does not show redundant tooltip",
+      "Login/Signup password visibility and mixed-case fixture input; bounded controller states retained",
+      "Room/Team editing and filters, hero browsing/search/empty/page/form, Campaign previews, Load/Achievements/Preferences, nested confirmations/dropdowns",
+      "Scoped default/Celes widget restoration, font-family isolation, field text/selection/caret preservation and touch geometry",
+      "Real CredentialsDialog Login, Signup and same-account recovery in both themes at both resolutions; fixed serif headings and full-width actions fit; X/Back dispatch retained",
+      "All six native Preferences tabs plus nested Multiplayer Friends; top/end scrolling; fixed title and48px Close",
+      "All six main tabs visible initially; constructor-built Hotkey/Advanced rows touch sized; actual final inner row visible after scrolling",
+      "Default checkbox/radio PNG and Celes checkbox/vector radio centered in48px targets",
+      "Scoped native script typography converted to sans while original native family/canvas/pointers remain unchanged outside menu contexts",
+      "Shared Load/Preferences builders and native controls are preserved outside menu scopes; exceptions unwind scopes"
+    ]
+  },
+  "focused_checks": {
+    "builder_preservation": {
+      "groups": 74,
+      "scope": "Disposable stage/receipt/journal tests, including 1192622 font change and all previously supported versions.",
+      "log": {
+        "path": "build/audit-emerald-startup-1192623/builder-01.log",
+        "bytes": 15784,
+        "sha256": "59cd6ddbbc84f99bed0e691ca3611eea9a5c7590bbd7590a623918ed5d4ecc6b"
+      }
+    },
+    "windows_helpers": {
+      "groups": 35,
+      "scope": "Actual Linux PowerShell with substituted Android/build tools; explicit 1192622 install-r preserves saved data and avoids old profile import/copy.",
+      "log": {
+        "path": "build/audit-emerald-startup-1192623/windows-01.log",
+        "bytes": 135,
+        "sha256": "8cf67a68c31f670027183a4661d5f256d4be74aaeed083e4daddad04917849c4"
+      }
+    },
+    "public_bundle_progress": {
+      "groups": 20,
+      "scope": "Actual X.509 validation; exact APK asset bindings including retained 1192622 font; installer interruption/resume/tamper and percent-only measured callback.",
+      "log": {
+        "path": "build/audit-emerald-startup-1192623/public-bundle-01.log",
+        "bytes": 119,
+        "sha256": "afaf7fe8f27fc82204fd2b68ba40967bef13da6b773c54400635209b71ca6cbb"
+      }
+    },
+    "central_theme": {
+      "groups": 5,
+      "scope": "Strict single descriptor, generated-language drift refusal, exact allowlisted font basename with space, compiled palette/font constants.",
+      "log": {
+        "path": "build/audit-emerald-startup-1192623/theme-01.log",
+        "bytes": 103,
+        "sha256": "b583344db7f4af1b20d54d66276c527366589e6759b72acbb7452cda1e97740b"
+      }
+    },
+    "startup_drawable": {
+      "groups": 1,
+      "scope": "Production Java Drawable with recording Canvas: measured levels at four densities, empty bounds, balanced canvas, ornament presence and pressed/released state. No Android visual rendering claim.",
+      "log": {
+        "path": "build/audit-emerald-startup-1192623/startup-chrome-02.log",
+        "bytes": 98,
+        "sha256": "056defee206ddc0fa63b0d8ba26a85dcd74e74f8db86d01e2edc301e90b67d7f"
+      }
+    },
+    "companions": {
+      "groups": 59,
+      "scope": "42 shared and 17 individual companion tests; installed APK1192623, protocol3/wire1192621 unchanged.",
+      "log": {
+        "path": "build/audit-emerald-startup-1192623/companions-01.log",
+        "bytes": 225,
+        "sha256": "4611abe01f02caa667c94b7b08a80e1880ef84d266729fae9c243cfd2db60923"
+      }
+    },
+    "keyboard_task": {
+      "groups": 3,
+      "scope": "Existing production Java keyboard/task behavior using substituted Android APIs.",
+      "log": {
+        "path": "build/audit-emerald-startup-1192623/keyboard-task-02.log",
+        "bytes": 101,
+        "sha256": "a5763e0fa36f60d15f527240938b9c0bafedd08859355b19e7580638ef3445c5"
+      }
+    },
+    "android_java_api": {
+      "sources": 22,
+      "scope": "All generated production Java including pinned SDL compiled against actual Android35 API, Java8 target. No emulator/device execution.",
+      "log": {
+        "path": "build/audit-emerald-startup-1192623/java-api-compile-02.log",
+        "bytes": 635,
+        "sha256": "4c96751c7c9dca21a249b0000d0a10f2de604e44b4e82c2d53d2f1fa83921071"
+      }
+    }
+  },
+  "auth_controller": {
+    "groups": 16,
+    "status": "passed",
+    "evidence": "Tool-output-only: session65925/chunk7db085, 16 PASS controller groups; unittest Ran1/OK. No retained filesystem log.",
+    "source_sha256": "a8e8ec62b24f3d80c195a63c7e0a58b76f4290d679c302beb6dcdae9d9ebcdbe",
+    "scope": "Executed after final account_ui.cpp label edits, before final shared presentation freeze; later header-only decoration covered by actual native render receipts."
+  },
+  "cairo_and_home": {
+    "groups": 4,
+    "status": "passed",
+    "log": {
+      "path": "build/audit-emerald-home-1192623/home-tests-final-02.log",
+      "bytes": 701,
+      "sha256": "909b0e9d2cd60eba9de3fe6b0e03937fd02b48cb47a2bd0f4f46dc1324eb3d50"
+    },
+    "scope": "ASan/UBSan chrome/icons/cache/alpha/frame variants, callbacks/profile refresh and pinned-source refusal"
+  },
+  "windows_commands": {
+    "status": "parsed_with_actual_Linux_PowerShell_7.4.6",
+    "blocks": 3,
+    "log": {
+      "path": "build/audit-emerald-ui-1192623/windows-command-check/parse.log",
+      "bytes": 72,
+      "sha256": "3e533938bc8d9a1a10a67524bc09b638bfa57fd7e434f97571b2ab3b564f7ab7"
+    },
+    "scope": "Syntax validation only; no Windows execution"
+  },
+  "android": {
+    "container_image": "wesnoth-android-sdl-verify:ndk26-java21",
+    "container_image_id": "sha256:baf66755bd3a0c1a6516db2cd49e50b98b423f48af708e487aac3bc6aecb505e",
+    "network": "none for every container",
+    "ndk": "r26d",
+    "android_api": 23,
+    "abi": "x86_64",
+    "native_steps": 49,
+    "offline_gradle_tasks": 33,
+    "same_input_reuse": "passed",
+    "separate_artifact_verification": "passed",
+    "prepare_journal_recheck": "passed",
+    "apk": {
+      "path": "build/android-account-game/app/build/outputs/apk/debug/app-debug.apk",
+      "bytes": 46635073,
+      "sha256": "aa91fbd5b87b9796589e6e527c4895d4d766a556f2d7343fb236d5a40947f2c1"
+    },
+    "package": "org.wesnoth.offline",
+    "launcher": "org.wesnoth.offline.OfflineInitActivity",
+    "original_signer_sha256": "7e346dc5ec05098674444abdb61508270da51de9e57421133340c07834343074",
+    "assets": {
+      "alliance-public-profile.json": {
+        "bytes": 1499,
+        "sha256": "f526e6ad272c0a959522c7b8ecc926dea279f1c7e378b3a53e3b95efb09ee159"
+      },
+      "alliance-ui-manifest.json": {
+        "bytes": 391,
+        "sha256": "239bd2b62e12ed30a0182bbcca39e68cd45638cec743dab6efcb54bda58189bd"
+      },
+      "alliance-ui/background/citadel-dawn.png": {
+        "bytes": 2739237,
+        "sha256": "ff3271e5ac176041517c42739ab15afbd2d57c69b56fbf290164d793e42b36ce"
+      },
+      "alliance-ui/hero/refumee.png": {
+        "bytes": 2092869,
+        "sha256": "cb05c9f0da6d16a068355e2b7fb59201ecf1296ebcafdfdb11763f43f30c04f8"
+      },
+      "alliance-ui/hero/thea.png": {
+        "bytes": 2190871,
+        "sha256": "1e3fe73953569a247e6055780e84125cf3bbe5148546fe449a3c7057d1a3f7f7"
+      },
+      "startup/Akademie Alte.ttf": {
+        "bytes": 61620,
+        "sha256": "3b5c0ac12ccba9a49cdc01348d984d62141309ba23535fa179dd75377e4a79c2"
+      },
+      "startup/Lato-Regular.ttf": {
+        "bytes": 657212,
+        "sha256": "6f6940be0835c3ddec9199e5fc42be4cbc61ebcfd58c623fdf719366253f1780"
+      }
+    },
+    "engine_receipt": {
+      "path": "build/android-account-engine/receipt.json",
+      "bytes": 204734,
+      "sha256": "fbee1414e52d6e1641dbd5f047c0e4016d9034fd2ddae3fe501672aa022eac86"
+    },
+    "game_receipt": {
+      "path": "build/android-account-game/receipt.json",
+      "bytes": 216685,
+      "sha256": "7ce721a0c513fe225544ff91163119eff454a37f536c4cbdb2fbce9e589a0d13"
+    }
+  },
+  "android_source_inputs": {
+    "account_files": 111,
+    "total_bound_files": 185,
+    "drift": 0,
+    "receipt": {
+      "path": "build/audit-emerald-startup-1192623/final-validation-02.json",
+      "bytes": 11894,
+      "sha256": "4826f0b4ffc57d00da3cbb5e88493ba74b563181ef6bcf09e309b06a70efe75b"
+    }
+  },
+  "preservation": {
+    "journal": {
+      "path": "build/.wesnoth-account-game-update-1192623.json",
+      "bytes": 315025,
+      "sha256": "37081e67351ebba8178370759b965584589518dd01b02c275bd2e44514b6f9ec"
+    },
+    "prior_stage_backups": {
+      "android-account-engine": "android-account-engine-before-emerald-ui-20261027T124619Z-4744bb011e3d45348e680333f4ffeaa0",
+      "android-account-game": "android-account-game-before-emerald-ui-20261027T124619Z-4744bb011e3d45348e680333f4ffeaa0"
+    },
+    "retained_previous_apk": {
+      "path": "build/android-account-game-before-emerald-ui-20261027T124619Z-4744bb011e3d45348e680333f4ffeaa0/app/build/outputs/apk/debug/app-debug.apk",
+      "bytes": 46594709,
+      "sha256": "0b0d0fe6eb9773703d9fbcc19ea977573a6710ada9522622a3a355306c2bdb4e"
+    },
+    "previous_public_profile_bytes_unchanged": true,
+    "previous_gamedata_manifest_bytes_unchanged": true,
+    "previous_citadel_background_bytes_unchanged": true,
+    "previous_lato_font_bytes_unchanged": true,
+    "previous_wesscript_font_retained_in_old_apk": true,
+    "original_objects_preserved": 568,
+    "owned_source_replacements": 20,
+    "original_objects_relinked": 548,
+    "historical_journals_verified_unchanged": 21,
+    "full_workspace_preservation": {
+      "path": "build/audit-emerald-preservation-1192623/verification-final.json",
+      "bytes": 586,
+      "sha256": "a4cb99e6106497b1427403db3a5d83d493e04955141fb5b99115eabe7c15e835"
+    },
+    "verified_inventory_counts": {
+      "foundation-before.json": 17731,
+      "account-before.json": 7794,
+      "pinned-engine-source-before.json": 1454,
+      "pins-before.json": 20
+    },
+    "verified_inventory_trees": 49
+  },
+  "retained_attempts": {
+    "native_render": {
+      "render-01": "Caught tooltip pixel sample on ornamental border; final fixture samples inset12px. Visual inspection found title Pango shadow mismatch and stretched corner ornaments.",
+      "render-02": "Caught unsupported WFL string concatenation in title shadow; replaced with per-shape Pango cache reset.",
+      "render-03": "Mixed earlier native object and newly added radio assertion refused; all dependent TUs rebuilt for final validation.",
+      "render-04": "112 captures passed; superseded by final native font/press-icon review and removal of redundant footer-focus tooltip."
+    },
+    "android_first_attempt": {
+      "record": {
+        "path": "build/audit-emerald-startup-1192623/android-attempt-01-stop.json",
+        "bytes": 1471,
+        "sha256": "47f99119be73884aa9b36d0a0bd7beb5c2db9e047e581440537808e216738c65"
+      },
+      "retained_stage": "build/audit-emerald-startup-1192623/android-intermediate-01/android-account-engine",
+      "retained_stage_files": 101,
+      "first_journal": {
+        "path": "build/audit-emerald-startup-1192623/android-intermediate-01/.wesnoth-account-game-update-1192623.json",
+        "bytes": 315025,
+        "sha256": "bae612351e6977b8f77ba5322d4e8f94ab58ddd0947a0bfb17e50c090dcbef33"
+      },
+      "unused_preparation_journal": {
+        "path": "build/audit-emerald-startup-1192623/unbuilt-preparation-01/.wesnoth-account-game-update-1192623.json",
+        "bytes": 315025,
+        "sha256": "a33911c91bb46ee816c7edb5779f5c29458ad618c608604abd93add457fa4fdc"
+      },
+      "reason": "Stopped after26/49 steps for actual renderer findings, no APK created; no second build started before final freeze.",
+      "recovery_reports": [
+        {
+          "path": "build/audit-emerald-startup-1192623/journal-recovery-01.json",
+          "bytes": 4325,
+          "sha256": "1f20063e1d4f55dc2795e1c9f441888ade89abd188bb2321150ad2fb6bd13be8"
+        },
+        {
+          "path": "build/audit-emerald-startup-1192623/journal-recovery-02.json",
+          "bytes": 4131,
+          "sha256": "8ad33e8d936e5e4adb3af9873ddbe6d608c8dc3187da511a621893e86915adbd"
+        }
+      ],
+      "operation_lock_retained": {
+        "path": "build/audit-emerald-startup-1192623/attempt01-operation-lock.json",
+        "bytes": 104,
+        "sha256": "3009b6af6179daabaa9a6fae4d48326bd940c1613aba97ccce3dbe0ddbab3e35"
+      }
+    }
+  },
+  "readme_edits": "Both pre-existing tracked README.md zero-byte edits match their original snapshot; neither is staged or included in commits.",
+  "evidence": [
+    {
+      "path": "build/audit-emerald-ui-1192623/validation.json",
+      "bytes": 16369,
+      "sha256": "5c15afceef3c928b20f7550e47d2ab0b1287e41575392468fdec319d0a968472"
+    },
+    {
+      "path": "build/audit-emerald-preferences-1192623/verification.json",
+      "bytes": 11340,
+      "sha256": "c348480aa6ceb10e584aa49deb1d324cfc6c95338956c7bf05c1f9750b06029e"
+    },
+    {
+      "path": "build/audit-emerald-startup-1192623/final-validation-02.json",
+      "bytes": 11894,
+      "sha256": "4826f0b4ffc57d00da3cbb5e88493ba74b563181ef6bcf09e309b06a70efe75b"
+    },
+    {
+      "path": "build/audit-emerald-preservation-1192623/verification-final.json",
+      "bytes": 586,
+      "sha256": "a4cb99e6106497b1427403db3a5d83d493e04955141fb5b99115eabe7c15e835"
+    },
+    {
+      "path": "build/audit-emerald-startup-1192623/validation.json",
+      "bytes": 8455,
+      "sha256": "75207abeedea3bb4e47b2fdf102f62a4fa226391fa2d33ccef6f2809b197ca40"
+    }
+  ],
+  "limitations": [
+    "Linux actual GUI2/SDL software render and injected events; not Windows/LDPlayer or physical keyboard/touch acceptance.",
+    "Account/room/team fixture data is synthetic; no production accounts, database or rewards were changed.",
+    "SDL dummy hardware-mode fallback is fixture-only.",
+    "Standalone native dialog captures can retain prior fixture backdrop pixels; foreground/control assertions do not establish live application transition appearance.",
+    "Existing missing audio track warning with sound disabled is retained; no new log suppression.",
+    "VPS native GUI2/SDL software rendering only; physical LDPlayer/Windows acceptance is not established",
+    "SDL dummy lacks hardware display modes; fixture supplies one current-canvas display mode solely to construct Preferences",
+    "No account service, database, campaign reward or gameplay mutation performed",
+    "VPS network-disabled build and direct APK verification; no Windows/LDPlayer installation, keyboard, startup visual or gameplay execution claimed.",
+    "Existing disposable public configuration fixture only; actual .env/private runtime not read.",
+    "Native renderer/interaction checks and full workspace preservation are separate root/sibling evidence.",
+    "Wire implementation1192621, protocol3, schema3, original OBB, package and signer unchanged.",
+    "StartupFrame production Java uses recording-Canvas checks at four densities, not an actual Android visual render.",
+    "Harmless injected SDL keyboard/mouse fixture events are not physical LDPlayer keyboard/touch acceptance.",
+    "VPS public profile is a disposable build fixture; Windows rebuilds using its existing public-only client configuration.",
+    "Existing 1192621 functional and 1192622 build/install acceptance remains historical. The user rejected Citadel design; its visual UI checklist is not accepted.",
+    "No new real account/XP/save values are inferred from synthetic renderer fixtures."
+  ],
+  "windows_checklist": "docs/EMERALD_ACCEPTANCE_1192623.md: client-only pull/rebuild/install, then UI1–UI10; retain current five services.",
+  "next_gameplay_check": "N after affected UI acceptance, using retained campaign saves and actual before/after hero values; do not restart campaign or repeat unrelated accepted work.",
+  "independent_final_review": {
+    "status": "passed",
+    "scope": "Source/delivery/foreground-render review, 32 receipt artifact hash recalculations including APK/signers/receipts/journals, Windows command/acceptance consistency."
+  }
+}

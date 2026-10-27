@@ -1,3 +1,15 @@
+# Android 1192623 — Emerald Court delivery
+
+Use the existing `Rebuild-WindowsAndroidAccountGame.ps1` and `Install-AndroidAccountGame.ps1 -KeepSavedProfile` after a client-only pull. The normal update verifies and retains completed 1192622 stages under unique `before-emerald-ui` backups and a new release journal. Exact legacy font/asset checks preserve earlier supported receipts. Current compilation binds 111 account inputs and 185 total project inputs, including the shared ornament renderer, generated palette, startup Drawable and bundled Akademie Alte font.
+
+The final network-disabled NDK r26d/API23/x86_64 build passed 49 native steps and 33 offline Gradle tasks, then same-input reuse, separate artifact verification, journal recheck and independent APK ZIP/package/version/original-signer checks. APK: 46,635,073 bytes; SHA256 `aa91fbd5b87b9796589e6e527c4895d4d766a556f2d7343fb236d5a40947f2c1`. Twenty owned source replacements relink 548 original objects while preserving all 568. Package `org.wesnoth.offline`, original signer, public configuration and OBB remain unchanged. The first unpublished partial build and its journals are retained; only final attempt 02 is passing evidence.
+
+[VERIFICATION_1192623.json](VERIFICATION_1192623.json) records evidence and limits. The VPS APK uses a disposable public-profile fixture; Windows must rebuild using its existing public-only configuration. Do not distribute the VPS APK as the user's Windows configuration. Follow [EMERALD_ACCEPTANCE_1192623.md](EMERALD_ACCEPTANCE_1192623.md). Existing server services can stay running; no server build or database change is required. Actual Windows/LDPlayer acceptance remains pending.
+
+---
+
+## Historical build records, superseded by the Emerald Court instructions above
+
 **Current Windows status (2026-10-27):1192622 rebuild and installation PASS.** The returned console verifies49 native steps,33 Gradle tasks, original signer, successful in-place installation and version1192622 startup launch. WAN-disconnected/local-Ethernet is explicitly confirmed once for this batch. Next is **UI1** in the installed app: citadel background/title/progress and eventual Login, with no import step or visual error. No new pull/build/install/service restart is needed for this documentation-only record. UI1–UI10 and subsequent N remain pending; follow the visible checks below without repeating the completed update commands.
 
 # Android1192622 Citadel delivery

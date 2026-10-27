@@ -1,3 +1,13 @@
+# Current workflow — Emerald Court 1192623
+
+Follow [EMERALD_ACCEPTANCE_1192623.md](EMERALD_ACCEPTANCE_1192623.md). Save/Quit the current game; keep the five existing services; pull only the client; record WAN status once; rebuild/install 1192623 in place; run UI1–UI10 in order. Protocol 3, wire release 1192621, schema 3, runtime-v2, server APIs, rewards and game saves remain unchanged. No server build, migration, initialization, profile import or OBB transfer is part of this update.
+
+[VERIFICATION_1192623.json](VERIFICATION_1192623.json) binds 180 actual VPS native captures, focused tests, the 49-step NDK/33-task offline Android build, reuse and package checks, original signer and preservation inventories. Windows/LDPlayer rendering, physical input and gameplay acceptance remain separate. Preserve the rejected 1192622 design's successful build/install as historical evidence, not UI acceptance. Stop at the first unexpected result, reproduce/fix on VPS and retest that check plus affected regressions. After the new UI batch passes, resume N using existing campaign saves without repeating unrelated accepted work.
+
+---
+
+## Historical workflow, superseded by the Emerald Court instructions above
+
 **Current Windows status (2026-10-27):1192622 rebuild and installation PASS.** The returned console verifies49 native steps,33 Gradle tasks, original signer, successful in-place installation and version1192622 startup launch. WAN-disconnected/local-Ethernet is explicitly confirmed once for this batch. Next is **UI1** in the installed app: citadel background/title/progress and eventual Login, with no import step or visual error. No new pull/build/install/service restart is needed for this documentation-only record. UI1–UI10 and subsequent N remain pending; follow the visible checks below without repeating the completed update commands.
 
 # Current release:1192622 — client-only Citadel UI
