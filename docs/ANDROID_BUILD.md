@@ -1,3 +1,13 @@
+# Android1192622 Citadel delivery
+
+Use the existing Rebuild-WindowsAndroidAccountGame.ps1 and Install-AndroidAccountGame.ps1 -KeepSavedProfile helpers after a client-only pull. The rebuild verifies and retains completed1192621 stages under before-citadel-ui backups and a new release journal. It binds113 current source inputs, generated native/Java palette constants, exact artwork/fonts and the existing public configuration. Package org.wesnoth.offline and original signer remain unchanged; version is1192622, wire release1192621/protocol3.
+
+Final VPS network-disabled NDKr26d/API23/x86_64 compilation passed49 native steps and33 offline Gradle tasks, same-input reuse, separate artifact verification, journal recheck and independent APK/signature checks. Final APK SHA256:0b0d0fe6eb9773703d9fbcc19ea977573a6710ada9522622a3a355306c2bdb4e.20 owned source replacements relink548 original objects while preserving all568 originals. [VERIFICATION_1192622.json](VERIFICATION_1192622.json) records exact evidence/limits; the earlier48-step unpublished build is retained and superseded.
+
+Keep the existing Windows services running. No server rebuild, migration, dependency download, profile reimport or OBB transfer. Follow [CITADEL_ACCEPTANCE_1192622.md](CITADEL_ACCEPTANCE_1192622.md) for the client batch and UI checks; actual Windows/LDPlayer acceptance is pending.
+
+## Historical Android records below
+
 # Current release: 1192621
 
 The approved product UI/flexible-battle release supersedes the historical instructions below. Read [PRODUCT_UI_1192621.md](PRODUCT_UI_1192621.md) for current behavior, [PRODUCT_ACCEPTANCE_1192621.md](PRODUCT_ACCEPTANCE_1192621.md) for the exact Windows A–Z commands, and [VERIFICATION_1192621.json](VERIFICATION_1192621.json) for VPS evidence and its limits. **1192621 Windows/LDPlayer acceptance is pending.**

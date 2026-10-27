@@ -1,3 +1,11 @@
+# Current release:1192622 — client-only Citadel UI
+
+Follow [CITADEL_ACCEPTANCE_1192622.md](CITADEL_ACCEPTANCE_1192622.md) and [NEXT_TEST.md](NEXT_TEST.md). Save/Quit the game; keep all five healthy services running; MSYS2 pull only the client; record WAN status once; preserve/rebuild/install1192622 in place; then run UI1–UI10. The signed public configuration, protocol3, schema3, runtime-v2, rewards and game saves remain unchanged. No server build, migration, initialization, profile import or OBB transfer is part of this update.
+
+[VERIFICATION_1192622.json](VERIFICATION_1192622.json) binds final VPS native renders, focused checks,49-step native/33-task offline Android build, original signer and preservation results. VPS evidence does not establish Windows/LDPlayer acceptance. On the first unexpected result, retain logs/state, reproduce/fix on VPS and retest that check plus affected regressions. After this UI batch passes, resume N using existing saves. Retain historical1192621 A–M acceptance and its recorded limits.
+
+## Historical releases below
+
 # Current release: 1192621
 
 The approved product UI/flexible-battle release supersedes the historical instructions below. Read [PRODUCT_UI_1192621.md](PRODUCT_UI_1192621.md) for current behavior, [PRODUCT_ACCEPTANCE_1192621.md](PRODUCT_ACCEPTANCE_1192621.md) for the exact Windows A–Z commands, and [VERIFICATION_1192621.json](VERIFICATION_1192621.json) for VPS evidence and its limits. **1192621 Windows/LDPlayer acceptance is pending.**

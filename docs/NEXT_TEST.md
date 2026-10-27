@@ -1,3 +1,21 @@
+# Next Windows test — Citadel menus1192622
+
+Use [CITADEL_ACCEPTANCE_1192622.md](CITADEL_ACCEPTANCE_1192622.md) for exact commands, expected outputs, report paths and UI1–UI10. This is a **client-only** update; keep the existing five services and schema3 runtime-v2. Save the current campaign and Quit before updating.
+
+1. Pull only the client with existing MSYS2 Git and report its commit. Preserve local README changes.
+2. Disconnect WAN while retaining local Ethernet; record this once for the new batch.
+3. Run Rebuild-WindowsAndroidAccountGame.ps1, then Install-AndroidAccountGame.ps1 -KeepSavedProfile. Expect retained old stages, REBUILD COMPLETE, INSTALL COMPLETE and verified1192622.
+4. Check startup/authentication, home composition and icons, profile count, all native destinations/default+Celes, saved hero/campaign values, required-local-server-loss recovery and Quit/reopen. Keep names/passwords/private backups out of diagnostics as appropriate; never send passwords or private runtime files.
+5. After UI1–UI10 pass, resume **N** from the existing campaign save. Record actual hero values, retain a unique pre-victory checkpoint, complete one legitimate eligible scenario, preserve the following scenario and report before/after values. Stop before repeating victory so the duplicate check uses this exact checkpoint.
+
+No server/bridge rebuild, database migration/initialization, dependency upgrade, profile import, OBB transfer or app reset. The deliberate account-bridge stop/restart in UI9 is the only service interruption. One LDPlayer remains sufficient for these UI checks.
+
+[VPS verification](VERIFICATION_1192622.json) passes actual native renders at1280x720/1920x1080, offline Android compilation/package/signer checks and preservation inventories. Windows/LDPlayer acceptance remains pending. [Design and previews](CITADEL_UI_1192622.md) use fixture data, not current player values.
+
+Historical1192621 A–M observations remain accepted at their recorded scope. Startup failure Retry/Close remains NOT RUN and empty-Owned guidance remains open feedback. N–Z gameplay acceptance remains pending. Stop at the first unexpected result; retain logs/state, fix on VPS, then retest the failed step and affected regressions without repeating unrelated accepted work.
+
+## Historical1192621 handoff (superseded by the client-only update above)
+
 # Next Windows test — product release 1192621
 
 Use the [complete A–Z checklist](PRODUCT_ACCEPTANCE_1192621.md). This coordinated update changes startup, native UI, Room and Team protocols, and explicitly migrates the existing **runtime-v2 from schema 2 to 3**. It does not create a replacement runtime.

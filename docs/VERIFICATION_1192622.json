@@ -1,0 +1,283 @@
+{
+  "release": 1192622,
+  "date": "2026-10-27",
+  "vps_verification": "passed",
+  "windows_acceptance": "pending",
+  "implementation_head": "78da7311ea6ee743ea5e2c3b4bfa1a7faadd60a8",
+  "native_render_fixture_commit": "12d253c105c4164ab88c0e776d61dac402cbb087",
+  "compatibility": {
+    "network_protocol": 3,
+    "wire_release": 1192621,
+    "database_schema": 3,
+    "server_production_changed": false,
+    "database_migration": false,
+    "package": "org.wesnoth.offline",
+    "original_signer_sha256": "7e346dc5ec05098674444abdb61508270da51de9e57421133340c07834343074"
+  },
+  "actual_native_rendering": {
+    "resolutions": [
+      "1280x720",
+      "1920x1080"
+    ],
+    "themes": [
+      "default",
+      "Celes"
+    ],
+    "final_integrated_captures": 112,
+    "final_preferences_captures": 56,
+    "checks": [
+      "Exact home geometry and nine native button dispatches in default/Celes at1280x720 and1920x1080",
+      "Zero and117 owned-character count, wide name ellipsis and actual hover/hold tooltip text/bounds/rendered pixels",
+      "Ordinary click, Enter/Space, Tab/arrows, drag cancellation, disabled actions, held Quit visible without callback or native CANCEL, following ordinary press",
+      "Login/Signup rendered production controls with injected SDL mixed-case text, password visibility and Back",
+      "Campaign/hero/team/Room forms, filters, search, plan controls and Celes campaign",
+      "Load/Preferences bounds, Achievements, nested confirmation/dropdown and no shared-theme registry leak"
+    ],
+    "preferences_checks": [
+      "All six Preferences tabs, both default and Celes, both resolutions",
+      "Multiplayer General and Friends nested tabs",
+      "Top and end-scroll captures, all six main tab targets initially visible and at least48px",
+      "Preferences title and Close remain inside window; Close remains at least48px and stationary while scrolling",
+      "Constructor-built Advanced toggle and Hotkey row targets at least48px",
+      "Horizontal tab strip minimum48px and Celes checkbox checkmark centred",
+      "Inner Hotkeys/Advanced lists scrolled after outer pager; actual final row visible in viewport",
+      "Actual Close button dispatch returns; constructor and show scopes unwind",
+      "Shared original builders/control pointers/canvases preserved outside menu scope; both themes checked"
+    ],
+    "profile_fixture_counts": [
+      0,
+      117
+    ],
+    "preview_files": {
+      "home": {
+        "path": "docs/images/citadel-1192622-home-27ce1a74b18f.png",
+        "bytes": 1899790,
+        "sha256": "27ce1a74b18f0dc6b78b0edcf296e2966c8c5e01a2d86fade96fb821e0f36e17"
+      },
+      "login": {
+        "path": "docs/images/citadel-1192622-login-9f51983f3a8f.png",
+        "bytes": 1074708,
+        "sha256": "9f51983f3a8f83ca04312ee816b9934fe95a1502de3ecb81897758b8ebded5ed"
+      },
+      "heroes": {
+        "path": "docs/images/citadel-1192622-heroes-fe66f168d2c3.png",
+        "bytes": 118324,
+        "sha256": "fe66f168d2c3bc08d7da3ea561380c95a004494de12d7412791d309fff2837cd"
+      }
+    },
+    "bound_inputs": {
+      "alliance_game/native_menu_theme.hpp": "70896f839bfda10ac9370afe937d1c847e0844774066af7f995f27c3ab283338",
+      "alliance_game/menu_theme_overlay.py": "68078a219ee66d5420e89f763d130a37ed1524a18d13875b298aa9d1e957017d",
+      "alliance_game/home_ui.hpp": "b241cde5c52c14f03dc3b98c8b4836b22bd4ef68bcda9b258f33119282ee589f",
+      "alliance_game/menu_icons.hpp": "3a392572598e63127759d9c777dcdbd5d601cd9ae97429ef0ff936106eb12826",
+      "alliance_game/product_ui_layout.hpp": "11bf6a7c6b289577b9c65299ac461316b8fbc588c35275613b6e6a58cb9c3344",
+      "alliance_game/product_theme.hpp": "2199a64b10a0d30ba45fc60da93693112c7d80b457faafa218eb308ee485b98e",
+      "tests/generate_citadel_ui_render.py": "174efa3c74e55b05ab4e55e0115b4e5cbc55c23c8ed5cca022174fd5ec23dfdb",
+      "tests/native_menu_theme_checks.hpp": "fcb6f9e448ba8f340c5dbc54a23d36a033d7bf821091864f85fff29d65937ff9",
+      "tests/citadel_home_render_cases.hpp": "2e68bf890798aa978355f851888d8d487867fdb988f74ea359132728898f438f"
+    },
+    "scope": [
+      "Account/network and game launch operations are substituted fixture boundaries; no player data was changed.",
+      "SDL display-mode enumeration is replaced only when the dummy driver provides none; actual native control/layout/rendering code is used.",
+      "Fixture-only tooltip observer reads the native tooltip singleton without changing show/remove behavior.",
+      "The retained pinned data emits its pre-existing missing audio-track warning with sound disabled; no GUI/layout/image error appeared.",
+      "No Windows/LDPlayer, physical keyboard/touch, Android framework render or multiple-human gameplay acceptance is claimed."
+    ]
+  },
+  "focused_checks": {
+    "builder_preservation": {
+      "groups": 73,
+      "log": "build/audit-citadel-startup-1192622/builder-preferences.log",
+      "scope": "Final builder inputs and preservation, including generated Preferences constructor."
+    },
+    "central_theme": {
+      "groups": 5,
+      "log": "theme-public-02.log",
+      "scope": "Canonical native/Java agreement, stale-output refusal, strict fields and compiled Java constants."
+    },
+    "public_assets_progress": {
+      "groups": 19,
+      "log": "theme-public-02.log",
+      "scope": "Actual local X.509 verification, exact fonts/background assets, old1192620 and1192621 APK asset schemas, interrupted install/resume/tamper and percent-only Java callback."
+    },
+    "windows_helpers": {
+      "groups": 34,
+      "log": "build/audit-citadel-startup-1192622/windows-preferences.log",
+      "scope": "Linux PowerShell with substituted build/ADB children; includes1192621 upgrade. No Windows execution."
+    },
+    "shared_companion": {
+      "groups": 42,
+      "log": "companions-01.log"
+    },
+    "individual_companion": {
+      "groups": 17,
+      "log": "companions-01.log",
+      "scope": "Protocol3 and wire release1192621 remain unchanged; installed APK version1192622 required."
+    },
+    "keyboard_task": {
+      "groups": 3,
+      "log": "keyboard-task-01.log",
+      "scope": "Existing production Java keyboard/task behaviors against substituted Android APIs."
+    },
+    "android_java_api": {
+      "sources": 21,
+      "log": "java-api-compile-02.log",
+      "scope": "Current startup/theme and pinned SDL compiled against actual Android35 API with Java8 target; expected obsolete/deprecated warnings only."
+    }
+  },
+  "auth_controller": {
+    "groups": 16,
+    "status": "passed",
+    "scope": "Production C++ controller with substituted GUI/network; ASan/UBSan. Includes session loss and bounded logout. Actual native login forms additionally rendered in the integrated fixture."
+  },
+  "cairo_icons": {
+    "groups": 3,
+    "status": "passed",
+    "scope": "ASan/UBSan;11 symbols, alpha/colour/size/cache eviction and title callback binding. Actual home gesture/focus/tooltip tests recorded in native receipts."
+  },
+  "android": {
+    "container_image": "wesnoth-android-sdl-verify:ndk26-java21",
+    "container_image_id": "sha256:baf66755bd3a0c1a6516db2cd49e50b98b423f48af708e487aac3bc6aecb505e",
+    "network": "none for every container",
+    "ndk": "r26d",
+    "android_api": 23,
+    "abi": "x86_64",
+    "native_steps": 49,
+    "offline_gradle_tasks": 33,
+    "same_input_reuse": "passed",
+    "separate_artifact_verification": "passed",
+    "final_prepare_journal_recheck": "passed",
+    "apk": {
+      "path": "build/android-account-game/app/build/outputs/apk/debug/app-debug.apk",
+      "bytes": 46594709,
+      "sha256": "0b0d0fe6eb9773703d9fbcc19ea977573a6710ada9522622a3a355306c2bdb4e"
+    },
+    "package": "org.wesnoth.offline",
+    "launcher": "org.wesnoth.offline.OfflineInitActivity",
+    "original_signer_sha256": "7e346dc5ec05098674444abdb61508270da51de9e57421133340c07834343074",
+    "assets": {
+      "alliance-public-profile.json": {
+        "bytes": 1499,
+        "sha256": "f526e6ad272c0a959522c7b8ecc926dea279f1c7e378b3a53e3b95efb09ee159"
+      },
+      "alliance-ui-manifest.json": {
+        "bytes": 391,
+        "sha256": "239bd2b62e12ed30a0182bbcca39e68cd45638cec743dab6efcb54bda58189bd"
+      },
+      "alliance-ui/background/citadel-dawn.png": {
+        "bytes": 2739237,
+        "sha256": "ff3271e5ac176041517c42739ab15afbd2d57c69b56fbf290164d793e42b36ce"
+      },
+      "alliance-ui/hero/refumee.png": {
+        "bytes": 2092869,
+        "sha256": "cb05c9f0da6d16a068355e2b7fb59201ecf1296ebcafdfdb11763f43f30c04f8"
+      },
+      "alliance-ui/hero/thea.png": {
+        "bytes": 2190871,
+        "sha256": "1e3fe73953569a247e6055780e84125cf3bbe5148546fe449a3c7057d1a3f7f7"
+      },
+      "startup/Lato-Regular.ttf": {
+        "bytes": 657212,
+        "sha256": "6f6940be0835c3ddec9199e5fc42be4cbc61ebcfd58c623fdf719366253f1780"
+      },
+      "startup/WesScript-Regular.otf": {
+        "bytes": 44156,
+        "sha256": "39fb7d2e5309478d6325cb29defd405ef486bd05dd8f8704bb3cef951c0ce6fb"
+      }
+    },
+    "engine_receipt": {
+      "path": "build/android-account-engine/receipt.json",
+      "bytes": 204403,
+      "sha256": "79f77295283a410055f5d4196280d8d26cb99f576779cb8c6ccd778918491563"
+    },
+    "game_receipt": {
+      "path": "build/android-account-game/receipt.json",
+      "bytes": 216185,
+      "sha256": "41224c2a3df87649325210381fdc2bcc6c629a47eaaf31006c8db139dfc5ddd1"
+    }
+  },
+  "preservation": {
+    "status": "passed",
+    "files_verified": {
+      "foundation-before.json": 17731,
+      "account-before.json": 7372,
+      "pinned-engine-source-before.json": 1454,
+      "pins-before.json": 20
+    },
+    "trees_verified": 47,
+    "remap": {
+      "wesnoth_client/build/android-account-engine": "wesnoth_client/build/android-account-engine-before-citadel-ui-20261027T065016Z-a59f3065838c4b26aeccd5cd6431e363",
+      "wesnoth_client/build/android-account-game": "wesnoth_client/build/android-account-game-before-citadel-ui-20261027T065016Z-a59f3065838c4b26aeccd5cd6431e363"
+    },
+    "seconds": 97.84,
+    "historical_journals": 20,
+    "owned_replacement_sources": 20,
+    "original_objects_preserved": 568,
+    "original_objects_relinked": 548,
+    "unrelated_readme_edits": "Both original zero-byte working-tree edits unchanged; neither staged nor committed.",
+    "prior_attempts": "Interrupted first target build and complete intermediate second build retained with their receipts and recovery records. Final third build binds all113 current production inputs."
+  },
+  "artwork": {
+    "path": "tools/native-account-game/ui-assets/background/citadel-dawn.png",
+    "bytes": 2739237,
+    "sha256": "ff3271e5ac176041517c42739ab15afbd2d57c69b56fbf290164d793e42b36ce"
+  },
+  "artwork_provenance": "tools/native-account-game/ui-assets/PROVENANCE.md",
+  "evidence": [
+    {
+      "path": "build/audit-citadel-startup-1192622/final-validation-03.json",
+      "bytes": 13906,
+      "sha256": "d167caafe93279aee61d66433b8a7c35a4ea8aebfecd856cb9a34cbc05e4fa21"
+    },
+    {
+      "path": "build/audit-citadel-ui-1192622/validation.json",
+      "bytes": 30679,
+      "sha256": "6492751b4a8c135c767480ca9f06bd77b35c7858780c54d9e1c5a7aa8d3987e4"
+    },
+    {
+      "path": "build/audit-native-preferences-1192622/verification.json",
+      "bytes": 10914,
+      "sha256": "7d9ef802d0ccb0a8843cc6434d3af466a78385353aa743c71ee93074801ab5eb"
+    },
+    {
+      "path": "build/audit-citadel-home-1192622/validation.json",
+      "bytes": 7124,
+      "sha256": "b33a3a171795ce3c0d9c4ecef1c68a58822dce64547ca4d0706582da3f65972a"
+    },
+    {
+      "path": "build/audit-native-menu-theme-1192622/auth-controller.log",
+      "bytes": 989,
+      "sha256": "0c8e1c310a6de9b5d750e0fe5a34a416525225f3834ce6812ebea86dab7ed5dc"
+    },
+    {
+      "path": "build/audit-citadel-preservation-1192622/verify-03.log",
+      "bytes": 584,
+      "sha256": "00cff23a93ea33cff4b3f445222dc1de8e78dc4be5649fa1973f1f4b14627340"
+    },
+    {
+      "path": "build/audit-citadel-preservation-1192622/readmes-before.json",
+      "bytes": 325,
+      "sha256": "124f5324b8a40fe2335460988302009c791385c6369459ee0e5f8db1ebb3b6b9"
+    },
+    {
+      "path": "build/audit-citadel-ui-1192622/windows-commands-parse.log",
+      "bytes": 36,
+      "sha256": "4c462cb0de24f6cf03bd0e2f83136ff208b4a73d663cc82ebcb8af6c14cb7e8b"
+    }
+  ],
+  "limitations": [
+    "VPS evidence uses actual native GUI2 rendering and injected SDL input, not a physical keyboard/touchscreen or LDPlayer.",
+    "Android startup tests cover source/API compilation and substituted framework/storage paths; no Android framework visual execution is claimed on the VPS.",
+    "Windows rebuild/install, live profile refresh, required-server-loss recovery and Android task closure remain acceptance checks.",
+    "No gameplay, backend API, reward rule, database, HUD, map, unit or editor-canvas change is part of this release; unchanged server/gameplay suites were not rerun.",
+    "Earlier1192621 A-M user acceptance is retained with startup-failure Retry/Close NOT RUN and empty-Owned guidance still open; N-Z remain pending.",
+    "Final artifacts were built with disposable public test trust. The Windows build validates and embeds its own existing public-only configuration; private .env/runtime/credentials were not read on the VPS.",
+    "Capture accounts, names and117-hero examples are fixture values, not current user data."
+  ],
+  "windows_checklist": "CITADEL_ACCEPTANCE_1192622.md",
+  "next_gameplay_check": "N, from the existing saved campaign after the affected UI checks pass.",
+  "independent_final_review": {
+    "status": "passed",
+    "scope": "Read-only review of final guides,112 integrated capture hashes,56 Preferences captures/current inputs,161 Android/source/artifact hash bindings and release/protocol consistency. No additional Windows execution."
+  }
+}
