@@ -1,6 +1,7 @@
 """Build the pinned full native World engine in an isolated preserving stage."""
 from __future__ import annotations
 import argparse
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 import importlib.util
@@ -219,17 +220,46 @@ def native(command, environment):
 
 def compiler_environment(prefix, cmake, environ=None):
     """Use only the selected compiler closure and the Windows system tools."""
-    environment = dict(os.environ if environ is None else environ)
+    # Windows os.environ normalizes names to uppercase. Its case-insensitive
+    # lookup behavior is lost when copied into an ordinary dict.
+    environment = {}
+    for name, value in (os.environ if environ is None else environ).items():
+        key = name.upper()
+        if key in environment:
+            raise BuildError('The compiler environment contains duplicate Windows variable names.')
+        environment[key] = value
     for name in list(environment):
         if name.upper().startswith(('CMAKE_', 'PKG_CONFIG_')) or name.upper() in (
                 'CPATH', 'C_INCLUDE_PATH', 'CPLUS_INCLUDE_PATH', 'OBJC_INCLUDE_PATH', 'LIBRARY_PATH',
                 'GCC_EXEC_PREFIX', 'COMPILER_PATH', 'CC', 'CXX', 'CPP', 'CFLAGS', 'CXXFLAGS', 'CPPFLAGS',
                 'LDFLAGS', 'RCFLAGS', 'LIB', 'INCLUDE', 'BOOST_ROOT', 'BOOST_INCLUDEDIR', 'BOOST_LIBRARYDIR', 'SDKROOT'):
             environment.pop(name)
-    system = Path(environment['SystemRoot'])
+    system_root = environment.get('SYSTEMROOT')
+    if not isinstance(system_root, str) or not system_root.strip():
+        raise BuildError('SystemRoot is missing or empty. Keep the build files and report this error.')
+    system = Path(system_root)
     environment['PATH'] = os.pathsep.join((str(prefix / 'bin'), str(system / 'System32'), str(system), str(Path(cmake).parent)))
     environment['PKG_CONFIG_LIBDIR'] = str(prefix / 'lib/pkgconfig') + os.pathsep + str(prefix / 'share/pkgconfig')
     return environment
+
+
+@contextmanager
+def build_step(name):
+    """Identify startup failures without printing environment or metadata values."""
+    print('RUN World worker ' + name, flush=True)
+    try:
+        yield
+    except BuildError as error:
+        raise BuildError('World worker stage=' + name + ': ' + str(error)) from None
+    except subprocess.TimeoutExpired:
+        raise BuildError('World worker stage=' + name + '; error=timeout. Retain the build log.') from None
+    except (OSError, ValueError, KeyError) as error:
+        details = type(error).__name__
+        for key in ('errno', 'winerror'):
+            number = getattr(error, key, None)
+            if type(number) is int:
+                details += '; ' + key + '=' + str(number)
+        raise BuildError('World worker stage=' + name + '; error=' + details + '. Retain the build log.') from None
 
 
 def toolchain_text(prefix):
@@ -427,28 +457,37 @@ def installed_worker(required=True, expected_binding=None):
 
 
 def build(msys, cmake, game_data, preserve):
-    check_host()
+    with build_step('host'):
+        check_host()
     from tools.world_worker_archive_prefix import verify_locked_prefix
-    verify_locked_prefix()
-    data=safe_path(game_data,directory=True)
-    initial_inventory=data_inventory(data)
-    prefix = safe_path(DEPENDENCY_PREFIX, directory=True)
-    environment = compiler_environment(prefix, cmake)
-    cmake=safe_path(cmake);ninja=safe_path(Path(msys)/'ucrt64/bin/ninja.exe')
-    cmake_version=capture([cmake,'--version'],environment).splitlines()[0]
-    ninja_version=capture([ninja,'--version'],environment)
-    if cmake_version!='cmake version 4.3.0' or ninja_version!='1.13.2':
-        raise BuildError('Use the previously verified CMake 4.3.0 and Ninja 1.13.2; do not upgrade unrelated tools.')
-    build_tools={name:{'path':str(path),'sha256':digest(path),'version':version}
-        for name,path,version in (('cmake',cmake,cmake_version),('ninja',ninja,ninja_version))}
-    diagnostics = ROOT / 'diagnostics'; diagnostics.mkdir(exist_ok=True)
-    for relative in REQUIRED.values():
-        if not (prefix/relative).is_file() or not (prefix/relative).stat().st_size:raise BuildError('Prepared worker prefix is incomplete.')
-    if (capture([prefix/'bin/g++.exe','-dumpmachine'],environment) != 'x86_64-w64-mingw32'
-            or capture([prefix/'bin/g++.exe','-dumpfullversion','-dumpversion'],environment) != '16.2.0'):
-        raise BuildError('Use the previously verified MINGW64 GCC 16.2.0 toolchain.')
-    compiler_preflight(prefix, environment)
-    expected = binding()
+    with build_step('isolated-dependencies'):
+        verify_locked_prefix()
+        prefix = safe_path(DEPENDENCY_PREFIX, directory=True)
+    with build_step('game-data'):
+        data=safe_path(game_data,directory=True)
+        initial_inventory=data_inventory(data)
+    with build_step('compiler-environment'):
+        environment = compiler_environment(prefix, cmake)
+    with build_step('build-tools'):
+        cmake=safe_path(cmake);ninja=safe_path(Path(msys)/'ucrt64/bin/ninja.exe')
+        cmake_lines=capture([cmake,'--version'],environment).splitlines()
+        cmake_version=cmake_lines[0] if cmake_lines else ''
+        ninja_version=capture([ninja,'--version'],environment)
+        if cmake_version!='cmake version 4.3.0' or ninja_version!='1.13.2':
+            raise BuildError('Use the previously verified CMake 4.3.0 and Ninja 1.13.2; do not upgrade unrelated tools.')
+        build_tools={name:{'path':str(path),'sha256':digest(path),'version':version}
+            for name,path,version in (('cmake',cmake,cmake_version),('ninja',ninja,ninja_version))}
+        diagnostics = ROOT / 'diagnostics'; diagnostics.mkdir(exist_ok=True)
+    with build_step('compiler-identity'):
+        for relative in REQUIRED.values():
+            if not (prefix/relative).is_file() or not (prefix/relative).stat().st_size:raise BuildError('Prepared worker prefix is incomplete.')
+        if (capture([prefix/'bin/g++.exe','-dumpmachine'],environment) != 'x86_64-w64-mingw32'
+                or capture([prefix/'bin/g++.exe','-dumpfullversion','-dumpversion'],environment) != '16.2.0'):
+            raise BuildError('Use the previously verified MINGW64 GCC 16.2.0 toolchain.')
+    with build_step('compiler-check'):
+        compiler_preflight(prefix, environment)
+    with build_step('source-binding'):
+        expected = binding()
     STAGE.parent.mkdir(exist_ok=True)
     from tools.world_worker_recovery import recovery_pending, preserve_failed_stage
     if recovery_pending(STAGE):
@@ -495,7 +534,7 @@ def build(msys, cmake, game_data, preserve):
     output=STAGE/'bin';output.mkdir(exist_ok=True)
     executable=output/'world-worker.exe';shutil.copy2(candidates[0],executable)
     closure=dll_closure(executable,prefix,output,environment)
-    clean=environment.copy();clean['PATH']=str(output)+os.pathsep+str(Path(os.environ['SystemRoot'])/'System32')
+    clean=environment.copy();clean['PATH']=str(output)+os.pathsep+str(Path(environment['SYSTEMROOT'])/'System32')
     version=capture([executable,'--version'],clean)
     if '1.19.26' not in version: raise BuildError('Full native engine version differs.')
     data=safe_path(game_data,directory=True)

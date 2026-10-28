@@ -63,6 +63,158 @@ class WorkerToolchainTests(unittest.TestCase):
                     'LDFLAGS', 'RCFLAGS', 'SDKROOT', 'LIB', 'INCLUDE', 'BOOST_ROOT', 'BOOST_INCLUDEDIR', 'BOOST_LIBRARYDIR'):
             self.assertNotIn(key, remaining)
 
+    def test_actual_windows_uppercase_environment_snapshot_selects_system_root(self):
+        # CPython's Windows os.environ uses uppercase keys. A plain copied dict
+        # no longer performs the case-insensitive lookup of os._Environ.
+        original = {
+            'SYSTEMROOT': str(self.root / 'Windows'), 'PATH': 'foreign compiler',
+            'TEMP': str(self.root / 'Temp'), 'CMAKE_PREFIX_PATH': 'foreign cmake',
+            'PKG_CONFIG_LIBDIR': 'foreign packages', 'CPATH': 'foreign headers',
+        }
+        before = dict(original)
+        cmake = self.root / 'cmake bin' / 'cmake.exe'
+        with patch.object(worker.os, 'environ', original):
+            result = worker.compiler_environment(self.prefix, cmake)
+        self.assertEqual(original, before)
+        self.assertEqual(result['SYSTEMROOT'], original['SYSTEMROOT'])
+        self.assertEqual(result['TEMP'], original['TEMP'])
+        self.assertEqual(result['PATH'].split(os.pathsep), [str(self.prefix / 'bin'),
+            str(Path(original['SYSTEMROOT']) / 'System32'), original['SYSTEMROOT'], str(cmake.parent)])
+        self.assertEqual(result['PKG_CONFIG_LIBDIR'].split(os.pathsep),
+            [str(self.prefix / 'lib/pkgconfig'), str(self.prefix / 'share/pkgconfig')])
+        self.assertNotIn('CPATH', result)
+        self.assertNotIn('CMAKE_PREFIX_PATH', result)
+
+    def test_mixed_case_environment_cannot_retain_competing_path_aliases(self):
+        original = {
+            'sYsTeMrOoT': str(self.root / 'Windows'), 'Path': 'foreign compiler',
+            'Temp': str(self.root / 'Temp'), 'pKg_cOnFiG_lIbDiR': 'foreign packages',
+            'cMake_Prefix_Path': 'foreign cmake', 'cPaTh': 'foreign headers',
+            'uNcHaNgEd': 'preserved value',
+        }
+        before = dict(original)
+        cmake = self.root / 'cmake bin' / 'cmake.exe'
+        result = worker.compiler_environment(self.prefix, cmake, original)
+        self.assertEqual(original, before)
+        self.assertEqual(result['SYSTEMROOT'], original['sYsTeMrOoT'])
+        self.assertEqual(result['TEMP'], original['Temp'])
+        self.assertEqual(result['UNCHANGED'], original['uNcHaNgEd'])
+        self.assertTrue(all(key == key.upper() for key in result))
+        self.assertEqual(sum(key.upper() == 'PATH' for key in result), 1)
+        self.assertEqual(sum(key.upper() == 'PKG_CONFIG_LIBDIR' for key in result), 1)
+        self.assertEqual(result['PATH'].split(os.pathsep), [str(self.prefix / 'bin'),
+            str(Path(original['sYsTeMrOoT']) / 'System32'), original['sYsTeMrOoT'], str(cmake.parent)])
+        self.assertEqual(result['PKG_CONFIG_LIBDIR'].split(os.pathsep),
+            [str(self.prefix / 'lib/pkgconfig'), str(self.prefix / 'share/pkgconfig')])
+        self.assertNotIn('CMAKE_PREFIX_PATH', result)
+        self.assertNotIn('CPATH', result)
+
+    def test_ambiguous_case_insensitive_environment_duplicates_are_rejected(self):
+        # Reject before filtering too: PATH/flags with two spellings must not be
+        # silently selected by Python insertion order or Windows CreateProcess.
+        for first, second in (('SYSTEMROOT', 'SystemRoot'), ('PATH', 'Path'),
+                              ('CPATH', 'cpath'), ('USERPROFILE', 'UserProfile')):
+            for same_value in (False, True):
+                with self.subTest(first=first, same_value=same_value):
+                    original = {'SYSTEMROOT': str(self.root / 'Windows')}
+                    original[first] = str(self.root / 'Windows') if first == 'SYSTEMROOT' else 'first'
+                    original[second] = original[first] if same_value else 'second'
+                    before = dict(original)
+                    with self.assertRaisesRegex(worker.BuildError, '(?i)duplicate'):
+                        worker.compiler_environment(self.prefix, self.root / 'cmake.exe', original)
+                    self.assertEqual(original, before)
+
+    def test_missing_or_empty_system_root_has_actionable_error_and_preserves_mapping(self):
+        for value in (None, '', ' ', '\t\r\n'):
+            with self.subTest(value=value):
+                original = {'Path': 'preserve caller PATH', 'TEMP': 'preserve caller temp'}
+                if value is not None:
+                    original['sYsTeMrOoT'] = value
+                before = dict(original)
+                with self.assertRaisesRegex(worker.BuildError, 'SystemRoot'):
+                    worker.compiler_environment(self.prefix, self.root / 'cmake.exe', original)
+                self.assertEqual(original, before)
+
+    def test_build_step_success_reports_phase_without_environment_values(self):
+        output = io.StringIO()
+        with redirect_stdout(output), worker.build_step('compiler-environment'):
+            pass
+        self.assertEqual(output.getvalue(), 'RUN World worker compiler-environment\n')
+
+    def test_build_step_sanitizes_unexpected_errors_and_keeps_numeric_codes(self):
+        private = 'private-runtime-password-and-path-sentinel'
+        os_error = OSError(5, private, private)
+        os_error.winerror = 123
+        for error in (os_error, ValueError(private), KeyError(private)):
+            with self.subTest(error=type(error).__name__):
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    with self.assertRaises(worker.BuildError) as caught:
+                        with worker.build_step('compiler-environment'):
+                            raise error
+                text = str(caught.exception)
+                self.assertIn('stage=compiler-environment', text)
+                self.assertIn('error=' + type(error).__name__, text)
+                self.assertNotIn(private, text + output.getvalue())
+                self.assertTrue(caught.exception.__suppress_context__)
+                if error is os_error:
+                    self.assertIn('errno=5', text)
+                    self.assertIn('winerror=123', text)
+                else:
+                    self.assertNotIn('errno=', text)
+                    self.assertNotIn('winerror=', text)
+
+    def test_build_step_timeout_does_not_expose_command_or_captured_output(self):
+        private = 'private-command-and-output-sentinel'
+        output = io.StringIO()
+        with redirect_stdout(output):
+            with self.assertRaises(worker.BuildError) as caught:
+                with worker.build_step('compiler-check'):
+                    raise subprocess.TimeoutExpired([private], 120,
+                        output=private.encode(), stderr=private.encode())
+        self.assertIn('stage=compiler-check; error=timeout', str(caught.exception))
+        self.assertNotIn(private, str(caught.exception) + output.getvalue())
+        self.assertTrue(caught.exception.__suppress_context__)
+
+    def test_build_step_preserves_actionable_build_error_with_phase(self):
+        original = worker.BuildError('Compiler checksum differs; preserve the prefix.')
+        output = io.StringIO()
+        with redirect_stdout(output):
+            with self.assertRaises(worker.BuildError) as caught:
+                with worker.build_step('compiler-identity'):
+                    raise original
+        self.assertEqual(str(caught.exception),
+            'World worker stage=compiler-identity: ' + str(original))
+        self.assertTrue(caught.exception.__suppress_context__)
+
+    def test_environment_failure_stops_before_compiler_or_stage_changes(self):
+        from tools import world_worker_archive_prefix as archive
+        original = self.stage / 'owner.json'
+        original.write_bytes(b'{"purpose":"existing incomplete worker"}\n')
+        data = self.root / 'game data'
+        data.mkdir()
+        output = io.StringIO()
+        with patch.object(worker, 'check_host'), patch.object(archive, 'verify_locked_prefix'), \
+             patch.object(worker, 'data_inventory', return_value={}), \
+             patch.object(worker.os, 'environ', {'PATH': 'private inherited PATH sentinel'}), \
+             patch.object(worker, 'DEPENDENCY_PREFIX', self.prefix), \
+             patch.object(worker, 'STAGE', self.stage), patch.object(worker, 'ROOT', self.root), \
+             patch.object(worker, 'capture') as capture, \
+             patch.object(worker, 'binding') as binding, \
+             patch.object(worker, 'compiler_preflight') as preflight, redirect_stdout(output):
+            with self.assertRaisesRegex(worker.BuildError, 'stage=compiler-environment: SystemRoot'):
+                worker.build(self.root / 'msys', self.root / 'cmake.exe', data, True)
+        capture.assert_not_called()
+        binding.assert_not_called()
+        preflight.assert_not_called()
+        self.assertEqual(original.read_bytes(), b'{"purpose":"existing incomplete worker"}\n')
+        self.assertEqual(list(self.stage.iterdir()), [original])
+        self.assertEqual(list(self.prefix.iterdir()), [])
+        self.assertFalse(list(self.root.glob('owned stage-before-*')))
+        self.assertIn('RUN World worker compiler-environment', output.getvalue())
+        self.assertNotIn('RUN World worker build-tools', output.getvalue())
+        self.assertNotIn('private inherited PATH sentinel', output.getvalue())
+
     def test_toolchain_binds_literal_sysroot_and_reuses_exact_file(self):
         prefix = self.root / 'verified $prefix with spaces'
         prefix.mkdir()
@@ -318,7 +470,8 @@ class WorkerToolchainTests(unittest.TestCase):
         ninja.write_bytes(b'controlled build runner')
         with patch.object(worker, 'check_host'), patch.object(archive, 'verify_locked_prefix'), \
              patch.object(worker, 'data_inventory', return_value={}), \
-             patch.object(worker, 'compiler_environment', return_value={}), \
+             patch.object(worker.os, 'environ', {'SYSTEMROOT': str(self.root / 'Windows'),
+                                               'Path': 'foreign compiler'}), \
              patch.object(worker, 'REQUIRED', {}), patch.object(worker, 'DEPENDENCY_PREFIX', self.prefix), \
              patch.object(worker, 'STAGE', self.stage), patch.object(worker, 'ROOT', self.root), \
              patch.object(worker, 'capture', side_effect=['cmake version 4.3.0', '1.13.2',
