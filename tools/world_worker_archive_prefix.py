@@ -16,7 +16,9 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
+import subprocess
 import tarfile
+import threading
 import uuid
 
 from tools import world_worker_dependencies as deps
@@ -28,6 +30,17 @@ MAX_EXPANDED = 4 * 1024 * 1024 * 1024
 MAX_METADATA = 32 * 1024 * 1024
 CHUNK = 1024 * 1024
 SPACE_RESERVE = 64 * 1024 * 1024
+DECODER_TIMEOUT = 300
+MAX_TAR_STREAM = MAX_EXPANDED + MAX_MEMBERS * 1024 + MAX_METADATA
+# Signed .MTREE payload pins from the unchanged 107-package snapshot. This
+# already-installed MINGW64 package is the Python 3.12 decompression bootstrap.
+# Its PE imports are only KERNEL32.dll, msvcrt.dll and this exact libzstd.dll.
+ZSTD_PACKAGE = {'name': 'mingw-w64-x86_64-zstd', 'version': '1.5.7-2',
+                'sha256': '1add6705b344664f6aca108c85f79ab5bdd9e1162662bb06a4cf40a34f6e0907'}
+ZSTD_FILES = {
+    'zstd.exe': {'size': 229865, 'sha256': 'd44f40274c8632f98fdc8bb89928fe8fb566f0fb6b4287bab98027c1cfa26d86'},
+    'libzstd.dll': {'size': 1218273, 'sha256': 'b95c223a9548a9ecf51377c962e0bc8f0c51eb0c6f67a296dbc885996f0dd40d'},
+}
 METADATA = {'.PKGINFO', '.BUILDINFO', '.MTREE', '.INSTALL', '.CHANGELOG'}
 HOOKS = {
     'usr/share/libalpm/hooks/mingw-w64-x86_64-fontconfig.hook',
@@ -146,6 +159,105 @@ def _check_cache(pin, cache):
     return archive
 
 
+def _verify_decoder(decoder):
+    for path, spec in decoder['files']:
+        packages.verify_artifact(path, {'filename': path.name, **spec})
+
+
+def _windows_decoder(manifest, msys):
+    if msys is None:
+        raise deps.BuildError('MsysRoot is required to verify the pinned archive decoder.')
+    matches = [row for row in manifest['packages'] if row['name'] == ZSTD_PACKAGE['name']]
+    if len(matches) != 1 or any(matches[0].get(key) != value for key, value in ZSTD_PACKAGE.items()):
+        raise deps.BuildError('The archive decoder is not part of the approved package snapshot.')
+    binary = deps.safe_path(Path(msys) / 'mingw64/bin', directory=True)
+    system = os.environ.get('SystemRoot')
+    if not system:
+        raise deps.BuildError('SystemRoot is required for the native archive decoder.')
+    system = deps.safe_path(system, directory=True)
+    system32 = deps.safe_path(system / 'System32', directory=True)
+    decoder = {'executable': binary / 'zstd.exe', 'cwd': system32,
+               'environment': {'SystemRoot': str(system), 'WINDIR': str(system),
+                               'PATH': os.pathsep.join(map(str, (binary, system32, system)))},
+               'files': [(binary / name, spec) for name, spec in ZSTD_FILES.items()]}
+    _verify_decoder(decoder)
+    return decoder
+
+
+def _decoder(manifest, msys):
+    if os.name == 'nt':
+        return _windows_decoder(manifest, msys)
+    # Linux is used for the real archive fixtures, never claimed as Windows
+    # execution. Record and recheck the local decoder rather than using a shell.
+    executable = shutil.which('zstd')
+    if executable is None:
+        raise deps.BuildError('Local archive verification requires the zstd executable.')
+    executable = deps.safe_path(executable)
+    return {'executable': executable, 'cwd': executable.parent,
+            'environment': {'PATH': str(executable.parent), 'LC_ALL': 'C'},
+            'files': [(executable, {'size': executable.stat().st_size, 'sha256': deps.digest(executable)})]}
+
+
+class _BoundedDecoderStream:
+    def __init__(self, stream):
+        self.stream = stream
+        self.total = 0
+
+    def read(self, size=-1):
+        remaining = MAX_TAR_STREAM - self.total
+        requested = min(CHUNK if size < 0 else size, remaining + 1)
+        value = self.stream.read(requested)
+        self.total += len(value)
+        if self.total > MAX_TAR_STREAM:
+            raise deps.BuildError('Decompressed package stream exceeds its bound.')
+        return value
+
+
+@contextmanager
+def _open_archive(archive, decoder):
+    """Stream zstd into Python 3.12 tarfile, with bounded lifetime and output."""
+    _verify_decoder(decoder)
+    process = subprocess.Popen([str(decoder['executable']), '-q', '-d', '-c', '--memory=128MB', '--', str(archive)],
+                               stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                               cwd=decoder['cwd'], env=decoder['environment'], shell=False)
+    expired = threading.Event()
+    def timeout():
+        expired.set()
+        try:
+            process.kill()
+        except OSError:
+            pass
+    timer = threading.Timer(DECODER_TIMEOUT, timeout)
+    timer.daemon = True
+    timer.start()
+    stream = _BoundedDecoderStream(process.stdout)
+    try:
+        with tarfile.open(fileobj=stream, mode='r|') as tar:
+            yield tar
+        # tarfile stops at the tar terminator; drain to establish decompressor
+        # success, including the compressed frame checksum and trailing frames.
+        while stream.read(CHUNK):
+            pass
+        status = process.wait(timeout=10)
+        if expired.is_set() or status != 0:
+            raise deps.BuildError('The archive decoder timed out or rejected the compressed package.')
+        _verify_decoder(decoder)
+    except subprocess.TimeoutExpired:
+        raise deps.BuildError('The archive decoder did not stop within its time bound.') from None
+    finally:
+        timer.cancel()
+        if process.poll() is None:
+            try:
+                process.kill()
+            except OSError:
+                pass
+        process.stdout.close()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            raise deps.BuildError('The archive decoder could not be stopped; preserve the preparation log.') from None
+
+
 def _file_bytes(stream, size, destination=None):
     """Verify or resume an interrupted, owned output without replacing bytes."""
     existing = None; writer = None; existing_size = 0; count = 0; digest = hashlib.sha256()
@@ -189,11 +301,11 @@ def _file_bytes(stream, size, destination=None):
     return result
 
 
-def _scan(pin, cache, destination=None):
+def _scan(pin, cache, destination=None, decoder=None):
     archive = _check_cache(pin, cache)
     seen = {}; names = {}; actual = {}; regular = {}; links = {}; metadata = {}; expanded = 0
     try:
-        with tarfile.open(archive, 'r|zst') as tar:
+        with _open_archive(archive, decoder) as tar:
             for member in tar:
                 name = _path(member.name)
                 if name in seen or name.casefold() in names:
@@ -264,13 +376,13 @@ def _package_receipts(manifest, manifest_hash):
              'manifest_sha256': manifest_hash} for row in manifest['packages']]
 
 
-def _receipt(manifest, manifest_hash, cache, destination=None):
+def _receipt(manifest, manifest_hash, cache, destination=None, decoder=None):
     files = {}; names = {}; directories = set()
     total = len(manifest['packages'])
     for index, pin in enumerate(manifest['packages'], 1):
         if destination is not None and (index == 1 or index % 5 == 0 or index == total):
             print(f'Preparing worker package {index}/{total}: {pin["name"]}', flush=True)
-        rows = _scan(pin, cache, destination)
+        rows = _scan(pin, cache, destination, decoder)
         for name, value in rows.items():
             if name.casefold() in directories:
                 raise deps.BuildError('Packages use the same path for a file and a directory.')
@@ -298,10 +410,10 @@ def _receipt(manifest, manifest_hash, cache, destination=None):
     return {'format': 1, 'purpose': deps.PURPOSE, 'packages': _package_receipts(manifest, manifest_hash), 'files': files}
 
 
-def verify_archive_inputs(manifest_path=packages.MANIFEST, cache=packages.CACHE):
+def verify_archive_inputs(manifest_path=packages.MANIFEST, cache=packages.CACHE, *, msys=None):
     """Validate all pinned tar contents without creating a prefix."""
     manifest = packages.load_manifest(manifest_path)
-    return _receipt(manifest, deps.digest(manifest_path), cache)
+    return _receipt(manifest, deps.digest(manifest_path), cache, decoder=_decoder(manifest, msys))
 
 
 def verify_locked_prefix(prefix=deps.PREFIX, manifest_path=packages.MANIFEST):
@@ -382,7 +494,7 @@ def _lock(path):
         stream.close()
 
 
-def prepare_archive_prefix(manifest_path=packages.MANIFEST, cache=packages.CACHE, prefix=deps.PREFIX):
+def prepare_archive_prefix(manifest_path=packages.MANIFEST, cache=packages.CACHE, prefix=deps.PREFIX, *, msys=None):
     manifest = packages.load_manifest(manifest_path); manifest_hash = deps.digest(manifest_path)
     prefix = Path(prefix).absolute()
     deps.safe_path(prefix, directory=True) if prefix.exists() else deps.safe_path(prefix)
@@ -392,7 +504,8 @@ def prepare_archive_prefix(manifest_path=packages.MANIFEST, cache=packages.CACHE
             verify_locked_prefix(prefix, manifest_path)
             print('WORLD WORKER ISOLATED DEPENDENCIES VERIFIED', flush=True)
             return prefix
-        expected = _receipt(manifest, manifest_hash, cache)
+        decoder = _decoder(manifest, msys)
+        expected = _receipt(manifest, manifest_hash, cache, decoder=decoder)
         staging = prefix.with_name(prefix.name + '.archive-preparing')
         journal = prefix.with_name(prefix.name + '.archive-preparation.json')
         ownership = {'format': 1, 'purpose': 'wesnoth-world-worker-archive-preparation',
@@ -409,7 +522,7 @@ def prepare_archive_prefix(manifest_path=packages.MANIFEST, cache=packages.CACHE
             _publish_json(journal, ownership)
         if not staging.exists():
             staging.mkdir()
-        extracted = _receipt(manifest, manifest_hash, cache, staging)
+        extracted = _receipt(manifest, manifest_hash, cache, staging, decoder)
         if extracted != expected or deps.digest(manifest_path) != manifest_hash:
             raise deps.BuildError('Worker package lock changed during preparation.')
         receipt = staging / 'receipt.json'

@@ -153,6 +153,7 @@ class DependencyPrefix(unittest.TestCase):
             self.assertEqual(build.main(),0)
         self.assertEqual([row[0] for row in calls],['cache','prefix'])
         self.assertEqual(calls[0][2],{'download':False})
+        self.assertEqual(calls[1][2]['msys'], self.msys)
         with patch.object(build,'check_host'), \
                 patch.object(build.sys,'argv',['build_world_worker.py','--msys',str(self.msys),'--prepare-dependencies']), \
                 patch.object(packages,'execute',side_effect=deps.BuildError('signature rejected')), \

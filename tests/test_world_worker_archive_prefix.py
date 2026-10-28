@@ -6,6 +6,8 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
 import tarfile
 import tempfile
 from types import SimpleNamespace
@@ -22,6 +24,12 @@ def sha(raw):
 
 
 class ArchivePrefix(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.zstd = shutil.which('zstd')
+        if cls.zstd is None:
+            raise unittest.SkipTest('The real zstd archive fixtures require a local zstd executable.')
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='world archive prefix ')
         self.addCleanup(self.temp.cleanup)
@@ -58,7 +66,8 @@ class ArchivePrefix(unittest.TestCase):
             mtree = mtree_change(mtree)
         compressed = gzip.compress(('\n'.join(mtree) + '\n').encode(), mtime=0)
         filename = name + '-1-1-any.pkg.tar.zst'; path = self.cache / filename
-        with tarfile.open(path, 'w:zst') as output:
+        uncompressed = io.BytesIO()
+        with tarfile.open(fileobj=uncompressed, mode='w') as output:
             for key, raw in [('.BUILDINFO', data.pop('.BUILDINFO')), ('.MTREE', compressed), *sorted(data.items())]:
                 entry = tarfile.TarInfo(key); entry.size = len(raw)
                 output.addfile(entry, io.BytesIO(raw))
@@ -70,6 +79,8 @@ class ArchivePrefix(unittest.TestCase):
                 output.addfile(entry)
             if special:
                 output.addfile(special)
+        path.write_bytes(subprocess.run([self.zstd, '-q', '-c'], input=uncompressed.getvalue(),
+                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True).stdout)
         signature = b'fixture detached signature; cryptographic verification belongs to cache helper'
         Path(str(path) + '.sig').write_bytes(signature)
         pin = {'name': name, 'version': '1-1', 'filename': filename, 'size': path.stat().st_size,
@@ -283,6 +294,66 @@ class ArchivePrefix(unittest.TestCase):
             archive.prepare_archive_prefix(self.lock, self.cache, self.prefix)
         self.assertIn('Preparing worker package 1/1:', output.getvalue())
         self.assertIn('WORLD WORKER ISOLATED DEPENDENCIES PREPARED', output.getvalue())
+
+    def test_windows_decoder_checks_exact_snapshot_and_dll_bytes(self):
+        binary = self.root / 'msys/mingw64/bin'; binary.mkdir(parents=True)
+        system = self.root / 'Windows'; (system / 'System32').mkdir(parents=True)
+        files = {'zstd.exe': b'fixture pinned executable', 'libzstd.dll': b'fixture pinned DLL'}
+        specs = {}
+        for name, data in files.items():
+            (binary / name).write_bytes(data)
+            specs[name] = {'size': len(data), 'sha256': sha(data)}
+        manifest = {'packages': [dict(archive.ZSTD_PACKAGE)]}
+        with patch.object(archive, 'ZSTD_FILES', specs), patch.dict(os.environ, {'SystemRoot': str(system), 'PATH': 'untrusted-path'}):
+            decoder = archive._windows_decoder(manifest, self.root / 'msys')
+            self.assertEqual(decoder['executable'], binary / 'zstd.exe')
+            self.assertEqual(decoder['cwd'], system / 'System32')
+            self.assertNotIn('untrusted-path', decoder['environment']['PATH'])
+            (binary / 'libzstd.dll').write_bytes(b'altered DLL')
+            with self.assertRaisesRegex(deps.BuildError, 'differs from its pin'):
+                archive._windows_decoder(manifest, self.root / 'msys')
+            manifest['packages'][0]['version'] = 'unapproved'
+            with self.assertRaisesRegex(deps.BuildError, 'approved package snapshot'):
+                archive._windows_decoder(manifest, self.root / 'msys')
+
+    def test_decoder_rejects_nonzero_exit_after_a_complete_tar(self):
+        real = archive.subprocess.Popen
+        children = []
+        def failed(*args, **kwargs):
+            child = real(*args, **kwargs); original_wait = child.wait
+            def wait(*a, **k):
+                original_wait(*a, **k)
+                return 1
+            child.wait = wait; children.append(child)
+            return child
+        with patch.object(archive.subprocess, 'Popen', side_effect=failed), self.assertRaisesRegex(deps.BuildError, 'decoder timed out or rejected'):
+            self.verify()
+        self.assertTrue(all(child.poll() is not None for child in children))
+        self.assertFalse(self.prefix.exists())
+
+    def test_decoder_command_uses_bounded_stream_and_no_shell(self):
+        real = archive.subprocess.Popen
+        with patch.object(archive.subprocess, 'Popen', wraps=real) as start:
+            self.verify()
+        args, kwargs = start.call_args
+        self.assertFalse(kwargs['shell'])
+        self.assertEqual(args[0][1:6], ['-q', '-d', '-c', '--memory=128MB', '--'])
+        self.assertEqual(args[0][-1], str(self.cache / self.pins[0]['filename']))
+        with patch.object(archive, 'MAX_TAR_STREAM', 10), self.assertRaisesRegex(deps.BuildError, 'stream exceeds'):
+            self.verify()
+
+    def test_decoder_timeout_terminates_child_without_extracting(self):
+        real = archive.subprocess.Popen
+        children = []
+        def stalled(*args, **kwargs):
+            import sys
+            child = real([sys.executable, '-I', '-c', 'import time; time.sleep(10)'], **kwargs)
+            children.append(child)
+            return child
+        with patch.object(archive.subprocess, 'Popen', side_effect=stalled), patch.object(archive, 'DECODER_TIMEOUT', 0.05), self.assertRaises(deps.BuildError):
+            self.verify()
+        self.assertTrue(all(child.poll() is not None for child in children))
+        self.assertFalse(self.prefix.exists())
 
 
 if __name__ == '__main__':

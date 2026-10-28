@@ -301,6 +301,7 @@ def build(msys, cmake, game_data, preserve):
     prepare_source(CLIENT,source,generated,replacements,cmake_text)
     native([cmake,'-S',source,'-B',STAGE/'engine','-G','Ninja',f'-DCMAKE_CXX_COMPILER={(prefix/"bin/g++.exe").as_posix()}',
         f'-DCMAKE_C_COMPILER={(prefix/"bin/gcc.exe").as_posix()}',f'-DCMAKE_RC_COMPILER={(prefix/"bin/windres.exe").as_posix()}',
+        f'-DPython_EXECUTABLE={safe_path(sys.executable).as_posix()}',
         f'-DCMAKE_MAKE_PROGRAM={ninja.as_posix()}',f'-DCMAKE_PREFIX_PATH={prefix.as_posix()}',f'-DBoost_ROOT={prefix.as_posix()}',
         f'-DCMAKE_FIND_ROOT_PATH={prefix.as_posix()}','-DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY','-DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY','-DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=ONLY',
         '-DCMAKE_FIND_USE_PACKAGE_REGISTRY=OFF','-DCMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY=OFF',
@@ -340,7 +341,7 @@ def main():
             from tools.world_worker_packages import execute, CACHE, MANIFEST
             from tools.world_worker_archive_prefix import prepare_archive_prefix
             execute(args.msys, download=False)
-            prepare_archive_prefix(manifest_path=MANIFEST, cache=CACHE, prefix=DEPENDENCY_PREFIX)
+            prepare_archive_prefix(manifest_path=MANIFEST, cache=CACHE, prefix=DEPENDENCY_PREFIX, msys=args.msys)
             return 0
         if args.audit:return 0 if dependency_audit(args.msys,args.audit)['complete'] else 1
         if args.verify:installed_worker();print('WORLD NATIVE WORKER ARTIFACT VERIFIED');return 0
