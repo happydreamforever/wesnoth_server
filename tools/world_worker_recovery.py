@@ -57,12 +57,30 @@ def _identity(info):
             info.st_nlink, getattr(info, 'st_file_attributes', 0))
 
 
+def _same_open_file(path, before, opened, *, windows=None):
+    """Account only for CPython's Windows filename-derived execute bits."""
+    expected = _identity(before)
+    actual = _identity(opened)
+    if expected == actual:
+        return True
+    if windows is None:
+        windows = os.name == 'nt'
+    # Windows path stat adds all execute bits for these suffixes. Descriptor
+    # stat cannot inspect the name. Keep every other field, and all subsequent
+    # path-to-path comparisons, exact; POSIX modes retain their full meaning.
+    if not windows or Path(path).suffix.casefold() not in ('.exe', '.bat', '.cmd', '.com'):
+        return False
+    named = list(actual)
+    named[2] |= stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+    return expected == tuple(named)
+
+
 def _read_json(path):
     before = _ordinary(path)
     if not 0 < before.st_size <= MAX_METADATA:
         raise BuildError('Worker recovery metadata exceeds its bound.')
     with Path(path).open('rb') as stream:
-        if _identity(os.fstat(stream.fileno())) != _identity(before):
+        if not _same_open_file(path, before, os.fstat(stream.fileno())):
             raise BuildError('Worker recovery metadata changed while opening.')
         raw = stream.read(MAX_METADATA + 1)
     if len(raw) != before.st_size or _identity(_ordinary(path)) != _identity(before):
@@ -150,7 +168,7 @@ def _inventory(directory):
                 if total > MAX_BYTES:
                     raise BuildError('Worker recovery inventory exceeds its byte bound.')
                 with entry.open('rb') as stream:
-                    if _identity(os.fstat(stream.fileno())) != _identity(before):
+                    if not _same_open_file(entry, before, os.fstat(stream.fileno())):
                         raise BuildError('Worker recovery file changed while opening.')
                     digest = hashlib.file_digest(stream, 'sha256').hexdigest()
                 if _identity(_ordinary(entry)) != _identity(before):

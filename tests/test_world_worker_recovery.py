@@ -5,12 +5,23 @@ import io
 import json
 import os
 from pathlib import Path
+import stat
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
 from tools import world_worker_recovery as recovery
 from tools.build_alliance_bridge import BuildError
+
+
+def stat_copy(info, **changes):
+    """Keep the identity fields while modelling one Win32 stat API result."""
+    values = {name: getattr(info, name) for name in (
+        'st_dev', 'st_ino', 'st_mode', 'st_size', 'st_mtime_ns', 'st_nlink')}
+    values['st_file_attributes'] = getattr(info, 'st_file_attributes', 0)
+    values.update(changes)
+    return SimpleNamespace(**values)
 
 
 class WorkerRecoveryTests(unittest.TestCase):
@@ -58,6 +69,175 @@ class WorkerRecoveryTests(unittest.TestCase):
     def assert_stage_preserved(self, original=None):
         self.assertEqual(recovery._inventory(self.stage), original or self.initial)
         self.assertFalse(self.complete.exists())
+
+    @contextmanager
+    def windows_executable_stats(self):
+        """Linux fixture only: filename stat adds execute bits; fstat does not."""
+        original_lstat = Path.lstat
+        original_comparison = recovery._same_open_file
+
+        def filename_stat(path, *args, **kwargs):
+            info = original_lstat(path, *args, **kwargs)
+            if (stat.S_ISREG(info.st_mode)
+                    and path.suffix.lower() in ('.exe', '.bat', '.cmd', '.com')):
+                return stat_copy(info, st_mode=info.st_mode | 0o111)
+            return info
+
+        def compare(path, before, opened):
+            return original_comparison(path, before, opened, windows=True)
+
+        with patch.object(Path, 'lstat', filename_stat), patch.object(
+                recovery, '_same_open_file', side_effect=compare):
+            yield
+
+    def add_executable_files(self):
+        for suffix in ('.exe', '.EXE', '.bat', '.cmd', '.com'):
+            path = self.stage / ('CMake-compiler-check' + suffix)
+            path.write_bytes(b'not executed; retained compiler output\0' + suffix.encode())
+            path.chmod(0o600)
+
+    def test_open_identity_allows_only_windows_filename_execute_bits(self):
+        opened = stat_copy((self.stage / 'partial.obj').stat(), st_mode=stat.S_IFREG | 0o666)
+        before = stat_copy(opened, st_mode=opened.st_mode | 0o111)
+        for suffix in ('.exe', '.EXE', '.bat', '.cmd', '.com'):
+            with self.subTest(suffix=suffix):
+                path = self.stage / ('probe' + suffix)
+                self.assertTrue(recovery._same_open_file(path, before, opened, windows=True))
+                self.assertFalse(recovery._same_open_file(path, before, opened, windows=False))
+                self.assertFalse(recovery._same_open_file(path, opened, before, windows=True))
+        for suffix in ('.json', '.txt', '.dll', '.exe.txt', ''):
+            with self.subTest(suffix=suffix):
+                self.assertFalse(recovery._same_open_file(
+                    self.stage / ('probe' + suffix), before, opened, windows=True))
+        for value in (0o100, 0o010, 0o001, 0o110):
+            with self.subTest(partial_execute=value):
+                self.assertFalse(recovery._same_open_file(self.stage / 'probe.exe',
+                    stat_copy(opened, st_mode=opened.st_mode | value), opened, windows=True))
+        self.assertTrue(recovery._same_open_file(
+            self.stage / 'unchanged.exe', opened, opened, windows=True))
+        self.assertTrue(recovery._same_open_file(
+            self.stage / 'unchanged.txt', before, before, windows=False))
+        readonly = stat_copy(opened, st_mode=stat.S_IFREG | 0o444, st_file_attributes=1)
+        self.assertTrue(recovery._same_open_file(self.stage / 'readonly.EXE',
+            stat_copy(readonly, st_mode=readonly.st_mode | 0o111), readonly, windows=True))
+
+    def test_windows_mode_exception_retains_all_other_identity_checks(self):
+        opened = stat_copy((self.stage / 'partial.obj').stat(), st_mode=stat.S_IFREG | 0o666)
+        before = stat_copy(opened, st_mode=opened.st_mode | 0o111)
+        mutations = {
+            'device': {'st_dev': opened.st_dev + 1},
+            'inode': {'st_ino': opened.st_ino + 1},
+            'file_type': {'st_mode': stat.S_IFDIR | 0o666},
+            'read_only': {'st_mode': opened.st_mode & ~0o222},
+            'size': {'st_size': opened.st_size + 1},
+            'mtime': {'st_mtime_ns': opened.st_mtime_ns + 1},
+            'hardlink': {'st_nlink': 2},
+            'reparse': {'st_file_attributes': 0x400},
+            'archive_attribute': {'st_file_attributes': 0x20},
+        }
+        for name, change in mutations.items():
+            with self.subTest(field=name):
+                self.assertFalse(recovery._same_open_file(
+                    self.stage / 'probe.exe', before, stat_copy(opened, **change), windows=True))
+
+    def test_changed_descriptor_metadata_rejects_json_and_inventory(self):
+        original_fstat = os.fstat
+        for check in ('metadata', 'inventory'):
+            for field in ('st_dev', 'st_ino', 'st_size', 'st_mtime_ns', 'st_nlink',
+                          'st_mode', 'st_file_attributes'):
+                with self.subTest(check=check, field=field):
+                    def changed(fd):
+                        info = original_fstat(fd)
+                        value = getattr(info, field, 0)
+                        change = value ^ stat.S_IWUSR if field == 'st_mode' else value + 1
+                        return stat_copy(info, **{field: change})
+                    with patch.object(os, 'fstat', side_effect=changed):
+                        with self.assertRaisesRegex(BuildError, 'changed while opening'):
+                            if check == 'metadata': recovery._read_json(self.stage / 'owner.json')
+                            else: recovery._inventory(self.stage)
+                    self.assert_stage_preserved()
+                    self.assertFalse(self.journal.exists())
+
+    def test_executable_tree_is_preserved_with_original_path_metadata(self):
+        self.add_executable_files()
+        with self.windows_executable_stats():
+            before = recovery._inventory(self.stage)
+            for name, entry in before['files'].items():
+                if Path(name).suffix.lower() in ('.exe', '.bat', '.cmd', '.com'):
+                    self.assertEqual(entry['mode'] & 0o111, 0o111)
+            retained = self.preserve()
+            self.assertEqual(recovery._inventory(retained), before)
+            self.assertEqual(recovery._read_json(self.journal)['inventory'], before)
+            self.assertFalse(recovery.recovery_pending(self.stage))
+            self.assertFalse((retained / 'receipt.json').exists())
+
+    def test_executable_recovery_resumes_before_and_after_rename(self):
+        self.add_executable_files()
+        with self.windows_executable_stats():
+            before = recovery._inventory(self.stage)
+            record = self.interrupted_before_rename()
+            self.assertEqual(record['inventory'], before)
+            publish = recovery._publish
+
+            def interrupt_completion(path, value):
+                if path == self.complete:
+                    raise KeyboardInterrupt
+                return publish(path, value)
+
+            with patch.object(recovery, '_publish', side_effect=interrupt_completion):
+                with self.assertRaises(KeyboardInterrupt): self.preserve()
+            self.assertFalse(self.stage.exists())
+            self.assertTrue(recovery.recovery_pending(self.stage))
+            retained = Path(record['retained'])
+            self.assertEqual(recovery._inventory(retained), before)
+            self.assertEqual(self.preserve(), retained)
+            self.assertEqual(recovery._inventory(retained), before)
+            self.assertFalse(recovery.recovery_pending(self.stage))
+
+    def test_executable_content_replacement_during_hash_is_not_normalized_away(self):
+        path = self.stage / 'probe.exe'
+        path.write_bytes(b'same bytes; different file identity')
+        path.chmod(0o600)
+        original_digest = recovery.hashlib.file_digest
+
+        def replace_after_hash(stream, algorithm):
+            digest = original_digest(stream, algorithm)
+            if Path(stream.name) == path:
+                before = path.stat()
+                replacement = self.root / 'replacement.exe'
+                replacement.write_bytes(path.read_bytes())
+                replacement.chmod(stat.S_IMODE(before.st_mode))
+                os.utime(replacement, ns=(before.st_atime_ns, before.st_mtime_ns))
+                os.replace(replacement, path)
+            return digest
+
+        with self.windows_executable_stats(), patch.object(
+                recovery.hashlib, 'file_digest', side_effect=replace_after_hash):
+            with self.assertRaisesRegex(BuildError, 'changed while hashing'):
+                self.preserve()
+        self.assertTrue(self.stage.exists())
+        self.assertEqual(path.read_bytes(), b'same bytes; different file identity')
+        self.assertFalse(self.journal.exists())
+
+    def test_executable_path_permission_change_after_hash_is_rejected(self):
+        path = self.stage / 'probe.exe'
+        path.write_bytes(b'retained file')
+        path.chmod(0o600)
+        original_digest = recovery.hashlib.file_digest
+
+        def chmod_after_hash(stream, algorithm):
+            digest = original_digest(stream, algorithm)
+            if Path(stream.name) == path:
+                path.chmod(0o400)
+            return digest
+
+        with self.windows_executable_stats(), patch.object(
+                recovery.hashlib, 'file_digest', side_effect=chmod_after_hash):
+            with self.assertRaisesRegex(BuildError, 'changed while hashing'):
+                self.preserve()
+        self.assertTrue(self.stage.exists())
+        self.assertEqual(path.read_bytes(), b'retained file')
+        self.assertFalse(self.journal.exists())
 
     def test_exact_legacy_tree_is_retained_without_blessing_outputs(self):
         retained = self.preserve()
