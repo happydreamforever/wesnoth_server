@@ -1,3 +1,5 @@
+**Current worker step:** Compiler/resource checks and preservation passed; CMake/Ninja failed while replacing its build log. Follow [the current Ninja metadata diagnostic](WORLD_WORKER_NINJA_1192624.md) before any further build. Accepted Python/migration/bridge/Room work remains preserved.
+
 # Windows acceptance — Companies and Territorial Wars 1192624
 
 Current checkpoint (2026-10-28): A–E, Python P1–P3, bridge/Room builds, compiler checks and old-stage preservation pass. The worker reaches 575/589 and stops on Windows resource quoting. Follow [the resource correction and incremental retry](WORLD_WORKER_RESOURCE_1192624.md), server correction 224034d. Full worker, Android and G–Z remain pending; keep five services stopped and Python 3.14 installed. Do not repeat accepted stages.

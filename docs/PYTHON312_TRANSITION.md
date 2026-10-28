@@ -1,3 +1,5 @@
+**Current worker step:** Compiler/resource checks and preservation passed; CMake/Ninja failed while replacing its build log. Follow [the current Ninja metadata diagnostic](WORLD_WORKER_NINJA_1192624.md) before any further build. Accepted Python/migration/bridge/Room work remains preserved.
+
 # Windows Python 3.12 transition
 
 Python 3.12 P1–P3, full worker dependencies, schema-4 migration, bridge/Room builds, compiler preflight and old-stage preservation are accepted on Windows. The worker now stops at resource compilation (575/589). Follow [the resource-only correction](WORLD_WORKER_RESOURCE_1192624.md); no Python reinstall or repeated transition is required. Keep all five services stopped and Python 3.14 installed until G acceptance. Android rebuilding has not started.

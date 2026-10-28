@@ -1,3 +1,5 @@
+**Current checkpoint:** The resource preflight and preserving transition passed, but CMake/Ninja restat failed. Stop build retries and follow [Ninja metadata inspection](WORLD_WORKER_NINJA_1192624.md). The retry instructions below are historical until the report is reviewed.
+
 # Windows World worker resource correction
 
 The latest Windows attempt passed preservation and reached resource compilation at step 575/589. Its full build has not completed. Correction **224034d** fixes the resource command and permits incremental continuation of this exact recognized stage. Keep all five services stopped and Python 3.14 installed until the later G startup check.
