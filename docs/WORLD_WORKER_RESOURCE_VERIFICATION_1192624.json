@@ -1,0 +1,344 @@
+{
+  "format": 1,
+  "purpose": "world-worker-resource-fix-and-incremental-recovery",
+  "date": "2026-10-28",
+  "release": 1192624,
+  "implementation_commit": "224034d",
+  "windows_report": {
+    "source": "user pasted attachment",
+    "bytes": 90936,
+    "sha256": "e0f1cea9eee32af34411598dd8874085d74fdaa334345e2a94d50da6863b5a08",
+    "preservation": "accepted",
+    "compiler_check": "accepted",
+    "failure": "575/589 Windows resource WESNOTH_PATH quote splitting",
+    "saved_log": "diagnostics/world-worker-build-20261028-092827-582-abd97a35635a488cac9e9f85a1d9e494.txt",
+    "saved_windows_files_opened": false,
+    "full_worker": "not passed",
+    "android": "not run"
+  },
+  "passed_tests": 119,
+  "skips": 0,
+  "actual_windows_python_recovery_groups": 8,
+  "source_sha256": {
+    "tools/build_world_worker.py": "d51726b6008da84483e4a680ee7178903e6941134483e491088170e6ebaac12d",
+    "tools/world_worker_recovery.py": "0c940d30ec4e6efa1d95571491f1fa687134d7c8a0ce3b75cc2e3b1187514645",
+    "tools/world_worker_resource_recovery.py": "2e76df6c3c5b59e4f6291ec3989c3c1b739a11a3a95dd176b203e330c42c08e3",
+    "tests/test_world_worker_resource.py": "39272601404094c0ecc8b7a9a4ada761577d22047ebf4fff615b490182ba4c66",
+    "tests/test_world_worker_resource_recovery.py": "4168859f1ab46b23e5d2f2ca56c3889712ccd1606cf1dc1a46f19e2c3217f678",
+    "tests/test_world_worker_recovery.py": "ac08e463d5f37d84ee94e1347e70098f3f23b5f8a30fd361f845cb2274993bb6",
+    "tests/test_world_worker_toolchain.py": "36d69098e01c65ea12622b9fed5c39f3d36c44bb52674b540d4eb198a7125ffd",
+    "tests/test_world_worker_dependencies.py": "621c58155e3d9ff4f49b7a453a9c00ff5a4f21d0937247b5255edf6628a0aa62"
+  },
+  "preservation": [
+    "C/C++ source, sysroot, command lines and existing objects preserved during resource correction.",
+    "Separate immutable original owner/inventory journal; resumable owner-only transition.",
+    "Original sysroot journals, prefix/cache, runtime/migration, private backup, client/profile/OBB/saves/signer and README edits retained."
+  ],
+  "limits": [
+    "PE and Windows Python execution use network-disabled Wine.",
+    "CMake incremental proof uses Linux CMake with PE path adapters, not native Windows CMake.",
+    "Prospective 65-private-DLL static import audit; final engine executable closure checked on Windows.",
+    "No complete Windows engine, Android, service or gameplay acceptance."
+  ],
+  "evidence": [
+    {
+      "path": "build/audit-world-worker-resource-20261028/tests/verification-final.json",
+      "sha256": "b3e62d71c4c538563110e74e0982089c5fbedd8848c758577f54c3849f1831cd",
+      "details": {
+        "format": 1,
+        "purpose": "world-worker-resource-correction-tests",
+        "python": "CPython 3.12.10",
+        "network": "none",
+        "modules": [
+          "tests.test_world_worker_resource",
+          "tests.test_world_worker_resource_recovery",
+          "tests.test_world_worker_recovery",
+          "tests.test_world_worker_toolchain",
+          "tests.test_world_worker_dependencies"
+        ],
+        "exit": 0,
+        "passed": 119,
+        "skips": 0,
+        "source_sha256": {
+          "tools/build_world_worker.py": "d51726b6008da84483e4a680ee7178903e6941134483e491088170e6ebaac12d",
+          "tools/world_worker_recovery.py": "0c940d30ec4e6efa1d95571491f1fa687134d7c8a0ce3b75cc2e3b1187514645",
+          "tools/world_worker_resource_recovery.py": "2e76df6c3c5b59e4f6291ec3989c3c1b739a11a3a95dd176b203e330c42c08e3",
+          "tests/test_world_worker_resource.py": "39272601404094c0ecc8b7a9a4ada761577d22047ebf4fff615b490182ba4c66",
+          "tests/test_world_worker_resource_recovery.py": "4168859f1ab46b23e5d2f2ca56c3889712ccd1606cf1dc1a46f19e2c3217f678",
+          "tests/test_world_worker_recovery.py": "ac08e463d5f37d84ee94e1347e70098f3f23b5f8a30fd361f845cb2274993bb6",
+          "tests/test_world_worker_toolchain.py": "36d69098e01c65ea12622b9fed5c39f3d36c44bb52674b540d4eb198a7125ffd",
+          "tests/test_world_worker_dependencies.py": "621c58155e3d9ff4f49b7a453a9c00ff5a4f21d0937247b5255edf6628a0aa62"
+        },
+        "log": {
+          "path": "build/audit-world-worker-resource-20261028/tests/resource-final-02.log",
+          "sha256": "dd748b6661ce51cf1179996e4e47798b5c8257032f1271d7ecc1ae1b65995f41"
+        },
+        "scope": "Actual Linux CPython/filesystem/CMake/Ninja/C/C++ and real Windows RC platform module with explicitly controlled resource process; actual Windows Python/PE evidence separate. No full worker or Android build claimed."
+      }
+    },
+    {
+      "path": "build/audit-world-worker-resource-20261028/repro/verification.json",
+      "sha256": "06b9145fa1a03ffe7e0913a01ba4420cc828d193059c300e2888b24db53e0012",
+      "details": {
+        "format": 1,
+        "purpose": "world-worker-resource-actual-pe-verification",
+        "date": "2026-10-28",
+        "network": "none",
+        "cached_wine_image": "wesnoth-mingw-worker-wine-verify:20261028",
+        "official_windows_python": "3.12.10 x64, previously verified cached embeddable distribution",
+        "readonly_inputs": [
+          "official Windows Python",
+          "pinned package prefix",
+          "original engine sources",
+          "project repository"
+        ],
+        "checks": {
+          "reported_rc_error_reproduced": true,
+          "RC_without_C_CXX_definitions": true,
+          "RC_without_C_CXX_definitions_and_includes": true,
+          "prefix_with_spaces": true,
+          "actual_PE_link_and_resource_APIs": true,
+          "prospective_DLL_closure": {
+            "private": 65,
+            "existing_system": 23,
+            "additional_system": [
+              "USP10.dll",
+              "WLDAP32.dll"
+            ]
+          },
+          "actual_Windows_resource_recovery_groups": 8,
+          "full_engine_build": false,
+          "native_windows_host_acceptance": false,
+          "cache_only_RC_override_negative_reproduced": true,
+          "actual_CMake_global_RC_override_incremental_native_objects_preserved": true,
+          "actual_CMake_resource_link_runtime": "passed"
+        },
+        "limitations": [
+          "DLL closure roots follow the engine linked library set and may exceed final linker-pruned imports; dynamic plugin loads are outside the audit.",
+          "Resource recovery uses synthetic recognized ownership and source validation with real copied PE/COFF artifacts; only crash boundaries and fixture validator are controlled.",
+          "Initial spaced-prefix reproduction also exposed unrelated inherited include argument splitting; both definitions and includes are omitted only for RC.",
+          "Two initial CMake fixture attempts are retained: first a literal-definition quoting error in fixture source, second unadapted Wine drive paths in Linux Ninja dependency records. Neither is a product failure.",
+          "Actual CMake Windows platform initialization overrides a cache-only CMAKE_RC_COMPILE_OBJECT value; its negative trace is retained. The supported global user make-rules override is verified separately."
+        ],
+        "evidence_files": {
+          "reported-windres-command.txt": {
+            "bytes": 2599,
+            "sha256": "f0475128db53d9a05cc38e420297897d7789845dd95e7e5176431e81b8503b8a"
+          },
+          "attempt02/probe-windres.py": {
+            "bytes": 3826,
+            "sha256": "a5aa8ac800f78c5387dcabc1ad0db6480ee189feac1c3f1889d5bf1be624e808"
+          },
+          "attempt02/windres-result.json": {
+            "bytes": 1425,
+            "sha256": "a41db42cc944cfb3e29bea07df0d75140a4d6354626fa43e2482e1584a87fe06"
+          },
+          "attempt02/probe-windres.log": {
+            "bytes": 747,
+            "sha256": "42dfdabad5ce8b974379d7da2f10b630c3a1cc274f797abd1a7cd1500861a321"
+          },
+          "resource-link-runtime/probe-resource-runtime.py": {
+            "bytes": 3303,
+            "sha256": "1e5c92616504310df7289c2a912ff49b74d108d8fe7993cedd5a80a93bc99318"
+          },
+          "resource-link-runtime/verification.json": {
+            "bytes": 2041,
+            "sha256": "7cdd1c1941fbc4a3e94e12396b161a727057423caff2272faecd5d2adb363313"
+          },
+          "resource-link-runtime/console.log": {
+            "bytes": 536,
+            "sha256": "d9cecd7ad892041f473cb1e392e849c04616d31e9a4af2513a73211ee8d72283"
+          },
+          "probe-dll-closure.py": {
+            "bytes": 2684,
+            "sha256": "8070a108992895db4c956d344b29d89cdfcbd8178589c5ee0fa363f261c89622"
+          },
+          "dll-closure.json": {
+            "bytes": 25338,
+            "sha256": "21fd3661f2ae3025109c9354543f513a00c9d7441824e01b29ba0f6494c3c730"
+          },
+          "probe-dll-closure.log": {
+            "bytes": 478,
+            "sha256": "75766f03f5b9ed2c88a032ac29c7533eb553de7f60451fbf45629729aefc7885"
+          },
+          "windows-resource-recovery/verify.py": {
+            "bytes": 7138,
+            "sha256": "35c5624bc5ed1630553d3d6518ea475c71c65b432934aba45b40bcb63eb9fe07"
+          },
+          "windows-resource-recovery/verification.json": {
+            "bytes": 1220,
+            "sha256": "6be2ccd41278bc7a36d983197c189a43fae17284425790675b351b3236a8d27c"
+          },
+          "windows-resource-recovery/console.log": {
+            "bytes": 1522,
+            "sha256": "3c80d454780413695d493446bc732b0f11b76a3a6500b9e389e4a4e77354d012"
+          },
+          "windows-resource-recovery/verify-final.py": {
+            "bytes": 7847,
+            "sha256": "29df9e6c6fac7db70aacceb2d29e4efc0204d15c9df8474aa13ee0b43cb3f9d5"
+          },
+          "windows-resource-recovery/verification-final.json": {
+            "bytes": 1419,
+            "sha256": "af1f7889e8beda061ceb9ec7765fff52b236bd2f8a492011c3d7880785ab38dd"
+          },
+          "windows-resource-recovery/console-final.log": {
+            "bytes": 1721,
+            "sha256": "f6b8e42b3cd5d54cd005160a13cdd50b33fe179b0490a5fe170e8d1f131781ba"
+          },
+          "cmake-incremental02/exact-cache-override/fixed_resource_then_link.log": {
+            "bytes": 1609,
+            "sha256": "9e85bf189ab986a8f96c721bb4fad9cd2498f731cd7b290d2402897d8729a224"
+          },
+          "cmake-incremental02/project-include-final/verification.json": {
+            "bytes": 2812,
+            "sha256": "08717b4224aaadc84e08b405af6ae1ddd75f2f1df423c3cbc9d7e5d0e26982eb"
+          },
+          "cmake-incremental02/verify-global-override-final.py": {
+            "bytes": 2933,
+            "sha256": "5601641977023a8112bb146f2795a6dcb14e1d119e1963c77c81465254b7e4c8"
+          },
+          "cmake-incremental02/global-override-final/verification.json": {
+            "bytes": 2868,
+            "sha256": "bd17057e5ec85f7f038c2b1d41911bb9e4ed548ef0e7e02b23c4b936555e6e00"
+          },
+          "cmake-incremental02/global-override-final/build.log": {
+            "bytes": 813,
+            "sha256": "5a066d01bd08a0b1e42b5d47f07db5c6fb6d3e143f8382f2161536188561736f"
+          },
+          "cmake-incremental02/global-override-final/configure.log": {
+            "bytes": 103,
+            "sha256": "c974e329e1b4f5da7e11ed8b71e55e7836c6d5f31c1d28691ee6254983fd6053"
+          },
+          "cmake-incremental02/global-override-final/run.log": {
+            "bytes": 108,
+            "sha256": "c4340a6faa89763b5d721f5f6fe3fc057c32458ec8e55a26e091ac4f411117e6"
+          },
+          "cmake-incremental02/global-override-console-final.log": {
+            "bytes": 83,
+            "sha256": "fc5e3d1d88e7fab72b6ea41e964682ea93219deae951f9cc619769f16a815ac3"
+          }
+        },
+        "actual_CMake_scope": "Linux CMake3.31.6/Ninja + actual pinned PE compilers through recorded Wine path adapters; compiled C/C++ commands, hashes, byte counts and mtimes unchanged. No native Windows CMake execution claimed."
+      }
+    },
+    {
+      "path": "build/audit-world-worker-resource-20261028/repro/windows-resource-recovery/verification-final.json",
+      "sha256": "af1f7889e8beda061ceb9ec7765fff52b236bd2f8a492011c3d7880785ab38dd",
+      "details": {
+        "scope": "Official Windows CPython3.12.10 executes production resource-stage ownership recovery under network-disabled Wine. Real Windows stat, hashing, atomic owner replacement and process locking on synthetic recognized stage with real copied PE/COFF artifacts. Only crash boundaries and fixture source validator are controlled. Not native Windows host acceptance or full worker build.",
+        "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+        "source_sha256": "2e76df6c3c5b59e4f6291ec3989c3c1b739a11a3a95dd176b203e330c42c08e3",
+        "cases": [
+          {
+            "case": "only_owner_changes_and_completed_transition_reuses_after_compilation",
+            "status": "passed",
+            "retained_files": 5
+          },
+          {
+            "case": "before_replace_resume",
+            "status": "passed"
+          },
+          {
+            "case": "after_replace_resume",
+            "status": "passed"
+          },
+          {
+            "case": "changed_object_refused_and_preserved",
+            "status": "passed"
+          },
+          {
+            "case": "foreign_owner_refused",
+            "status": "passed"
+          },
+          {
+            "case": "actual_competing_process_lock_and_retry",
+            "status": "passed"
+          },
+          {
+            "case": "completed_historical_journal_after_stage_retention",
+            "status": "passed"
+          },
+          {
+            "case": "missing_pending_stage_refused",
+            "status": "passed"
+          }
+        ],
+        "status": "passed"
+      }
+    },
+    {
+      "path": "build/audit-world-worker-resource-20261028/repro/cmake-incremental02/global-override-final/verification.json",
+      "sha256": "bd17057e5ec85f7f038c2b1d41911bb9e4ed548ef0e7e02b23c4b936555e6e00",
+      "details": {
+        "scope": "Actual Linux CMake3.31.6/Ninja with pinned PE tools under Wine. Owned global user make-rules override sets RC-only rule after platform initialization; retained C/C++ objects/commands remain identical. Earlier failed cache-only override retained as negative evidence. Not full engine or native Windows CMake execution.",
+        "rule": "<CMAKE_RC_COMPILER> -O coff <FLAGS> <SOURCE> <OBJECT>",
+        "objects_before_and_after": {
+          "build/CMakeFiles/c_obj.dir/probe.c.obj": {
+            "sha256": "17f6e4366135c3f99de238d7cfeaf04c6b7fd09238c52ba6f11847d76050e794",
+            "bytes": 2104,
+            "mtime_ns": 1793209634873912559
+          },
+          "build/CMakeFiles/cpp_obj.dir/secondary.cpp.obj": {
+            "sha256": "0118cf9f19dc2743f7eed3a2e77e7889fc8e6da386531807aa86aa2016c107e7",
+            "bytes": 30383,
+            "mtime_ns": 1793209639950857332
+          }
+        },
+        "compile_commands_before_and_after": [
+          {
+            "directory": "/work/build",
+            "command": "/work/bin/gcc --sysroot=\"/verified prefix\" -DFIFODIR=\\\"/var/run/wesnothd\\\" -DLOCALEDIR=\\\"translations\\\" -DWESNOTH_PATH=\"\\\"C:/Program Files (x86)/wesnoth/share/wesnoth\\\"\" -I\"/verified prefix/include\" -I\"/verified prefix/include/pango-1.0\" -o CMakeFiles/c_obj.dir/probe.c.obj -c /work/source/probe.c",
+            "file": "/work/source/probe.c",
+            "output": "CMakeFiles/c_obj.dir/probe.c.obj"
+          },
+          {
+            "directory": "/work/build",
+            "command": "/work/bin/g++ --sysroot=\"/verified prefix\" -DFIFODIR=\\\"/var/run/wesnothd\\\" -DLOCALEDIR=\\\"translations\\\" -DWESNOTH_PATH=\"\\\"C:/Program Files (x86)/wesnoth/share/wesnoth\\\"\" -I\"/verified prefix/include\" -I\"/verified prefix/include/pango-1.0\" -o CMakeFiles/cpp_obj.dir/secondary.cpp.obj -c /work/source/secondary.cpp",
+            "file": "/work/source/secondary.cpp",
+            "output": "CMakeFiles/cpp_obj.dir/secondary.cpp.obj"
+          }
+        ],
+        "rules_sha256": "7017f76fb1fcdf7fe294b34ec2e4f5318144aac4f7f3d855cf2858af07711361",
+        "phases": [
+          {
+            "phase": "configure",
+            "exit": 0,
+            "argv": [
+              "cmake",
+              "-S",
+              "/work/source",
+              "-B",
+              "/work/build",
+              "-UCMAKE_PROJECT_ActualWorkerResourceIncremental_INCLUDE",
+              "-DCMAKE_USER_MAKE_RULES_OVERRIDE:FILEPATH=/work/worker-resource-rules.cmake"
+            ]
+          },
+          {
+            "phase": "build",
+            "exit": 0,
+            "argv": [
+              "cmake",
+              "--build",
+              "/work/build",
+              "--verbose",
+              "--parallel",
+              "1"
+            ]
+          },
+          {
+            "phase": "run",
+            "exit": 0,
+            "argv": [
+              "/usr/lib/wine/wine64",
+              "Z:/work/build/worker.exe"
+            ]
+          }
+        ],
+        "resource_object_previous_version_retained": true,
+        "status": "passed",
+        "path_adapter": "Existing compiler wrapper translates Unix arguments to Wine Z paths; build/Z: symlink resolves generated PE dependency paths for Linux Ninja."
+      }
+    }
+  ],
+  "next": "Server-only pull; offline worker-only -PreservePreviousBuild retry. Review full completion before Android."
+}

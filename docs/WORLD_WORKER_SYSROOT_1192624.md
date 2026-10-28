@@ -1,5 +1,7 @@
 # Windows World worker compiler corrections
 
+Current step: preservation now passed; resource compilation failed at 575/589. Use [the resource correction and incremental retry](WORLD_WORKER_RESOURCE_1192624.md). The earlier compiler/recovery instructions below are historical.
+
 Current retry (2026-10-28): **all six Windows compiler checks now pass**. The helper then stops during old-stage inventory with `Worker recovery file changed while opening`. Log: `diagnostics/world-worker-build-20261028-082809-546-84c11e64678842bfb6048b43bd7e5e6b.txt`; compiler report: `build/world-worker-toolchain-check-884af478a55748c89d9ce4d5678363c1/report.json`. Only the pasted console was supplied. Full worker preservation/compilation and Android remain pending.
 
 Correction `428402f` handles Windows Python's filename-derived executable permission bits when comparing a file's path and open handle. Only the exact `.exe`/`.bat`/`.cmd`/`.com` difference is permitted; identity, content, links, other metadata and strict post-read checks remain enforced. The exact original failure is reproduced with official Windows Python 3.12.10. Follow the server-only pull and worker-only retry below; preserve every existing recovery file.

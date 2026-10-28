@@ -1,6 +1,6 @@
 # Windows Python 3.12 transition
 
-The Python 3.12 transition P1–P3 is now accepted on Windows. The targeted archive diagnostic, full World D preparation and E schema-4 migration have also passed. The bridge and Room server have also built successfully. Windows worker compiler checks now pass; its old-stage preservation requires correction 428402f for Windows executable metadata. Continue at [the worker-only compiler correction](WORLD_WORKER_SYSROOT_1192624.md). Android has not built yet. Do not repeat the transition commands below. Keep all five services stopped. Keep the accepted cold backup, package cache, installed game, saves and runtime-v2. Do not repeat database initialization or the 107-package download.
+Python 3.12 P1–P3, full worker dependencies, schema-4 migration, bridge/Room builds, compiler preflight and old-stage preservation are accepted on Windows. The worker now stops at resource compilation (575/589). Follow [the resource-only correction](WORLD_WORKER_RESOURCE_1192624.md); no Python reinstall or repeated transition is required. Keep all five services stopped and Python 3.14 installed until G acceptance. Android rebuilding has not started.
 
 ## Accepted Windows evidence
 
