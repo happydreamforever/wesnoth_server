@@ -1,3 +1,5 @@
+**Current step (2026-10-28):** The returned JSON has been reviewed. Follow [the preserving Ninja recovery and worker retry](WORLD_WORKER_NINJA_RECOVERY_1192624.md). Do not repeat this historical inspection.
+
 # Windows World worker: Ninja metadata inspection
 
 The latest worker retry passes compiler checks, actual game-resource compilation and the resource-stage preservation transition. CMake then stops while running Ninja `-t restat` with `failed recompaction: Permission denied`. The full worker has not passed and Android rebuilding has not started.

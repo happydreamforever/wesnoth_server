@@ -1,3 +1,5 @@
+**Current Windows checkpoint:** Ninja metadata recovery is next; use [WORLD_WORKER_NINJA_RECOVERY_1192624.md](WORLD_WORKER_NINJA_RECOVERY_1192624.md) before any worker retry, Android build or service startup. Accepted dependency/migration/bridge/Room/Python results remain intact.
+
 **Current worker step:** Compiler/resource checks and preservation passed; CMake/Ninja failed while replacing its build log. Follow [the current Ninja metadata diagnostic](WORLD_WORKER_NINJA_1192624.md) before any further build. Accepted Python/migration/bridge/Room work remains preserved.
 
 # Windows acceptance — Companies and Territorial Wars 1192624

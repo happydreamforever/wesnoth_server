@@ -1,0 +1,346 @@
+{
+  "status": "passed_with_scoped_evidence",
+  "date": "2026-10-28",
+  "implementation_commit": "5acf828",
+  "purpose": "Reviewed Ninja history recovery and guarded incremental World worker continuation",
+  "returned_windows_report": {
+    "report": {
+      "filename": "world-worker-ninja-20261028-134310-139-aba19effeed9452caf5de5c8aab5626d.json",
+      "bytes": 93837,
+      "sha256": "ec2ad389eaf2c256b80665d3c0433d6f4a02fb7f8bdb77f7489348b97db930ee",
+      "collected_at_utc": "2026-10-28T19:43:11.395613+00:00",
+      "complete": true
+    },
+    "missing_original": true,
+    "retained_restat": {
+      "bytes": 64517,
+      "sha256": "5dcaf12944cd883d3b801a2140e42e09357ce3f5310f9d8e453e8adae5710ace",
+      "matches_original_journal": true,
+      "records": 575,
+      "unique_outputs": 575,
+      "extensions": {
+        ".obj": 571,
+        ".a": 4
+      }
+    },
+    "dependency_history_unchanged": true,
+    "owner_matches_resource_journal": true,
+    "source_bindings_match": true,
+    "directory_access": {
+      "add_file": {
+        "access": 2,
+        "close_error": 0,
+        "opened": true,
+        "winerror": 0
+      },
+      "delete_child": {
+        "access": 64,
+        "close_error": 0,
+        "opened": false,
+        "winerror": 5
+      },
+      "metadata": {
+        "access": 0,
+        "close_error": 0,
+        "opened": true,
+        "winerror": 0
+      }
+    },
+    "limits": [
+      "Report proves retained log matches original; Windows compiled outputs must still be revalidated locally.",
+      "Current access probes do not establish the historical rename failure cause.",
+      "No full worker or Android acceptance."
+    ]
+  },
+  "regression_verification": {
+    "status": "passed",
+    "python": "3.12.10",
+    "network": "none",
+    "tests": 164,
+    "skips": 0,
+    "image": "wesnoth-alliance-native-verify:python3.14.3-gcc16.2 (invoked exact separately cached Python3.12.10)",
+    "log": {
+      "path": "build/audit-world-worker-ninja-recovery-20261028/tests/combined-final-03.log",
+      "sha256": "a59870ef5eebfec0223f44f065ff8583be890640506ca78a5e484c33691b26b4"
+    },
+    "source_sha256": {
+      "tools/build_world_worker.py": "ca3bd66aa658734a26196cfa4007433a91ca074c4c4101619247a21712875172",
+      "tools/world_worker_ninja_recovery.py": "df6888cc7ac006b6b8d5ef06e2c42be88089f86c2d960c1b5ecfa178f86f6d2c",
+      "tools/Build-WindowsWorldWorker.ps1": "7cc972c93cb0771c81ec8c2d1a0ab6cdabab9b9896d8734b0570437a76c520f6",
+      "tests/test_world_worker_ninja_recovery.py": "1dc8d5249175462d16dbeb8bb978a70776950465e66d7a9df40f431750839792",
+      "tests/test_world_worker_ninja_integration.py": "d13b181942378caf45062e23f2726c97273df7bbd532f35446d852f88c87662b",
+      "tests/test_windows_world_worker_resume.py": "a3520038f52ecdc623d5e7b755d5e517836031dadeba8e079237f1a043affc75",
+      "tests/test_world_worker_dependencies.py": "9e6bf5f942a11e0a6f1fc761febe8db6b5c4c70a156578214430459bb85702d2"
+    },
+    "limits": [
+      "Linux Python3.12.10; controlled Windows native-build boundaries in unit tests.",
+      "Actual Linux PowerShell7.4.6 uses a controlled child to verify argument forwarding and errors.",
+      "Real Linux CMake/GCC propagation tests included; actual Windows tool evidence recorded separately."
+    ],
+    "earlier_attempts": [
+      "combined-01.log retained: one historical test lacked isolated STAGE patch after adding build lock; original repo read-only protected it; three CMake tests lacked image tools.",
+      "combined-final-02.log retained: all invoked tests passed but two real CMake tests skipped for missing cc/c++; corrected final image uses already cached tools."
+    ]
+  },
+  "native_tools_verification": {
+    "status": "passed",
+    "purpose": "Windows Ninja metadata recovery and guarded configuration verification",
+    "date": "2026-10-28",
+    "production_module": {
+      "path": "tools/world_worker_ninja_recovery.py",
+      "bytes": 24564,
+      "sha256": "df6888cc7ac006b6b8d5ef06e2c42be88089f86c2d960c1b5ecfa178f86f6d2c"
+    },
+    "production_dependencies": [
+      {
+        "path": "tools/world_worker_recovery.py",
+        "bytes": 14967,
+        "sha256": "0c940d30ec4e6efa1d95571491f1fa687134d7c8a0ce3b75cc2e3b1187514645"
+      },
+      {
+        "path": "tools/world_worker_resource_recovery.py",
+        "bytes": 11844,
+        "sha256": "2e76df6c3c5b59e4f6291ec3989c3c1b739a11a3a95dd176b203e330c42c08e3"
+      },
+      {
+        "path": "tools/inspect_world_worker_ninja.py",
+        "bytes": 15633,
+        "sha256": "7c1a1bf46d26b7a0c39f36fb0905e84d34f6a4cbf355e5e56ef6d72f280819d6"
+      }
+    ],
+    "execution": {
+      "network": "Docker --network none for every executable verification",
+      "windows": "Official Windows CPython 3.12.10 x64 and actual pinned MSYS2 UCRT64 Ninja 1.13.2 under Wine64, uid 1001:1001; repository and Python mounted read-only; only disposable audit fixtures writable.",
+      "windows_image": "wesnoth-mingw-worker-wine-verify:20261028",
+      "windows_image_id": "sha256:fde871904f9c06b6c40d4946f537b8a10f332f4dc570df8e867bb65cb5dd9b80",
+      "linux": "Exact CPython 3.12.10, CMake 4.3.0, GCC/G++ 16.2.0, Kitware Ninja 1.13.2.git.kitware.jobserver-pipe-1 in cached wesnoth-alliance-native-verify:python3.14.3-gcc16.2 image.",
+      "downloads_installs_upgrades": false,
+      "user_build_runtime_or_private_credentials_accessed": false
+    },
+    "results": {
+      "actual_pe_ninja_restat": [
+        "normal",
+        "blocked-temp-rename",
+        "absent-log-restat"
+      ],
+      "linux_cmake": "Suppressed regeneration removes RERUN_CMAKE while preserving existing C/C++ command lines, object bytes and mtimes; subsequent build and touched CMake input do not recompile; linked executable runs.",
+      "windows_configure_guard": [
+        "normal",
+        "fresh",
+        "retained-temp-share-blocker",
+        "configure-error",
+        "process-exit-resume",
+        "partial-restore-resume",
+        "competing-lock",
+        "unexpected-history",
+        "tampered-backup"
+      ],
+      "windows_reviewed_recovery": [
+        "normal-initial-repair-and-completed-reuse"
+      ]
+    },
+    "boundaries": [
+      "The exact real user .ninja_log bytes and pinned PE Ninja reproduce the observed failure shape under a deliberately held sharing handle. This does not identify the historical Windows cause.",
+      "Actual user metadata reports directory delete_child denied with error 5; file-level open probes granted. Open permission is not proof of rename/delete success.",
+      "Reviewed-repair successes use actual Windows filesystem metadata from controlled synthetic owned stages and 575 synthetic compiled-output files. Only REVIEWED_REPORT_SHA256 is overridden to bind those fixtures; the exact real user log and its production pin are unchanged. The validate_stage callback checks a controlled source marker, not a real full-engine stage.",
+      "Interruption tests inject failures at selected publication/copy boundaries; real files, attributes, Win32 locks and separate Windows processes are used. No platform/stat/file API or subprocess mocks.",
+      "The configure driver invokes actual PE Ninja restat at the vulnerable boundary; actual CMake graph and incremental-retention evidence is separate Linux execution. No cached native Windows CMake 4.3 executable was available, and none was downloaded.",
+      "Wine is not native Windows acceptance. No full 589-step engine build, actual user-stage repair, worker readiness, Android build or gameplay is claimed."
+    ],
+    "historical_attempts": [
+      {
+        "path": "repro/guard",
+        "status": "superseded",
+        "reason": "Functional cases passed, then source immutability assertion detected concurrent production edits; final frozen-source run is guard-final."
+      },
+      {
+        "path": "repro/repair-final/verify.py",
+        "status": "extra-stress-loop-stopped",
+        "reason": "Completed normal initial repair, all575 preservation checks and reuse. Parent then stopped the next extra failure-case group; its partial fixture is retained and not counted. The focused final completed-stage verifier independently confirms the entire completed normal fixture."
+      },
+      {
+        "path": "repro/repair",
+        "status": "interrupted",
+        "reason": "Stopped only this disposable container after production source freeze to avoid duplicate slow Windows inventories. Excluded from passing evidence."
+      }
+    ],
+    "artifacts": [
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/native-restat-verification.json",
+        "bytes": 1646,
+        "sha256": "c422f0e9f12760e5b1745c4599eafbcf47d7528522fc179587016543aaa0fc27"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/cmake/verification.json",
+        "bytes": 2085,
+        "sha256": "199e740820c219fb6d37beb5d8582077e9413344cd386ece41665561c84fc235"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/guard-final/verification.json",
+        "bytes": 1925,
+        "sha256": "3d99a3de0dc39c156cebe1f09ac6e1fdc54f11395a0ec2f5ae8cf7f0f9f733f5"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/repair-final/verification.json",
+        "bytes": 2620,
+        "sha256": "c90b343e681414a19f4ef8cc6e9375c5f148c4436510a849a2589be5a326c498"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/native-restat-verification.log",
+        "bytes": 4099,
+        "sha256": "96c7b9fbbacfa4935c64e985a3c6ed90677c08efc15b49ef145cf333beeeaa20"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/reproduce.py",
+        "bytes": 3267,
+        "sha256": "e7866ecfda3b810b772cc168ed27bb0e30d30f324ce23744078c67b98191baec"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/tool-provenance.json",
+        "bytes": 1416,
+        "sha256": "86c1062c0a7eac24717a5987a01b1762299bab478d7fc5b678ea8f04826e874c"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/ninja-imports.json",
+        "bytes": 728,
+        "sha256": "f5dfcd42e8348ec8d36fae06d13d6a3ddbf1b7f5ec35ef16badff3c79c22f93c"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/cmake/run.log",
+        "bytes": 52,
+        "sha256": "0d347be31f7c0245d0abc5a721a886bb80b322ff5269137e32f7f36a26d822b1"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/cmake/verify.py",
+        "bytes": 2840,
+        "sha256": "8b27f1da18d35f14be13920729e93825cce2486819a97deab43a0a350061a935"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/guard-final/configure-driver.py",
+        "bytes": 517,
+        "sha256": "9a3b734f4c5515098337b0c4e3100375623b35743d2fc59250c40f32303b0b7e"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/guard-final/verify.py",
+        "bytes": 7838,
+        "sha256": "57697c6951c5cd2fc46e0fd7973e1551be80a16718fb6822eda2485b88e06afd"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/repair-final/verify.py",
+        "bytes": 7725,
+        "sha256": "b51bedf7e1caf012225f73526ee1f59dadb36b268846a892db7a100fa7b72b7b"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/repair-final/verify-completed.py",
+        "bytes": 5307,
+        "sha256": "33661a05c9c859eaae41e02cd1fb990dc965575c61ca6a79a4820bee82fa8b43"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/repair-final/completed-verification.log",
+        "bytes": 4105,
+        "sha256": "b39345ed252e035cd905d0501210b3441c6ee83a756058330686a752b4d94a52"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/repair-final/stopped-extra.json",
+        "bytes": 430,
+        "sha256": "7b2f7c0ef3bdcfcb1c8afbd93c65b60f4df4c23fe1899de363d2ba9d6d86f386"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/final-verification.log",
+        "bytes": 6722,
+        "sha256": "16add8931e59dfa95ac38e3f7cf4b230993be5cb1ad63741895819cf8b8b79df"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/user-ninja-log.bin",
+        "bytes": 64517,
+        "sha256": "5dcaf12944cd883d3b801a2140e42e09357ce3f5310f9d8e453e8adae5710ace"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/reviewed-user-report.json",
+        "bytes": 93837,
+        "sha256": "ec2ad389eaf2c256b80665d3c0433d6f4a02fb7f8bdb77f7489348b97db930ee"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/repro/repair/interrupted.json",
+        "bytes": 301,
+        "sha256": "6609420f0f3cdd1a0967810c5a788ee026234d5b949f9bbe5f4cbb3ef07fdbe8"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/index.py",
+        "bytes": 5446,
+        "sha256": "acf9dc4f5be88e24fe199bec5fb017241808fd9393bcbe5fa4ee515be741b68d"
+      }
+    ]
+  },
+  "native_index": {
+    "path": "build/audit-world-worker-ninja-recovery-20261028/verification.json",
+    "bytes": 9096,
+    "sha256": "d5dca5dd7c62a9944eae3e03a9f20adcded85357fe393a99c549da354e5f8b74"
+  },
+  "returned_analysis": {
+    "path": "build/audit-world-worker-ninja-recovery-20261028/returned-report-analysis.json",
+    "bytes": 1340,
+    "sha256": "b468f89da6d04f315aede28ba70302ff338b133724715bae9d3eb574145a739d"
+  },
+  "handoff": {
+    "parser": "Linux PowerShell 7.4.6; two exact guide blocks and wrapper parsed by independent reviewer",
+    "output": "POWERSHELL_NINJA_RECOVERY_HANDOFF_PARSED blocks=2 wrapper=1",
+    "guide": {
+      "path": "docs/WORLD_WORKER_NINJA_RECOVERY_1192624.md",
+      "bytes": 5213,
+      "sha256": "16b6bc1136f2590daf60a0feb2172a97d94e455d82ddc7fd85726f66f30ca719"
+    },
+    "files": [
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/review/handoff-1.ps1",
+        "bytes": 366,
+        "sha256": "c392fe086dda248880049e623a14a52922bf22a8faf0f92301a4b8ed7ced5b23"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/review/handoff-2.ps1",
+        "bytes": 581,
+        "sha256": "54fb2178b67a8042f3d02a135d106c5c5b8b76aadc3f253048010b2a3bc60711"
+      },
+      {
+        "path": "build/audit-world-worker-ninja-recovery-20261028/review/parse.ps1",
+        "bytes": 668,
+        "sha256": "5bbefea8460ef8173ebee37960c479cf7e8b3c83e981f66b522b33fc28eec048"
+      }
+    ]
+  },
+  "preservation": {
+    "status": "verified_unchanged",
+    "inputs": {
+      "wesnoth_server/README.md": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "wesnoth_client/README.md": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "wesnoth_server/tools/world_worker_recovery.py": {
+        "bytes": 14967,
+        "sha256": "0c940d30ec4e6efa1d95571491f1fa687134d7c8a0ce3b75cc2e3b1187514645"
+      },
+      "wesnoth_server/tools/world_worker_resource_recovery.py": {
+        "bytes": 11844,
+        "sha256": "2e76df6c3c5b59e4f6291ec3989c3c1b739a11a3a95dd176b203e330c42c08e3"
+      },
+      "wesnoth_server/tools/inspect_world_worker_ninja.py": {
+        "bytes": 15633,
+        "sha256": "7c1a1bf46d26b7a0c39f36fb0905e84d34f6a4cbf355e5e56ef6d72f280819d6"
+      }
+    },
+    "scope": "Both existing README edits and historical sysroot/resource recovery and diagnostic sources unchanged. User Windows stage, runtime, private credentials, dependency prefix and game data were not accessed or changed on VPS."
+  },
+  "independent_review": "No blocker found in source integration, guarded recovery, journal lifecycle, suppression checks or handoff; no production edits by reviewer.",
+  "next_step": "Server-only pull, then the guide worker retry with PreservePreviousBuild and the original NinjaReportPath. Keep five services stopped. Full Windows worker build remains pending; review before Android/services.",
+  "not_claimed": [
+    "Historical Windows rename-error cause",
+    "Actual user compiled-output preservation before local retry",
+    "Full native Windows engine build or worker readiness",
+    "Android build or gameplay acceptance",
+    "Extra initial-repair stress groups that were stopped or not started"
+  ]
+}
