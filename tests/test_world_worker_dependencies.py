@@ -134,7 +134,8 @@ class DependencyPrefix(unittest.TestCase):
 
     def test_worker_build_requires_pinned_archive_prefix_before_native_tools(self):
         from tools import world_worker_archive_prefix as archive
-        with patch.object(build,'check_host'), patch.object(archive,'verify_locked_prefix',
+        with patch.object(build,'STAGE',self.root/'isolated-worker'), \
+                patch.object(build,'check_host'), patch.object(archive,'verify_locked_prefix',
                 side_effect=deps.BuildError('unapproved dependency prefix')) as verify, \
                 patch.object(build,'data_inventory') as data:
             with self.assertRaisesRegex(deps.BuildError,'unapproved dependency prefix'):

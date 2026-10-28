@@ -107,6 +107,7 @@ def binding():
              ROOT/'tools/world_worker_packages.py', ROOT/'tools/world_worker_archive_prefix.py',
              ROOT/'tools/world_worker_recovery.py',
              ROOT/'tools/world_worker_resource_recovery.py',
+             ROOT/'tools/world_worker_ninja_recovery.py',
              ROOT/'tools/world-worker-packages-1192624.json', DEPENDENCY_PREFIX/'receipt.json']
     paths += [CLIENT/'tools'/name for name in ('prepare_android_source.py','verify_game_data.py','gamedata-1.19.26.reference.json')]
     paths += [path for directory in ('engine', 'alliance_game', 'alliance_native')
@@ -485,6 +486,8 @@ def installed_worker(required=True, expected_binding=None):
             raise BuildError('Worker compiler sysroot differs from the verified isolated prefix.')
     if 'wesnoth_server/tools/world_worker_resource_recovery.py' in expected_binding.get('inputs', {}):
         verify_resource_rule(STAGE)
+    if 'wesnoth_server/tools/world_worker_ninja_recovery.py' in expected_binding.get('inputs', {}):
+        verify_ninja_configuration(STAGE)
     executable = safe_path(STAGE / 'bin/world-worker.exe')
     if row['executable'] != {'sha256':digest(executable),'bytes':executable.stat().st_size}:
         raise BuildError('World worker executable differs from its receipt.')
@@ -543,6 +546,19 @@ def verify_resource_rule(stage):
         raise BuildError('Worker resource compile rule differs; preserve the stage for review.')
 
 
+def verify_ninja_configuration(stage):
+    """No implicit CMake invocation may bypass the metadata guard."""
+    cache = safe_path(Path(stage) / 'engine/CMakeCache.txt')
+    graph = safe_path(Path(stage) / 'engine/build.ninja')
+    if cache.stat().st_nlink != 1 or graph.stat().st_nlink != 1:
+        raise BuildError('Worker Ninja configuration cannot be linked.')
+    rows = [line for line in cache.read_text(encoding='utf-8').splitlines()
+            if line.startswith('CMAKE_SUPPRESS_REGENERATION:')]
+    if rows != ['CMAKE_SUPPRESS_REGENERATION:BOOL=ON'] or re.search(
+            r'^build [^\n]*: RERUN_CMAKE(?:\s|$)', graph.read_text(encoding='utf-8'), re.M):
+        raise BuildError('Worker automatic regeneration is not disabled; preserve the guarded build.')
+
+
 def game_resource_preflight(prefix, environment):
     """Exercise the actual pinned icon/version/manifest before resuming CMake."""
     directory = ROOT / 'build' / ('world-worker-resource-check-' + uuid4().hex)
@@ -579,9 +595,22 @@ def game_resource_preflight(prefix, environment):
         print('Game resource report: ' + str(directory / 'report.json'), flush=True)
 
 
-def build(msys, cmake, game_data, preserve):
+def build(msys, cmake, game_data, preserve, ninja_report=None):
     with build_step('host'):
         check_host()
+    if ninja_report is not None and not preserve:
+        raise BuildError('Ninja recovery requires -PreservePreviousBuild and its reviewed report.')
+    from tools import world_worker_ninja_recovery as ninja_state
+    STAGE.parent.mkdir(exist_ok=True)
+    with ninja_state.build_lock(STAGE):
+        # A killed configure can leave the logs safely in its durable backup.
+        # Restore them before source transitions or any subsequent CMake/Ninja.
+        ninja_state.resume_configure(STAGE)
+        return build_locked(msys, cmake, game_data, preserve, ninja_report)
+
+
+def build_locked(msys, cmake, game_data, preserve, ninja_report=None):
+    from tools import world_worker_ninja_recovery as ninja_state
     from tools.world_worker_archive_prefix import verify_locked_prefix
     with build_step('isolated-dependencies'):
         verify_locked_prefix()
@@ -614,6 +643,16 @@ def build(msys, cmake, game_data, preserve):
     STAGE.parent.mkdir(exist_ok=True)
     with build_step('game-resource-check'):
         game_resource_preflight(prefix, environment)
+    if ninja_report is not None or ninja_state.pending(STAGE):
+        if not preserve:
+            raise BuildError('Pending Ninja recovery requires -PreservePreviousBuild; retain all files.')
+        ninja_state.recover_reviewed(STAGE, expected, ninja_report,
+            lambda: prepare_worker_overlay(validate_existing=True))
+        print('WORLD WORKER NINJA HISTORY RECOVERED; existing compilation retained', flush=True)
+    elif (STAGE.exists() and not (STAGE/'receipt.json').exists()
+            and metadata(STAGE/'owner.json').get('inputs', {}).get(
+                'wesnoth_server/tools/build_world_worker.py') == ninja_state.REVIEWED_BUILDER):
+        raise BuildError('This interrupted worker requires -NinjaReportPath with the reviewed JSON; preserve all files.')
     from tools.world_worker_resource_recovery import resource_recovery_pending, resume_resource_stage
     if resource_recovery_pending(STAGE) or (STAGE.exists()
             and not (STAGE/'receipt.json').exists()
@@ -649,15 +688,16 @@ def build(msys, cmake, game_data, preserve):
     replacements, cmake_text = prepare_worker_overlay()
     source = STAGE/'source'
     prepare_source(CLIENT,source,generated,replacements,cmake_text)
-    native([cmake,'-S',source,'-B',STAGE/'engine','-G','Ninja',f'-DCMAKE_USER_MAKE_RULES_OVERRIDE:FILEPATH={resource_rules.as_posix()}',f'-DCMAKE_TOOLCHAIN_FILE={toolchain.as_posix()}',f'-DCMAKE_CXX_COMPILER={(prefix/"bin/g++.exe").as_posix()}',
+    ninja_state.configure(STAGE, [cmake,'-S',source,'-B',STAGE/'engine','-G','Ninja',f'-DCMAKE_USER_MAKE_RULES_OVERRIDE:FILEPATH={resource_rules.as_posix()}',f'-DCMAKE_TOOLCHAIN_FILE={toolchain.as_posix()}',f'-DCMAKE_CXX_COMPILER={(prefix/"bin/g++.exe").as_posix()}',
         f'-DCMAKE_C_COMPILER={(prefix/"bin/gcc.exe").as_posix()}',f'-DCMAKE_RC_COMPILER={(prefix/"bin/windres.exe").as_posix()}',
         f'-DPython_EXECUTABLE={safe_path(sys.executable).as_posix()}',
         f'-DCMAKE_MAKE_PROGRAM={ninja.as_posix()}',f'-DCMAKE_PREFIX_PATH={prefix.as_posix()}',f'-DBoost_ROOT={prefix.as_posix()}',
         f'-DCMAKE_FIND_ROOT_PATH={prefix.as_posix()}','-DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY','-DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY','-DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=ONLY',
         '-DCMAKE_FIND_USE_PACKAGE_REGISTRY=OFF','-DCMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY=OFF',
         '-DCMAKE_BUILD_TYPE=Release','-DENABLE_SERVER=OFF','-DENABLE_CAMPAIGN_SERVER=OFF','-DENABLE_TESTS=OFF',
-        '-DENABLE_NLS=OFF','-DENABLE_STRICT_COMPILATION=OFF','-DENABLE_DISPLAY_REVISION=OFF'],environment)
+        '-DENABLE_NLS=OFF','-DENABLE_STRICT_COMPILATION=OFF','-DENABLE_DISPLAY_REVISION=OFF'],environment,native)
     verify_resource_rule(STAGE)
+    verify_ninja_configuration(STAGE)
     native([cmake,'--build',STAGE/'engine','--target','wesnoth','--parallel','2'],environment)
     prepare_source(CLIENT,source,generated,replacements,cmake_text)
     candidates=list((STAGE/'engine').rglob('world-worker.exe'))
@@ -685,8 +725,12 @@ def main():
     parser.add_argument('--cmake',type=Path,default=Path(r'C:\Program Files\CMake\bin\cmake.exe'))
     parser.add_argument('--game-data',type=Path,default=ROOT.parent/'gamedata-1.19.26')
     parser.add_argument('--prepare-dependencies',action='store_true');parser.add_argument('--audit',type=Path);parser.add_argument('--verify',action='store_true');parser.add_argument('--preserve-previous',action='store_true')
+    parser.add_argument('--ninja-report', type=Path,
+        help='Reviewed Ninja diagnostic for preserving recovery of the interrupted worker.')
     args=parser.parse_args()
     try:
+        if args.ninja_report is not None and (args.prepare_dependencies or args.audit or args.verify):
+            raise BuildError('Ninja recovery cannot be combined with another operation.')
         if args.prepare_dependencies:
             check_host()
             from tools.world_worker_packages import execute, CACHE, MANIFEST
@@ -696,7 +740,7 @@ def main():
             return 0
         if args.audit:return 0 if dependency_audit(args.msys,args.audit)['complete'] else 1
         if args.verify:installed_worker();print('WORLD NATIVE WORKER ARTIFACT VERIFIED');return 0
-        build(args.msys,args.cmake,args.game_data,args.preserve_previous);return 0
+        build(args.msys,args.cmake,args.game_data,args.preserve_previous,args.ninja_report);return 0
     except BuildError as error:
         print('ERROR: '+str(error),flush=True);return 1
     except (OSError,ValueError,KeyError):
