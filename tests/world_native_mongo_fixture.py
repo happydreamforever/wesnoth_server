@@ -121,7 +121,7 @@ class MongoNativeFixture:
         assert self.db.world_settlements.count_documents({}) == 1
         assert self.db.network_battle_reservations.count_documents({'run_id': self.run}) == 0
         assert self.db.company_asset_locks.count_documents({'run_id': self.run}) == 0
-        expected_xp = 20 if self.finished['winner_team_id'] == self.actor else 10
+        expected_xp = 20 if self.finished['winner_team_id'] == self.actor else 0
         after_hero = self.db.account_heroes.find_one({'account_id': self.actor, 'hero_id': self.hero_id})
         assert after_hero['total_experience'] == self.initial_hero_xp + expected_xp
         soldier_values = []

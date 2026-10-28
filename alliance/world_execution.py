@@ -236,7 +236,7 @@ class WorldRoom:
                     side = int(command.attrs.get("from_side", str(simulated)))
                     if side not in peer.sides: raise WireError("World command exceeds assigned authority.")
                     names = [action.name for action in command.children]
-                    if any(name in ("change_controller", "change_controller_wml", "add_side", "random_seed", "custom_command") or name.startswith("debug_") for name in names):
+                    if any(name in ("change_controller", "change_controller_wml", "add_side", "random_seed", "custom_command", "fire_event") or name.startswith("debug_") for name in names):
                         raise WireError("World command may not rewrite controller or terminal state.")
                     dependent = command.attrs.get("dependent") == "yes" and command.attrs.get("from_side") == str(side) and len(names) == 1 and names[0] not in ("end_turn", "init_side")
                     if side != simulated and not dependent: raise WireError("World turn ownership differs.")

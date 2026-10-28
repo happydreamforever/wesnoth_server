@@ -121,6 +121,8 @@ class WorkerAuthorityTests(unittest.TestCase):
                 await room.command(peer,Node(children=[Node('world_native_terminal',{'scenario_sha256':'a'*64})]))
             with self.assertRaises(WireError):
                 await room.command(peer,Node(children=[Node('turn',children=[Node('command',{'from_side':'2'},[Node('end_turn')])])]))
+            with self.assertRaises(WireError):
+                await room.command(peer,Node(children=[Node('turn',children=[Node('command',{'from_side':'1'},[Node('fire_event',{'raise':'time over'})])])]))
             self.assertEqual(room.count,0)
         asyncio.run(run())
 

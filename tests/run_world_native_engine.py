@@ -30,9 +30,10 @@ async def main():
     parser.add_argument('--reconnect', action='store_true')
     parser.add_argument('--worker-restart', action='store_true')
     parser.add_argument('--unit-audit', action='store_true', help='Separate test binary: native tables and synthetic XP, no settlement.')
+    parser.add_argument('--command-audit', action='store_true', help='Separate test binary: actual native source ownership guards, no settlement.')
     parser.add_argument('--mongo', action='store_true', help='Disposable real production-domain Company settlement.')
     args=parser.parse_args()
-    if args.mongo and (args.case!='company' or args.unit_audit or args.worker_restart):
+    if args.mongo and (args.case!='company' or args.unit_audit or args.command_audit or args.worker_restart):
         parser.error('--mongo currently verifies the Company production path without synthetic unit setup or worker restart.')
     output=Path('/out')/('native-run-'+uuid4().hex);output.mkdir()
     identity=output/'identity'
@@ -96,7 +97,7 @@ async def main():
         domain,auth,descriptor=mongo,mongo.auth,mongo.descriptor
         actor,token,run,generation,worker_id=mongo.actor,mongo.token,mongo.run,mongo.generation,mongo.worker_id
     daemon=SimpleNamespace(storage=output/'battles',domain=domain,auth=auth)
-    executable=Path('/out/world-unit-audit' if args.unit_audit else '/out/world-worker')
+    executable=Path('/out/world-command-audit' if args.command_audit else '/out/world-unit-audit' if args.unit_audit else '/out/world-worker')
     supervisor=WorldWorkerSupervisor(daemon,identity,executable,Path('/gamedata'))
     errors=[]
     async def handle(reader,writer):
@@ -167,13 +168,14 @@ async def main():
             await companion(actor,token)
             if args.case=='witness':await companion(opponent,second_token)
         await asyncio.wait_for(asyncio.gather(worker,*(p.wait() for p in children)),300)
-        if args.unit_audit:
+        if args.unit_audit or args.command_audit:
             entries=list(output.rglob('engine.log'))
             assert domain.finished is None,'Synthetic native audit must never settle.'
-            assert len(entries)==2 and all('WORLD NATIVE UNIT AUDIT PASSED' in p.read_text() for p in entries)
-            (output/'result.json').write_text(json.dumps({'scope':'native initialized unit tables and explicit synthetic XP; no combat reward claim',
-                'unit_audit':True,'completed':True,'settlement':False,'engine_logs':[str(p) for p in entries]},indent=2))
-            print('ACTUAL NATIVE UNIT TABLE / ADVANCEMENT AUDIT PASSED',output,flush=True)
+            marker='WORLD NATIVE COMMAND GUARD PASSED' if args.command_audit else 'WORLD NATIVE UNIT AUDIT PASSED'
+            assert len(entries)==2 and all(marker in p.read_text() for p in entries)
+            (output/'result.json').write_text(json.dumps({'scope':'actual native command dispatch on an initialized board; rejected opposing unit commands; no settlement' if args.command_audit else 'native initialized unit tables and explicit synthetic XP; no combat reward claim',
+                'command_audit':args.command_audit,'unit_audit':args.unit_audit,'completed':True,'settlement':False,'engine_logs':[str(p) for p in entries]},indent=2))
+            print(marker,output,flush=True)
             return
         assert all(p.returncode==0 for p in children[retired_children:])
         assert domain.finished is not None,errors
