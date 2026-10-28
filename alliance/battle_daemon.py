@@ -544,6 +544,7 @@ class BattleDaemon:
         self.rooms = {}
         self.room_lock = asyncio.Lock()
         self.connections = 0
+        self.world = None
         self.storage.mkdir(mode=0o700, parents=True, exist_ok=True)
 
     def load_record(self, run_id, directory, run):
@@ -804,9 +805,16 @@ class BattleDaemon:
             if root.attrs or len(root.children)!=1:
                 raise WireError('Invalid handshake.')
             node=root.children[0]
+            if node.name == 'world_join':
+                if self.world is None:
+                    raise WireError('The native World worker is unavailable.')
+                from .world_execution import handle_world
+                await handle_world(self.world, reader, writer, node)
+                return
             if node.name=='alliance_health' and not node.attrs and not node.children:
                 await asyncio.to_thread(self.db.command,'ping')
-                await send(writer,message('alliance_health',service='alliance-battles',api=1,implementation_release=1192621))
+                await send(writer,message('alliance_health',service='alliance-battles',api=1,implementation_release=1192624,
+                    native_workers=self.world.limit if self.world and self.world.executable else 0))
                 return
             if node.name!='alliance_join' or set(node.attrs)!={'run_id','token','intent'} or node.children or node.attrs['intent'] not in ('play','result_retry','replay_download','observe'):
                 raise WireError('Invalid join request.')
@@ -857,7 +865,7 @@ def tls_context(identity):
     return context,profile['server_address']
 
 
-async def run(runtime, identity):
+async def run(runtime, identity, workers=1):
     runtime=owned_runtime(safe_path(runtime))
     settings=Settings.load(runtime)
     context,address=tls_context(identity)
@@ -866,26 +874,37 @@ async def run(runtime, identity):
         db=client.get_default_database()
         await asyncio.to_thread(db.command,'ping')
         daemon=BattleDaemon(db,Path(runtime)/'battles',context)
+        from .world_worker import WorldWorkerSupervisor
+        from tools.build_world_worker import installed_worker
+        worker = installed_worker(required=False)
+        daemon.world = WorldWorkerSupervisor(daemon, identity,
+            executable=worker['executable'] if worker else None,
+            game_data=worker['game_data'] if worker else None, workers=workers)
         with process_lock(Path(runtime)/'battles'/'daemon.lock'):
             server=await asyncio.start_server(daemon.handle,address,15002,limit=131072)
+            print('WORLD NATIVE WORKER READY' if daemon.world.executable else 'WORLD NATIVE WORKER UNAVAILABLE: build and verify the isolated native worker before Company or World battles.',flush=True)
             print(f'ALLIANCE SHARED BATTLE SERVICE READY {address}:15002',flush=True)
             print('Keep this window open. Existing accounts and fixed side ownership are required.',flush=True)
             settlement=asyncio.create_task(daemon.settle_ready())
+            world_task=asyncio.create_task(daemon.world.serve())
             try:
                 async with server:
                     await server.serve_forever()
             finally:
                 settlement.cancel()
-                await asyncio.gather(settlement,return_exceptions=True)
+                world_task.cancel()
+                await daemon.world.close()
+                await asyncio.gather(settlement,world_task,return_exceptions=True)
 
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description='Run the local fixed-seat Alliance battle service.')
     parser.add_argument('--runtime',type=Path,required=True)
     parser.add_argument('--identity',type=Path,required=True)
+    parser.add_argument('--workers',type=int,choices=range(1,5),default=1)
     args=parser.parse_args(argv)
     try:
-        asyncio.run(run(args.runtime,args.identity))
+        asyncio.run(run(args.runtime,args.identity,args.workers))
         return 0
     except KeyboardInterrupt:
         print('Battle service stopped. Retained rooms can reconnect after restart.',flush=True)

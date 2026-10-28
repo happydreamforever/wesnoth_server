@@ -152,7 +152,7 @@ class BattleDaemonTests(unittest.IsolatedAsyncioTestCase):
         await writer.start_tls(self.client_context, server_hostname='127.0.0.1')
         await peer.send(message('alliance_health'))
         reply = await peer.read('alliance_health')
-        self.assertEqual(reply.attrs, {'service':'alliance-battles','api':'1','implementation_release':'1192617'})
+        self.assertEqual(reply.attrs, {'service':'alliance-battles','api':'1','implementation_release':'1192624','native_workers':'0'})
         self.assertEqual(self.db.game_runs.count_documents({}), 0)
 
     async def test_four_six_eight_fixed_seats_and_no_start_before_all_loaded(self):

@@ -1,0 +1,144 @@
+"""Worker authority and durable evidence rejection tests; no fake combat claim."""
+import asyncio
+import copy
+import json
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import AsyncMock, patch
+from types import SimpleNamespace
+from uuid import uuid4
+from alliance.world_worker import WorldWorkerSupervisor, canonical, sha, validate_evidence
+from alliance.world_execution import WorldRoom, WorldPeer, download_world
+from alliance.battle_wire import Node, WireError
+
+
+class WorkerAuthorityTests(unittest.TestCase):
+    def setUp(self):
+        self.temp=tempfile.TemporaryDirectory();self.root=Path(self.temp.name)
+        self.actor,self.run,self.generation=[str(uuid4()) for _ in range(3)]
+        self.descriptor={'run_id':self.run,'generation':self.generation,'required_humans':[self.actor],
+            'sides':[{'side':1,'team_id':'a','controller':'human','account_id':self.actor,
+                'hero':{'instance_id':'h'},'soldiers':[]},
+                {'side':2,'team_id':'b','controller':'worker','account_id':None,'hero':None,'soldiers':[]}]}
+        self.daemon=SimpleNamespace(storage=self.root,domain=SimpleNamespace())
+        self.supervisor=WorldWorkerSupervisor(self.daemon,self.root)
+    def tearDown(self):self.temp.cleanup()
+
+    def test_machine_ticket_is_run_scoped_single_use_and_generation_bound(self):
+        ticket=self.supervisor.capability(self.run,self.generation,'machine-1234')
+        with self.assertRaises(ValueError):self.supervisor.consume(ticket,str(uuid4()))
+        self.assertEqual(self.supervisor.consume(ticket,self.run)['generation'],self.generation)
+        with self.assertRaises(ValueError):self.supervisor.consume(ticket,self.run)
+
+    def test_persisted_chain_detects_deleted_or_reordered_event(self):
+        room=WorldRoom(self.supervisor,self.descriptor,self.root)
+        packet=Node(children=[Node('turn',children=[Node('command',{'from_side':'1'},[Node('end_turn',{'next_player_number':'2'})])])])
+        room.append(packet)
+        packet.children[0].children[0].attrs['from_side']='2'
+        packet.children[0].children[0].children[0].attrs['next_player_number']='1'
+        room.append(packet)
+        loaded=WorldRoom(self.supervisor,self.descriptor,self.root)
+        self.assertEqual((loaded.count,loaded.turn,loaded.current_side),(2,2,1))
+        path=self.root/'commands.jsonl';lines=path.read_bytes().splitlines();path.write_bytes(lines[1]+b'\n')
+        with self.assertRaises(WireError):WorldRoom(self.supervisor,self.descriptor,self.root)
+
+    def test_human_cannot_send_worker_terminal_or_ai_side_commands(self):
+        async def run():
+            room=WorldRoom(self.supervisor,self.descriptor,self.root);room.started=True
+            room.available.set()
+            async def authorize(peer):pass
+            room.authorize=authorize
+            peer=WorldPeer(None,None,self.actor,'x'*43);peer.loaded=True;peer.sides=[1]
+            worker=SimpleNamespace(loaded=True);room.peers['worker']=worker
+            with self.assertRaises(WireError):
+                await room.command(peer,Node(children=[Node('world_native_terminal',{'scenario_sha256':'a'*64})]))
+            with self.assertRaises(WireError):
+                await room.command(peer,Node(children=[Node('turn',children=[Node('command',{'from_side':'2'},[Node('end_turn')])])]))
+            self.assertEqual(room.count,0)
+        asyncio.run(run())
+
+    def proof(self):
+        row={'sequence':0,'run_id':self.run,'generation':self.generation,'previous':'0'*64,
+             'instance_id':'h','kind':'deployed','unit_type':'Fighter','amount':0}
+        row['sha256']=sha(canonical(row));ledger=[row]
+        proof={'format':1,'run_id':self.run,'generation':self.generation,'scenario_sha256':'a'*64,
+            'replay_sha256':sha(b'replay'),'ledger_sha256':sha(canonical(ledger)),'ledger':ledger,
+            'event_count':1,'terminal':'leaders_defeated','outcome':'win','winner_team_id':'a',
+            'units':[{'instance_id':'h','earned_xp':0,'final_type':'Fighter','final_xp':0,'dead':False,'deployed':True}],
+            'sync_valid':True,'native_end':'victory','command_chain_sha256':'b'*64,'command_count':20,
+            'combat_verified':True,'completed_rounds':2}
+        (self.root/'evidence.json').write_bytes(canonical(proof));(self.root/'replay.gz').write_bytes(b'replay')
+        return proof
+
+    def test_missing_replay_and_forged_ledger_never_reach_domain_summary(self):
+        proof=self.proof();cursor={'sha256':'b'*64,'count':20,'completed_rounds':2}
+        self.assertEqual(validate_evidence(self.root,self.descriptor,cursor,'a'*64)['outcome'],'win')
+        proof['units'][0]['earned_xp']=999
+        (self.root/'evidence.json').write_bytes(canonical(proof))
+        with self.assertRaises(ValueError):validate_evidence(self.root,self.descriptor,cursor,'a'*64)
+        self.proof();(self.root/'replay.gz').unlink()
+        with self.assertRaises(ValueError):validate_evidence(self.root,self.descriptor,cursor,'a'*64)
+
+    def test_truncated_native_cursor_or_wrong_generation_is_rejected(self):
+        self.proof()
+        with self.assertRaises(ValueError):validate_evidence(self.root,self.descriptor,{'sha256':'b'*64,'count':19,'completed_rounds':2},'a'*64)
+        descriptor=copy.deepcopy(self.descriptor);descriptor['generation']=str(uuid4())
+        with self.assertRaises(ValueError):validate_evidence(self.root,descriptor,{'sha256':'b'*64,'count':20,'completed_rounds':2},'a'*64)
+
+    def test_observer_terminal_requires_a_scoped_witness_without_ai_sides(self):
+        proof=self.proof();proof['native_end']='observer_end'
+        (self.root/'evidence.json').write_bytes(canonical(proof))
+        cursor={'sha256':'b'*64,'count':20,'completed_rounds':2}
+        with self.assertRaises(ValueError):validate_evidence(self.root,self.descriptor,cursor,'a'*64)
+        descriptor=copy.deepcopy(self.descriptor)
+        descriptor['sides'][1]['controller']='human'
+        self.assertEqual(validate_evidence(self.root,descriptor,cursor,'a'*64)['outcome'],'win')
+
+    def test_missing_tail_cannot_be_mistaken_for_complete_history(self):
+        room=WorldRoom(self.supervisor,self.descriptor,self.root)
+        packet=Node(children=[Node('turn',children=[Node('command',{'from_side':'1'},[Node('move')])])])
+        room.append(packet);room.append(packet)
+        path=self.root/'commands.jsonl';path.write_bytes(path.read_bytes().splitlines()[0]+b'\n')
+        with self.assertRaises(WireError):WorldRoom(self.supervisor,self.descriptor,self.root)
+
+    def test_total_history_bound_rejects_before_writing(self):
+        room=WorldRoom(self.supervisor,self.descriptor,self.root)
+        room.history_bytes=128*1024*1024
+        packet=Node(children=[Node('turn',children=[Node('command',{'from_side':'1'},[Node('move')])])])
+        with self.assertRaises(WireError):room.append(packet)
+        self.assertEqual(room.count,0)
+        self.assertFalse((self.root/'commands.jsonl').exists())
+
+    def test_commands_wait_until_same_human_has_loaded_again(self):
+        async def run():
+            room=WorldRoom(self.supervisor,self.descriptor,self.root);room.started=True
+            room.authorize=AsyncMock()
+            peer=WorldPeer(None,None,self.actor,'x'*43);peer.loaded=True;peer.sides=[1]
+            room.peers['worker']=SimpleNamespace(loaded=True,send=AsyncMock())
+            packet=Node(children=[Node('turn',children=[Node('command',{'from_side':'1'},[Node('end_turn')])])])
+            task=asyncio.create_task(room.command(peer,packet))
+            await asyncio.sleep(.01);self.assertFalse(task.done());self.assertEqual(room.count,0)
+            room.peers[self.actor]=peer;room.update_availability()
+            await asyncio.wait_for(task,1);self.assertEqual((room.count,room.current_side),(1,2))
+        asyncio.run(run())
+
+    def test_authorized_completed_replay_survives_daemon_restart(self):
+        async def run():
+            directory=self.supervisor.root/self.run/self.generation;directory.mkdir(parents=True)
+            room=WorldRoom(self.supervisor,self.descriptor,directory)
+            attempt=directory/'worker-retained';attempt.mkdir();recording=attempt/'replay.gz';recording.write_bytes(b'bounded replay')
+            room.completed_replay=recording;room.completed=True;room.persist()
+            self.daemon.domain=SimpleNamespace(world_replay_authorize=lambda *args:{'generation':self.generation,'replay_sha256':sha(b'bounded replay')})
+            self.daemon.auth=SimpleNamespace(validate_token=lambda *args:{'_id':self.actor})
+            packets=[]
+            async def capture(writer,packet):packets.append(packet)
+            async def request(*args):return Node(children=[Node('world_replay_get',{'offset':'0'})])
+            with patch('alliance.world_execution.send',capture),patch('alliance.world_execution.receive',request):
+                await download_world(self.supervisor,None,None,self.actor,'x'*43,self.run)
+            self.assertEqual([p.children[0].name for p in packets],['world_replay_info','world_replay_data'])
+            recording.write_bytes(b'changed replay')
+            with self.assertRaises(WireError):await download_world(self.supervisor,None,None,self.actor,'x'*43,self.run)
+        asyncio.run(run())
+
+if __name__=='__main__':unittest.main()
