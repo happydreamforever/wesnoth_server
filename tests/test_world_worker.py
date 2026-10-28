@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 from types import SimpleNamespace
 from uuid import uuid4
 from alliance.world_worker import WorldWorkerSupervisor, canonical, sha, validate_evidence
@@ -30,6 +30,72 @@ class WorkerAuthorityTests(unittest.TestCase):
         with self.assertRaises(ValueError):self.supervisor.consume(ticket,str(uuid4()))
         self.assertEqual(self.supervisor.consume(ticket,self.run)['generation'],self.generation)
         with self.assertRaises(ValueError):self.supervisor.consume(ticket,self.run)
+
+    def test_worker_spawn_failure_releases_ticket_and_closes_log(self):
+        async def run():
+            self.daemon.domain.world_worker_pause=Mock()
+            logs=[]
+            async def spawn(*args,**kwargs):
+                logs.append(kwargs['stdout']);raise OSError('test missing executable')
+            with patch('alliance.world_worker.asyncio.create_subprocess_exec',spawn):
+                await self.supervisor.launch(self.descriptor,'machine-1234')
+            self.assertFalse(self.supervisor.children);self.assertFalse(self.supervisor.tickets)
+            self.assertTrue(logs[0].closed)
+            self.daemon.domain.world_worker_pause.assert_called_once_with(
+                self.run,'machine-1234',self.generation,'worker_interrupted')
+        asyncio.run(run())
+
+    def test_private_stdin_failure_stops_child_and_releases_ticket(self):
+        async def run():
+            self.daemon.domain.world_worker_pause=Mock()
+            self.daemon.domain.world_worker_lease=Mock(return_value={'state':'preparing'})
+            child=SimpleNamespace(returncode=None,stdin=SimpleNamespace(
+                write=Mock(),drain=AsyncMock(side_effect=BrokenPipeError()),close=Mock()))
+            child.terminate=Mock()
+            async def stopped():child.returncode=1;return 1
+            child.wait=AsyncMock(side_effect=stopped)
+            with patch('alliance.world_worker.asyncio.create_subprocess_exec',AsyncMock(return_value=child)):
+                await self.supervisor.launch(self.descriptor,'machine-1234')
+            child.terminate.assert_called_once();child.wait.assert_awaited_once()
+            self.assertFalse(self.supervisor.children);self.assertFalse(self.supervisor.tickets)
+            self.daemon.domain.world_worker_pause.assert_called_once_with(
+                self.run,'machine-1234',self.generation,'worker_interrupted')
+        asyncio.run(run())
+
+    def test_finished_worker_invalid_proof_requires_review_not_restart(self):
+        async def run():
+            self.daemon.domain.world_worker_pause=Mock()
+            child=SimpleNamespace(returncode=0,stdin=SimpleNamespace(
+                write=Mock(),drain=AsyncMock(),close=Mock()))
+            async def stopped():
+                self.supervisor.rooms[self.run].terminal_cursor={'count':1,'sha256':'a'*64}
+                return 0
+            child.wait=AsyncMock(side_effect=stopped)
+            with patch('alliance.world_worker.asyncio.create_subprocess_exec',AsyncMock(return_value=child)):
+                await self.supervisor.launch(self.descriptor,'machine-1234')
+            self.assertEqual(self.supervisor.rooms[self.run].pause_reason,'native_evidence_conflict')
+            self.daemon.domain.world_worker_pause.assert_called_once_with(
+                self.run,'machine-1234',self.generation,'native_evidence_conflict')
+            self.assertFalse(self.supervisor.children);self.assertFalse(self.supervisor.tickets)
+            with patch('alliance.world_worker.asyncio.create_subprocess_exec',AsyncMock()) as spawn:
+                with self.assertRaises(ValueError):
+                    await self.supervisor.launch(self.descriptor,'machine-5678')
+                spawn.assert_not_awaited()
+        asyncio.run(run())
+
+    def test_retained_terminal_without_proof_requires_review(self):
+        async def run():
+            self.daemon.domain.world_worker_pause=Mock()
+            directory=self.supervisor.root/self.run/self.generation;directory.mkdir(parents=True)
+            room=WorldRoom(self.supervisor,self.descriptor,directory)
+            room.terminal_cursor={'count':0,'sha256':'0'*64};room.persist()
+            with patch('alliance.world_worker.asyncio.create_subprocess_exec',AsyncMock()) as spawn:
+                with self.assertRaises(ValueError):
+                    await self.supervisor.launch(self.descriptor,'machine-1234')
+                spawn.assert_not_awaited()
+            self.daemon.domain.world_worker_pause.assert_called_once_with(
+                self.run,'machine-1234',self.generation,'native_evidence_conflict')
+        asyncio.run(run())
 
     def test_persisted_chain_detects_deleted_or_reordered_event(self):
         room=WorldRoom(self.supervisor,self.descriptor,self.root)
@@ -56,6 +122,23 @@ class WorkerAuthorityTests(unittest.TestCase):
             with self.assertRaises(WireError):
                 await room.command(peer,Node(children=[Node('turn',children=[Node('command',{'from_side':'2'},[Node('end_turn')])])]))
             self.assertEqual(room.count,0)
+        asyncio.run(run())
+
+    def test_end_turn_cannot_skip_enemy_or_repeat_the_own_side(self):
+        async def run():
+            room=WorldRoom(self.supervisor,self.descriptor,self.root);room.started=True
+            room.available.set();room.authorize=AsyncMock()
+            peer=WorldPeer(None,None,self.actor,'x'*43);peer.loaded=True;peer.sides=[1]
+            room.peers['worker']=SimpleNamespace(loaded=True,send=AsyncMock())
+            for target in ('1','3','99','-1'):
+                packet=Node(children=[Node('turn',children=[Node('command',{'from_side':'1'},
+                    [Node('end_turn',{'next_player_number':target})])])])
+                with self.assertRaises(WireError):await room.command(peer,packet)
+            self.assertEqual((room.count,room.current_side),(0,1))
+            packet=Node(children=[Node('turn',children=[Node('command',{'from_side':'1'},
+                [Node('end_turn',{'next_player_number':'2'})])])])
+            await room.command(peer,packet)
+            self.assertEqual((room.count,room.current_side),(1,2))
         asyncio.run(run())
 
     def proof(self):

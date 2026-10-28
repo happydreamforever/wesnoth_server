@@ -242,8 +242,14 @@ class WorldRoom:
                     if side != simulated and not dependent: raise WireError("World turn ownership differs.")
                     for action in command.children:
                         if action.name == "end_turn":
-                            target = int(action.attrs.get("next_player_number", "0")) or simulated + 1
-                            if not 1 <= target <= len(self.descriptor["sides"]) + 1: raise WireError("Invalid World next side.")
+                            requested = int(action.attrs.get("next_player_number", "0"))
+                            # The pinned Company/World scenarios never change
+                            # turn order through WML. Native replay trusts this
+                            # value, so a client must not skip an enemy or take
+                            # another turn. Closed sides are skipped below.
+                            if requested not in (0, simulated + 1):
+                                raise WireError("World end-turn may not change the fixed side order.")
+                            target = simulated + 1
                             simulated = self.next_side(target)
                 self.append(root)
                 await self.broadcast(root, "worker" if peer.worker else peer.actor)

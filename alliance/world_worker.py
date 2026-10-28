@@ -181,17 +181,25 @@ class WorldWorkerSupervisor:
 
     async def launch(self, descriptor, worker_id):
         from .world_execution import WorldRoom
+        from .battle_wire import WireError
         descriptor = {key: value for key, value in descriptor.items() if key not in ('state', 'scenario_sha256')}
         run_id, generation = descriptor["run_id"], descriptor["generation"]
         directory = ordinary(self.root / run_id / generation)
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         room = self.rooms.get(run_id)
         if room is None:
-            room = WorldRoom(self, descriptor, directory)
+            try:
+                room = WorldRoom(self, descriptor, directory)
+            except (ValueError, KeyError, TypeError, WireError):
+                await asyncio.to_thread(self.daemon.domain.world_worker_pause,
+                    run_id, worker_id, generation, "native_evidence_conflict")
+                raise
             self.rooms[run_id] = room
         elif room.generation != generation:
             raise ValueError("World worker generation differs from retained room.")
-        if room.pause_reason == "native_sync_error":
+        if room.pause_reason in ("native_sync_error", "native_evidence_conflict"):
+            await asyncio.to_thread(self.daemon.domain.world_worker_pause,
+                run_id, worker_id, generation, room.pause_reason)
             raise ValueError("The retained native synchronization failure requires review.")
         # An acquired replacement lease authorizes replay of the same generation,
         # never an invented result or a fresh battle with the old reservations.
@@ -200,22 +208,31 @@ class WorldWorkerSupervisor:
         room.update_availability()
         room.persist()
         if room.terminal_cursor is not None:
-            for previous in sorted(directory.glob("worker-*")):
-                if not (previous / "evidence.json").exists(): continue
-                evidence = validate_evidence(previous, descriptor, room.terminal_cursor, room.scenario)
-                loaded = await asyncio.to_thread(self.daemon.domain.world_worker_loaded,
-                    run_id, worker_id, generation, room.scenario)
-                if loaded.get("state") not in ("preparing", "running", "paused"):
-                    raise ValueError("The retained native scenario was rejected.")
-                settled = await asyncio.to_thread(self.daemon.domain.world_worker_finish,
-                    run_id, worker_id, generation, evidence)
-                if settled.get("state") not in (None, "completed", "awaiting_confirmation"):
-                    raise ValueError("The retained native result was rejected.")
-                room.completed_replay = previous / "replay.gz"
-                room.completed = True
+            try:
+                for previous in sorted(directory.glob("worker-*")):
+                    if not (previous / "evidence.json").exists(): continue
+                    evidence = validate_evidence(previous, descriptor, room.terminal_cursor, room.scenario)
+                    loaded = await asyncio.to_thread(self.daemon.domain.world_worker_loaded,
+                        run_id, worker_id, generation, room.scenario)
+                    if loaded.get("state") not in ("preparing", "running", "paused"):
+                        raise ValueError("The retained native scenario was rejected.")
+                    settled = await asyncio.to_thread(self.daemon.domain.world_worker_finish,
+                        run_id, worker_id, generation, evidence)
+                    if settled.get("state") not in (None, "completed", "awaiting_confirmation"):
+                        raise ValueError("The retained native result was rejected.")
+                    room.completed_replay = previous / "replay.gz"
+                    room.completed = True
+                    room.persist()
+                    return
+                raise ValueError("Retained terminal cursor has no complete native evidence.")
+            except (ValueError, KeyError, TypeError):
+                room.paused = True
+                room.pause_reason = "native_evidence_conflict"
+                room.available.set()
                 room.persist()
-                return
-            raise ValueError("Retained terminal cursor has no complete native evidence.")
+                await asyncio.to_thread(self.daemon.domain.world_worker_pause,
+                    run_id, worker_id, generation, room.pause_reason)
+                raise
         attempt = ordinary(directory / ("worker-" + uuid4().hex))
         attempt.mkdir(mode=0o700)
         (attempt / "userdata").mkdir(mode=0o700)
@@ -232,9 +249,7 @@ class WorldWorkerSupervisor:
         command = [str(self.executable), str(self.game_data), "--userdata-dir", str(attempt / "userdata"),
                    "--nogui", "--multiplayer", "--nosound", "--noaddons", "--no-log-to-file", "--log-none=audio"]
         log = (attempt / "engine.log").open("xb")
-        child = await asyncio.create_subprocess_exec(*command, stdin=asyncio.subprocess.PIPE,
-            stdout=log, stderr=asyncio.subprocess.STDOUT, env=environment)
-        self.children[run_id] = child
+        child, pulse = None, None
         async def heartbeat():
             try:
                 while child.returncode is None:
@@ -245,16 +260,23 @@ class WorldWorkerSupervisor:
             except Exception:
                 if child.returncode is None: child.terminate()
                 raise
-        pulse = asyncio.create_task(heartbeat())
-        child.stdin.write(canonical({"run_id": run_id, "token": token}) + b"\n")
-        await child.stdin.drain()
-        child.stdin.close()
         try:
+            child = await asyncio.create_subprocess_exec(*command, stdin=asyncio.subprocess.PIPE,
+                stdout=log, stderr=asyncio.subprocess.STDOUT, env=environment)
+            self.children[run_id] = child
+            pulse = asyncio.create_task(heartbeat())
+            child.stdin.write(canonical({"run_id": run_id, "token": token}) + b"\n")
+            await child.stdin.drain()
+            child.stdin.close()
             code = await child.wait()
             write_json(attempt / "process.json", {"exit_code": code, "terminal_cursor": room.terminal_cursor is not None})
             if code != 0 or room.terminal_cursor is None:
                 raise ValueError("Native worker paused before a verified terminal.")
-            evidence = validate_evidence(attempt, descriptor, room.terminal_cursor, room.scenario)
+            try:
+                evidence = validate_evidence(attempt, descriptor, room.terminal_cursor, room.scenario)
+            except (ValueError, KeyError, TypeError):
+                room.pause_reason = "native_evidence_conflict"
+                raise
             settled = await asyncio.to_thread(self.daemon.domain.world_worker_finish,
                                    run_id, worker_id, generation, evidence)
             if settled.get("state") not in (None, "completed", "awaiting_confirmation"):
@@ -268,14 +290,15 @@ class WorldWorkerSupervisor:
             room.paused = True
             room.available.set()  # Wake bounded pending packets so their guards close the old peers.
             room.persist()
+            for peer in list(room.peers.values()): peer.writer.close()
             await asyncio.to_thread(self.daemon.domain.world_worker_pause, run_id, worker_id, generation,
                 room.pause_reason or "worker_interrupted")
-            for peer in list(room.peers.values()): peer.writer.close()
-            print("WORLD WORKER PAUSED: " + type(error).__name__ + "; exit=" + str(child.returncode) + "; retained=" + str(attempt), flush=True)
+            print("WORLD WORKER PAUSED: " + type(error).__name__ + "; exit=" + str(getattr(child, "returncode", None)) + "; retained=" + str(attempt), flush=True)
         finally:
-            pulse.cancel()
-            await asyncio.gather(pulse, return_exceptions=True)
-            if child.returncode is None:
+            if pulse is not None:
+                pulse.cancel()
+                await asyncio.gather(pulse, return_exceptions=True)
+            if child is not None and child.returncode is None:
                 child.terminate()
                 await child.wait()
             self.children.pop(run_id, None)
