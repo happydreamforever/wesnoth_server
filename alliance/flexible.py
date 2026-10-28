@@ -639,6 +639,8 @@ class FlexibleProduct:
             self._governance_idle(team_id, session)
             if new_captain_id == actor_id or new_captain_id not in {m['account_id'] for m in team['members']}:
                 raise DomainError('not_member', 'Choose another current member as captain.')
+            # Validate and serialize the successor against account suspension.
+            self._player(new_captain_id, session)
             self.db.teams.update_one({'_id': team_id}, {'$set': {'captain_id': new_captain_id}, '$inc': {'revision': 1}}, session=session)
             self.db.game_runs.update_many({'plan_format': PLAN_FORMAT, 'state': 'draft', 'team_ids': team_id},
                 {'$set': {'approvals': {}, 'ready': []}, '$inc': {'revision': 1}}, session=session)

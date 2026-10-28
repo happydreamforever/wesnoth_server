@@ -120,18 +120,19 @@ class BackendCheckTests(unittest.TestCase):
 
     def test_workflow_requires_exact_release_over_real_authenticated_http(self):
         from tools import alliance_workflow as workflow
-        for release in (None, 1192614, 1192616, True, "1192615"):
+        rejected = (None, 1192615, 1192617, 1192623, 1192625, True, "1192624")
+        for release in rejected:
             with self.subTest(release=release):
                 body = dict(HEALTH)
                 if release is not None: body["implementation_release"] = release
                 self.mode["body"] = json.dumps(body).encode()
                 with self.assertRaisesRegex(workflow.WorkflowError, "^W03_backend_release_mismatch$"):
                     workflow.backend_check(self.runtime)
-        self.mode["body"] = json.dumps({**HEALTH, "implementation_release": 1192615}).encode()
+        self.mode["body"] = json.dumps({**HEALTH, "implementation_release": 1192624}).encode()
         self.assertTrue(workflow.backend_check(self.runtime))
         self.mode["status"] = 401
         self.assertFalse(workflow.backend_check(self.runtime))
-        self.assertEqual(self.calls, [("/internal/v1/health", "Bearer " + self.secret)] * 7)
+        self.assertEqual(self.calls, [("/internal/v1/health", "Bearer " + self.secret)] * (len(rejected) + 2))
         self.assertEqual(self.config.read_bytes(), self.original_config)
 
     def test_stale_backend_stops_workflow_with_manual_guidance_and_no_launch(self):
@@ -149,7 +150,7 @@ class BackendCheckTests(unittest.TestCase):
         launch.assert_not_called(); bridge.assert_not_called()
         report = json.loads(self.report.read_text())
         self.assertEqual(report["error"], "W03_backend_release_mismatch")
-        self.assertEqual(report["expected_backend_implementation_release"], 1192615)
+        self.assertEqual(report["expected_backend_implementation_release"], 1192624)
         self.assertEqual(report["steps"][-1], {"id": "W03", "service": "backend", "status": "failed", "action": "none"})
         self.assertEqual([row["id"] for row in report["steps"]], ["W01", "W02", "W03"])
         self.assertIn("press Ctrl+C", output.getvalue())

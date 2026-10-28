@@ -192,7 +192,7 @@ class AllianceWebTests(unittest.TestCase):
         self.assertTrue(response.json["game_bridge_integrated"])
         self.assertEqual(response.json["health_scope"], "backend_only")
         self.assertFalse(response.json["native_runtime_checked"])
-        self.assertEqual(response.json["implementation_release"], 1192617)
+        self.assertEqual(response.json["implementation_release"], 1192624)
 
     def test_register_login_team_creation_and_logout(self):
         response = self.client.post("/internal/v1/register", headers=self.bridge, json={
@@ -382,23 +382,29 @@ class AllianceWebTests(unittest.TestCase):
         self.assertEqual(self.domain.get_account(self.player['_id'])['heroes'], [])
 
     def test_native_management_busy_and_suspended_target_leave_membership_unchanged(self):
-        captain = self.player['_id']
-        member = self.domain.register('ManageTarget', self.password_hash)['_id']
-        team = self.domain.create_team(captain, 'Busy Management')['_id']
-        self.domain.request_join(member, team)
-        self.domain.approve_member(captain, team, member)
-        headers = self.player_headers()
+        players, headers, teams, body = self.planning_fixture()
+        member, team = players[1]['_id'], teams[0]
         base = '/internal/v1/team-directory/'
+        created = self.client.post(base + 'propose_battle', headers=headers[0], json=body)
+        self.assertEqual(created.status_code, 201)
+        battle_id = created.json['battle']['id']
         before = self.domain._team(team)
-        for collection, identifier in ((self.db.accounts, captain), (self.db.accounts, member), (self.db.teams, team)):
-            collection.update_one({'_id': identifier}, {'$set': {'active_run_id': str(uuid4())}})
-            response = self.client.post(base + 'transfer_captain', headers=headers,
-                                        json={'team_id': team, 'account_id': member})
-            self.assertEqual((response.status_code, response.json['error']['code']), (409, 'busy'))
-            collection.update_one({'_id': identifier}, {'$set': {'active_run_id': None}})
+        # Governance uses the team's actual prepared/running battles, rather
+        # than the obsolete team-wide active_run_id reservation.
+        for state, room_state in (('draft', 'preparing'), ('running', 'playing')):
+            with self.subTest(state=state, room_state=room_state):
+                self.db.game_runs.update_one({'_id': battle_id},
+                    {'$set': {'state': state, 'shared_room.state': room_state}})
+                response = self.client.post(base + 'transfer_captain', headers=headers[0],
+                                            json={'team_id': team, 'account_id': member})
+                self.assertEqual((response.status_code, response.json['error']['code']), (409, 'busy'))
+                self.assertEqual(self.domain._team(team), before)
+        self.db.game_runs.update_one({'_id': battle_id},
+                                    {'$set': {'state': 'draft'}, '$unset': {'shared_room': ''}})
         self.db.accounts.update_one({'_id': member}, {'$set': {'status': 'suspended'}})
-        suspended = self.client.post(base + 'transfer_captain', headers=headers,
+        suspended = self.client.post(base + 'transfer_captain', headers=headers[0],
                                     json={'team_id': team, 'account_id': member})
+        self.assertEqual(suspended.status_code, 403)
         self.assertEqual((suspended.status_code, suspended.json['error']['code']), (403, 'forbidden'))
         self.assertEqual(self.domain._team(team), before)
 
@@ -474,17 +480,30 @@ class AllianceWebTests(unittest.TestCase):
         self.assertEqual(post('cancel_battle', selector, 2).json, cancelled.json)
         self.assertEqual(post('battle_ready', {**selector, 'ready': True}, 1).status_code, 409)
 
-    def test_native_battle_planning_hides_former_members_and_cancels_stale(self):
+    def test_native_battle_planning_retains_participant_history_but_rejects_former_member_mutation(self):
         players, headers, teams, body = self.planning_fixture()
         base = '/internal/v1/team-directory/'
         created = self.client.post(base + 'propose_battle', headers=headers[0], json=body)
         selector = {'battle_id': created.json['battle']['id']}
         self.domain.leave_team(players[1]['_id'])
-        for operation, data in (('battle_detail', selector), ('approve_battle', selector),
+        history = self.client.post(base + 'battle_detail', headers=headers[1], json=selector)
+        self.assertEqual(history.status_code, 200)
+        self.assertEqual(history.json['battle']['id'], selector['battle_id'])
+        self.assertEqual(history.json['battle']['validity'], 'roster_changed')
+        for operation, data in (('approve_battle', selector),
                                 ('battle_ready', {**selector, 'ready': False}), ('cancel_battle', selector)):
             self.assertEqual(self.client.post(base + operation, headers=headers[1], json=data).status_code, 403)
-        self.assertEqual(self.client.post(base + 'my_battles', headers=headers[1], json={'after': ''}).json,
-                         {'battles': [], 'next': ''})
+        listing = self.client.post(base + 'my_battles', headers=headers[1], json={'after': ''})
+        self.assertEqual(listing.status_code, 200)
+        self.assertEqual([row['id'] for row in listing.json['battles']], [selector['battle_id']])
+        self.assertEqual(listing.json['next'], '')
+        stranger = self.domain.register('UnrelatedViewer', self.password_hash)
+        stranger_headers = {**self.bridge, 'X-Player-Token': self.auth.authenticate(
+            stranger['username'], self.password, 'player')['token']}
+        self.assertEqual(self.client.post(base + 'battle_detail', headers=stranger_headers,
+                                         json=selector).status_code, 403)
+        self.assertEqual(self.client.post(base + 'my_battles', headers=stranger_headers,
+                                         json={'after': ''}).json, {'battles': [], 'next': ''})
         detail = self.client.post(base + 'battle_detail', headers=headers[2], json=selector)
         self.assertEqual(detail.json['battle']['validity'], 'roster_changed')
         self.assertEqual(self.client.post(base + 'approve_battle', headers=headers[2], json=selector).status_code, 409)
@@ -496,21 +515,38 @@ class AllianceWebTests(unittest.TestCase):
     def test_native_battle_planning_strict_inputs_reject_identity_and_rewards(self):
         players, headers, teams, body = self.planning_fixture()
         base = '/internal/v1/team-directory/'
-        cases = [('propose_battle', {**body, 'actor_id': players[1]['_id']}),
-                 ('propose_battle', {**body, 'experience': 20}),
-                 ('propose_battle', {**body, 'lineups': {'team': []}}),
-                 ('battle_maps', {'area_id': {'$ne': ''}}), ('my_battles', {'after': 'bad'}),
-                 ('battle_detail', {'battle_id': {'$ne': ''}}),
-                 ('approve_battle', {'battle_id': str(uuid4()), 'account_id': players[1]['_id']}),
-                 ('battle_ready', {'battle_id': str(uuid4()), 'ready': 1}),
-                 ('battle_ready', {'battle_id': str(uuid4()), 'ready': 'false'}),
-                 ('cancel_battle', {'battle_id': str(uuid4()), 'reason': 'caller detail'})]
-        for operation, data in cases:
+        cases = [('propose_battle', {**body, 'actor_id': players[1]['_id']}, 400, 'request_rejected'),
+                 ('propose_battle', {**body, 'experience': 20}, 400, 'request_rejected'),
+                 ('propose_battle', {**body, 'lineups': {'team': []}}, 409, 'invalid_lineup'),
+                 ('battle_maps', {'area_id': {'$ne': ''}}, 409, 'invalid_input'),
+                 ('my_battles', {'after': 'bad'}, 409, 'invalid_input'),
+                 ('battle_detail', {'battle_id': {'$ne': ''}}, 409, 'invalid_input'),
+                 ('approve_battle', {'battle_id': str(uuid4()), 'account_id': players[1]['_id']}, 400, 'request_rejected'),
+                 ('cancel_battle', {'battle_id': str(uuid4()), 'reason': 'caller detail'}, 400, 'request_rejected')]
+        for operation, data, expected_status, expected_code in cases:
             with self.subTest(operation=operation, data=data):
-                self.assertIn(self.client.post(base + operation, headers=headers[0], json=data).status_code, (400, 409))
+                response = self.client.post(base + operation, headers=headers[0], json=data)
+                self.assertEqual(response.status_code, expected_status)
+                self.assertEqual(response.json['error']['code'], expected_code)
         self.assertEqual(self.client.post(base + 'propose_battle?extra=1', headers=headers[0], json=body).status_code, 400)
         self.assertEqual(self.client.get(base + 'battle_maps', headers=headers[0]).status_code, 405)
         self.assertEqual(self.db.game_runs.count_documents({}), 0)
+
+        created = self.client.post(base + 'propose_battle', headers=headers[0], json=body)
+        self.assertEqual(created.status_code, 201)
+        battle_id = created.json['battle']['id']
+        before = self.domain.get_run(battle_id)
+        for ready in (1, 'false'):
+            with self.subTest(ready=ready):
+                invalid = self.client.post(base + 'battle_ready', headers=headers[0],
+                                          json={'battle_id': battle_id, 'ready': ready})
+                self.assertEqual((invalid.status_code, invalid.json['error']['code']), (409, 'invalid_input'))
+                self.assertEqual(self.domain.get_run(battle_id), before)
+        missing = self.client.post(base + 'battle_ready', headers=headers[0],
+                                   json={'battle_id': str(uuid4()), 'ready': False})
+        self.assertEqual((missing.status_code, missing.json['error']['code']), (404, 'not_found'))
+        self.assertEqual(self.db.game_runs.count_documents({}), 1)
+        self.assertEqual(self.db.settlements.count_documents({}), 0)
 
     def test_native_directory_rejects_extra_identity_rewards_selectors_and_query(self):
         headers = self.player_headers()

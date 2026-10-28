@@ -372,7 +372,7 @@ class ActualDeploymentTests(unittest.TestCase):
                         self.assertTrue(health["game_bridge_integrated"])
                         self.assertEqual(health["health_scope"], "backend_only")
                         self.assertFalse(health["native_runtime_checked"])
-                        self.assertEqual(health["implementation_release"], 1192617)
+                        self.assertEqual(health["implementation_release"], 1192624)
                         self.assertTrue(health["campaign_content_ready"])
                     finally:
                         service.terminate()
