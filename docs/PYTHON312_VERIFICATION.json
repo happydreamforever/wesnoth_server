@@ -1,6 +1,6 @@
 {
   "recorded": "2026-10-28",
-  "status": "vps_verified_windows_python_transition_accepted_world_d_archive_diagnostic_pending",
+  "status": "windows_python_transition_and_one_package_diagnostic_accepted_world_d_resume_pending",
   "release": 1192624,
   "protocol": 4,
   "schema": 4,
@@ -123,6 +123,32 @@
       "cause": "unresolved",
       "network_status": "P3 user-confirmed WAN disconnected/local Ethernet retained; no new independent measurement.",
       "next": "Server-only diagnostic pull, disconnect WAN/retain Ethernet, Test-WindowsWorldWorkerArchive.ps1; return console and matching text/JSON even on success before full retry."
+    },
+    "world_archive_diagnostic": {
+      "status": "accepted_supplied_windows_console",
+      "package": "mingw-w64-x86_64-aom",
+      "phases_passed": [
+        "host",
+        "manifest",
+        "decoder",
+        "preflight",
+        "scratch",
+        "extract",
+        "verify"
+      ],
+      "success_markers": [
+        "WORLD WORKER ARCHIVE DIAGNOSTIC PASSED",
+        "WORLD WORKER ARCHIVE DIAGNOSTIC COMPLETE"
+      ],
+      "report_stem": "diagnostics/world-worker-archive-20261028-053027-599-5b4e9714eeaa43a080042af7a50937a2",
+      "retained_scratch": "build/world-worker-archive-check-464cf0e81cff4a5d859a1080f47528bc",
+      "saved_files_supplied": false,
+      "wrapper_verified_json_success": true,
+      "full_prefix_readiness": false,
+      "native_worker_tested": false,
+      "earlier_failure_cause": "unresolved",
+      "network_status": "No new physical WAN evidence; retain prior P3 user confirmation as history and instruct WAN disconnected/local Ethernet retained.",
+      "next": "Resume Prepare-WindowsWorldWorker.ps1 once with unchanged cache/journal; no new pull/download/install/backup. Return console and new prepare log before E."
     }
   },
   "dependencies": {

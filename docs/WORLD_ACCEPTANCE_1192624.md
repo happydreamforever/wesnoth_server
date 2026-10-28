@@ -1,6 +1,6 @@
 # Windows acceptance — Companies and Territorial Wars 1192624
 
-Current checkpoint (2026-10-28): A/B, the signed 107-package cache and Python 3.12 P1–P3 remain accepted at their recorded Windows scope. Offline World D stopped during the first aom package extraction with `ReadError`; the actual Windows cause is unresolved. **Run only the [one-package diagnostic](WORLD_ARCHIVE_DIAGNOSTIC_1192624.md) after the server diagnostic update. Return its console and text/JSON reports before retrying full preparation or proceeding to E.** Keep all five services stopped, the cache/journal/backup retained and Python 3.14 installed. No repeated Python installation, backup, package download or database initialization is needed. Windows prefix preparation, migration, builds and gameplay remain pending.
+Current checkpoint (2026-10-28): A/B, the signed 107-package cache and Python 3.12 P1–P3 remain accepted. The targeted Windows aom diagnostic now passes all phases, including extraction and verification, in the supplied console. Saved text/JSON files were not supplied. **Resume full World D once using the command below or the [current archive handoff](WORLD_ARCHIVE_DIAGNOSTIC_1192624.md); return its console/new log before E.** The earlier ReadError cause remains unresolved and full-prefix/worker readiness is not inferred from one package. Keep five services stopped, preparation files retained and Python 3.14 installed. No new pull, download, Python installation, backup or initialization is required.
 
 Use the existing `runtime-v2`, accounts, Teams, earned heroes, campaign saves, bundled public profile, original Android signer and one LDPlayer. This release explicitly upgrades schema 3 to 4 in place. It does not initialize another database, create founding Teams automatically or grant replacement heroes. Previously accepted results remain historical evidence; untested new behavior is NOT RUN.
 
@@ -14,7 +14,7 @@ The worker needs 107 pinned packages in total. The 83 additional archives total 
 
 The isolated prefix is assembled from verified archives, not from installed files that package scripts may have changed. Internal package hardlinks become independent files; installer scripts and hooks are not executed. The exact 57,474-file prefix occupies 1,686,953,610 bytes. Keep at least 3 GB free for dependency preparation, plus the additional space required by the full worker and retained Android builds. Cold backup, migration and build storage need their own headroom.
 
-A–D below retain the rollout sequence. Python P1–P3 are accepted, but full D preparation has stopped; run only the linked one-package diagnostic now. Do not rerun the preliminary inventory or use `pacman -Syu`. Details and provenance: [worker dependency preparation](WORLD_WORKER_DEPENDENCIES_1192624.md).
+A–D below retain the rollout sequence. Python P1–P3 and the one-package diagnostic are accepted; run only D's offline full-prefix resume now. Do not rerun the preliminary inventory or use `pacman -Syu`. Details and provenance: [worker dependency preparation](WORLD_WORKER_DEPENDENCIES_1192624.md).
 
 ## A. Save and stop
 
@@ -77,7 +77,7 @@ The following online download already passed on 2026-10-27; retain it as histori
 
 Expected: `WORLD WORKER PACKAGE CACHE VERIFIED`, 107 pinned archives/signatures verified, and the original package inventory preserved. Reports: `diagnostics\world-worker-packages-*.txt` and `.json`. Keep the cache and its journals. Existing mismatched files, a changed toolchain or failed signature stop preparation instead of being overwritten. No database or service is started. Stop here and return the console plus saved text/JSON reports, including on success. Continue with offline preparation only after this result has been reviewed.
 
-The following full-prefix command stopped on Windows and is retained for reference. **Do not repeat it now.** First run the [one-package diagnostic](WORLD_ARCHIVE_DIAGNOSTIC_1192624.md) and return its result. Full D preparation resumes only after that review:
+Current next step: the Windows one-package diagnostic passed and its console has been reviewed. Resume full D once below, retaining the existing cache, journal and partial output. Keep all five services stopped and WAN disconnected/local Ethernet retained; no new pull or download is needed:
 
 ```powershell
 & {

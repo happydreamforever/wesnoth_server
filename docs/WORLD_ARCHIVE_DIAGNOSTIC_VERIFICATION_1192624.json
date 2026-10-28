@@ -2,7 +2,7 @@
   "recorded": "2026-10-28",
   "release": 1192624,
   "implementation_commit": "75a82a2914bab045e09728b9da4be2ffd0cb0ffd",
-  "status": "diagnostic_update_verified_original_windows_cause_unresolved",
+  "status": "windows_one_package_diagnostic_accepted_full_prefix_resume_pending",
   "windows_evidence": {
     "status": "stopped_first_package_extraction",
     "package": "mingw-w64-x86_64-aom",
@@ -68,5 +68,38 @@
     "diagnostic_helper_parsed": true,
     "independent_source_and_handoff_review": "passed; no blocker",
     "windows_cause_resolved": false
+  },
+  "windows_one_package_followup": {
+    "status": "accepted_supplied_windows_console",
+    "package": "mingw-w64-x86_64-aom",
+    "phases_passed": [
+      "host",
+      "manifest",
+      "decoder",
+      "preflight",
+      "scratch",
+      "extract",
+      "verify"
+    ],
+    "success_markers": [
+      "WORLD WORKER ARCHIVE DIAGNOSTIC PASSED",
+      "WORLD WORKER ARCHIVE DIAGNOSTIC COMPLETE"
+    ],
+    "report_stem": "diagnostics/world-worker-archive-20261028-053027-599-5b4e9714eeaa43a080042af7a50937a2",
+    "retained_scratch": "build/world-worker-archive-check-464cf0e81cff4a5d859a1080f47528bc",
+    "saved_files_supplied": false,
+    "wrapper_verified_json_success": true,
+    "full_prefix_readiness": false,
+    "native_worker_tested": false,
+    "earlier_failure_cause": "unresolved",
+    "network_status": "No new physical WAN evidence; retain prior P3 user confirmation as history and instruct WAN disconnected/local Ethernet retained.",
+    "next": "Resume Prepare-WindowsWorldWorker.ps1 once with unchanged cache/journal; no new pull/download/install/backup. Return console and new prepare log before E."
+  },
+  "current_checkpoint_review": {
+    "production_sources_changed": false,
+    "unchanged_test_suite_rerun": false,
+    "source_review": "Journal binds unchanged lock/paths; resume compares partial bytes before append; existing extraction-failure/resume regression evidence retained.",
+    "powershell_document_blocks_parsed": 14,
+    "independent_resume_review": "passed; no blocker"
   }
 }

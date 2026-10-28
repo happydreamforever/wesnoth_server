@@ -1,6 +1,6 @@
 # Windows World worker dependency preparation
 
-Current Windows checkpoint (2026-10-28): the 107-package cache and Python 3.12 P1–P3 passed. Offline prefix extraction stopped at the first aom package with ReadError. Follow the [one-package diagnostic](WORLD_ARCHIVE_DIAGNOSTIC_1192624.md) before retrying preparation or migration; the full instructions below are retained for the rollout sequence. Preserve the cache and preparation journal.
+Current Windows checkpoint (2026-10-28): the 107-package cache and Python 3.12 P1–P3 passed. The subsequent targeted aom diagnostic now passes on Windows after the earlier full-prefix ReadError. Resume full preparation once using the [current archive handoff](WORLD_ARCHIVE_DIAGNOSTIC_1192624.md); return its new console/log before migration. Preserve cache/journal/partial files; no new pull, download or repeated Python installation is needed.
 
 The user's Windows inventory reports 24 installed MINGW64 packages and the same 24 cached archives. The console is accepted at that scope; the saved Windows file itself was not opened on the VPS. It does not establish archive integrity, usable installed headers or worker execution. No new WAN state was supplied.
 

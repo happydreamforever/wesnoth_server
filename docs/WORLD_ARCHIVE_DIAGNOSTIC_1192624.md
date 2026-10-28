@@ -1,5 +1,33 @@
 # World D: first-package archive diagnostic
 
+## Current step: resume full preparation once
+
+The returned Windows console confirms all diagnostic phases, including extraction and verification, and both PASSED/COMPLETE markers. Report stem: `diagnostics/world-worker-archive-20261028-053027-599-5b4e9714eeaa43a080042af7a50937a2`; the text/JSON files themselves were not supplied. Retain `build/world-worker-archive-check-464cf0e81cff4a5d859a1080f47528bc`.
+
+This accepts the one-package Windows check. It does not establish why the earlier attempt failed or verify the full prefix. The existing journal and partial files can now be checked by the normal resume path; unknown or changed contents stop without being replaced.
+
+Keep all five services stopped, WAN disconnected and local Ethernet connected. Keep Python 3.14 installed. No new pull, download, Python installation or backup is needed. Run:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Prepare-WindowsWorldWorker.ps1' `
+        -MsysRoot 'D:\Test\wesnoth-setup\msys64'
+
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Worker preparation stopped. Preserve the cache and journal; send the new saved log.'
+    }
+}
+```
+
+The helper revalidates all 107 cached packages and resumes matching partial files in the original owned staging directory. Allow several minutes. Expected: `WORLD WORKER PACKAGE CACHE VERIFIED`, then `WORLD WORKER ISOLATED DEPENDENCIES PREPARED` (or `VERIFIED` if already complete).
+
+Return the full console and new `diagnostics/world-worker-prepare-*.txt`, even on success, before E migration. If it stops, retain the reported classification and every preparation file; do not repeat the command until reviewed. Python P1–P3 and the accepted cold backup remain accepted. There is no new network-status measurement in the diagnostic console.
+
+## Earlier diagnostic handoff — completed, do not repeat
+
 The Windows worker preparation verified the 107-package cache, then stopped with `Pinned package archive could not be read: ReadError` during the first package's extraction. Saved Windows log: `diagnostics/world-worker-prepare-20261028-005845-045-7179b8b6b7e74460bc97558c5ec94cc5.txt`. World D has not passed; do not migrate or build yet.
 
 The preparation path scans every package before printing `Preparing worker package 1/107`, so this failure occurred during its second pass, while writing files. The pinned first package (`mingw-w64-x86_64-aom`) passes repeated actual Python 3.12.10 scans and extraction on the VPS: 24 files, 23,735,199 bytes. A deliberately shortened decoder timeout reproduces the old generic `ReadError`, but that does **not** establish the Windows cause. The returned console contains no decoder exit status, timeout flag or precise read-error reason.
