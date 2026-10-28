@@ -1,0 +1,254 @@
+{
+  "format": 1,
+  "purpose": "world-worker-windows-environment-correction",
+  "date": "2026-10-28",
+  "release": 1192624,
+  "implementation_commit": "cc4d350",
+  "windows_report": {
+    "source": "pasted console",
+    "saved_file_opened": false,
+    "log": "diagnostics/world-worker-build-20261028-074358-134-e82b585a063142c5974327badec16a6b.txt",
+    "compiler_check_started": false,
+    "full_worker_accepted": false,
+    "android": "not started",
+    "exact_HEAD_supplied": false
+  },
+  "cause": "Windows os.environ enumerates SYSTEMROOT; dict conversion loses case-insensitive lookup. Prior builder looked up SystemRoot. Actual official Windows CPython3.12.10 reproduced KeyError. User generic output alone does not identify exact exception.",
+  "fix": [
+    "Normalize copied Windows environment names to uppercase; reject duplicate aliases.",
+    "Validate SystemRoot without logging environment values.",
+    "Retain sanitized early stage/type/errno diagnostics; use validated root for final isolated worker startup."
+  ],
+  "passed_tests": 76,
+  "skips": 0,
+  "python": "3.12.10",
+  "actual_execution": "Official Windows CPython3.12.10 \u2192 actual NT os.environ \u2192 production compiler_environment \u2192 six production C/CXX/resource phases \u2192 pinned Windows PE tools under network-disabled Wine; no subprocess/environment substitution.",
+  "limitations": [
+    "Not a native Windows host test or complete589-step worker build.",
+    "No Android or five-service readiness/gameplay acceptance.",
+    "Recovery dispatch tests use controlled compiler boundaries; actual filesystem operations."
+  ],
+  "preservation": [
+    "Original incomplete legacy stage allowlist unchanged.",
+    "No prefix/cache/package/runtime/schema/client/bridge/Room/Android/save change.",
+    "Existing README modifications retained."
+  ],
+  "source_sha256": {
+    "tools/build_world_worker.py": "766a890b4d92690832ff325fc287573b11b8f0dbd25d0964c7965f010647bb44",
+    "tests/test_world_worker_toolchain.py": "36d69098e01c65ea12622b9fed5c39f3d36c44bb52674b540d4eb198a7125ffd",
+    "tools/world_worker_recovery.py": "c1f46b53066aeac5725caa01bdf6af972a5010ca0812ff11f5443a8646134187"
+  },
+  "evidence": [
+    {
+      "path": "build/audit-world-worker-environment-20261028/tests/verification.json",
+      "sha256": "058a3c36397f503841b40586ad764558441628f3c074e9e93115e53a7d3b0af6",
+      "details": {
+        "format": 1,
+        "purpose": "windows-compiler-environment-regression-verification",
+        "date": "2026-10-28",
+        "python": "3.12.10",
+        "container": "wesnoth-alliance-native-verify:python3.14.3-gcc16.2",
+        "network": "disabled",
+        "passed": 76,
+        "skipped": 0,
+        "toolchain": 26,
+        "recovery_and_dispatch": 36,
+        "adjacent_dependencies": 14,
+        "elapsed_seconds": 4.355,
+        "source_sha256": {
+          "tools/build_world_worker.py": "766a890b4d92690832ff325fc287573b11b8f0dbd25d0964c7965f010647bb44",
+          "tools/world_worker_recovery.py": "c1f46b53066aeac5725caa01bdf6af972a5010ca0812ff11f5443a8646134187",
+          "tests/test_world_worker_toolchain.py": "36d69098e01c65ea12622b9fed5c39f3d36c44bb52674b540d4eb198a7125ffd",
+          "tests/test_world_worker_recovery.py": "f5a38441ee14ce8a5cec13bed9edf29e5fbff3aeb76edb34b4a1d5d8c3b02740",
+          "tests/test_world_worker_dependencies.py": "621c58155e3d9ff4f49b7a453a9c00ff5a4f21d0937247b5255edf6628a0aa62"
+        },
+        "negative": {
+          "path": "build/audit-world-worker-environment-20261028/tests/environment-before-fix.log",
+          "sha256": "2bf04c57533c601302794b398a40e3d5bce8037c541b0362667c08bd17fc2360",
+          "tests": 4,
+          "result": "failed: failures=2, errors=12 across subtests",
+          "snapshot_path": "build/audit-world-worker-environment-20261028/tests/pre-fix-build_world_worker.py",
+          "snapshot_sha256": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26",
+          "observed": "Default uppercase environment snapshot and mixed-case plain mapping both raise KeyError: SystemRoot before compiler setup."
+        },
+        "positive": {
+          "path": "build/audit-world-worker-environment-20261028/tests/environment-toolchain-recovery-final.log",
+          "sha256": "8924b4fc0419277bac4ca7fb412ad6c6716b484a9a48f29bf60d373456d31378",
+          "process_exit": 0
+        },
+        "scope": {
+          "environment": "Actual production normalization/filtering using controlled Windows-style plain mappings on Linux CPython3.12.10; no native Windows host claim.",
+          "errors": "Actual production build_step classification, redaction and contextual error wrapping.",
+          "preservation": "Real local filesystem recovery, plus build dispatch with controlled compiler/package boundaries.",
+          "cmake": "Actual host CMake/Ninja C/CXX compile-link-runtime and RC argv generation; RC subprocess controlled.",
+          "full_windows_worker_build": false
+        },
+        "assertions": [
+          "Uppercase os.environ snapshot and mixed-case mappings select the Windows root without KeyError.",
+          "Canonical output contains one PATH and PKG_CONFIG_LIBDIR with only selected compiler/system paths.",
+          "Any case-insensitive duplicate key is rejected, including identical values and filtered compiler keys.",
+          "Missing or empty SystemRoot produces actionable BuildError and preserves original mapping.",
+          "Unexpected exceptions expose only phase/type/numeric OS error codes; command/exception values are not printed.",
+          "Early environment failure prevents compiler invocation and preserves the original incomplete stage.",
+          "Recognized pre-sysroot incomplete stage remains eligible with a changed current builder digest; all other input bindings remain strict."
+        ]
+      }
+    },
+    {
+      "path": "build/audit-world-worker-environment-20261028/evidence/input-provenance.json",
+      "sha256": "aed6e0bccc622a25acdd9f6a6b1d5dd8733983b323b805b17a74a451f54957eb",
+      "details": {
+        "url": "https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip",
+        "archive_bytes": 11133606,
+        "archive_sha256": "4acbed6dd1c744b0376e3b1cf57ce906f9dc9e95e68824584c8099a63025a3c3",
+        "builder_baseline_sha256": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26",
+        "source_os_sha256": "54c43a1fc69c979c70d8f7d097174cee163bfe59937723ee353043dd4a0211e1",
+        "scope": "Official HTTPS Windows embeddable Python3.12.10 for isolated Wine evidence; no installed project dependency changed."
+      }
+    },
+    {
+      "path": "build/audit-world-worker-environment-20261028/evidence/windows-python-baseline.json",
+      "sha256": "f154bdc7f60cdfa9a524668c7edabe5fd6bb16933fd1424516236bfdd1366722",
+      "details": {
+        "scope": "Actual official Windows CPython3.12.10 under network-disabled Linux Wine; not native Windows acceptance.",
+        "version": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+        "platform": "win32",
+        "os_name": "nt",
+        "builder_baseline_sha256": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26",
+        "environ_key_names": [
+          "SYSTEMROOT"
+        ],
+        "direct_mixed_case_lookup_succeeds": true,
+        "plain_dict_mixed_case_lookup_present": false,
+        "plain_dict_uppercase_lookup_present": true,
+        "baseline_exception_type": "KeyError",
+        "baseline_key_name": "'SystemRoot'"
+      }
+    },
+    {
+      "path": "build/audit-world-worker-environment-20261028/evidence/windows-python-production.json",
+      "sha256": "5f66194a4e797a75502c406c4080d71479740529031b86e466564ff096b73165",
+      "details": {
+        "scope": "Actual official Windows CPython3.12.10 directly calls current production environment and C/CXX/resource preflight with actual NT os.environ and pinned PE tools under network-disabled Linux Wine; no subprocess or environment boundary substitutions. Not full engine compilation or native Windows acceptance.",
+        "python_version": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+        "os_name": "nt",
+        "platform": "win32",
+        "builder_sha256": "766a890b4d92690832ff325fc287573b11b8f0dbd25d0964c7965f010647bb44",
+        "builder_final_sha256": "766a890b4d92690832ff325fc287573b11b8f0dbd25d0964c7965f010647bb44",
+        "original_environment_unchanged": true,
+        "case_normalized": true,
+        "prefix_and_repository": "read-only Docker mounts",
+        "network": "none",
+        "result": {
+          "format": 1,
+          "purpose": "world-worker-compiler-check",
+          "status": "passed",
+          "prefix": "Z:\\verified prefix",
+          "sysroot": "Z:/verified prefix",
+          "phases": [
+            {
+              "phase": "c-compile",
+              "exit": 0,
+              "status": "passed"
+            },
+            {
+              "phase": "c-run",
+              "exit": 0,
+              "status": "passed"
+            },
+            {
+              "phase": "cxx-compile",
+              "exit": 0,
+              "status": "passed"
+            },
+            {
+              "phase": "cxx-run",
+              "exit": 0,
+              "status": "passed"
+            },
+            {
+              "phase": "rc-compile",
+              "exit": 0,
+              "status": "passed"
+            },
+            {
+              "phase": "rc-verify",
+              "exit": 0,
+              "status": "passed"
+            }
+          ],
+          "c": {
+            "source_sha256": "d3bccccd89b4951c6a39ac2522d39b78ea7ab0a333458fab30891f0c944fdca3",
+            "executable_sha256": "892aaa0f7deb4675c5e6a522276310a47e7afeca8c293d0a2f41de17f958fd91"
+          },
+          "cxx": {
+            "source_sha256": "8beacb6675f3d675eee5129b5f587f91ba4711abd05b0ae9e95fc422659c491c",
+            "executable_sha256": "db8ded2b9953afd90a0d3821b17b8b8bb1e2c0061f7afe433641b58b844a688f"
+          },
+          "rc": {
+            "source_sha256": "9659f15d750ac6db8a232e096401ec70c450b5f30746d24032b022c8a5642d29",
+            "object_sha256": "15908081d0553aca130ba0ed0675018b29fb2c87cf136733bcc13a0b6a95fb34"
+          }
+        }
+      }
+    },
+    {
+      "path": "build/audit-world-worker-environment-20261028/evidence/review.json",
+      "sha256": "7c4005a41d5f3ddcfaabacf234befbc90f61315f082487e6a5fbe083d914b6d2",
+      "details": {
+        "format": 1,
+        "purpose": "independent-worker-windows-environment-review",
+        "status": "passed",
+        "baseline_reproduction": "KeyError SystemRoot in current released compiler_environment from actual Windows CPython3.12.10 os.environ, before invoking compiler preflight",
+        "fixed_behavior": "Actual NT environment case normalization succeeds; production C/CXX compile/link/runtime and Windows resource compile/object checks pass",
+        "tests_subprocess_or_environment_mocked": false,
+        "wine_image_id": "sha256:fde871904f9c06b6c40d4946f537b8a10f332f4dc570df8e867bb65cb5dd9b80",
+        "execution_network": "none",
+        "actual_windows_python_version": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+        "builder_baseline_sha256": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26",
+        "builder_fixed_sha256": "766a890b4d92690832ff325fc287573b11b8f0dbd25d0964c7965f010647bb44",
+        "input_files": {
+          "input-provenance.json": {
+            "bytes": 523,
+            "sha256": "aed6e0bccc622a25acdd9f6a6b1d5dd8733983b323b805b17a74a451f54957eb"
+          },
+          "build_world_worker-before.py": {
+            "bytes": 32006,
+            "sha256": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26"
+          },
+          "verify-windows-environment.py": {
+            "bytes": 1660,
+            "sha256": "4dee9578807c70883480cc5f487d0c912927127c12124b6ea504b9c9b6b08cd8"
+          },
+          "verify-windows-production.py": {
+            "bytes": 1860,
+            "sha256": "50fae64bba6096693dcca60b747b5ed385b12b0d12fa2fec9691da8979b65acb"
+          },
+          "windows-python-baseline.json": {
+            "bytes": 643,
+            "sha256": "f154bdc7f60cdfa9a524668c7edabe5fd6bb16933fd1424516236bfdd1366722"
+          },
+          "windows-python-baseline.log": {
+            "bytes": 963,
+            "sha256": "e6d37f57e4579ae57a177f211833a86294fd8e45f58cc43be62a2283a106241b"
+          },
+          "windows-python-production.json": {
+            "bytes": 2224,
+            "sha256": "5f66194a4e797a75502c406c4080d71479740529031b86e466564ff096b73165"
+          },
+          "windows-python-production.log": {
+            "bytes": 633,
+            "sha256": "3f52e25a2c5875d84bc25f1ee7b505028ded46c80407ebd88fe388cc9ed043f5"
+          }
+        },
+        "review_notes": [
+          "CMake and game-data/prefix checks may also fail before preflight; supplied console omitted exception details and cannot prove an exclusive host failure. The Windows environment defect is deterministic and its symptom matches.",
+          "The new stage classifier covers host, prefix, data, environment, build tools, compiler identity, preflight and source binding; metadata/environment exception values are not printed.",
+          "Actual PE interpreter/compiler execution under Wine is not a full 589-step engine compilation or native Windows acceptance.",
+          "No runtime, previous stage, package cache, journal or pinned prefix mutated; prefix and source mounted read-only; no other repository file edited by this reviewer."
+        ]
+      }
+    }
+  ],
+  "next": "Server-only pull containing cc4d350; offline worker-only retry with services stopped; review before Android."
+}

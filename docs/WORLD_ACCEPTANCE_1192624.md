@@ -1,6 +1,6 @@
 # Windows acceptance — Companies and Territorial Wars 1192624
 
-Current checkpoint (2026-10-28): A–E, Python P1–P3, full D preparation, F bridge rebuild and F native Room server build pass at supplied Windows-console scope. The World worker failed at string.h lookup; Android rebuilding did not start. Follow [the compiler correction and worker-only retry](WORLD_WORKER_SYSROOT_1192624.md). Keep five services stopped and Python3.14 installed. Do not repeat accepted stages. Full F worker/Android and G–Z remain pending.
+Current checkpoint (2026-10-28): A–E, Python P1–P3, full D preparation, F bridge rebuild and F native Room server build pass at supplied Windows-console scope. The World worker initially failed at string.h lookup, then its retry stopped before preflight. The Windows environment correction cc4d350 is now verified; Android rebuilding did not start. Follow [the compiler correction and worker-only retry](WORLD_WORKER_SYSROOT_1192624.md). Keep five services stopped and Python3.14 installed. Do not repeat accepted stages. Full F worker/Android and G–Z remain pending.
 
 Use the existing `runtime-v2`, accounts, Teams, earned heroes, campaign saves, bundled public profile, original Android signer and one LDPlayer. This release explicitly upgrades schema 3 to 4 in place. It does not initialize another database, create founding Teams automatically or grant replacement heroes. Previously accepted results remain historical evidence; untested new behavior is NOT RUN.
 

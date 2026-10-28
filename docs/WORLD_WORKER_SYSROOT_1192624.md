@@ -1,6 +1,10 @@
-# Windows World worker compiler correction
+# Windows World worker compiler corrections
+
+Current retry (2026-10-28): the next Windows attempt stopped before the compiler-check message, with generic preparation failure. Log: `diagnostics/world-worker-build-20261028-074358-134-e82b585a063142c5974327badec16a6b.txt`. Correction `cc4d350` fixes Windows environment-name normalization and adds named startup phases. Follow the same server-only pull and worker-only retry below. The saved file itself and exact pulled HEAD were not supplied.
 
 The supplied 2026-10-28 F transcript accepts the bridge rebuild and native Room server build. The full World worker stopped at its first Lua compilation with `fatal error: string.h: No such file or directory`. Android rebuilding did not start. Keep A–E and the two successful F builds accepted.
+
+The second defect is in the previous update: Windows Python stores `SYSTEMROOT` in its environment mapping. Copying it into a plain dictionary then requesting `SystemRoot` raises `KeyError`. This has now been reproduced with the official Windows Python 3.12.10 executable and corrected. The old generic user message does not expose its precise exception; new phase messages will distinguish any additional problem.
 
 The pinned headers are present. The relocated GCC was still using its compiled-in `/mingw64` system root. The corrected builder supplies the verified isolated prefix through an owned CMake toolchain, including the separate resource compiler. It checks C/C++ compilation, threads, runtime DLL execution and Windows resource compilation before touching the previous worker stage. This follows the [CMake sysroot toolchain requirement](https://cmake.org/cmake/help/v4.3/variable/CMAKE_SYSROOT.html) and [GCC system-root behavior](https://gcc.gnu.org/onlinedocs/gcc/Directory-Options.html).
 
@@ -23,7 +27,7 @@ Keep all five services stopped and Python 3.14 installed until the later G start
 }
 ```
 
-Expected: a successful fast-forward (or already up to date) and a commit hash containing correction `13e975a` (or a later commit). Preserve the unrelated README edit. No client pull, dependency download, re-extraction, Python reinstall, migration or repeated bridge/Room build is needed.
+Expected: a successful fast-forward (or already up to date) and a commit hash containing environment correction `cc4d350` (or a later commit). Preserve the unrelated README edit. No client pull, dependency download, re-extraction, Python reinstall, migration or repeated bridge/Room build is needed.
 
 ## 2. Retry only F's World worker
 
@@ -46,6 +50,8 @@ Disconnect WAN again while retaining local Ethernet. Keep the five services stop
 
 Expected in order:
 
+First, named `RUN World worker` stages: `host`, `isolated-dependencies`, `game-data`, `compiler-environment`, `build-tools`, `compiler-identity` and `compiler-check`. These show progress; they are not the build success marker. Then:
+
 1. `WORLD WORKER COMPILER CHECK PASSED` after C, C++ and resource checks.
 2. `Incomplete worker build preserved: ...before-sysroot-...` for the known failed stage (already finished preservation is reused).
 3. The full engine configure/build, then `FULL NATIVE WORLD WORKER BUILD PASSED`.
@@ -56,8 +62,8 @@ After the full worker passes, review that result before the remaining Android re
 
 ## Evidence limits
 
-All **67 focused tests pass**, without skips, on Python 3.12.10 with networking disabled. The exact handoff blocks and wrapper also pass PowerShell parsing. [Verification record](WORLD_WORKER_SYSROOT_VERIFICATION_1192624.json) separates actual execution from controlled test boundaries.
+All **76 focused tests pass**, without skips, on Python 3.12.10 with networking disabled. The exact handoff blocks and wrapper also pass PowerShell parsing. [Current environment verification](WORLD_WORKER_ENVIRONMENT_VERIFICATION_1192624.json) separates actual execution from controlled test boundaries.
 
-The VPS verification uses the actual pinned Windows compiler executables under Wine, with network disabled and the prefix mounted read-only, plus actual Python 3.12.10/CMake tests and controlled filesystem recovery tests. It is not a full native Windows worker build, Android compilation, worker readiness or gameplay acceptance. The next Windows report supplies that platform's full-build evidence.
+The new VPS check uses actual official Windows Python 3.12.10 and its native environment mapping to run the production compiler setup and all six C/C++/resource phases directly under Wine, without mocked environment or subprocess boundaries. Network access is disabled and repository/prefix are read-only. Linux Python/CMake and controlled recovery tests supply separate regression evidence. [Earlier sysroot verification](WORLD_WORKER_SYSROOT_VERIFICATION_1192624.json) remains historical evidence for the unchanged header/resource correction. It is not a full native Windows worker build, Android compilation, worker readiness or gameplay acceptance. The next Windows report supplies that platform's full-build evidence.
 
 Source report: 21,685-byte pasted attachment, SHA256 `e070e908134657820ab99f053285589b0f7968bbeaad253bca2b4a91846e715a`. F's failed worker log: `diagnostics/world-worker-build-20261028-065115-429-661ddeee6ac449e6beeb5c1272b687bf.txt`. Its saved Windows file itself was not supplied.
