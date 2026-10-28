@@ -94,8 +94,8 @@ def native(command, environment):
 
 
 def check_host():
-    if os.name != "nt" or sys.version_info[:3] != (3, 14, 3) or sys.maxsize <= 2**32:
-        raise BuildError("Use the verified Windows x86_64 Python 3.14.3.")
+    if os.name != "nt" or sys.version_info[:3] != (3, 12, 10) or sys.maxsize <= 2**32:
+        raise BuildError("Use the verified Windows x86_64 Python 3.12.10.")
 
 
 def build(msys, cmake):

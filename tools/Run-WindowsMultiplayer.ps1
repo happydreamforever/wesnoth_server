@@ -12,7 +12,7 @@ $result = 1
 try {
     if ($env:OS -ne 'Windows_NT') { throw 'Run this helper on Windows.' }
     $RuntimeRoot = Resolve-AllianceRuntimeRoot -Path $RuntimeRoot
-    $python = Join-Path $repo 'build\alliance-venv\Scripts\python.exe'
+    $python = Join-Path $repo 'build\alliance-venv-py312\Scripts\python.exe'
     $env:PATH = (Join-Path $MsysRoot 'mingw64\bin') + ';' + $originalPath
     $diagnostics = Join-Path $repo 'diagnostics'
     $null = New-Item -ItemType Directory -Path $diagnostics -Force

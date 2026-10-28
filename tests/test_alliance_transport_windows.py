@@ -63,7 +63,7 @@ class TransportPowerShellTests(unittest.TestCase):
         self.helper = self.tools / HELPER
         self.helper.write_bytes((ROOT / "tools" / HELPER).read_bytes())
         self.localappdata = self.root / "Local App Data"
-        self.python = self.localappdata / "Programs/Python/Python314/python.exe"
+        self.python = self.localappdata / "Programs/Python/Python312/python.exe"
         self.python.parent.mkdir(parents=True)
         self.python.write_text(FAKE_PYTHON)
         self.python.chmod(0o755)
@@ -167,7 +167,7 @@ class TransportPowerShellTests(unittest.TestCase):
     def test_python_version_failure_stops_fixture_and_restores_path(self):
         _, report = self.run_helper(failure="check-python", success=False)
         self.assertEqual(len(self.read_calls()), 1)
-        self.assertIn("Windows x86_64 CPython 3.14.3 is required", report)
+        self.assertIn("Windows x86_64 CPython 3.12.10 is required", report)
         self.assertEqual(list((self.repo / "diagnostics").glob("*.json")), [])
 
     def test_fixture_failure_is_saved_without_success_marker(self):

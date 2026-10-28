@@ -13,7 +13,7 @@ try {
     if ($env:OS -ne 'Windows_NT') { throw 'Run this helper on Windows.' }
     $RuntimeRoot = Resolve-AllianceRuntimeRoot -Path $RuntimeRoot
     $BackupPath = Resolve-AllianceRuntimeRoot -Path $BackupPath
-    $python = Join-Path $repo 'build\alliance-venv\Scripts\python.exe'
+    $python = Join-Path $repo 'build\alliance-venv-py312\Scripts\python.exe'
     $helper = Join-Path $PSScriptRoot 'migrate_alliance_runtime.py'
     $mongod = Join-Path $repo 'build\alliance-mongodb\bin\mongod.exe'
     foreach ($file in @($python,$helper,$mongod)) { if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw 'The pinned migration tools are missing.' } }

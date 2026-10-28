@@ -71,7 +71,7 @@ try {
         $RuntimeRoot = Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2'
     }
     $RuntimeRoot = Resolve-AllianceRuntimeRoot -Path $RuntimeRoot
-    $python = Join-Path $repo 'build\alliance-venv\Scripts\python.exe'
+    $python = Join-Path $repo 'build\alliance-venv-py312\Scripts\python.exe'
     $diagnostic = Join-Path $PSScriptRoot 'check_alliance_backend.py'
     foreach ($path in @($python, $diagnostic)) {
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {

@@ -144,7 +144,7 @@ class LoginTraceWindowsTests(unittest.TestCase):
         for name in (HELPER, "Alliance-Common.ps1"):
             shutil.copyfile(ROOT / "tools" / name, self.tools / name)
         self.helper = self.tools / HELPER
-        self.python = self.repo / "build/alliance-venv/Scripts/python.exe"
+        self.python = self.repo / "build/alliance-venv-py312/Scripts/python.exe"
         self.python.parent.mkdir(parents=True)
         self.python.write_text(FAKE_PYTHON)
         self.python.chmod(0o755)
@@ -158,7 +158,7 @@ class LoginTraceWindowsTests(unittest.TestCase):
             self.repo / "runtime/alliance/config.json": b"PRIVATE_OLD_CONFIG_SENTINEL",
             self.repo / "runtime/alliance-transport/server-key.pem": b"PRIVATE_IDENTITY_SENTINEL",
             self.repo / "build/alliance-account-bridge/alliance-account-bridge.exe": b"EXISTING_BRIDGE",
-            self.repo / "build/alliance-venv/alliance-owned.json": b"EXISTING_VENV_RECEIPT",
+            self.repo / "build/alliance-venv-py312/alliance-owned.json": b"EXISTING_VENV_RECEIPT",
             self.repo / "build/alliance-mongodb/bin/mongod.exe": b"EXISTING_MONGODB",
             self.repo / "README.md": b"UNRELATED_USER_CHANGES",
             self.repo / "diagnostics/alliance-login-trace-previous.json": b"PREVIOUS_REPORT",

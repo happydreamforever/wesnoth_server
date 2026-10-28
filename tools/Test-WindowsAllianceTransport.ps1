@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [string]$MsysRoot = 'D:\Test\wesnoth-setup\msys64',
-    [string]$PythonPath = (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python314\python.exe'),
+    [string]$PythonPath = (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\python.exe'),
     [string]$ServerAddress = '127.0.0.1',
     [ValidateRange(1, 65535)][int]$Port = 15001
 )
@@ -33,7 +33,7 @@ try {
 
     $env:PATH = $dllRoot + ';' + $originalPath
     & $PythonPath -I -B $pythonCheck check-python | Out-Host
-    if ($LASTEXITCODE -ne 0) { throw 'Windows x86_64 CPython 3.14.3 is required; no version was changed.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Windows x86_64 CPython 3.12.10 is required; no version was changed.' }
 
     Write-Host 'Preparing a separate TLS identity and testing it with Python on loopback.'
     $arguments = @('-I', '-B', $transport,

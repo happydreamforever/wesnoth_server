@@ -59,7 +59,7 @@ elif action == 'fixture':
         print('Injected fixture failure after partial report')
         sys.exit(9)
 else:
-    print('Simulated Python 3.14.3 check')
+    print('Simulated Python 3.12.10 check')
 '''
 LAUNCHER = r'''
 $ErrorActionPreference = 'Stop'
@@ -94,7 +94,7 @@ class NativePowerShellTests(unittest.TestCase):
         self.source.mkdir(parents=True)
         (self.source / "CMakeLists.txt").write_bytes(b"existing native sources")
         self.localappdata = self.root / "Local App Data"
-        self.python = self.localappdata / "Programs/Python/Python314/python.exe"
+        self.python = self.localappdata / "Programs/Python/Python312/python.exe"
         self.msys = self.root / "MSYS with spaces & literal $"
         self.compiler = self.msys / "mingw64/bin/g++.exe"
         self.openssl = self.msys / "mingw64/bin/openssl.exe"
@@ -306,7 +306,7 @@ class NativePowerShellTests(unittest.TestCase):
     def test_python_pin_failure_stops_before_any_build(self):
         _, report = self.run_helper(success=False, failure="check-python")
         self.assertEqual(len(self.read_calls()), 1)
-        self.assertIn("CPython 3.14.3 is required", report)
+        self.assertIn("CPython 3.12.10 is required", report)
 
     def test_all_tool_version_and_target_failures_stop_before_configuration(self):
         for action in ("cmake-version", "ninja-version", "compiler-target", "compiler-version", "openssl-version"):

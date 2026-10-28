@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
 try {
     if ($env:OS -ne 'Windows_NT') { throw 'This helper requires Windows.' }
-    $python = Join-Path $repo 'build\alliance-venv\Scripts\python.exe'
+    $python = Join-Path $repo 'build\alliance-venv-py312\Scripts\python.exe'
     & $python -I -B (Join-Path $PSScriptRoot 'alliance_dependencies.py') check-python
     if ($LASTEXITCODE -ne 0) { throw 'The installed pinned Python runtime is required.' }
     $companionArgs = @('--username', $Username, '--profile', $PublicProfile)

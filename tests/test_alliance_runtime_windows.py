@@ -37,7 +37,7 @@ class RuntimeRootPowerShellTests(unittest.TestCase):
         for name in ("Alliance-Common.ps1", *WRAPPERS.values(), "Run-WindowsAllianceBridge.ps1", "Run-WindowsAllianceBattles.ps1"):
             shutil.copy2(ROOT / "tools" / name, self.repo / "tools" / name)
         (self.repo / "tools/alliance_dependencies.py").touch()
-        self.python = self.repo / "build/alliance-venv/Scripts/python.exe"
+        self.python = self.repo / "build/alliance-venv-py312/Scripts/python.exe"
         self.python.parent.mkdir(parents=True)
         self.python.write_text(
             "#!/usr/bin/python3\n"

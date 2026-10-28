@@ -1,0 +1,176 @@
+{
+  "schema": 1,
+  "python": "3.14.3",
+  "platform": "win_amd64",
+  "wheels": [
+    {
+      "name": "argon2-cffi",
+      "version": "25.1.0",
+      "filename": "argon2_cffi-25.1.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/4f/d3/a8b22fa575b297cd6e3e3b0155c7e25db170edf1c74783d6a31a2490b8d9/argon2_cffi-25.1.0-py3-none-any.whl",
+      "size": 14657,
+      "sha256": "fdc8b074db390fccb6eb4a3604ae7231f219aa669a2652e0f20e16ba513d5741"
+    },
+    {
+      "name": "argon2-cffi-bindings",
+      "version": "26.1.0",
+      "filename": "argon2_cffi_bindings-26.1.0-cp310-abi3-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/6d/3a/0cc14a05810e6add9bce5e87693334baa2222de5f647fa31781885b6573f/argon2_cffi_bindings-26.1.0-cp310-abi3-win_amd64.whl",
+      "size": 25730,
+      "sha256": "2c36ff87b5dfaa477d0bd51e9d7f6abdae7c8955d2983c97419085d842154b3e"
+    },
+    {
+      "name": "blinker",
+      "version": "1.9.0",
+      "filename": "blinker-1.9.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/10/cb/f2ad4230dc2eb1a74edf38f1a38b9b52277f75bef262d8908e60d957e13c/blinker-1.9.0-py3-none-any.whl",
+      "size": 8458,
+      "sha256": "ba0efaa9080b619ff2f3459d1d500c57bddea4a6b424b60a91141db6fd2f08bc"
+    },
+    {
+      "name": "cffi",
+      "version": "2.1.1",
+      "filename": "cffi-2.1.1-cp314-cp314-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/a7/06/1c3e01e3ba14c39f6d10bfbac52753b7e22259e38088e5cfe1d704918690/cffi-2.1.1-cp314-cp314-win_amd64.whl",
+      "size": 187949,
+      "sha256": "3222ba5d678f80a030e6afbcc33dc1ae5cb45facabb61cee2c7016b8432fde48"
+    },
+    {
+      "name": "click",
+      "version": "8.5.0",
+      "filename": "click-8.5.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/58/50/6c0d534c5f134586a8e1ba4e330569e32f057e33372ae556463212fb4cd3/click-8.5.0-py3-none-any.whl",
+      "size": 125251,
+      "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360"
+    },
+    {
+      "name": "colorama",
+      "version": "0.4.6",
+      "filename": "colorama-0.4.6-py2.py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl",
+      "size": 25335,
+      "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"
+    },
+    {
+      "name": "dnspython",
+      "version": "2.9.0",
+      "filename": "dnspython-2.9.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/10/02/cdcc9b7c051786a103c3b09e1003a82fa0c66bcb91ffbdabcfbf7b4163b9/dnspython-2.9.0-py3-none-any.whl",
+      "size": 354822,
+      "sha256": "9a4aedb833c3c1b49214d04d44d3032ab7a9135f7c1d29a549b4ff78fd82fda9"
+    },
+    {
+      "name": "Flask",
+      "version": "3.1.3",
+      "filename": "flask-3.1.3-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/7f/9c/34f6962f9b9e9c71f6e5ed806e0d0ff03c9d1b0b2340088a0cf4bce09b18/flask-3.1.3-py3-none-any.whl",
+      "size": 103424,
+      "sha256": "f4bcbefc124291925f1a26446da31a5178f9483862233b23c0c96a20701f670c"
+    },
+    {
+      "name": "Flask-WTF",
+      "version": "1.3.0",
+      "filename": "flask_wtf-1.3.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/14/d2/97adf2ec7af95522573e6dd5493ee84792d0fbfb2def010c4a581b8d6e5e/flask_wtf-1.3.0-py3-none-any.whl",
+      "size": 13959,
+      "sha256": "dc5e3a4ce97f75c47bf6c1c72ad2c3b7bdf579a2ed13aebcc5d3d81fe2571160"
+    },
+    {
+      "name": "itsdangerous",
+      "version": "2.2.0",
+      "filename": "itsdangerous-2.2.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/04/96/92447566d16df59b2a776c0fb82dbc4d9e07cd95062562af01e408583fc4/itsdangerous-2.2.0-py3-none-any.whl",
+      "size": 16234,
+      "sha256": "c6242fc49e35958c8b15141343aa660db5fc54d4f13a1db01a3f5891b98700ef"
+    },
+    {
+      "name": "Jinja2",
+      "version": "3.1.6",
+      "filename": "jinja2-3.1.6-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl",
+      "size": 134899,
+      "sha256": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67"
+    },
+    {
+      "name": "MarkupSafe",
+      "version": "3.0.4",
+      "filename": "markupsafe-3.0.4-cp314-cp314-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/80/f0/5792ff768a410f93ee3f84fc19345295ffc352d2c936b424cb37e514714c/markupsafe-3.0.4-cp314-cp314-win_amd64.whl",
+      "size": 14501,
+      "sha256": "c1bc67752d5f21013cfe430df4062441714eab79f65a6a05e01505957e9c35fe"
+    },
+    {
+      "name": "pycparser",
+      "version": "3.11",
+      "filename": "pycparser-3.11-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/90/11/0e6f11117525ff0eec40ebac3d313376f102df93ca44ad9e893ee85e4f89/pycparser-3.11-py3-none-any.whl",
+      "size": 51178,
+      "sha256": "51d5a8ba2be0bbe440b99d2112604c95bbbc3c2748a64260186c541e1729cd80"
+    },
+    {
+      "name": "pymongo",
+      "version": "4.18.3",
+      "filename": "pymongo-4.18.3-cp314-cp314-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/fb/53/a432246287fa2ead90546c855b9ad62c0fd2fa783f9042f1d762d7d18ef0/pymongo-4.18.3-cp314-cp314-win_amd64.whl",
+      "size": 823661,
+      "sha256": "82f620a555a646f2218cfbf6c39b722e4cbfc71bd9fee019af5e72cbbe7488f7"
+    },
+    {
+      "name": "waitress",
+      "version": "3.0.2",
+      "filename": "waitress-3.0.2-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/8d/57/a27182528c90ef38d82b636a11f606b0cbb0e17588ed205435f8affe3368/waitress-3.0.2-py3-none-any.whl",
+      "size": 56232,
+      "sha256": "c56d67fd6e87c2ee598b76abdd4e96cfad1f24cacdea5078d382b1f9d7b5ed2e"
+    },
+    {
+      "name": "Werkzeug",
+      "version": "3.1.9",
+      "filename": "werkzeug-3.1.9-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/a1/38/df03f564f43cec2684823f3cccae1a652ee7face1cbaa76fb223096e64d7/werkzeug-3.1.9-py3-none-any.whl",
+      "size": 228700,
+      "sha256": "6392e50c78460ba618e5b21f08a71f59c99ce99cdc6cf6e3dd7e6ccca8754fab"
+    },
+    {
+      "name": "WTForms",
+      "version": "3.2.2",
+      "filename": "wtforms-3.2.2-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/18/76/bb225c8300f3a0ba28e01df51419c6c9574a297c43d71b29048e03b65deb/wtforms-3.2.2-py3-none-any.whl",
+      "size": 158656,
+      "sha256": "72b90d5d921bd3119252069cf0301e9c13915f9e52792652bc91c5dda4b79e56"
+    }
+  ],
+  "mongodb": {
+    "version": "8.0.32",
+    "filename": "mongodb-windows-x86_64-8.0.32.zip",
+    "url": "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-8.0.32.zip",
+    "size": 807312757,
+    "sha256": "5a0675fdec49b544cd5d374ad50a9a594cf5b3278b5ace658aa51cbb4df17177",
+    "files": {
+      "LICENSE-Community.txt": {
+        "size": 30608,
+        "sha256": "09d99ca61eb07873d5334077acba22c33e7f7d0a9fa08c92734e0ac8430d6e27"
+      },
+      "MPL-2": {
+        "size": 16726,
+        "sha256": "fab3dd6bdab226f1c08630b1dd917e11fcb4ec5e1e020e2c16f83a0a13863e85"
+      },
+      "README": {
+        "size": 2094,
+        "sha256": "2bb23beaf70002a77d4f82597d664559879845573ad6ed51ae20476c9cabd1e8"
+      },
+      "THIRD-PARTY-NOTICES": {
+        "size": 146330,
+        "sha256": "c3c1219b8c71583c33b372d2b4eae0978d27d6854f5306dd25d4bd0a4fe8844c"
+      },
+      "bin/mongod.exe": {
+        "size": 77725696,
+        "sha256": "38f8e6dfbc496ae4089f15b8235f15287adfbd8c09eafa4f384a2e5361625522"
+      },
+      "bin/vc_redist.x64.exe": {
+        "size": 25314320,
+        "sha256": "37ed59a66699c0e5a7ebeef7352d7c1c2ed5ede7212950a1b0a8ee289af4a95b"
+      }
+    }
+  }
+}

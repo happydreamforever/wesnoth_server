@@ -432,7 +432,7 @@ def main():
     args = parser.parse_args()
     try:
         assert_windows_python()
-        print('Python 3.14.3; Windows x86_64 runtime verified.', flush=True)
+        print('Python 3.12.10; Windows x86_64 runtime verified.', flush=True)
         execute(args.msys, download=args.download, report_path=args.report)
         return 0
     except (BuildError, PreparationError) as error:

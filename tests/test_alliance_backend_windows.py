@@ -97,7 +97,7 @@ class BackendWindowsTests(unittest.TestCase):
         self.helper = self.tools / HELPER
         for name in (HELPER, "Alliance-Common.ps1"):
             shutil.copyfile(ROOT / "tools" / name, self.tools / name)
-        self.python = self.repo / "build/alliance-venv/Scripts/python.exe"
+        self.python = self.repo / "build/alliance-venv-py312/Scripts/python.exe"
         self.python.parent.mkdir(parents=True)
         self.python.write_text(FAKE_PYTHON)
         self.python.chmod(0o755)
@@ -115,7 +115,7 @@ class BackendWindowsTests(unittest.TestCase):
             self.repo / "build/windows-mingw64/bin/wesnothd.exe": b"EXISTING_GUEST_SERVER",
             self.repo / "alliance_bridge/main.cpp": b"EXISTING_BRIDGE_SOURCE",
             self.repo / "build/alliance-mongodb/bin/mongod.exe": b"EXISTING_MONGODB_BINARY",
-            self.repo / "build/alliance-venv/alliance-owned.json": b"EXISTING_VENV_RECEIPT",
+            self.repo / "build/alliance-venv-py312/alliance-owned.json": b"EXISTING_VENV_RECEIPT",
             self.repo / "README.md": b"UNRELATED_USER_CHANGES",
             self.repo / "diagnostics/alliance-backend-previous.json": b"PREVIOUS_REPORT",
             self.runtime / "config.json": b"PRIVATE_PROFILE_CONFIG_SENTINEL",

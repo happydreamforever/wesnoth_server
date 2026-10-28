@@ -16,7 +16,7 @@ try {
     if ($env:OS -ne 'Windows_NT') { throw 'Run this helper on Windows.' }
     $RuntimeRoot = Resolve-AllianceRuntimeRoot -Path $RuntimeRoot
     $MsysRoot = Resolve-AllianceRuntimeRoot -Path $MsysRoot
-    $python = Join-Path $repo 'build\alliance-venv\Scripts\python.exe'
+    $python = Join-Path $repo 'build\alliance-venv-py312\Scripts\python.exe'
     $helper = Join-Path $PSScriptRoot 'alliance_workflow.py'
     foreach ($file in @($python, $helper)) {
         if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw 'The installed workflow runtime is missing.' }

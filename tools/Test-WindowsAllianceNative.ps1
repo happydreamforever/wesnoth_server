@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [string]$MsysRoot = 'D:\Test\wesnoth-setup\msys64',
-    [string]$PythonPath = (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python314\python.exe'),
+    [string]$PythonPath = (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\python.exe'),
     [string]$CMakePath = 'C:\Program Files\CMake\bin\cmake.exe',
     [string]$ClientRoot = '',
     [string]$ProbePath = ''
@@ -54,7 +54,7 @@ try {
 
     $env:PATH = $dllRoot + ';' + $originalPath
     & $PythonPath -I -B $pythonCheck check-python | Out-Host
-    if ($LASTEXITCODE -ne 0) { throw 'Windows x86_64 CPython 3.14.3 is required; no version was changed.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Windows x86_64 CPython 3.12.10 is required; no version was changed.' }
 
     if (-not $reuseProbe) {
         $cmakeVersion = (& $CMakePath --version | Out-String).Trim()

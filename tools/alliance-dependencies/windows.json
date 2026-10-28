@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "python": "3.14.3",
+  "python": "3.12.10",
   "platform": "win_amd64",
   "wheels": [
     {
@@ -30,10 +30,10 @@
     {
       "name": "cffi",
       "version": "2.1.1",
-      "filename": "cffi-2.1.1-cp314-cp314-win_amd64.whl",
-      "url": "https://files.pythonhosted.org/packages/a7/06/1c3e01e3ba14c39f6d10bfbac52753b7e22259e38088e5cfe1d704918690/cffi-2.1.1-cp314-cp314-win_amd64.whl",
-      "size": 187949,
-      "sha256": "3222ba5d678f80a030e6afbcc33dc1ae5cb45facabb61cee2c7016b8432fde48"
+      "filename": "cffi-2.1.1-cp312-cp312-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/d9/79/615cc094e2fb508cade7de88d3b4f6c4ec2bab695c97bce9153dc65aadf5/cffi-2.1.1-cp312-cp312-win_amd64.whl",
+      "size": 185919,
+      "sha256": "f53e442b08449d42821fa4a4fba000095af9f62742a500f978a9f557ec44339a"
     },
     {
       "name": "click",
@@ -94,10 +94,10 @@
     {
       "name": "MarkupSafe",
       "version": "3.0.4",
-      "filename": "markupsafe-3.0.4-cp314-cp314-win_amd64.whl",
-      "url": "https://files.pythonhosted.org/packages/80/f0/5792ff768a410f93ee3f84fc19345295ffc352d2c936b424cb37e514714c/markupsafe-3.0.4-cp314-cp314-win_amd64.whl",
-      "size": 14501,
-      "sha256": "c1bc67752d5f21013cfe430df4062441714eab79f65a6a05e01505957e9c35fe"
+      "filename": "markupsafe-3.0.4-cp312-cp312-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/3f/bf/62495e180b7000aaf30000fff849e933f74264638057176cf46852500adc/markupsafe-3.0.4-cp312-cp312-win_amd64.whl",
+      "size": 14303,
+      "sha256": "11935df9bf455ed0c04eb87bcd720f02b1fe5e02128a9430f23aed6f93336fc7"
     },
     {
       "name": "pycparser",
@@ -110,10 +110,10 @@
     {
       "name": "pymongo",
       "version": "4.18.3",
-      "filename": "pymongo-4.18.3-cp314-cp314-win_amd64.whl",
-      "url": "https://files.pythonhosted.org/packages/fb/53/a432246287fa2ead90546c855b9ad62c0fd2fa783f9042f1d762d7d18ef0/pymongo-4.18.3-cp314-cp314-win_amd64.whl",
-      "size": 823661,
-      "sha256": "82f620a555a646f2218cfbf6c39b722e4cbfc71bd9fee019af5e72cbbe7488f7"
+      "filename": "pymongo-4.18.3-cp312-cp312-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/1e/18/3fa9d86ba32386c02ea991f10875a6a066dd5e5d80790243be3c141b0e73/pymongo-4.18.3-cp312-cp312-win_amd64.whl",
+      "size": 822079,
+      "sha256": "dc8ccf72b76c99a6b9fd05f8b89fe4a693128c5cfdba70f70e5792a6a563f6b0"
     },
     {
       "name": "waitress",

@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$MsysRoot='D:\Test\wesnoth-setup\msys64', [string]$PythonPath=(Join-Path $env:LOCALAPPDATA 'Programs\Python\Python314\python.exe'), [string]$CMakePath='C:\Program Files\CMake\bin\cmake.exe', [string]$GameDataRoot='D:\Test\wesnoth-setup\gamedata-1.19.26', [switch]$PreservePreviousBuild)
+param([string]$MsysRoot='D:\Test\wesnoth-setup\msys64', [string]$PythonPath=(Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\python.exe'), [string]$CMakePath='C:\Program Files\CMake\bin\cmake.exe', [string]$GameDataRoot='D:\Test\wesnoth-setup\gamedata-1.19.26', [switch]$PreservePreviousBuild)
 $ErrorActionPreference='Stop'
 $repo=Split-Path $PSScriptRoot -Parent
 $null=New-Item -ItemType Directory -Path (Join-Path $repo 'diagnostics') -Force

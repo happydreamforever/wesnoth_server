@@ -7,6 +7,8 @@ are preserved and rejected instead of being replaced.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
+from datetime import datetime, timezone
 import errno
 import hashlib
 import http.client
@@ -14,9 +16,11 @@ import importlib.metadata
 import json
 import os
 from pathlib import Path
+import platform
 import shutil
 import socket
 import ssl
+import stat
 import subprocess
 import sys
 import tempfile
@@ -29,10 +33,13 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 PINS = ROOT / "tools" / "alliance-dependencies"
 CACHE = ROOT / "build" / "alliance-dependencies"
-VENV = ROOT / "build" / "alliance-venv"
+VENV = ROOT / "build" / "alliance-venv-py312"
+LEGACY_VENV = ROOT / "build" / "alliance-venv"
+PYTHON_VERSION = (3, 12, 10)
 MONGO = ROOT / "build" / "alliance-mongodb"
 OWNER = "wesnoth-alliance-dependencies-v1"
 DOWNLOAD_ATTEMPTS = 3
+ARTIFACT_RENAME_DELAYS = (0.5, 1, 2)
 MONGO_RENAME_DELAYS = (0.5, 1, 2, 4, 8)
 MONGO_FILES = (
     "LICENSE-Community.txt", "MPL-2", "README", "THIRD-PARTY-NOTICES",
@@ -105,16 +112,77 @@ def verify(path: Path, item: dict) -> None:
         raise PreparationError(f"Dependency differs from its pin; preserved for inspection: {path.name}")
 
 
+def _publish_artifact(partial: Path, path: Path, item: dict) -> None:
+    """Publish complete bytes exclusively; never expose a partially copied wheel."""
+    for attempt in range(len(ARTIFACT_RENAME_DELAYS) + 1):
+        _safe_local_path(partial)
+        _safe_local_path(path)
+        verify(partial, item)
+        if partial.stat().st_nlink != 1:
+            raise PreparationError('Verified download has unexpected hard links; preserved.')
+        if path.exists() or path.is_symlink():
+            raise PreparationError(f'Dependency destination appeared during publication; preserved: {path.name}')
+        try:
+            if sys.platform == 'win32':
+                # Windows rename fails if the destination exists. Both paths
+                # are in one directory, so no partial copy becomes visible.
+                os.rename(partial, path)
+            else:
+                # POSIX rename replaces existing files. Link exclusively, then
+                # remove our temporary name; the resulting artifact is ordinary.
+                os.link(partial, path)
+                partial.unlink()
+        except OSError as error:
+            code = getattr(error, 'winerror', None)
+            if sys.platform != 'win32' or code not in (5, 32, 33):
+                raise
+            if attempt == len(ARTIFACT_RENAME_DELAYS):
+                raise PreparationError(
+                    f'Windows denied dependency publication (WinError {code}). '
+                    'Verified download retained; rerun preparation to resume without downloading it again.') from None
+            time.sleep(ARTIFACT_RENAME_DELAYS[attempt])
+        else:
+            verify(path, item)
+            return
+
+
+def _resume_verified_download(path: Path, item: dict) -> bool:
+    """Retain incomplete attempts, but reuse exact verified bytes after a local failure."""
+    attempts = []
+    for candidate in path.parent.glob(path.name + '.download-*'):
+        suffix = candidate.name[len(path.name + '.download-'):]
+        if len(suffix) != 32 or any(c not in '0123456789abcdef' for c in suffix):
+            continue
+        attempts.append(candidate)
+        if len(attempts) > 64:
+            raise PreparationError('Too many retained dependency downloads; preserve the cache for review.')
+    for candidate in sorted(attempts):
+        _safe_local_path(candidate)
+        if candidate.stat().st_nlink != 1:
+            raise PreparationError('Retained download has unexpected hard links; preserved.')
+        try:
+            verify(candidate, item)
+        except PreparationError:
+            continue
+        print(f'Resuming verified download for {path.name}.', flush=True)
+        _publish_artifact(candidate, path, item)
+        return True
+    return False
+
+
 def ensure_artifact(path: Path, item: dict, download: bool) -> None:
     if path.exists() or path.is_symlink():
         verify(path, item)
         print(f"Using verified cached {path.name}.", flush=True)
+        return
+    if _resume_verified_download(path, item):
         return
     if not download:
         verify(path, item)
     path.parent.mkdir(parents=True, exist_ok=True)
     for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
         partial = path.with_name(path.name + ".download-" + uuid.uuid4().hex)
+        verified_download = False
         print(f"Downloading pinned {path.name} ({item['size']} bytes; attempt {attempt}/{DOWNLOAD_ATTEMPTS}).", flush=True)
         try:
             response = _network_operation(lambda: urllib.request.urlopen(item["url"], timeout=90))
@@ -128,11 +196,10 @@ def ensure_artifact(path: Path, item: dict, download: bool) -> None:
                 output.flush()
                 os.fsync(output.fileno())
             verify(partial, item)
+            verified_download = True
             # Publication and local I/O errors are deliberately outside the
             # network retry classification. Never replace an existing file.
-            with partial.open("rb") as source, path.open("xb") as destination:
-                shutil.copyfileobj(source, destination, 1024 * 1024)
-            verify(path, item)
+            _publish_artifact(partial, path, item)
             return
         except _TransientDownloadError as error:
             if attempt == DOWNLOAD_ATTEMPTS:
@@ -142,7 +209,10 @@ def ensure_artifact(path: Path, item: dict, download: bool) -> None:
             delay = 2 ** attempt
             print(f"Temporary download failure for {path.name} ({error}); retrying in {delay}s.", flush=True)
         finally:
-            partial.unlink(missing_ok=True)
+            # A local publication error must leave complete verified bytes
+            # available to an offline retry. Unverified attempts are disposable.
+            if not verified_download:
+                partial.unlink(missing_ok=True)
         time.sleep(delay)
 
 
@@ -267,8 +337,9 @@ def extract_mongodb(manifest: dict, cache: Path, destination: Path) -> Path:
 
 
 def assert_windows_python() -> None:
-    if sys.platform != "win32" or sys.version_info[:3] != (3, 14, 3) or sys.maxsize <= 2**32:
-        raise PreparationError("Use the verified Windows x86_64 CPython 3.14.3 interpreter.")
+    if (sys.platform != "win32" or sys.version_info[:3] != PYTHON_VERSION or sys.maxsize <= 2**32
+            or sys.implementation.name != "cpython" or platform.machine().lower() not in ("amd64", "x86_64")):
+        raise PreparationError("Use the verified Windows x86_64 CPython 3.12.10 interpreter.")
 
 
 def clean_environment() -> dict:
@@ -293,10 +364,86 @@ def verify_installed(manifest: dict, venv: Path, mongodb: Path) -> None:
     print("Pinned Alliance environment and MongoDB files verified.")
 
 
-def install(manifest: dict, cache: Path, venv: Path, mongodb: Path) -> None:
+def native_smoke() -> None:
+    """Exercise runtime ABIs locally without sockets, accounts or databases."""
+    import _cffi_backend
+    from argon2 import PasswordHasher
+    from cffi import FFI
+    import bson
+    from bson import BSON
+    from markupsafe import _speedups, escape
+    from flask import Flask
+    from flask_wtf import FlaskForm
+    from waitress import create_server
+
+    hasher = PasswordHasher(time_cost=1, memory_cost=8192, parallelism=1)
+    fixture = 'local dependency ABI check; never an account password'
+    encoded = hasher.hash(fixture)
+    if not hasher.verify(encoded, fixture):
+        raise PreparationError('Argon2 native verification failed.')
+    ffi = FFI()
+    memory = ffi.new('unsigned char[]', b'ABI')
+    if bytes(ffi.buffer(memory, 3)) != b'ABI' or not _cffi_backend:
+        raise PreparationError('CFFI native allocation failed.')
+    document = {'runtime': 'python312', 'value': 12, 'valid': True}
+    if not bson.has_c() or BSON(BSON.encode(document)).decode() != document:
+        raise PreparationError('BSON native round-trip failed.')
+    if not callable(_speedups._escape_inner) or str(escape('<runtime>')) != '&lt;runtime&gt;':
+        raise PreparationError('MarkupSafe native escaping failed.')
+    application = Flask('alliance-python312-smoke')
+    application.add_url_rule('/runtime-check', 'runtime_check', lambda: {'status': 'ok'})
+    with application.test_client() as client:
+        response = client.get('/runtime-check')
+        if response.status_code != 200 or response.get_json() != {'status': 'ok'}:
+            raise PreparationError('Flask local request failed.')
+    if not FlaskForm or not callable(create_server):
+        raise PreparationError('Backend service imports failed.')
+    for available, version in ((ssl.HAS_TLSv1_2, ssl.TLSVersion.TLSv1_2),
+                               (ssl.HAS_TLSv1_3, ssl.TLSVersion.TLSv1_3)):
+        if not available:
+            raise PreparationError('The new interpreter lacks a required TLS version.')
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        context.minimum_version = version
+        context.maximum_version = version
+        if not context.get_ciphers():
+            raise PreparationError('The new interpreter has no usable TLS ciphers.')
+    print('ALLIANCE PYTHON NATIVE MODULE CHECK PASSED', flush=True)
+
+
+def validate_existing_venv(venv: Path, manifest: dict) -> None:
+    if not venv.exists():
+        return
+    preservation_inventory(venv)
+    fingerprint = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()
+    owner = _safe_local_path(venv / 'alliance-owned.json')
+    if not owner.is_file() or json.loads(owner.read_text(encoding='utf-8')) != {'owner': OWNER, 'manifest_sha256': fingerprint}:
+        raise PreparationError('Existing Python 3.12 environment has another owner or dependency pin; preserved.')
+    config = _safe_local_path(venv / 'pyvenv.cfg')
+    executable = _safe_local_path(venv / 'Scripts/python.exe')
+    if config.exists():
+        fields = {}
+        for line in config.read_text(encoding='utf-8').splitlines():
+            if '=' not in line:
+                continue
+            key, value = (part.strip() for part in line.split('=', 1))
+            if key in fields:
+                raise PreparationError('Existing Python environment configuration has duplicate fields.')
+            fields[key] = value
+        if fields.get('version') != '3.12.10':
+            raise PreparationError('Existing Python environment uses another interpreter version; preserved.')
+    elif executable.exists():
+        raise PreparationError('Existing Python environment executable has no verified configuration; preserved.')
+
+
+def install(manifest: dict, cache: Path, venv: Path, mongodb: Path, *, existing_mongodb: bool = False) -> None:
     assert_windows_python()
-    prepare(manifest, cache)
-    mongod = extract_mongodb(manifest, cache, mongodb)
+    if existing_mongodb:
+        _mongodb_tree_snapshot(mongodb, manifest["mongodb"])
+        prepare_wheels(manifest, cache)
+        mongod = mongodb / "bin/mongod.exe"
+    else:
+        prepare(manifest, cache)
+        mongod = extract_mongodb(manifest, cache, mongodb)
     check = subprocess.run([str(mongod), "--version"], capture_output=True, text=True, check=False)
     if check.returncode or f"v{manifest['mongodb']['version']}" not in check.stdout:
         raise PreparationError(f"Pinned mongod.exe could not report its version (exit {check.returncode}). The bundled VC++ runtime installer is in build/alliance-mongodb/bin. No installer was run.")
@@ -324,27 +471,179 @@ def install(manifest: dict, cache: Path, venv: Path, mongodb: Path) -> None:
     print("Database and administrator accounts have not been initialized.")
 
 
+def _safe_local_path(path: Path, *, directory=False) -> Path:
+    path = Path(path).absolute()
+    for entry in (*reversed(path.parents), path):
+        try:
+            metadata = entry.lstat()
+        except FileNotFoundError:
+            continue
+        if stat.S_ISLNK(metadata.st_mode) or getattr(metadata, 'st_file_attributes', 0) & 0x400:
+            raise PreparationError('Python transition paths cannot traverse links or junctions.')
+    if path.exists() and (not path.is_dir() if directory else not path.is_file()):
+        raise PreparationError('Python transition path has an unexpected type.')
+    return path
+
+
+def prepare_wheels(manifest: dict, cache: Path, download=False) -> None:
+    cache = _safe_local_path(cache, directory=True)
+    for item in manifest['wheels']:
+        path = _safe_local_path(cache / 'wheels' / item['filename'])
+        if path.exists() and path.stat().st_nlink != 1:
+            raise PreparationError('Python wheel cache cannot use hard links.')
+        ensure_artifact(path, item, download)
+    print('ALLIANCE PYTHON 3.12 WHEELS VERIFIED: ' + str(len(manifest['wheels'])) + ' pinned wheels.', flush=True)
+
+
+def prepare_python312(manifest: dict, cache: Path, mongodb: Path, download=False) -> None:
+    assert_windows_python()
+    if manifest['python'] != '3.12.10':
+        raise PreparationError('Python 3.12 preparation requires its pinned dependency manifest.')
+    _safe_local_path(mongodb, directory=True)
+    _mongodb_tree_snapshot(mongodb, manifest['mongodb'])
+    prepare_wheels(manifest, cache, download)
+    print('ALLIANCE PYTHON 3.12 CACHE READY', flush=True)
+    print('Existing MongoDB files are verified and unchanged; its archive was not downloaded or extracted.', flush=True)
+
+
+def preservation_inventory(path: Path) -> dict:
+    path = _safe_local_path(path, directory=True)
+    if not path.exists():
+        return {'exists': False, 'files': {}}
+    result = {}
+    for directory, subdirs, files in os.walk(path, followlinks=False):
+        for name in subdirs:
+            _safe_local_path(Path(directory) / name, directory=True)
+        for name in files:
+            entry = _safe_local_path(Path(directory) / name)
+            if entry.stat().st_nlink != 1:
+                raise PreparationError('A preserved Python environment file is hard-linked; stop for review.')
+            relative = entry.relative_to(path).as_posix()
+            result[relative] = {'size': entry.stat().st_size, 'sha256': digest(entry)}
+            if len(result) > 100000:
+                raise PreparationError('Preserved Python environment exceeds its inventory bound.')
+    return {'exists': True, 'files': result}
+
+
+@contextmanager
+def stopped_services():
+    sockets = []
+    try:
+        for port in (27018, 18765, 15000, 15001, 15002):
+            listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sockets.append(listener)
+            if hasattr(socket, 'SO_EXCLUSIVEADDRUSE'):
+                listener.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+            try:
+                listener.bind(('0.0.0.0', port))
+            except OSError:
+                raise PreparationError('Stop all five game services before the Python environment transition.') from None
+        yield
+    finally:
+        for listener in sockets:
+            listener.close()
+
+
+def install_python312(manifest: dict, cache: Path, venv: Path, mongodb: Path,
+                      legacy_venv: Path = LEGACY_VENV, journal_root: Path | None = None) -> None:
+    assert_windows_python()
+    if manifest['python'] != '3.12.10':
+        raise PreparationError('Python 3.12 installation requires its pinned dependency manifest.')
+    venv = _safe_local_path(venv, directory=True)
+    legacy_venv = _safe_local_path(legacy_venv, directory=True)
+    mongodb = _safe_local_path(mongodb, directory=True)
+    for protected in (legacy_venv, mongodb):
+        if venv == protected or venv in protected.parents or protected in venv.parents:
+            raise PreparationError('The new Python environment must be separate from preserved environments and MongoDB.')
+    validate_existing_venv(venv, manifest)
+    if journal_root is None:
+        journal_root = venv.parent / 'alliance-python312-transition'
+    journal_root = _safe_local_path(journal_root, directory=True)
+    for protected in (legacy_venv, mongodb, venv):
+        if journal_root == protected or journal_root in protected.parents or protected in journal_root.parents:
+            raise PreparationError('The Python transition journal must be separate from preserved and installed files.')
+    journal_root.mkdir(parents=True, exist_ok=True)
+    fingerprint = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()
+    marker = {'owner': 'wesnoth-alliance-python312-transition-v1', 'manifest_sha256': fingerprint,
+              'new_venv': str(venv), 'preserved_venv': str(legacy_venv), 'mongodb': str(mongodb)}
+    owner = journal_root / 'owner.json'
+    if owner.exists():
+        if json.loads(_safe_local_path(owner).read_text(encoding='utf-8')) != marker:
+            raise PreparationError('The existing Python transition journal belongs to another configuration.')
+    else:
+        write_json_new(owner, marker)
+    lock = journal_root / 'operation.lock'
+    record = {'pid': os.getpid(), 'nonce': uuid.uuid4().hex}
+    try:
+        write_json_new(lock, record)
+    except FileExistsError:
+        raise PreparationError('Another Python transition holds its operation lock. Preserve it and stop for review.') from None
+    attempt = journal_root / ('attempt-' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ') + '-' + record['nonce'])
+    attempt.mkdir()
+    try:
+        with stopped_services():
+            before = {'legacy_venv': preservation_inventory(legacy_venv), 'mongodb': preservation_inventory(mongodb)}
+            snapshot = journal_root / 'preserved-before.json'
+            if snapshot.exists():
+                if json.loads(_safe_local_path(snapshot).read_text(encoding='utf-8')) != before:
+                    raise PreparationError('Preserved Python or MongoDB files changed since this transition began.')
+            else:
+                write_json_new(snapshot, before)
+            prepare_python312(manifest, cache, mongodb)
+            write_json_new(attempt / 'started.json', {'manifest_sha256': fingerprint, 'existing_database_untouched': True})
+            completed = any(journal_root.glob('attempt-*/complete.json'))
+            if not completed:
+                install(manifest, cache, venv, mongodb, existing_mongodb=True)
+            else:
+                print('Checking the completed Python 3.12 environment without reinstalling it.', flush=True)
+            # The new interpreter performs the complete installed-version and
+            # MongoDB check. No runtime/database schema is opened or changed.
+            subprocess.run([str(venv / 'Scripts/python.exe'), '-I', '-B', str(ROOT / 'tools/alliance_dependencies.py'),
+                            'check-installed'], check=True, env=clean_environment())
+            subprocess.run([str(venv / 'Scripts/python.exe'), '-I', '-B', str(ROOT / 'tools/alliance_dependencies.py'),
+                            'check-native'], check=True, env=clean_environment())
+            after = {'legacy_venv': preservation_inventory(legacy_venv), 'mongodb': preservation_inventory(mongodb)}
+            if after != before:
+                raise PreparationError('Preservation verification failed; keep both environments and this journal.')
+            write_json_new(attempt / 'complete.json', {'python': '3.12.10', 'legacy_venv_preserved': True,
+                           'mongodb_preserved': True, 'runtime_accessed': False, 'database_initialized': False,
+                           'new_venv': str(venv)})
+            print('ALLIANCE PYTHON 3.12 TRANSITION VERIFIED', flush=True)
+            print('Old Python environment, MongoDB, accounts and runtime-v2 remain untouched.', flush=True)
+    finally:
+        if lock.is_file() and json.loads(_safe_local_path(lock).read_text(encoding='utf-8')) == record:
+            lock.unlink()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("prepare", "install", "check-python", "check-installed"))
+    parser.add_argument("command", choices=("prepare", "install", "prepare-python312", "install-python312", "check-python", "check-installed", "check-native"))
     parser.add_argument("--download", action="store_true", help="Permit pinned downloads during prepare only.")
     args = parser.parse_args(argv)
     try:
-        if args.download and args.command != "prepare":
-            raise PreparationError("Only prepare accepts --download; installation and runtime checks are offline.")
+        if args.download and args.command not in ("prepare", "prepare-python312"):
+            raise PreparationError("Only preparation accepts --download; installation and runtime checks are offline.")
         if args.command == "check-python":
             assert_windows_python()
-            print("Python 3.14.3; Windows x86_64 runtime verified.")
+            print("Python 3.12.10; Windows x86_64 runtime verified.")
+            return 0
+        if args.command == 'check-native':
+            assert_windows_python()
+            native_smoke()
             return 0
         manifest = load_manifest()
-        if args.command == "check-installed":
+        if args.command == "prepare-python312":
+            prepare_python312(manifest, CACHE, MONGO, args.download)
+        elif args.command == "install-python312":
+            install_python312(manifest, CACHE, VENV, MONGO)
+        elif args.command == "check-installed":
             verify_installed(manifest, VENV, MONGO)
         elif args.command == "prepare":
             prepare(manifest, CACHE, args.download)
         else:
             install(manifest, CACHE, VENV, MONGO)
         return 0
-    except (PreparationError, OSError, ValueError, KeyError, subprocess.CalledProcessError, zipfile.BadZipFile, importlib.metadata.PackageNotFoundError) as error:
+    except (PreparationError, OSError, ValueError, KeyError, ImportError, subprocess.CalledProcessError, zipfile.BadZipFile, importlib.metadata.PackageNotFoundError) as error:
         # Configuration secrets are never read here; avoid exposing subprocess environments.
         print(f"ERROR: {error}", file=sys.stderr)
         return 1

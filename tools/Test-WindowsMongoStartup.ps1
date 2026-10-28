@@ -50,7 +50,7 @@ try {
     } else {
         $scratch = Join-Path (Join-Path $repoRoot 'build') $runName
     }
-    $python = Join-Path $repoRoot 'build\alliance-venv\Scripts\python.exe'
+    $python = Join-Path $repoRoot 'build\alliance-venv-py312\Scripts\python.exe'
     $mongod = Join-Path $repoRoot 'build\alliance-mongodb\bin\mongod.exe'
     $dependencyCheck = Join-Path $PSScriptRoot 'alliance_dependencies.py'
     $fixture = Join-Path $PSScriptRoot 'test_mongodb_startup.py'
@@ -61,7 +61,7 @@ try {
     }
 
     $code = Invoke-SelectedPython -Arguments @('-I', '-B', $dependencyCheck, 'check-python')
-    if ($code -ne 0) { throw 'Windows x86_64 CPython 3.14.3 is required; no version was changed.' }
+    if ($code -ne 0) { throw 'Windows x86_64 CPython 3.12.10 is required; no version was changed.' }
     $code = Invoke-SelectedPython -Arguments @('-I', '-B', $dependencyCheck, 'check-installed')
     if ($code -ne 0) { throw 'Installed Alliance dependency verification failed; no MongoDB startup was attempted.' }
 

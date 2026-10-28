@@ -14,7 +14,7 @@ try {
     $PreviousRuntimeRoot = Resolve-AllianceRuntimeRoot -Path $PreviousRuntimeRoot
     $RuntimeRoot = Resolve-AllianceRuntimeRoot -Path $RuntimeRoot
     $BackupPath = Resolve-AllianceRuntimeRoot -Path $BackupPath
-    $python = Join-Path $repo 'build\alliance-venv\Scripts\python.exe'
+    $python = Join-Path $repo 'build\alliance-venv-py312\Scripts\python.exe'
     & $python -I -B (Join-Path $PSScriptRoot 'alliance_dependencies.py') check-python
     if ($LASTEXITCODE -ne 0) { throw 'Pinned Python check failed.' }
     & $python -I -B (Join-Path $PSScriptRoot 'alliance_dependencies.py') check-installed

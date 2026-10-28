@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
     [string]$MsysRoot = 'D:\Test\wesnoth-setup\msys64',
-    [string]$PythonPath = (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python314\python.exe'),
+    [string]$PythonPath = (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\python.exe'),
     [string]$CMakePath = 'C:\Program Files\CMake\bin\cmake.exe',
     [switch]$PreservePreviousBuild
 )

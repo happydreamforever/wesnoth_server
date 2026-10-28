@@ -24,7 +24,7 @@ class OperationsWindowsTests(unittest.TestCase):
             shutil.copy2(ROOT / "tools" / name, self.repo / "tools" / name)
         for name in ("alliance_maintenance.py", "alliance_workflow.py", "alliance_dependencies.py"):
             (self.repo / "tools" / name).touch()
-        python = self.repo / "build/alliance-venv/Scripts/python.exe"; python.parent.mkdir(parents=True)
+        python = self.repo / "build/alliance-venv-py312/Scripts/python.exe"; python.parent.mkdir(parents=True)
         python.write_text("#!/usr/bin/python3\nimport json,os,sys\n"
             "with open(os.environ['OPS_CALLS'], 'a') as f: f.write(json.dumps(sys.argv[1:])+'\\n')\n"
             "print('SIMULATED TOOL RESULT')\n"

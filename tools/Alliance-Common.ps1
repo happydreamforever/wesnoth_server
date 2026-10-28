@@ -52,7 +52,7 @@ function Invoke-AllianceCommand {
         if ($Command -in @('prepare','install')) {
             if ($PSBoundParameters.ContainsKey('RuntimeRoot')) { throw 'RuntimeRoot is only available for runtime commands.' }
             if (-not $PythonPath) {
-                $PythonPath = Join-Path $env:LOCALAPPDATA 'Programs\Python\Python314\python.exe'
+                $PythonPath = Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\python.exe'
             }
         } else {
             if ($PSBoundParameters.ContainsKey('RuntimeRoot')) {
@@ -62,13 +62,13 @@ function Invoke-AllianceCommand {
                 $selectedRuntime = Resolve-AllianceRuntimeRoot -Path (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2')
             }
             if ($PythonPath) { throw 'Runtime commands use the isolated Alliance virtual environment.' }
-            $PythonPath = Join-Path $repoRoot 'build\alliance-venv\Scripts\python.exe'
+            $PythonPath = Join-Path $repoRoot 'build\alliance-venv-py312\Scripts\python.exe'
         }
         if (-not (Test-Path -LiteralPath $PythonPath -PathType Leaf)) {
             throw "Missing Python executable: $PythonPath. Complete the preceding preparation/install step."
         }
         & $PythonPath -I (Join-Path $repoRoot 'tools\alliance_dependencies.py') check-python | Out-Host
-        if ($LASTEXITCODE -ne 0) { throw 'Windows x86_64 CPython 3.14.3 is required; no version was changed.' }
+        if ($LASTEXITCODE -ne 0) { throw 'Windows x86_64 CPython 3.12.10 is required; no version was changed.' }
         Push-Location -LiteralPath $repoRoot
         $locationChanged = $true
         # init uses getpass interactively; do not capture the password prompt.

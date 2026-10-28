@@ -18,7 +18,7 @@ try {
     if ($Operation -eq 'Restore') {
         $BackupPath = Resolve-AllianceRuntimeRoot -Path $BackupPath
     } elseif ($PSBoundParameters.ContainsKey('BackupPath')) { throw 'BackupPath is only used for Restore.' }
-    $python = Join-Path $repo 'build\alliance-venv\Scripts\python.exe'
+    $python = Join-Path $repo 'build\alliance-venv-py312\Scripts\python.exe'
     $helper = Join-Path $PSScriptRoot 'alliance_maintenance.py'
     foreach ($file in @($python, $helper)) {
         if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw 'The installed maintenance runtime is missing.' }

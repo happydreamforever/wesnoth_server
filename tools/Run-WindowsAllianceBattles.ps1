@@ -22,9 +22,9 @@ try {
     $log = Join-Path $diagnostics ('alliance-battles-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N') + '.txt')
     Start-Transcript -LiteralPath $log -NoClobber | Out-Null
     $started = $true
-    $python = Join-Path $repo 'build\alliance-venv\Scripts\python.exe'
+    $python = Join-Path $repo 'build\alliance-venv-py312\Scripts\python.exe'
     & $python -I -B (Join-Path $PSScriptRoot 'alliance_dependencies.py') check-python | Out-Host
-    if ($LASTEXITCODE -ne 0) { throw 'The installed Python 3.14.3 runtime is required.' }
+    if ($LASTEXITCODE -ne 0) { throw 'The installed Python 3.12.10 runtime is required.' }
     & $python -I -B (Join-Path $PSScriptRoot 'alliance_dependencies.py') check-installed | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Pinned Alliance installation verification failed.' }
     & $python -I -B (Join-Path $PSScriptRoot 'run_alliance_battles.py') --runtime $RuntimeRoot --identity $IdentityRoot --workers $Workers | Out-Host

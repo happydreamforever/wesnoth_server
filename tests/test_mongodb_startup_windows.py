@@ -84,7 +84,7 @@ class MongoStartupPowerShellTests(unittest.TestCase):
         self.tools.mkdir(parents=True)
         self.helper = self.tools / HELPER
         self.helper.write_bytes((ROOT / "tools" / HELPER).read_bytes())
-        self.python = self.repo / "build/alliance-venv/Scripts/python.exe"
+        self.python = self.repo / "build/alliance-venv-py312/Scripts/python.exe"
         self.python.parent.mkdir(parents=True)
         self.python.write_text(FAKE_PYTHON)
         self.python.chmod(0o755)
@@ -108,7 +108,7 @@ class MongoStartupPowerShellTests(unittest.TestCase):
             "build/alliance-mongodb/bin/vc_redist.x64.exe": b"INSTALLED_RUNTIME_INSTALLER",
             "build/alliance-cache/mongodb.zip": b"ORIGINAL_CACHE_ARCHIVE",
             "build/alliance-cache/wheels/pymongo.whl": b"ORIGINAL_CACHE_WHEEL",
-            "build/alliance-venv/alliance-owned.json": b"EXISTING_VENV_RECEIPT",
+            "build/alliance-venv-py312/alliance-owned.json": b"EXISTING_VENV_RECEIPT",
             "build/windows-mingw64/bin/wesnothd.exe": b"COMPLETED_GUEST_SERVER",
             "build/alliance-mongo-startup-previous/fixture-data": b"OLDER_STARTUP_FIXTURE",
             "diagnostics/alliance-mongo-startup-previous.json": b"OLDER_STARTUP_REPORT",
@@ -209,7 +209,7 @@ class MongoStartupPowerShellTests(unittest.TestCase):
         _, transcript = self.run_helper(success=False, failure="check-python")
         self.assertEqual([call["action"] for call in self.read_calls()], ["check-python"])
         self.assertEqual(self.new_stages(), [])
-        self.assertIn("CPython 3.14.3 is required", transcript)
+        self.assertIn("CPython 3.12.10 is required", transcript)
 
     def test_existing_profile_parent_with_spaces_and_literal_characters(self):
         parent = self.root / "profile storage [literal] & $"

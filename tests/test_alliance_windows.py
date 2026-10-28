@@ -557,8 +557,8 @@ class PowerShellTests(unittest.TestCase):
         for script in (ROOT / "tools").glob("*Alliance*.ps1"):
             shutil.copy2(script, self.root / "tools" / script.name)
         (self.root / "tools/alliance_dependencies.py").touch()
-        self.native = self.root / "Programs/Python/Python314/python.exe"
-        self.venv = self.root / "build/alliance-venv/Scripts/python.exe"
+        self.native = self.root / "Programs/Python/Python312/python.exe"
+        self.venv = self.root / "build/alliance-venv-py312/Scripts/python.exe"
         for path in (self.native, self.venv):
             path.parent.mkdir(parents=True)
             path.write_text('#!/usr/bin/python3\nimport json,os,sys\nwith open(os.environ["ALLIANCE_CALLS"],"a") as f: f.write(json.dumps(sys.argv[1:])+"\\n")\nprint("Simulated native output")\nsys.exit(9 if os.environ.get("ALLIANCE_FAIL") in sys.argv[1:] else 0)\n')

@@ -30,7 +30,7 @@ try {
     $RuntimeRoot = Resolve-AllianceRuntimeRoot -Path $RuntimeRoot
     if (-not (Test-Path -LiteralPath $RuntimeRoot -PathType Container)) { throw $failureMessage }
 
-    $python = Join-Path $repo 'build\alliance-venv\Scripts\python.exe'
+    $python = Join-Path $repo 'build\alliance-venv-py312\Scripts\python.exe'
     $diagnostic = Join-Path $PSScriptRoot 'check_alliance_login.py'
     $failureMessage = 'The installed Alliance Python or login diagnostic is missing, empty or redirected. No service was changed.'
     foreach ($path in @($python, $diagnostic)) {

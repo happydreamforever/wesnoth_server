@@ -30,7 +30,7 @@ try {
     $RuntimeRoot = Resolve-AllianceRuntimeRoot -Path $RuntimeRoot
     if (-not (Test-Path -LiteralPath $RuntimeRoot -PathType Container)) { throw $failureMessage }
 
-    $python = Join-Path $repo 'build\alliance-venv\Scripts\python.exe'
+    $python = Join-Path $repo 'build\alliance-venv-py312\Scripts\python.exe'
     $traceTool = Join-Path $PSScriptRoot 'trace_alliance_login.py'
     $failureMessage = 'The installed Alliance Python or login trace is missing, empty or redirected. No service was started by this helper.'
     foreach ($path in @($python, $traceTool)) {

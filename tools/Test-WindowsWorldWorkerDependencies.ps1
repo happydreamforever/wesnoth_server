@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$MsysRoot='D:\Test\wesnoth-setup\msys64', [string]$PythonPath=(Join-Path $env:LOCALAPPDATA 'Programs\Python\Python314\python.exe'))
+param([string]$MsysRoot='D:\Test\wesnoth-setup\msys64', [string]$PythonPath=(Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\python.exe'))
 $ErrorActionPreference='Stop'
 $repo=Split-Path $PSScriptRoot -Parent
 $null=New-Item -ItemType Directory -Path (Join-Path $repo 'diagnostics') -Force
