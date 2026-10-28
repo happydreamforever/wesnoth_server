@@ -1,6 +1,6 @@
 # Windows acceptance — Companies and Territorial Wars 1192624
 
-Current checkpoint (2026-10-28): A/B and D's signed-package download have passed at the supplied Windows-console scope. The private backup contains 113 files / 257,065,798 bytes; all 107 worker archives/signatures are cached. The later client Git integrity check returned `GIT_CHECK_EXIT: 0` after the pull's unavailable-index warnings. No repair, repeat backup or repeat package download is needed. Python 3.12 P1–P3 now pass: all 17 wheels installed, native-module checks and transition verification succeeded. The user explicitly confirms WAN disconnected/local Ethernet retained during P3; carry this network state through the batch. Resume D at offline prefix preparation using the already delivered helper. No new pull, repeat Python installation, backup or package download is needed. Windows prefix preparation, schema-4 migration, builds and gameplay remain pending.
+Current checkpoint (2026-10-28): A/B, the signed 107-package cache and Python 3.12 P1–P3 remain accepted at their recorded Windows scope. Offline World D stopped during the first aom package extraction with `ReadError`; the actual Windows cause is unresolved. **Run only the [one-package diagnostic](WORLD_ARCHIVE_DIAGNOSTIC_1192624.md) after the server diagnostic update. Return its console and text/JSON reports before retrying full preparation or proceeding to E.** Keep all five services stopped, the cache/journal/backup retained and Python 3.14 installed. No repeated Python installation, backup, package download or database initialization is needed. Windows prefix preparation, migration, builds and gameplay remain pending.
 
 Use the existing `runtime-v2`, accounts, Teams, earned heroes, campaign saves, bundled public profile, original Android signer and one LDPlayer. This release explicitly upgrades schema 3 to 4 in place. It does not initialize another database, create founding Teams automatically or grant replacement heroes. Previously accepted results remain historical evidence; untested new behavior is NOT RUN.
 
@@ -14,7 +14,7 @@ The worker needs 107 pinned packages in total. The 83 additional archives total 
 
 The isolated prefix is assembled from verified archives, not from installed files that package scripts may have changed. Internal package hardlinks become independent files; installer scripts and hooks are not executed. The exact 57,474-file prefix occupies 1,686,953,610 bytes. Keep at least 3 GB free for dependency preparation, plus the additional space required by the full worker and retained Android builds. Cold backup, migration and build storage need their own headroom.
 
-A–C and the online portion of D below are retained for the original sequence. At the current checkpoint, Python P1–P3 are accepted; run only D's offline command. Do not rerun the preliminary inventory or use `pacman -Syu`. Details and provenance: [worker dependency preparation](WORLD_WORKER_DEPENDENCIES_1192624.md).
+A–D below retain the rollout sequence. Python P1–P3 are accepted, but full D preparation has stopped; run only the linked one-package diagnostic now. Do not rerun the preliminary inventory or use `pacman -Syu`. Details and provenance: [worker dependency preparation](WORLD_WORKER_DEPENDENCIES_1192624.md).
 
 ## A. Save and stop
 
@@ -77,7 +77,7 @@ The following online download already passed on 2026-10-27; retain it as histori
 
 Expected: `WORLD WORKER PACKAGE CACHE VERIFIED`, 107 pinned archives/signatures verified, and the original package inventory preserved. Reports: `diagnostics\world-worker-packages-*.txt` and `.json`. Keep the cache and its journals. Existing mismatched files, a changed toolchain or failed signature stop preparation instead of being overwritten. No database or service is started. Stop here and return the console plus saved text/JSON reports, including on success. Continue with offline preparation only after this result has been reviewed.
 
-Current next step: Python P3 is accepted, including WAN-disconnected confirmation. Keep all five services stopped, WAN disconnected and local Ethernet connected, carrying this batch status, then run:
+The following full-prefix command stopped on Windows and is retained for reference. **Do not repeat it now.** First run the [one-package diagnostic](WORLD_ARCHIVE_DIAGNOSTIC_1192624.md) and return its result. Full D preparation resumes only after that review:
 
 ```powershell
 & {

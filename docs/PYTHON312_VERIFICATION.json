@@ -1,6 +1,6 @@
 {
   "recorded": "2026-10-28",
-  "status": "vps_verified_windows_python_transition_accepted_world_d_pending",
+  "status": "vps_verified_windows_python_transition_accepted_world_d_archive_diagnostic_pending",
   "release": 1192624,
   "protocol": 4,
   "schema": 4,
@@ -112,6 +112,17 @@
       "world_prefix_worker_services_gameplay": "not tested by P3",
       "wan_status": "User explicitly confirms WAN disconnected; local Ethernet retained.",
       "next": "World D offline worker prefix; retain Python3.14 until five-service startup passes."
+    },
+    "world_prefix_attempt": {
+      "status": "stopped_first_package_extraction",
+      "package": "mingw-w64-x86_64-aom",
+      "cache_verified": true,
+      "error": "Pinned package archive could not be read: ReadError",
+      "log": "diagnostics/world-worker-prepare-20261028-005845-045-7179b8b6b7e74460bc97558c5ec94cc5.txt",
+      "scope": "Pasted Windows console; saved file not supplied. Source marker places failure in second materializing pass after all content preflights.",
+      "cause": "unresolved",
+      "network_status": "P3 user-confirmed WAN disconnected/local Ethernet retained; no new independent measurement.",
+      "next": "Server-only diagnostic pull, disconnect WAN/retain Ethernet, Test-WindowsWorldWorkerArchive.ps1; return console and matching text/JSON even on success before full retry."
     }
   },
   "dependencies": {
@@ -721,5 +732,6 @@
     "server_captain_regression": "be39491",
     "client_tools": "af3cb14"
   },
-  "mongo_diagnostic_retention_followup": "PYTHON312_MONGO_DIAGNOSTICS_VERIFICATION.json"
+  "mongo_diagnostic_retention_followup": "PYTHON312_MONGO_DIAGNOSTICS_VERIFICATION.json",
+  "archive_diagnostic_followup": "WORLD_ARCHIVE_DIAGNOSTIC_VERIFICATION_1192624.json"
 }

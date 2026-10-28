@@ -1,0 +1,72 @@
+{
+  "recorded": "2026-10-28",
+  "release": 1192624,
+  "implementation_commit": "75a82a2914bab045e09728b9da4be2ffd0cb0ffd",
+  "status": "diagnostic_update_verified_original_windows_cause_unresolved",
+  "windows_evidence": {
+    "status": "stopped_first_package_extraction",
+    "package": "mingw-w64-x86_64-aom",
+    "cache_verified": true,
+    "error": "Pinned package archive could not be read: ReadError",
+    "log": "diagnostics/world-worker-prepare-20261028-005845-045-7179b8b6b7e74460bc97558c5ec94cc5.txt",
+    "scope": "Pasted Windows console; saved file not supplied. Source marker places failure in second materializing pass after all content preflights.",
+    "cause": "unresolved",
+    "network_status": "P3 user-confirmed WAN disconnected/local Ethernet retained; no new independent measurement.",
+    "next": "Server-only diagnostic pull, disconnect WAN/retain Ethernet, Test-WindowsWorldWorkerArchive.ps1; return console and matching text/JSON even on success before full retry."
+  },
+  "tests": {
+    "python": "3.12.10",
+    "network": "none",
+    "total": 43,
+    "skips": 0,
+    "archive_and_cleanup_regressions": 31,
+    "diagnostic_and_windows_wrapper_fixtures": 12,
+    "scope": "Linux subprocess/tar/archive execution and Linux PowerShell wrapper fixtures; Windows boundaries simulated."
+  },
+  "actual_package": {
+    "name": "mingw-w64-x86_64-aom",
+    "archive_bytes": 3785618,
+    "sha256": "08db980341163308e5e49b81dfcd55d98c45072a5609aabe142d92fb5adbe144",
+    "verified_files": 24,
+    "verified_bytes": 23735199,
+    "scope": "Exact Linux Python3.12.10; actual pinned Windows archive and native Linux zstd, Windows host guard adapted. Cache/signature/lock/source preserved; no existing prefix paths created. Fixture tests separately retain existing prefix/journal/cache sentinels."
+  },
+  "diagnostic_scope": "Only first pinned package in new retained scratch; original prefix, cache, journal and runtime not mutated. Report even on failure; caller returns results before full preparation retry.",
+  "unchanged_guards": [
+    "300-second decoder deadline",
+    "decoded-size and file-size bounds",
+    "exact archive/signature/decoder pins",
+    "path and tree validation",
+    "journal and publication rules"
+  ],
+  "limits": [
+    "Injected shortened timeout reproduces generic ReadError but does not establish Windows cause.",
+    "No Windows native execution or full new 107-package extraction claimed.",
+    "No game database, worker engine, Android build or gameplay tested for this diagnostic-only change.",
+    "Python P1-P3 and accepted backup remain valid; World D and subsequent stages remain pending."
+  ],
+  "source_hashes": {
+    "tools/world_worker_archive_prefix.py": "b11a15466e0ec4bd7b8f5e17c4cfa4aa56dd4987e42a919066edc6ebbdd59fac",
+    "tools/diagnose_world_worker_archive.py": "7c4f4e73179f408cbd268febaf19f89cee947b0e74e9b711e40b9ae51431103a",
+    "tools/Test-WindowsWorldWorkerArchive.ps1": "c6e2c355f665fa431c2783a316f1374087631dd26fd92524be5e18035d026975",
+    "tests/test_world_archive_diagnostic.py": "11aac05a45937af534e8270ed666962bc1e4d349a35061af7ada44a3813b69a8",
+    "tests/test_world_archive_diagnostic_windows.py": "c9679b2a9a722ad548140f67c78ede9750f50a3f4bb0f487ed7049738ef3f746",
+    "tests/test_world_worker_archive_prefix.py": "214391a9590bc4d3d00326588c57dfa0e2e9dd25a1cc6561050f63bd07355c96",
+    "tools/world-worker-packages-1192624.json": "dcff87184e3a549d9ec25296d4363a0ff983295eb680491081b2760b0847aec7"
+  },
+  "evidence": {
+    "build/audit-world-archive-diagnostic-20261028/before-fix-reproduction.log": "80c6321941b2455d4797ef565294d757fdc41765f10d2c67618c61f40f1a5df1",
+    "build/audit-world-archive-diagnostic-20261028/archive-cleanup-regressions-exact31210.log": "894d14a3efb24245b6d16634be264fc3aa53f1376caf785eed477150f4f8aeec",
+    "build/audit-world-prefix-readerror-20261028/research/actual-first-package-research.json": "f57874964ba3c29fc3518de3cb78a5b64532a697e90f83dcad526a09780471a4",
+    "build/audit-world-prefix-readerror-20261028/research/injected-timeout-resume.log": "32180e51d22e22dbbe3a2072568edf01f5f19a3d76e79e806d30d0f16b83b389",
+    "build/audit-world-prefix-readerror-20261028/research/diagnostic-tests-exact31210-cleanup.log": "0fe8868468c5aae67e786fa1c7ad92692fc59fd293a7656ca188b276c07954db",
+    "build/audit-world-prefix-readerror-20261028/research/production-first-package-final.json": "e9dffc7fe50bcac0dc2ad5b2c1f2527b6b53b0e46a3f5876fc32e11964354b36",
+    "build/audit-world-prefix-readerror-20261028/research/production-first-package-final-evidence.json": "f0d0fd5b56fc47a02f57dff49865af97f4cdc56e6026046a4802791e39b3fe42"
+  },
+  "handoff_verification": {
+    "powershell_document_blocks_parsed": 13,
+    "diagnostic_helper_parsed": true,
+    "independent_source_and_handoff_review": "passed; no blocker",
+    "windows_cause_resolved": false
+  }
+}
