@@ -1,6 +1,8 @@
 # Windows World worker compiler corrections
 
-Current retry (2026-10-28): the next Windows attempt stopped before the compiler-check message, with generic preparation failure. Log: `diagnostics/world-worker-build-20261028-074358-134-e82b585a063142c5974327badec16a6b.txt`. Correction `cc4d350` fixes Windows environment-name normalization and adds named startup phases. Follow the same server-only pull and worker-only retry below. The saved file itself and exact pulled HEAD were not supplied.
+Current retry (2026-10-28): **all six Windows compiler checks now pass**. The helper then stops during old-stage inventory with `Worker recovery file changed while opening`. Log: `diagnostics/world-worker-build-20261028-082809-546-84c11e64678842bfb6048b43bd7e5e6b.txt`; compiler report: `build/world-worker-toolchain-check-884af478a55748c89d9ce4d5678363c1/report.json`. Only the pasted console was supplied. Full worker preservation/compilation and Android remain pending.
+
+Correction `428402f` handles Windows Python's filename-derived executable permission bits when comparing a file's path and open handle. Only the exact `.exe`/`.bat`/`.cmd`/`.com` difference is permitted; identity, content, links, other metadata and strict post-read checks remain enforced. The exact original failure is reproduced with official Windows Python 3.12.10. Follow the server-only pull and worker-only retry below; preserve every existing recovery file.
 
 The supplied 2026-10-28 F transcript accepts the bridge rebuild and native Room server build. The full World worker stopped at its first Lua compilation with `fatal error: string.h: No such file or directory`. Android rebuilding did not start. Keep A–E and the two successful F builds accepted.
 
@@ -27,7 +29,7 @@ Keep all five services stopped and Python 3.14 installed until the later G start
 }
 ```
 
-Expected: a successful fast-forward (or already up to date) and a commit hash containing environment correction `cc4d350` (or a later commit). Preserve the unrelated README edit. No client pull, dependency download, re-extraction, Python reinstall, migration or repeated bridge/Room build is needed.
+Expected: a successful fast-forward (or already up to date) and HEAD at `428402f` or a descendant containing that preservation correction. Preserve the unrelated README edit. No client pull, dependency download, re-extraction, Python reinstall, migration or repeated bridge/Room build is needed.
 
 ## 2. Retry only F's World worker
 
@@ -62,8 +64,8 @@ After the full worker passes, review that result before the remaining Android re
 
 ## Evidence limits
 
-All **76 focused tests pass**, without skips, on Python 3.12.10 with networking disabled. The exact handoff blocks and wrapper also pass PowerShell parsing. [Current environment verification](WORLD_WORKER_ENVIRONMENT_VERIFICATION_1192624.json) separates actual execution from controlled test boundaries.
+All **83 focused tests pass**, without skips, on Python 3.12.10 with networking disabled. The exact handoff blocks and wrapper also pass PowerShell parsing. [Current preservation verification](WORLD_WORKER_RECOVERY_VERIFICATION_1192624.json) separates actual execution from controlled test boundaries.
 
-The new VPS check uses actual official Windows Python 3.12.10 and its native environment mapping to run the production compiler setup and all six C/C++/resource phases directly under Wine, without mocked environment or subprocess boundaries. Network access is disabled and repository/prefix are read-only. Linux Python/CMake and controlled recovery tests supply separate regression evidence. [Earlier sysroot verification](WORLD_WORKER_SYSROOT_VERIFICATION_1192624.json) remains historical evidence for the unchanged header/resource correction. It is not a full native Windows worker build, Android compilation, worker readiness or gameplay acceptance. The next Windows report supplies that platform's full-build evidence.
+The new VPS check uses official Windows Python 3.12.10 under network-disabled Wine for actual stat/open/hash/journal/lock/rename operations on disposable fixtures. Seven recovery groups pass, including interruption/resumption, uppercase and read-only executables, changed-file/hardlink rejection and real competing-process locks. Only crash boundaries are injected. Linux fixtures separately test every retained metadata guard. [Earlier environment verification](WORLD_WORKER_ENVIRONMENT_VERIFICATION_1192624.json) and [sysroot verification](WORLD_WORKER_SYSROOT_VERIFICATION_1192624.json) remain historical. This is not a full native Windows worker build, Android compilation, worker readiness or gameplay acceptance. The next Windows report supplies that platform's full-build evidence.
 
 Source report: 21,685-byte pasted attachment, SHA256 `e070e908134657820ab99f053285589b0f7968bbeaad253bca2b4a91846e715a`. F's failed worker log: `diagnostics/world-worker-build-20261028-065115-429-661ddeee6ac449e6beeb5c1272b687bf.txt`. Its saved Windows file itself was not supplied.

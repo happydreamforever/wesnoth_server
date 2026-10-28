@@ -1,0 +1,265 @@
+{
+  "format": 1,
+  "purpose": "world-worker-windows-recovery-stat-correction",
+  "date": "2026-10-28",
+  "release": 1192624,
+  "implementation_commit": "428402f",
+  "windows_evidence": {
+    "source": "pasted console",
+    "saved_files_opened": false,
+    "compiler_check": "accepted: C/CXX/runtime/resources passed",
+    "compiler_report": "build/world-worker-toolchain-check-884af478a55748c89d9ce4d5678363c1/report.json",
+    "failure": "Worker recovery file changed while opening",
+    "log": "diagnostics/world-worker-build-20261028-082809-546-84c11e64678842bfb6048b43bd7e5e6b.txt",
+    "full_worker": "not passed",
+    "android": "not run",
+    "failing_filename": "not supplied"
+  },
+  "cause": "Windows CPython path stat synthesizes all execute bits for .exe/.bat/.cmd/.com; descriptor stat cannot derive them from the filename. Exact baseline error reproduced with actual Windows Python 3.12.10.",
+  "fix": "Separate narrow path-to-handle comparator allows only exact Windows executable-suffix execute-bit synthesis; strict identity/path-after-read checks and original inventories remain unchanged.",
+  "guard_coverage": [
+    "device/inode",
+    "file type",
+    "read/write permissions",
+    "size",
+    "mtime_ns",
+    "link count",
+    "file attributes",
+    "content hashes",
+    "ordinary paths and ownership",
+    "POSIX execute bits"
+  ],
+  "passed_tests": 83,
+  "skips": 0,
+  "actual_Windows_Python_groups": 7,
+  "limitations": [
+    "Windows Python/filesystem API verification is under network-disabled Wine, not a native Windows host.",
+    "Only disposable fixture data mutated; no real user runtime or failed stage accessed.",
+    "No full 589-step worker build, Android or gameplay acceptance."
+  ],
+  "preservation": [
+    "Builder/sysroot/environment and pinned prefix unchanged.",
+    "Original legacy ownership allowlist and journal format unchanged.",
+    "Bridge/Room, schema/runtime, client/signing/OBB/profile/saves and README edits retained."
+  ],
+  "source_sha256": {
+    "tools/world_worker_recovery.py": "819f7a4368efd6561df1c918c5f5d22a887d9d9b6eabca7ab1642c8f02d263f0",
+    "tests/test_world_worker_recovery.py": "da50bc6b3d2a1ed56206273ee573792e65ca5159c05797fb0f3bd89cd247df96",
+    "tools/build_world_worker.py": "766a890b4d92690832ff325fc287573b11b8f0dbd25d0964c7965f010647bb44"
+  },
+  "evidence": [
+    {
+      "path": "build/audit-world-worker-recovery-20261028/tests/verification.json",
+      "sha256": "238cc94490ca2d56f8300332a13a0910f0a620c7f377dd970c5972edc111567a",
+      "details": {
+        "format": 1,
+        "purpose": "worker-recovery-windows-stat-regression-verification",
+        "python": "3.12.10 (main, Oct 28 2026, 05:56:53) [GCC 16.2.0]",
+        "network": "disabled",
+        "container": "wesnoth-alliance-native-verify:python3.14.3-gcc16.2",
+        "container_image": "sha256:8fe629201b28e971844de3359bfc5797aef1bc0eb24626b77c7a8d6c416c1e31",
+        "passed": 83,
+        "skipped": 0,
+        "recovery_and_dispatch": 43,
+        "toolchain": 26,
+        "adjacent_dependencies": 14,
+        "source_sha256": {
+          "tools/world_worker_recovery.py": "819f7a4368efd6561df1c918c5f5d22a887d9d9b6eabca7ab1642c8f02d263f0",
+          "tools/build_world_worker.py": "766a890b4d92690832ff325fc287573b11b8f0dbd25d0964c7965f010647bb44",
+          "tests/test_world_worker_recovery.py": "da50bc6b3d2a1ed56206273ee573792e65ca5159c05797fb0f3bd89cd247df96",
+          "tests/test_world_worker_toolchain.py": "36d69098e01c65ea12622b9fed5c39f3d36c44bb52674b540d4eb198a7125ffd",
+          "tests/test_world_worker_dependencies.py": "621c58155e3d9ff4f49b7a453a9c00ff5a4f21d0937247b5255edf6628a0aa62"
+        },
+        "log": {
+          "path": "build/audit-world-worker-recovery-20261028/tests/recovery-final-01.log",
+          "sha256": "bf7aa04be89c1b895cfb058931701f53e54772fe7eb6ac5f4711555dd089c25a",
+          "exit": 0
+        },
+        "scope": [
+          "Linux CPython3.12.10 with simulated Windows filename-derived executable mode bits; actual Windows Python verification is separate.",
+          "Actual filesystem preservation, non-overwriting rename, locks, interrupted recovery and metadata change guards.",
+          "Actual engine compilation and native Windows host acceptance are not claimed."
+        ],
+        "regressions": [
+          "Only Windows .exe/.EXE/.bat/.cmd/.com path execute bits may differ from descriptor stat; readonly files accepted without dropping readonly attributes.",
+          "POSIX, ordinary suffixes, reversed/partial executable flags and every other identity field stay strict.",
+          "Retained inventories preserve exact path modes, attributes, hashes and empty directories.",
+          "Interrupted recovery resumes before and after rename with executable files.",
+          "Same-content, same-size, same-mtime file replacement and permission changes during hashing are rejected."
+        ]
+      }
+    },
+    {
+      "path": "build/audit-world-worker-recovery-20261028/evidence/verification.json",
+      "sha256": "8ec8dfedf8708a9c292d0b03a2e94e6bc6271b9f4ed2d445f082d205cd0262b5",
+      "details": {
+        "format": 1,
+        "purpose": "actual-windows-python-recovery-filesystem-verification",
+        "date": "2026-10-28",
+        "network": "none",
+        "official_cached_python": {
+          "url": "https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip",
+          "archive_bytes": 11133606,
+          "archive_sha256": "4acbed6dd1c744b0376e3b1cf57ce906f9dc9e95e68824584c8099a63025a3c3"
+        },
+        "container": "wesnoth-mingw-worker-wine-verify:20261028",
+        "mounts": {
+          "repository": "read-only",
+          "official_windows_python": "read-only",
+          "disposable_evidence_directory": "writable"
+        },
+        "native_windows_host_acceptance": false,
+        "full_worker_build": false,
+        "baseline": {
+          "status": "exact_reported_inventory_error_reproduced",
+          "differing_field": "st_mode only",
+          "executable_suffixes": [
+            ".exe",
+            ".EXE",
+            ".bat",
+            ".cmd",
+            ".com"
+          ],
+          "path_mode": "0o100777",
+          "descriptor_mode": "0o100666",
+          "ordinary_json_text_bin": "passed",
+          "actual_cmake_pe_copied_as_exe": "fails_before_correction",
+          "same_pe_bytes_as_bin": "passed"
+        },
+        "production": {
+          "scope": "Actual official Windows CPython3.12.10 invokes corrected production inventory/preservation, Windows locking and exclusive rename through network-disabled Wine on controlled ordinary fixtures. Before/after-rename crash boundaries are deliberately injected; all stat/open/hash/journal/lock/rename operations are real. Not native Windows host acceptance or full engine compilation.",
+          "python_version": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+          "os_name": "nt",
+          "source_sha256": "819f7a4368efd6561df1c918c5f5d22a887d9d9b6eabca7ab1642c8f02d263f0",
+          "source_after_sha256": "819f7a4368efd6561df1c918c5f5d22a887d9d9b6eabca7ab1642c8f02d263f0",
+          "cases": [
+            {
+              "case": "preserve_repeat_and_current_stage_reuse",
+              "status": "passed",
+              "files": 11
+            },
+            {
+              "case": "before_rename_resume",
+              "status": "passed",
+              "files": 11
+            },
+            {
+              "case": "after_rename_resume",
+              "status": "passed",
+              "files": 11
+            },
+            {
+              "case": "changed_file_refused_and_preserved",
+              "status": "passed"
+            },
+            {
+              "case": "actual_hardlink_refused",
+              "status": "passed"
+            },
+            {
+              "case": "readonly_executable_preserved",
+              "status": "passed"
+            },
+            {
+              "case": "actual_competing_process_lock_then_retry",
+              "status": "passed"
+            }
+          ],
+          "status": "passed"
+        },
+        "fixture_limitations": [
+          "Ownership uses the exact production shape with controlled non-builder input hashes; no actual user failed stage was available.",
+          "Only crash boundaries are injected; stat, file opening, hashing, journal publication, Windows locking and rename are production operations.",
+          "Initial baseline script attempted names differing only by case in sibling directories; Windows name collision stopped that fixture, and its failed log is retained. Numbered directories corrected the fixture.",
+          "Wine first-run diagnostics about absent optional 32-bit rundll32/XDG display are retained; CPython x64 executions completed as recorded."
+        ],
+        "evidence_files": {
+          "world_worker_recovery-before.py": {
+            "bytes": 14078,
+            "sha256": "c1f46b53066aeac5725caa01bdf6af972a5010ca0812ff11f5443a8646134187"
+          },
+          "verify-windows-baseline.py": {
+            "bytes": 2545,
+            "sha256": "f7fe1115dc6e816c6ec1dda086fba4f42dbfeb25dfb10ce0532928037d7db9a9"
+          },
+          "windows-baseline-attempt01.log": {
+            "bytes": 718,
+            "sha256": "cd7027e2620443f3c3fbab1d434a53def7d5cf9d374008a75000ddbd0de7266d"
+          },
+          "windows-baseline.log": {
+            "bytes": 608,
+            "sha256": "804e789544921882a904a2d79a9f107fc467952b27187b81d7c29df1ff0da93b"
+          },
+          "windows-baseline.json": {
+            "bytes": 9108,
+            "sha256": "166d07a562a24b12067186007fbc3a4ca4dd060f5c4bdbd9af015ab272e97cc0"
+          },
+          "verify-windows-production.py": {
+            "bytes": 6642,
+            "sha256": "fd92850fe157a1e705063f5d35b4c30c74734741da075511b392ba6e72b13281"
+          },
+          "windows-production.log": {
+            "bytes": 1751,
+            "sha256": "2f55aeb9989fbb732d2291d6405244ab0a61a0c30af9f4df000c1c6b11cdc2ba"
+          },
+          "windows-production.json": {
+            "bytes": 1434,
+            "sha256": "7e930c73863dd5a780cadac3a880201ca43734806b61e7ec4a99126df98445a5"
+          },
+          "cmake-probe-source.bin": {
+            "bytes": 96730,
+            "sha256": "de86076bb9b1599083c495b6aff5ed78a6e99b248b219aa8fd3523c763043830"
+          }
+        },
+        "cmake_probe_source": "build/audit-world-worker-headers-20261028/tests/cmake-production-final/build/CMakeFiles/3.31.6/CMakeDetermineCompilerABI_CXX.bin",
+        "container_image_id": "sha256:fde871904f9c06b6c40d4946f537b8a10f332f4dc570df8e867bb65cb5dd9b80"
+      }
+    },
+    {
+      "path": "build/audit-world-worker-recovery-20261028/evidence/windows-production.json",
+      "sha256": "7e930c73863dd5a780cadac3a880201ca43734806b61e7ec4a99126df98445a5",
+      "details": {
+        "scope": "Actual official Windows CPython3.12.10 invokes corrected production inventory/preservation, Windows locking and exclusive rename through network-disabled Wine on controlled ordinary fixtures. Before/after-rename crash boundaries are deliberately injected; all stat/open/hash/journal/lock/rename operations are real. Not native Windows host acceptance or full engine compilation.",
+        "python_version": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+        "os_name": "nt",
+        "source_sha256": "819f7a4368efd6561df1c918c5f5d22a887d9d9b6eabca7ab1642c8f02d263f0",
+        "source_after_sha256": "819f7a4368efd6561df1c918c5f5d22a887d9d9b6eabca7ab1642c8f02d263f0",
+        "cases": [
+          {
+            "case": "preserve_repeat_and_current_stage_reuse",
+            "status": "passed",
+            "files": 11
+          },
+          {
+            "case": "before_rename_resume",
+            "status": "passed",
+            "files": 11
+          },
+          {
+            "case": "after_rename_resume",
+            "status": "passed",
+            "files": 11
+          },
+          {
+            "case": "changed_file_refused_and_preserved",
+            "status": "passed"
+          },
+          {
+            "case": "actual_hardlink_refused",
+            "status": "passed"
+          },
+          {
+            "case": "readonly_executable_preserved",
+            "status": "passed"
+          },
+          {
+            "case": "actual_competing_process_lock_then_retry",
+            "status": "passed"
+          }
+        ],
+        "status": "passed"
+      }
+    }
+  ],
+  "next": "Server-only pull containing 428402f, offline worker-only retry -PreservePreviousBuild with five services stopped. Keep every lock/journal and old stage. Review full worker before Android."
+}
