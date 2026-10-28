@@ -1,6 +1,6 @@
 {
   "recorded": "2026-10-28",
-  "status": "vps_verified_windows_p2_retention_fix_retry_pending",
+  "status": "vps_verified_windows_p2_accepted_p3_pending",
   "release": 1192624,
   "protocol": 4,
   "schema": 4,
@@ -41,7 +41,7 @@
     },
     "package_cache": "107 signed pinned archives verified in supplied console",
     "git_integrity_followup": "GIT_CHECK_EXIT: 0",
-    "scope": "Supplied Windows console only; saved reports/private backup not opened on VPS. Base CPython3.12.10 x64 execution passed; project dependency/environment verification and remaining World acceptance pending.",
+    "scope": "Supplied Windows console only; saved reports/private backup not opened on VPS. Base CPython3.12.10 x64 execution and P2 dependency preparation passed; P3 environment installation and remaining World acceptance pending.",
     "python312_base": {
       "status": "accepted_supplied_console",
       "version": "3.12.10",
@@ -55,19 +55,35 @@
       "wan_status": "not supplied for this check"
     },
     "python312_preparation": {
-      "status": "stopped_before_wheels",
-      "server_head": "810988e78d1c40997b81d01fa9bce10397eed3b1",
-      "client_head": "044af5d228b90bcc0b8b6c5a3c4d19030533b06f",
-      "error": "MongoDB directory contains unexpected files; preserved.",
-      "log": "diagnostics\\alliance-python312-prepare-20261028-003528-963-5f1da516b7864b69a593ad54048dabd2.txt",
-      "attachment_bytes": 10663,
-      "attachment_sha256": "736205f627f47933b667e46a80449fae9aaac45cfa4b6d7869fd6ef8f7732a2d",
-      "known_file_hash_checks_reached": false,
-      "differing_names": [
-        "mongod.2026-10-19T19-37-33.mdmp",
-        "mongod.2026-10-20T04-02-35.mdmp"
-      ],
-      "next": "Server-only retention-fix pull and P2 retry; return output before offline P3."
+      "status": "accepted_successful_retry_supplied_console",
+      "server_head": "acd35a27984837a171e031eed984e83103d0768f",
+      "log": "diagnostics/alliance-python312-prepare-20261028-005052-213-cb166be869bd477fbf6c44e3b8e48c61.txt",
+      "pinned_wheels_verified": 17,
+      "cached_wheels_reused": 14,
+      "new_cp312_wheels_downloaded": 3,
+      "new_bytes": 1022301,
+      "mongo_dumps_retained": 2,
+      "mongo_archive_downloaded_or_extracted": false,
+      "success_marker": "ALLIANCE PYTHON 3.12 CACHE READY",
+      "saved_windows_file_opened_on_vps": false,
+      "new_environment_installation": "pending P3",
+      "wan_status": "Online preparation; no offline batch confirmation yet.",
+      "initial_stopped_attempt": {
+        "status": "stopped_before_wheels",
+        "server_head": "810988e78d1c40997b81d01fa9bce10397eed3b1",
+        "client_head": "044af5d228b90bcc0b8b6c5a3c4d19030533b06f",
+        "error": "MongoDB directory contains unexpected files; preserved.",
+        "log": "diagnostics\\alliance-python312-prepare-20261028-003528-963-5f1da516b7864b69a593ad54048dabd2.txt",
+        "attachment_bytes": 10663,
+        "attachment_sha256": "736205f627f47933b667e46a80449fae9aaac45cfa4b6d7869fd6ef8f7732a2d",
+        "known_file_hash_checks_reached": false,
+        "differing_names": [
+          "mongod.2026-10-19T19-37-33.mdmp",
+          "mongod.2026-10-20T04-02-35.mdmp"
+        ],
+        "next": "Server-only retention-fix pull and P2 retry; return output before offline P3."
+      },
+      "next": "Offline P3 with five services stopped and Python3.14 retained. No new pull."
     }
   },
   "dependencies": {
