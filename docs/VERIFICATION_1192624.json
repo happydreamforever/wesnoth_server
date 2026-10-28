@@ -982,12 +982,13 @@
   },
   "mobile_evidence": "WORLD_MOBILE_VERIFICATION_1192624.json",
   "limits": [
-    "Actual Windows installed full-engine package inventory is not supplied. Missing pinned packages cannot yet be selected; Windows MINGW compilation and DLL execution are NOT RUN.",
+    "Windows installed/cached package names, versions and sizes were supplied and reviewed. The full 107-package signed closure and isolated prefix were verified on VPS; actual Windows preparation, MINGW compilation and DLL execution remain NOT RUN.",
     "Actual GUI2/SDL captures and logical touch geometry on Linux are not LDPlayer rendering, Android density measurements or physical touchscreen acceptance.",
     "Single-LDPlayer companions and assigned native AI do not establish multiple-human usability.",
     "Six original native cases use an in-memory domain fixture; joined Company cases use actual production AuthService/AllianceService and isolated MongoDB. Test-only earned-hero/initial-XP setup is labeled.",
     "Native evidence, source ownership and command continuity checks are not complete modified-public-client anti-cheat.",
     "No production Windows database, password, private profile, runtime or campaign save was accessed or reset.",
     "Historical user acceptance is retained. Windows1192624 A-Z and the earlier authored-campaign duplicate-reward check remain pending."
-  ]
+  ],
+  "worker_dependency_followup": "WORLD_WORKER_DEPENDENCY_VERIFICATION_1192624.json"
 }

@@ -1,43 +1,20 @@
 # Windows acceptance — Companies and Territorial Wars 1192624
 
-Status: implementation and VPS verification complete. Actual Windows worker dependency inventory remains the delivery gate. Do not begin migration or the offline build batch until that audit is reviewed; Windows A-Z is not yet accepted. Final coordinated commits are supplied in the release handoff.
+Status: the Windows inventory is reviewed: 24 existing pinned MINGW64 packages and their cached archives were reported. The complete worker closure adds 83 library packages in a separate prefix. Prepare the signed cache while connected, then verify and materialize it offline at D before migration. Windows worker compilation and A-Z acceptance remain pending. Final coordinated commits are supplied in the release handoff.
 
 Use the existing `runtime-v2`, accounts, Teams, earned heroes, campaign saves, bundled public profile, original Android signer and one LDPlayer. This release explicitly upgrades schema 3 to 4 in place. It does not initialize another database, create founding Teams automatically or grant replacement heroes. Previously accepted results remain historical evidence; untested new behavior is NOT RUN.
 
 Record WAN status once for this batch. GitHub and reviewed pinned missing-package preparation require connectivity before the offline build/test phase. Keep local Ethernet connected when WAN is disconnected. Stop at the first unexpected result, retain its logs and report the step, expected result and actual result. Retest the failed step and affected regressions after the fix; do not repeat unrelated accepted work.
 
-## Before A: read-only dependency inventory
+## Before A: inventory reviewed
 
-The full Windows game engine needs more libraries than the account bridge. A copied MSYS folder on the VPS is not proof of usable Windows dependencies. Resolve the read-only inventory before scheduling the offline batch. The release does not run `pacman -Syu`, upgrade unrelated tools or substitute another compiler ABI.
+The supplied `world-worker-inventory-20261027-230551-870.txt` console lists 24 installed/cached MINGW64 packages. Their names, versions and sizes match the reviewed signed repository snapshot. This is user-supplied inventory evidence, not verification of installed files or native worker execution. The copied VPS MSYS headers/executables remain unusable placeholders.
 
-Run this read-only collection in Windows PowerShell and return its saved text log. It does not require a new repository pull or any service restart:
+The worker needs 107 pinned packages in total. The 83 additional archives total 100,641,401 bytes, plus small signatures and the official signing keyring. Existing cached archives are reused after exact size/SHA256 checks. The new helper downloads into `build/world-worker-packages-1192624`; it never installs into MSYS2, updates repositories, changes its keyring or upgrades the compiler.
 
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $worldMsys = 'D:\Test\wesnoth-setup\msys64'
-    $worldDiagnostics = 'D:\Test\wesnoth-setup\wesnoth_server\diagnostics'
-    $null = New-Item -ItemType Directory -Path $worldDiagnostics -Force
-    $worldLog = Join-Path $worldDiagnostics ('world-worker-inventory-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.txt')
-    Start-Transcript -LiteralPath $worldLog -NoClobber | Out-Null
-    try {
-        'INSTALLED MINGW64 PACKAGE RECORDS'
-        Get-ChildItem -LiteralPath (Join-Path $worldMsys 'var\lib\pacman\local') -Directory |
-            Where-Object { $_.Name -like 'mingw-w64-x86_64-*' } |
-            Select-Object -ExpandProperty Name
-        'CACHED MINGW64 PACKAGES'
-        Get-ChildItem -LiteralPath (Join-Path $worldMsys 'var\cache\pacman\pkg') -File |
-            Where-Object { $_.Name -like 'mingw-w64-x86_64-*' -and $_.Name -notlike '*.sig' } |
-            Select-Object Name,Length | Format-List
-        'READ-ONLY WORKER INVENTORY COMPLETE'
-    } finally {
-        Stop-Transcript | Out-Null
-        Write-Host "Saved log: $worldLog"
-    }
-}
-```
+The isolated prefix is assembled from verified archives, not from installed files that package scripts may have changed. Internal package hardlinks become independent files; installer scripts and hooks are not executed. The exact 57,474-file prefix occupies 1,686,953,610 bytes. Keep at least 3 GB free for dependency preparation, plus the additional space required by the full worker and retained Android builds. Cold backup, migration and build storage need their own headroom.
 
-Expected: installed package names/versions, cached archive names/sizes and the saved log path. This preliminary inventory is not a full dependency PASS; D verifies package contents and versions before E can run.
+Follow A-B-C, then D below. Do not rerun the preliminary inventory or use `pacman -Syu`. Details and provenance: [worker dependency preparation](WORLD_WORKER_DEPENDENCIES_1192624.md).
 
 ## A. Save and stop
 
@@ -84,25 +61,37 @@ With services still stopped, temporarily connect to GitHub:
 
 Expected: both pulls succeed and print the release commits. Preserve unrelated README edits. Retain the existing ignored client `.env` and public profile; do not regenerate identity or paste private configuration.
 
-## D. Verify and isolate worker dependencies
+## D. Download once, then prepare the isolated worker offline
+
+After C, while internet is available, run:
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Test-WindowsWorldWorkerDependencies.ps1' `
-        -MsysRoot 'D:\Test\wesnoth-setup\msys64'
-    if ($LASTEXITCODE -ne 0) { throw 'Dependency audit is incomplete. Send its JSON report; do not migrate or upgrade packages.' }
-    powershell.exe -NoProfile -ExecutionPolicy Bypass `
-        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Prepare-WindowsWorldWorker.ps1' `
-        -MsysRoot 'D:\Test\wesnoth-setup\msys64'
-    if ($LASTEXITCODE -ne 0) { throw 'Isolated dependency preparation stopped. Send the saved log.' }
+        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Prepare-WindowsWorldWorkerPackages.ps1' `
+        -MsysRoot 'D:\Test\wesnoth-setup\msys64' -Download
+    if ($LASTEXITCODE -ne 0) { throw 'Package preparation stopped. Send the saved text and JSON reports; do not migrate.' }
 }
 ```
 
-Expected: `WORLD WORKER DEPENDENCY AUDIT COMPLETE`, installed package integrity verified, then `WORLD WORKER ISOLATED DEPENDENCIES PREPARED` or `VERIFIED`. The helper checks installed package ownership, recorded SHA256s and dependency versions, then copies the exact closure into `build\world-worker-prefix`. It does not install packages. Reports: `diagnostics\world-worker-dependencies-*.json` and `world-worker-prepare-*.txt`.
+Expected: `WORLD WORKER PACKAGE CACHE VERIFIED`, 107 pinned archives/signatures verified, and the original package inventory preserved. Reports: `diagnostics\world-worker-packages-*.txt` and `.json`. Keep the cache and its journals. Existing mismatched files, a changed toolchain or failed signature stop preparation instead of being overwritten. No database or service is started. Stop here and return the console plus saved text/JSON reports, including on success. Continue with offline preparation only after this result has been reviewed.
 
-If libraries are missing, stop here. A reviewed, pinned offline package batch must be prepared from the actual report before continuing. A header-only audit or successful bridge build is not full-engine acceptance. Once dependency preparation is complete, disconnect WAN while retaining Ethernet and record that state once.
+Disconnect WAN while keeping local Ethernet connected, record this once for the offline batch, then run:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Prepare-WindowsWorldWorker.ps1' `
+        -MsysRoot 'D:\Test\wesnoth-setup\msys64'
+    if ($LASTEXITCODE -ne 0) { throw 'Isolated dependency preparation stopped. Preserve the cache and journal; send the saved log.' }
+}
+```
+
+Expected: cache verification followed by `WORLD WORKER ISOLATED DEPENDENCIES PREPARED` (or `VERIFIED` on reuse). The helper checks package identity, signatures, dependency pins, every extracted file and the full prefix hash. Owned interrupted extraction resumes; foreign or changed output is retained and rejected. Report: `diagnostics\world-worker-prepare-*.txt`. Original MSYS2 files and package records remain unchanged.
+
+The earlier `Test-WindowsWorldWorkerDependencies.ps1` audits installed MSYS files only. It will still report missing libraries because the new libraries deliberately live in the isolated prefix; it is no longer the release D gate. Native compilation and execution are verified at F/G, not inferred from extraction.
 
 ## E. Preserving schema 3 → 4 migration
 
