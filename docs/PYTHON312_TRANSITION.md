@@ -7,7 +7,7 @@ This checkpoint interrupts the pending 1192624 World rollout only to change the 
 - Cold backup: 113 files / 257,065,798 bytes, verified with no schema claim. Private path: `C:\Users\Uni\AppData\Local\WesnothAlliance\backups\before-1192624-20261027-234120-963-9a74eff719334e9d885999ef17b69d7d`.
 - The supplied pulls reached server `24129be2cb8c8a82c2943f0cf76beecdd4597a60` and client `5dff239ba895cd02c214c17c1ae1972519e1f697`. The client pull printed unavailable pack indexes; the subsequent read-only full Git check returned `GIT_CHECK_EXIT: 0`. No repository repair is needed on that evidence.
 - `WORLD WORKER PACKAGE CACHE VERIFIED` confirms the 107 pinned archives/signatures were prepared. Its supplied console reports original MSYS package records preserved. This is Windows console evidence; the saved JSON and private backup were not opened on the VPS.
-- P1 accepted on 2026-10-28: the explicit Windows Python312 interpreter reports CPython3.12.10, 64-bit AMD64, and PYTHON312_CHECK_EXIT:0. The repeated client Git check returns GIT_CHECK_EXIT:0. P2 dependency preparation and P3 isolated-environment installation are still pending, along with the isolated worker prefix, schema-4 migration, worker build and new gameplay acceptance.
+- P1 accepted on 2026-10-28: the explicit Windows Python312 interpreter reports CPython3.12.10, 64-bit AMD64, and PYTHON312_CHECK_EXIT:0. The repeated client Git check returns GIT_CHECK_EXIT:0. P2 reached a folder-layout failure; the two reported diagnostic files are now handled by the verified fix below. P2 retry and P3 isolated-environment installation are still pending, along with the isolated worker prefix, schema-4 migration, worker build and new gameplay acceptance.
 
 ## P1. Install the pinned interpreter alongside 3.14
 
@@ -17,24 +17,25 @@ While connected, download the installer (or copy it from a connected computer). 
 
 Choose Customize installation, retain pip and venv support, and install for the current user at `%LOCALAPPDATA%\Programs\Python\Python312`. A PATH change is unnecessary: every project helper selects an explicit interpreter. Leave Python 3.14 installed until the new environment and subsequent five-service startup pass.
 
-## P2. Pull and prepare the three replacement wheels while connected
+## P2. Retry preparation with the MongoDB retention fix
 
-The latest attempt stopped at the folder-layout check. Use the diagnostic below before retrying these retained preparation instructions.
+The earlier pulls delivered Python 3.12 support to both repositories. The returned folder listing now identifies the two extra files that stopped preparation: `bin/mongod.2026-10-19T19-37-33.mdmp` (517,241 bytes) and `bin/mongod.2026-10-20T04-02-35.mdmp` (523,111 bytes). The saved metadata log is `diagnostics/mongo-install-layout-20261028-004222-844-eca9687d4aec4ca79d45e2bf43dab384.txt`. Their contents were not supplied. No further listing or dump upload is needed.
 
-This downloads about 1 MB when the previously verified cache is present. Fourteen wheels are reused; CFFI, MarkupSafe and PyMongo receive their CPython 3.12 x64 builds. Dependency versions and MongoDB 8.0.32 remain unchanged. The MongoDB ZIP is neither downloaded nor extracted by this transition.
+Server fix `e936b29` retains timestamped ordinary diagnostic files in an existing installation while still checking its ownership receipt and all six pinned MongoDB files. Fresh extraction remains strict. The original P2 rejection was reproduced and the correction verified on the VPS; Windows P2 has not yet passed.
+
+Keep all five services stopped and Python 3.14 installed. Connect to the internet for this server-only update and preparation retry. The client helpers are already current. This downloads about 1 MB when the previously verified cache is present: fourteen wheels are reused, while CFFI, MarkupSafe and PyMongo receive their CPython 3.12 x64 builds. Dependency versions and MongoDB 8.0.32 remain unchanged. The MongoDB ZIP is neither downloaded nor extracted.
 
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
-    if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) { throw 'LOCALAPPDATA is missing.' }
     $pythonBash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
-    foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
-        $repo = '/d/Test/wesnoth-setup/' + $name
-        & $pythonBash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' pull --ff-only origin main')
-        if ($LASTEXITCODE -ne 0) { throw "Pull failed for $name. Stop and send the output." }
-        & $pythonBash --noprofile --norc -c ('PATH=/usr/bin:$PATH /usr/bin/git -C ' + $repo + ' rev-parse HEAD')
-        if ($LASTEXITCODE -ne 0) { throw "Commit check failed for $name." }
-    }
+
+    & $pythonBash --noprofile --norc -c 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server pull --ff-only origin main'
+    if ($LASTEXITCODE -ne 0) { throw 'Server pull failed. Stop and send the output.' }
+
+    & $pythonBash --noprofile --norc -c 'PATH=/usr/bin:$PATH /usr/bin/git -C /d/Test/wesnoth-setup/wesnoth_server rev-parse HEAD'
+    if ($LASTEXITCODE -ne 0) { throw 'Commit check failed. Stop and send the output.' }
+
     powershell.exe -NoProfile -ExecutionPolicy Bypass `
         -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Prepare-WindowsAlliancePython312.ps1' `
         -Download
@@ -42,45 +43,13 @@ This downloads about 1 MB when the previously verified cache is present. Fourtee
 }
 ```
 
-Expected: both pulls succeed and print their commit IDs, followed by `ALLIANCE PYTHON 3.12 CACHE READY`. The preparation helper validates the selected interpreter automatically. Report: `wesnoth_server\diagnostics\alliance-python312-prepare-*.txt`. Keep services stopped. On any unexpected output, stop and return the console and log before P3.
+Expected:
 
-## Current P2 stop: inspect the MongoDB installation folder
+- Successful server pull and printed commit ID, including the correction in its history.
+- `Pinned MongoDB files verified; retained diagnostic dumps: 2.`
+- `ALLIANCE PYTHON 3.12 CACHE READY`
 
-The 2026-10-28 supplied console confirms both pulls (server810988e/client044af5d) but preparation stops with `MongoDB directory contains unexpected files; preserved.` P2 has not passed. The code stopped before wheel preparation and before checking the known MongoDB file contents. An entry-name mismatch alone does not establish corruption or reveal which entry differs.
-
-Keep the five services stopped and Python3.14 installed. Do not repeat P2 or proceed to P3 yet. Run this read-only listing; it reads only directory metadata and writes a new diagnostic transcript. It does not open file contents, recurse into extra folders, execute MongoDB or access runtime-v2.
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $repo = 'D:\Test\wesnoth-setup\wesnoth_server'
-    $mongoInstall = Join-Path $repo 'build\alliance-mongodb'
-    $diagnostics = Join-Path $repo 'diagnostics'
-    $null = New-Item -ItemType Directory -Path $diagnostics -Force
-    $log = Join-Path $diagnostics ('mongo-install-layout-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N') + '.txt')
-
-    Start-Transcript -LiteralPath $log -NoClobber | Out-Null
-    try {
-        foreach ($folder in @($mongoInstall, (Join-Path $mongoInstall 'bin'))) {
-            $item = Get-Item -LiteralPath $folder -Force
-            if (-not $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-                throw 'Unexpected folder type or redirected path. Files were preserved.'
-            }
-            Write-Host "FOLDER: $folder"
-            Get-ChildItem -LiteralPath $folder -Force |
-                Sort-Object Name |
-                Select-Object Name,PSIsContainer,Length,Attributes,LastWriteTimeUtc |
-                Format-List
-        }
-        Write-Host 'READ-ONLY MONGODB FOLDER CHECK COMPLETE'
-    } finally {
-        Stop-Transcript | Out-Null
-        Write-Host "Saved log: $log"
-    }
-}
-```
-
-Expected: two folder listings and `READ-ONLY MONGODB FOLDER CHECK COMPLETE`. This marker means collection completed, not that MongoDB passed verification. Send the saved text log and console. Do not send any extra files shown by the listing. Choose the correction and affected retest only after those actual names are reviewed. No new pull is needed for this inline command.
+Report: `wesnoth_server\diagnostics\alliance-python312-prepare-*.txt`. Return the console and saved log for review before P3. Keep the diagnostic dumps in place; do not send them. No database initialization, client rebuild, new backup or repeat worker-package download is required.
 
 ## P3. Install and check offline
 
@@ -114,6 +83,6 @@ The isolated MINGW worker package closure contains its own Python 3.14.7 depende
 
 ## Verification scope
 
-See [the verification record](PYTHON312_VERIFICATION.json). VPS checks use actual CPython 3.12.10, disposable local MongoDB, retained APK/signature verification and real pinned archive contents, with networking disabled. Windows wrappers are exercised in Linux PowerShell simulations. P1 Windows base-interpreter execution is now user-reported and accepted. Windows dependency preparation, isolated-environment execution and the remaining World tests are still pending.
+See [the transition verification record](PYTHON312_VERIFICATION.json) and [the focused diagnostic-retention correction](PYTHON312_MONGO_DIAGNOSTICS_VERIFICATION.json). VPS checks use actual CPython 3.12.10, disposable local MongoDB, retained APK/signature verification and real pinned archive contents, with networking disabled. Windows wrappers are exercised in Linux PowerShell simulations. P1 Windows base-interpreter execution is now user-reported and accepted. Windows dependency preparation, isolated-environment execution and the remaining World tests are still pending.
 
 The historical Dockerfile remains the earlier 3.14 baseline. Exact 3.12 checks explicitly invoke the separately built pinned 3.12.10 interpreter inside the existing Mongo-compatible container; they do not use its default Python. Earlier APK/native execution evidence remains bound to its original inputs. No new game compilation or gameplay result is claimed for this interpreter-only change.

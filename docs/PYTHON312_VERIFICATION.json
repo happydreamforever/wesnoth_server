@@ -1,6 +1,6 @@
 {
   "recorded": "2026-10-28",
-  "status": "vps_verified_windows_p2_layout_check_stopped",
+  "status": "vps_verified_windows_p2_retention_fix_retry_pending",
   "release": 1192624,
   "protocol": 4,
   "schema": 4,
@@ -63,8 +63,11 @@
       "attachment_bytes": 10663,
       "attachment_sha256": "736205f627f47933b667e46a80449fae9aaac45cfa4b6d7869fd6ef8f7732a2d",
       "known_file_hash_checks_reached": false,
-      "differing_names": "not supplied",
-      "next": "Read-only root/bin directory metadata listing; preserve existing files."
+      "differing_names": [
+        "mongod.2026-10-19T19-37-33.mdmp",
+        "mongod.2026-10-20T04-02-35.mdmp"
+      ],
+      "next": "Server-only retention-fix pull and P2 retry; return output before offline P3."
     }
   },
   "dependencies": {
@@ -673,5 +676,6 @@
     "server_archive_compatibility": "3b57cce",
     "server_captain_regression": "be39491",
     "client_tools": "af3cb14"
-  }
+  },
+  "mongo_diagnostic_retention_followup": "PYTHON312_MONGO_DIAGNOSTICS_VERIFICATION.json"
 }

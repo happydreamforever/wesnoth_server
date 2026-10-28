@@ -1,0 +1,78 @@
+{
+  "recorded": "2026-10-28",
+  "status": "vps_verified_windows_p2_retry_pending",
+  "implementation_commit": "e936b29",
+  "scope": "Existing MongoDB installation verification during Python 3.12 transition; no dependency or gameplay change.",
+  "windows_evidence": {
+    "source": "User-pasted read-only directory metadata; saved Windows file and dump contents not supplied.",
+    "log": "diagnostics\\mongo-install-layout-20261028-004222-844-eca9687d4aec4ca79d45e2bf43dab384.txt",
+    "diagnostics": [
+      {
+        "name": "mongod.2026-10-19T19-37-33.mdmp",
+        "bytes": 517241,
+        "attributes": "Archive"
+      },
+      {
+        "name": "mongod.2026-10-20T04-02-35.mdmp",
+        "bytes": 523111,
+        "attributes": "Archive"
+      }
+    ],
+    "wan_status": "not supplied for metadata collection",
+    "p2_retry": "pending",
+    "p3_install": "pending"
+  },
+  "behavior": {
+    "used_installation_dump_metadata_only": true,
+    "fresh_extraction_exact_tree_unchanged": true,
+    "original_six_pins_and_receipt_required": true,
+    "dump_names_calendar_dates_regular_single_link_nonreparse_required": true,
+    "unexpected_entries_rejected": true,
+    "existing_p3_private_preservation_inventory_includes_dump_bytes": true
+  },
+  "tests": {
+    "python": "3.12.10",
+    "platform": "Linux x86_64",
+    "network": "disabled",
+    "focused_total": 68,
+    "passed": 68,
+    "skipped": 0,
+    "groups": {
+      "diagnostic_retention": 16,
+      "python_transition": 20,
+      "adjacent_artifacts": 32
+    },
+    "final_stronger_no_dump_delete_or_rename_guard": "16 diagnostic tests rerun and passed",
+    "native_windows_subprocesses": "simulated",
+    "actual_artifact_preparation": {
+      "result": "passed",
+      "mongodb_pinned_files": 6,
+      "windows_wheels": 17,
+      "dumps": "synthetic bytes matching user-reported names and sizes",
+      "patched_boundary": "assert_windows_python only",
+      "original_and_disposable_files_preserved": true,
+      "windows_executables_run": false,
+      "database_accessed": false,
+      "archive_present": false,
+      "downloaded": false,
+      "installed_wheels": false
+    },
+    "document_powershell_blocks_parsed": 11
+  },
+  "independent_review": "No blocker; existing reuse alone opts in, fresh publication stays strict, original pins remain enforced.",
+  "source_sha256": {
+    "tools/alliance_dependencies.py": "c42803d64c3d6467a14c00caa5398258ea6fd8cccf7c625d6cdc9768900ddd20",
+    "tests/test_alliance_mongo_diagnostics.py": "28dd2cb6d0cb909c32fcef09e5aa8af8a4bc7d02bfda4c050c7f579ca1078764",
+    "tests/test_alliance_python312.py": "47e1442b60b2e5d5c18600d186eb689b08924ae1d22f40e9616fa1816094caa1",
+    "tests/test_alliance_windows.py": "cb39331a6d721c37a01a3d62e54c79528f2dea828d3d709ffe846c543bdacc46"
+  },
+  "evidence_sha256": {
+    "build/audit-python312-mongo-dumps-20261028/before-fix-reproduction.log": "d0ea89baf5aac4972e1e67f7523c97970aaac19107df28cf170c68904247ec0e",
+    "build/audit-python312-mongo-dumps-20261028/regression-exact31210.log": "a6432278a5278b0a36f7e78dbc665f0497ee1b19225ec67f30b44187611e0c7c",
+    "build/audit-python312-mongo-dumps-20261028/dump-guards-exact31210.log": "ac4f8f2a6a17f29a45ae4e0710c5bbe7d11b6053be66b8e85d458658711e0ee7",
+    "build/audit-python312-mongo-dumps-20261028/actual-artifacts-exact31210.json": "0ecd5ad0c6eb934823b7a4906c329139af5f2e2bbc258eb5ddbd26cd40faebb2",
+    "build/audit-python312-mongo-dumps-20261028/actual-artifacts-exact31210.log": "9f57a54bcca9f6256523cebbbf2f321838279f138fd4f3a59f741a12ce5402ab",
+    "build/audit-python312-mongo-dumps-20261028/verify_actual_artifacts.py": "1f9151c7f43e5c1d732558a4cd62452c1378c1028ebc60f5c6e9667debfb5803"
+  },
+  "handoff": "Server-only fast-forward pull and P2 retry; review output before offline P3. Keep five services stopped and Python3.14 installed."
+}
