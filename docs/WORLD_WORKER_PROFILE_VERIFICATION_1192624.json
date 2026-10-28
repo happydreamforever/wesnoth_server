@@ -1,0 +1,689 @@
+{
+  "status": "passed_with_scoped_evidence",
+  "date": "2026-10-28",
+  "implementation_commits": {
+    "wesnoth_client": "fe91a450129101de64c55f91b7e442a477e1e711",
+    "wesnoth_server": "7bfa1f1b2734d0319902e6a043a805bb33dd1279"
+  },
+  "returned_windows_console": {
+    "bytes": 10504,
+    "sha256": "b77ec156fce918f716f557577637930ff45a84499bc31a7b9ac78787e91ad472",
+    "accepted": [
+      "Windows compiler and resource preflight",
+      "Reviewed Ninja history recovery",
+      "Guarded CMake configure/generation",
+      "Incremental compilation resumed with 14 steps"
+    ],
+    "failure": {
+      "step": "11/14",
+      "file": "wesnoth_client/alliance_native/account_client.cpp",
+      "line": 634,
+      "error": "lstat was not declared in this scope",
+      "log": "diagnostics/world-worker-build-20261028-151913-045-8776effadd044d23aaf6bd2c2d8dfa99.txt"
+    },
+    "nonfatal": "NOMINMAX redefined warning in world_storage.cpp",
+    "scope": "Pasted console attachment, not saved Windows logs or compiler report. Full worker and Android pending."
+  },
+  "production_and_test_sources": [
+    {
+      "path": "wesnoth_client/alliance_native/account_client.cpp",
+      "bytes": 61471,
+      "sha256": "52eca5ebd33bc3964b9233f4f51cf4843b29e2967b92a8b1bb26d70bcfb52a79"
+    },
+    {
+      "path": "wesnoth_client/tests/account_profile_windows_probe.cpp",
+      "bytes": 1403,
+      "sha256": "755e047bac7176f4ee01b474ec1dfef377a1c2f43a199d0e0265d6152245ada4"
+    },
+    {
+      "path": "wesnoth_client/tests/account_profile_read_probe.cpp",
+      "bytes": 2332,
+      "sha256": "99f85efcd660bee4902b289917b3ff19300a3cad40734a0d73608dd7a5cfceef"
+    },
+    {
+      "path": "wesnoth_client/tests/test_account_profile_read.py",
+      "bytes": 13035,
+      "sha256": "5dc61d96258c474ca86dbcb39b5fcd83456001c3cf19ce7ce94a343a0026862e"
+    },
+    {
+      "path": "wesnoth_server/tools/build_world_worker.py",
+      "bytes": 45454,
+      "sha256": "03c1c609e7dbf78903f8bd4f7064bc5440d107b7c59d0d65ccdba3b7ba5e7867"
+    },
+    {
+      "path": "wesnoth_server/tools/world_worker_account_recovery.py",
+      "bytes": 11441,
+      "sha256": "e33ec6935ab5115a3dd3989246ecd7e1a302f9a3a25b8d6f873ba46ebf55247d"
+    },
+    {
+      "path": "wesnoth_server/tests/test_world_worker_account_recovery.py",
+      "bytes": 13238,
+      "sha256": "75dc61572e37dd8d52d222f3f2b48abdb7d7f1a62f24b6ac8610c781f1c751c2"
+    }
+  ],
+  "server_regressions": {
+    "status": "passed",
+    "python": "3.12.10",
+    "network": "none",
+    "tests": 181,
+    "skips": 0,
+    "log_sha256": "51e03e4a7b86bd9073be0fd5f27dccc87d5fcb575b2426cc49387bace3036b18",
+    "source_sha256": {
+      "tools/world_worker_account_recovery.py": "e33ec6935ab5115a3dd3989246ecd7e1a302f9a3a25b8d6f873ba46ebf55247d",
+      "tools/build_world_worker.py": "03c1c609e7dbf78903f8bd4f7064bc5440d107b7c59d0d65ccdba3b7ba5e7867",
+      "tests/test_world_worker_account_recovery.py": "75dc61572e37dd8d52d222f3f2b48abdb7d7f1a62f24b6ac8610c781f1c751c2"
+    },
+    "scope": "Exact Linux Python3.12.10; real Linux CMake/GCC and PowerShell with controlled Windows/build boundaries. Native Windows fixture evidence is separate."
+  },
+  "posix_profile": {
+    "tests": 13,
+    "skips": 0,
+    "execution": "Exact Python3.12.10, GCC16.2, ASan/UBSan, network-disabled Linux container; actual production parser/reader/TLS.",
+    "evidence": {
+      "path": "wesnoth_server/build/audit-world-worker-profile-20261028/posix-final/result.json",
+      "bytes": 8913,
+      "sha256": "1c14609427054fdf466e6cddbf8d0c56a6cb6c72a3a2cfe9456a2b25d3891aa2"
+    },
+    "log": {
+      "path": "wesnoth_server/build/audit-world-worker-profile-20261028/posix-final/run.log",
+      "bytes": 2240,
+      "sha256": "ac6c30e237f9f3a3a96a96888410ca0d3e77eec7ccae601d61b8bcdc11643dbd"
+    },
+    "sources": {
+      "tests/account_profile_read_probe.cpp": "99f85efcd660bee4902b289917b3ff19300a3cad40734a0d73608dd7a5cfceef",
+      "alliance_native/account_client.cpp": "52eca5ebd33bc3964b9233f4f51cf4843b29e2967b92a8b1bb26d70bcfb52a79",
+      "alliance_native/account_protocol.cpp": "35336b8bf181ada87be283e9355ec2a2750c123d8916e9f0a7ae66387b565344",
+      "alliance_native/transport.cpp": "54674ee14a6b0f5059d6c2979e0b02668f73516d14ff59810ed8d31eebe9440d",
+      "alliance_native/account_client.hpp": "35fd758bd4370a0e680b1452760d51909d5de861aaa41d5add329204c6c76a57",
+      "tests/test_account_profile_read.py": "5dc61d96258c474ca86dbcb39b5fcd83456001c3cf19ce7ce94a343a0026862e"
+    }
+  },
+  "native_verification": {
+    "status": "passed",
+    "date": "2026-10-28",
+    "purpose": "Windows public-profile reader compilation and preserving source continuation",
+    "production_sources": [
+      {
+        "path": "/home/uni/Documents/future/wesnoth_client/alliance_native/account_client.cpp",
+        "bytes": 61471,
+        "sha256": "52eca5ebd33bc3964b9233f4f51cf4843b29e2967b92a8b1bb26d70bcfb52a79"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/tools/world_worker_account_recovery.py",
+        "bytes": 11441,
+        "sha256": "e33ec6935ab5115a3dd3989246ecd7e1a302f9a3a25b8d6f873ba46ebf55247d"
+      }
+    ],
+    "test_probe": {
+      "path": "/home/uni/Documents/future/wesnoth_client/tests/account_profile_windows_probe.cpp",
+      "bytes": 1403,
+      "sha256": "755e047bac7176f4ee01b474ec1dfef377a1c2f43a199d0e0265d6152245ada4"
+    },
+    "execution": {
+      "image": "wesnoth-mingw-worker-wine-verify:20261028",
+      "image_id": "sha256:fde871904f9c06b6c40d4946f537b8a10f332f4dc570df8e867bb65cb5dd9b80",
+      "network": "none",
+      "uid": "1001:1001",
+      "read_only_mounts": [
+        "client sources",
+        "server sources for continuation tests",
+        "previously verified pinned isolated package prefix",
+        "official Windows CPython3.12.10"
+      ],
+      "locale": "C.UTF-8 for final Windows-to-Unix filename mapping; native Windows API still reports ANSI codepage1252",
+      "downloads_or_tool_upgrades": false
+    },
+    "results": {
+      "compile": "Original production translation unit reproduces lstat undeclared with pinned PE GCC16.2. Corrected full account-client, codec and transport compile under C++17/O3/Wall/Wextra/Werror and link with pinned OpenSSL/zlib/Windows socket libraries.",
+      "native_profile_cases": 19,
+      "native_profile_report": "native/verification.json",
+      "compiled_profile_limit": 262144,
+      "source_transition_cases": [
+        "normal-and-reuse",
+        "after-owner-interruption",
+        "pending-changed-output-refusal"
+      ],
+      "source_transition_report": "transition/verification.json"
+    },
+    "scope_limits": [
+      "Actual Windows binaries and filesystem APIs run under Wine, not a native Windows host. No full engine link/startup or gameplay is claimed.",
+      "Only disposable profile certificates/files and synthetic small build stages were accessed; no actual user profile, runtime, credentials, saves or Windows build output was opened.",
+      "The reader preserves the Windows CRT active-ANSI-codepage path convention. Tests cover ASCII and an ACP1252-representable non-ASCII filename, not arbitrary Unicode environment paths.",
+      "Wine CreateSymbolicLinkW returned success but no usable reparse file. Native Windows reparse execution remains unverified; code explicitly rejects reparse attributes before and after handle opening. Existing POSIX actual symlink coverage is separate.",
+      "Continuation tests replace only the earlier complete575-output Ninja provenance callback with a controlled retained-file check and use a source-marker callback. Production file/hash/stat/lock/journal/publication operations execute unchanged. Real before/after publication failures are injected to test resume.",
+      "POSIX and Android preprocessor/build verification and focused181 server tests are parent-owned separate evidence."
+    ],
+    "historical_attempts": [
+      {
+        "path": "native/verification-attempt01.log",
+        "status": "fixture_failure",
+        "reason": "Non-UTF-8 Unix container locale prevented creation of the ACP-representable test filename before reader execution. Retained; final run uses available C.UTF-8 locale."
+      },
+      {
+        "path": "native/verification-attempt02.log",
+        "status": "fixture_failure",
+        "reason": "Harness attempted its own Python read while a deliberate DELETE handle blocked that read. Final harness compares hashes before acquiring and after releasing the blocker. Production source unchanged."
+      }
+    ],
+    "pinned_runtime_inputs": [
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-package-preparation-1192624/full-prefix/receipt.json",
+        "bytes": 9471403,
+        "sha256": "bf2f48a84d716f8e3e2c36b2264f35b8f59907dbf2693c21ff73512a264c240e"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-package-preparation-1192624/full-prefix/bin/g++.exe",
+        "bytes": 3305269,
+        "sha256": "fe03455c28ab0c69f1adb0ccde202124091f01d02b0c0ede8578f606063cc894"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-package-preparation-1192624/full-prefix/bin/libssl-3-x64.dll",
+        "bytes": 994446,
+        "sha256": "b0aaaab67558716ea8cb03516d0e83ab92d1c0e3ddfc774c466032053f8b2331"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-package-preparation-1192624/full-prefix/bin/libcrypto-3-x64.dll",
+        "bytes": 5495118,
+        "sha256": "4d2e724eb852f78ec0adbd1b7265325f79f503c9572658a26434f27f0cedb051"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-package-preparation-1192624/full-prefix/bin/zlib1.dll",
+        "bytes": 128488,
+        "sha256": "93e9243a44c29200eeacaf9658efe2558581770e4b11ca4b500e18e424a6e3b5"
+      }
+    ],
+    "artifacts": [
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/account_client.before.cpp",
+        "bytes": 57615,
+        "sha256": "5a3fa0ea86560ae5c4d6a9f1511ed3f5b9f0cdc970987f512f9493e68ff3d53e"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/compile.py",
+        "bytes": 1948,
+        "sha256": "5dc3c72473ae146a0c2bbb943d2c855bebfa0de0bb2b0079ae4f79760adff2b9"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/compile.json",
+        "bytes": 3742,
+        "sha256": "d5886e0cacc2142f464c2684558ba74b75d8cc746b1edc9ae98b394e2d8c3681"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/compile.log",
+        "bytes": 7968,
+        "sha256": "8e51f14127be2c5f79829d08955086c0e5e54f582f8f04bc5f7bd4946f1616f3"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/old-production.log",
+        "bytes": 448,
+        "sha256": "afeac3bbe412c1e45f8def1f1c6de37664d0d413f7c1034d6c58f9c2adc608ac"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/fixed-production.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/account_protocol.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/transport.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/probe-compile.json",
+        "bytes": 1446,
+        "sha256": "179dc31135543f62b97f70e4dab28ea674181c85260ab3e1214793ad3bfa1943"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/compile-probe.py",
+        "bytes": 1510,
+        "sha256": "6a555cff8e408d913e85cb8fa6ea483a33b71498ce124b03f67dc44ffeefb086"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/probe-final.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/link-final.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/verify.py",
+        "bytes": 7110,
+        "sha256": "d6c573590fb9c58630da271e68622b51263607dd7483cd70b25f90a50f849c61"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/verification.json",
+        "bytes": 5902,
+        "sha256": "55b7e68cd7a70f3ffeca17a3a8094ca99c79634180789d7b4aa305cc544bffe0"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/verification-final03.log",
+        "bytes": 12532,
+        "sha256": "5061dc89bc513266777aa71e0864537bc14bf486d180c9f7ab244ed1d0ea452d"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/verification-attempt01.log",
+        "bytes": 8485,
+        "sha256": "2054ece1dc550c65f66959f40c02e61f76a02e7770e47e576f218185584a68b5"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/verification-attempt02.log",
+        "bytes": 11679,
+        "sha256": "9067b67ca5ea9f3dd8e2545d1228d09b7683eab8ed01f984b3b5b3d6c79315a9"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/native/profile-probe.exe",
+        "bytes": 1732416,
+        "sha256": "0bae38f0e3cbec73044bdef98ac1aabb689c44ab2a9f500d5430f6c2bb5e5ef4"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/transition/verify.py",
+        "bytes": 4814,
+        "sha256": "20b35d088c901fa2e2b6baabfda65f76208770bd7b4450425db56f74c4c8e6e5"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/transition/verification.json",
+        "bytes": 1390,
+        "sha256": "39f5af8762af9de3f0bed39cf60a5308b092eb1bfa7f316400ece56a91749f71"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/transition/verification.log",
+        "bytes": 4086,
+        "sha256": "fafc98c15f9cbe9cc0f29b67843a06080a5f00804bf1e189fdc02d1d19a5ce02"
+      },
+      {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-profile-20261028/index-native.py",
+        "bytes": 4950,
+        "sha256": "3ba560c0de4c4c7fd33464336cab713b76ff8d2d7b77760c07d488395ed77774"
+      }
+    ]
+  },
+  "native_index": {
+    "path": "wesnoth_server/build/audit-world-worker-profile-20261028/native-verification-index.json",
+    "bytes": 10532,
+    "sha256": "422925a9aab1940b6b6262a9ddb53921cb05ef1bb73d8065446624475a328330"
+  },
+  "android_compilation": {
+    "status": "passed",
+    "scope": "Actual NDK r26d API23 x86_64 preprocessor and compilation; no Android execution or APK rebuild.",
+    "network": "none",
+    "android_effective_source_identical_except_blank_lines": true,
+    "comparison": "Nonempty preprocessor output lines match byte-for-byte. The added platform conditional removes one blank line.",
+    "observations": [
+      {
+        "phase": "before",
+        "command": [
+          "/workspace/build/toolchains/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++",
+          "--target=x86_64-none-linux-android23",
+          "--sysroot=/workspace/build/toolchains/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+          "-DBOOST_ALL_NO_EMBEDDED_GDB_SCRIPTS",
+          "-DBOOST_ALL_NO_LIB",
+          "-DBOOST_CHARCONV_NO_QUADMATH",
+          "-DBOOST_ERROR_CODE_HEADER_ONLY",
+          "-DHAS_RELATIVE_LOCALEDIR=1",
+          "-DHAVE_CONFIG_H",
+          "-DU_STATIC_IMPLEMENTATION",
+          "-Dmain_EXPORTS",
+          "-I/workspace/build/android-account-engine",
+          "-I/workspace/engine/src",
+          "-I/workspace/build/android-account-engine/build",
+          "-I/workspace",
+          "-isystem",
+          "/workspace/build/android-media/prefix/include",
+          "-isystem",
+          "/workspace/build/android-fonts/prefix/include",
+          "-isystem",
+          "/workspace/build/android-text-base/prefix/include",
+          "-isystem",
+          "/workspace/build/android-glib-deps/prefix/include",
+          "-isystem",
+          "/workspace/build/android-glib/prefix/include",
+          "-isystem",
+          "/workspace/build/android-text-render/prefix/include",
+          "-isystem",
+          "/workspace/build/android-text-layout/prefix/include",
+          "-isystem",
+          "/workspace/build/android-icu/prefix/include",
+          "-isystem",
+          "/workspace/build/android-boost/prefix/include",
+          "-isystem",
+          "/workspace/build/android-network/prefix/include",
+          "-isystem",
+          "/workspace/build/android-fonts/prefix/include/freetype2",
+          "-isystem",
+          "/workspace/build/android-fonts/prefix/include/harfbuzz",
+          "-isystem",
+          "/workspace/build/android-text-base/prefix/include/pixman-1",
+          "-isystem",
+          "/workspace/build/android-glib/prefix/include/glib-2.0",
+          "-isystem",
+          "/workspace/build/android-glib/prefix/lib/glib-2.0/include",
+          "-isystem",
+          "/workspace/build/android-text-render/prefix/include/cairo",
+          "-isystem",
+          "/workspace/build/android-text-layout/prefix/include/pango-1.0",
+          "-isystem",
+          "/workspace/build/android-text-layout/prefix/include/fribidi",
+          "-g",
+          "-DANDROID",
+          "-fdata-sections",
+          "-ffunction-sections",
+          "-funwind-tables",
+          "-fstack-protector-strong",
+          "-no-canonical-prefixes",
+          "-D_FORTIFY_SOURCE=2",
+          "-Wformat",
+          "-Werror=format-security",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-fPIC",
+          "-O2",
+          "-UNDEBUG",
+          "-fexceptions",
+          "-pthread",
+          "-I/workspace/alliance_native",
+          "-E",
+          "-P",
+          "/audit/account_client.before.cpp",
+          "-o",
+          "/audit/android-final/before.ii"
+        ],
+        "source_sha256": "5a3fa0ea86560ae5c4d6a9f1511ed3f5b9f0cdc970987f512f9493e68ff3d53e",
+        "preprocessed_sha256": "549b9caeba9cf4af6c6147a3058fc780977711f8a7771f923e22ad0d2b1c38ea"
+      },
+      {
+        "phase": "after",
+        "command": [
+          "/workspace/build/toolchains/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++",
+          "--target=x86_64-none-linux-android23",
+          "--sysroot=/workspace/build/toolchains/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+          "-DBOOST_ALL_NO_EMBEDDED_GDB_SCRIPTS",
+          "-DBOOST_ALL_NO_LIB",
+          "-DBOOST_CHARCONV_NO_QUADMATH",
+          "-DBOOST_ERROR_CODE_HEADER_ONLY",
+          "-DHAS_RELATIVE_LOCALEDIR=1",
+          "-DHAVE_CONFIG_H",
+          "-DU_STATIC_IMPLEMENTATION",
+          "-Dmain_EXPORTS",
+          "-I/workspace/build/android-account-engine",
+          "-I/workspace/engine/src",
+          "-I/workspace/build/android-account-engine/build",
+          "-I/workspace",
+          "-isystem",
+          "/workspace/build/android-media/prefix/include",
+          "-isystem",
+          "/workspace/build/android-fonts/prefix/include",
+          "-isystem",
+          "/workspace/build/android-text-base/prefix/include",
+          "-isystem",
+          "/workspace/build/android-glib-deps/prefix/include",
+          "-isystem",
+          "/workspace/build/android-glib/prefix/include",
+          "-isystem",
+          "/workspace/build/android-text-render/prefix/include",
+          "-isystem",
+          "/workspace/build/android-text-layout/prefix/include",
+          "-isystem",
+          "/workspace/build/android-icu/prefix/include",
+          "-isystem",
+          "/workspace/build/android-boost/prefix/include",
+          "-isystem",
+          "/workspace/build/android-network/prefix/include",
+          "-isystem",
+          "/workspace/build/android-fonts/prefix/include/freetype2",
+          "-isystem",
+          "/workspace/build/android-fonts/prefix/include/harfbuzz",
+          "-isystem",
+          "/workspace/build/android-text-base/prefix/include/pixman-1",
+          "-isystem",
+          "/workspace/build/android-glib/prefix/include/glib-2.0",
+          "-isystem",
+          "/workspace/build/android-glib/prefix/lib/glib-2.0/include",
+          "-isystem",
+          "/workspace/build/android-text-render/prefix/include/cairo",
+          "-isystem",
+          "/workspace/build/android-text-layout/prefix/include/pango-1.0",
+          "-isystem",
+          "/workspace/build/android-text-layout/prefix/include/fribidi",
+          "-g",
+          "-DANDROID",
+          "-fdata-sections",
+          "-ffunction-sections",
+          "-funwind-tables",
+          "-fstack-protector-strong",
+          "-no-canonical-prefixes",
+          "-D_FORTIFY_SOURCE=2",
+          "-Wformat",
+          "-Werror=format-security",
+          "-O3",
+          "-DNDEBUG",
+          "-std=c++17",
+          "-fPIC",
+          "-O2",
+          "-UNDEBUG",
+          "-fexceptions",
+          "-pthread",
+          "-I/workspace/alliance_native",
+          "-E",
+          "-P",
+          "/workspace/alliance_native/account_client.cpp",
+          "-o",
+          "/audit/android-final/after.ii"
+        ],
+        "source_sha256": "52eca5ebd33bc3964b9233f4f51cf4843b29e2967b92a8b1bb26d70bcfb52a79",
+        "preprocessed_sha256": "723289f7b35e1292722e3cfd0b150786c122409b6d1ec46c7b9aebb81327cbe8"
+      }
+    ],
+    "compile_command": [
+      "/workspace/build/toolchains/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++",
+      "--target=x86_64-none-linux-android23",
+      "--sysroot=/workspace/build/toolchains/android-ndk-r26d/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+      "-DBOOST_ALL_NO_EMBEDDED_GDB_SCRIPTS",
+      "-DBOOST_ALL_NO_LIB",
+      "-DBOOST_CHARCONV_NO_QUADMATH",
+      "-DBOOST_ERROR_CODE_HEADER_ONLY",
+      "-DHAS_RELATIVE_LOCALEDIR=1",
+      "-DHAVE_CONFIG_H",
+      "-DU_STATIC_IMPLEMENTATION",
+      "-Dmain_EXPORTS",
+      "-I/workspace/build/android-account-engine",
+      "-I/workspace/engine/src",
+      "-I/workspace/build/android-account-engine/build",
+      "-I/workspace",
+      "-isystem",
+      "/workspace/build/android-media/prefix/include",
+      "-isystem",
+      "/workspace/build/android-fonts/prefix/include",
+      "-isystem",
+      "/workspace/build/android-text-base/prefix/include",
+      "-isystem",
+      "/workspace/build/android-glib-deps/prefix/include",
+      "-isystem",
+      "/workspace/build/android-glib/prefix/include",
+      "-isystem",
+      "/workspace/build/android-text-render/prefix/include",
+      "-isystem",
+      "/workspace/build/android-text-layout/prefix/include",
+      "-isystem",
+      "/workspace/build/android-icu/prefix/include",
+      "-isystem",
+      "/workspace/build/android-boost/prefix/include",
+      "-isystem",
+      "/workspace/build/android-network/prefix/include",
+      "-isystem",
+      "/workspace/build/android-fonts/prefix/include/freetype2",
+      "-isystem",
+      "/workspace/build/android-fonts/prefix/include/harfbuzz",
+      "-isystem",
+      "/workspace/build/android-text-base/prefix/include/pixman-1",
+      "-isystem",
+      "/workspace/build/android-glib/prefix/include/glib-2.0",
+      "-isystem",
+      "/workspace/build/android-glib/prefix/lib/glib-2.0/include",
+      "-isystem",
+      "/workspace/build/android-text-render/prefix/include/cairo",
+      "-isystem",
+      "/workspace/build/android-text-layout/prefix/include/pango-1.0",
+      "-isystem",
+      "/workspace/build/android-text-layout/prefix/include/fribidi",
+      "-g",
+      "-DANDROID",
+      "-fdata-sections",
+      "-ffunction-sections",
+      "-funwind-tables",
+      "-fstack-protector-strong",
+      "-no-canonical-prefixes",
+      "-D_FORTIFY_SOURCE=2",
+      "-Wformat",
+      "-Werror=format-security",
+      "-O3",
+      "-DNDEBUG",
+      "-std=c++17",
+      "-fPIC",
+      "-O2",
+      "-UNDEBUG",
+      "-fexceptions",
+      "-pthread",
+      "-I/workspace/alliance_native",
+      "-c",
+      "/workspace/alliance_native/account_client.cpp",
+      "-o",
+      "/audit/android-final/account_client.cpp.o"
+    ],
+    "object_sha256": "8181c9da536509aebb2d0698cd4f6587267c6002234313d72c94a082e07ea363",
+    "protected": {
+      "/workspace/build/android-account-engine/build/CMakeFiles/main.dir/workspace/alliance_native/account_client.cpp.o": {
+        "sha256": "828520e0182bb82e7eb2cbb893e2562dd210e47cbd6bc4e9b16be08199751bd3",
+        "mtime_ns": 1793162772368990235
+      },
+      "/workspace/build/android-account-engine/build/build.ninja": {
+        "sha256": "6526882d5abb002b851f4653fc69a505542cb387efa685573f3843303b8c41c7",
+        "mtime_ns": 1793162563542238005
+      },
+      "/workspace/build/android-account-engine/build/.ninja_log": {
+        "sha256": "1c93f1ae643361b5d05d1c05e0df0f615b90e73b5d84d4d602c9f90157cadbac",
+        "mtime_ns": 1793162811768566129
+      },
+      "/workspace/build/android-account-engine/build/.ninja_deps": {
+        "sha256": "ff40cdfdd25d2e8706eec85999d0fe2e38603d911886242a07e214974ff08368",
+        "mtime_ns": 1793162811770566108
+      }
+    },
+    "preservation": "Repository and completed stages mounted read-only; only separate audit outputs writable."
+  },
+  "android_report": {
+    "path": "wesnoth_server/build/audit-world-worker-profile-20261028/android-final/verification.json",
+    "bytes": 10147,
+    "sha256": "e63a96aa5114195b7aec8b5ee60de8b195551d9803e9986a4128b72c3d9616f7"
+  },
+  "handoff": {
+    "scope": "Both exact PowerShell blocks and unchanged wrapper parsed with pinned Linux PowerShell7.4.6; not executed on user Windows.",
+    "guide": {
+      "path": "wesnoth_server/docs/WORLD_WORKER_PROFILE_1192624.md",
+      "bytes": 4950,
+      "sha256": "574281222ad4161f2db93fa3c8aa90eb5034c048a8cd9b7ed25fdd0139652e31"
+    },
+    "parser_artifacts": [
+      {
+        "path": "wesnoth_server/build/audit-world-worker-profile-20261028/review/handoff-1.ps1",
+        "bytes": 729,
+        "sha256": "ffd77ac538a2545d046e4f1718f3d37fbc92994f0c9fb979c6babb1ca0bd1de1"
+      },
+      {
+        "path": "wesnoth_server/build/audit-world-worker-profile-20261028/review/handoff-2.ps1",
+        "bytes": 417,
+        "sha256": "b55a4a21125a22773581182ebf58ca65a7e45394b03c9f2ae3a2f2936d7c3fb3"
+      },
+      {
+        "path": "wesnoth_server/build/audit-world-worker-profile-20261028/review/parse.log",
+        "bytes": 59,
+        "sha256": "5e5d24334b90f6cce2560d6292edc0524b092ba582d6e3c1e36625d152d1c2b4"
+      },
+      {
+        "path": "wesnoth_server/build/audit-world-worker-profile-20261028/review/parse.ps1",
+        "bytes": 654,
+        "sha256": "40bf39df0050961a8f080a0414ef060ebba83bc187915bd83f6077fe3db4a76b"
+      }
+    ]
+  },
+  "preservation": {
+    "status": "verified",
+    "inputs": {
+      "wesnoth_client/README.md": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "wesnoth_server/README.md": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "wesnoth_server/tools/world_worker_recovery.py": {
+        "bytes": 14967,
+        "sha256": "0c940d30ec4e6efa1d95571491f1fa687134d7c8a0ce3b75cc2e3b1187514645"
+      },
+      "wesnoth_server/tools/world_worker_resource_recovery.py": {
+        "bytes": 11844,
+        "sha256": "2e76df6c3c5b59e4f6291ec3989c3c1b739a11a3a95dd176b203e330c42c08e3"
+      },
+      "wesnoth_server/tools/world_worker_ninja_recovery.py": {
+        "bytes": 24564,
+        "sha256": "df6888cc7ac006b6b8d5ef06e2c42be88089f86c2d960c1b5ecfa178f86f6d2c"
+      },
+      "wesnoth_server/tools/inspect_world_worker_ninja.py": {
+        "bytes": 15633,
+        "sha256": "7c1a1bf46d26b7a0c39f36fb0905e84d34f6a4cbf355e5e56ef6d72f280819d6"
+      },
+      "wesnoth_client/tools/build_android_account_game.py": {
+        "bytes": 51677,
+        "sha256": "5350e49a43562b37a63e48020808b0c3abd29b8cada7c942c9c2aefba87318c5"
+      }
+    },
+    "android_protected_files": {
+      "/workspace/build/android-account-engine/build/CMakeFiles/main.dir/workspace/alliance_native/account_client.cpp.o": {
+        "sha256": "828520e0182bb82e7eb2cbb893e2562dd210e47cbd6bc4e9b16be08199751bd3",
+        "mtime_ns": 1793162772368990235
+      },
+      "/workspace/build/android-account-engine/build/build.ninja": {
+        "sha256": "6526882d5abb002b851f4653fc69a505542cb387efa685573f3843303b8c41c7",
+        "mtime_ns": 1793162563542238005
+      },
+      "/workspace/build/android-account-engine/build/.ninja_log": {
+        "sha256": "1c93f1ae643361b5d05d1c05e0df0f615b90e73b5d84d4d602c9f90157cadbac",
+        "mtime_ns": 1793162811768566129
+      },
+      "/workspace/build/android-account-engine/build/.ninja_deps": {
+        "sha256": "ff40cdfdd25d2e8706eec85999d0fe2e38603d911886242a07e214974ff08368",
+        "mtime_ns": 1793162811770566108
+      }
+    },
+    "scope": "No user Windows stage or runtime accessed. Native/Android fixtures use read-only repository/prefix/stage mounts and separate disposable outputs. README edits and prior recovery sources unchanged."
+  },
+  "historical_attempts": [
+    {
+      "path": "posix/run.log",
+      "status": "stale_test_fixture",
+      "reason": "Old fixture used32769 bytes despite existing protocol256KiB limit; production unchanged. Final test queries compiled limit and checks its boundary."
+    },
+    {
+      "path": "android/",
+      "status": "comparison_refined",
+      "reason": "Strict byte comparison found only one blank preprocessor line removed by platform conditional; final nonempty-line comparison and actual compile passed."
+    }
+  ],
+  "independent_review": "Frozen source, LF/CRLF pins, dispatch, original-output preservation and exact guide reviewed; no blocker found.",
+  "next_step": "Pull both repos, then Build-WindowsWorldWorker.ps1 -PreservePreviousBuild without NinjaReportPath. Keep five services stopped; review full worker completion before Android or services.",
+  "limits": [
+    "Full Windows worker link/startup and gameplay remain pending.",
+    "Wine reparse creation unsupported; no actual Windows reparse-execution claim.",
+    "New source transition native tests use controlled historical-provenance boundary; complete575-output provenance is covered by Python fixtures and earlier accepted Windows recovery.",
+    "No fresh Android APK build; actual NDK compilation/effective-source comparison only."
+  ]
+}

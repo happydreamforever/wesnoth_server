@@ -1,3 +1,5 @@
+**Current Windows step:** Ninja history recovery and guarded configuration passed. Continue with [the Windows profile-reader correction](WORLD_WORKER_PROFILE_1192624.md); keep services stopped and omit the old NinjaReportPath on that retry. Earlier instructions below remain historical.
+
 **Current step (2026-10-28):** The returned JSON has been reviewed. Follow [the preserving Ninja recovery and worker retry](WORLD_WORKER_NINJA_RECOVERY_1192624.md). Do not repeat this historical inspection.
 
 # Windows World worker: Ninja metadata inspection

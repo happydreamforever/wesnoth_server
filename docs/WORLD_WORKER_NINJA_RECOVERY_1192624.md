@@ -1,3 +1,5 @@
+**Current Windows step:** Ninja history recovery and guarded configuration passed. Continue with [the Windows profile-reader correction](WORLD_WORKER_PROFILE_1192624.md); keep services stopped and omit the old NinjaReportPath on that retry. Earlier instructions below remain historical.
+
 # Resume the Windows World worker after Ninja generation failure
 
 The supplied JSON was opened and checked: `world-worker-ninja-20261028-134310-139-aba19effeed9452caf5de5c8aab5626d.json`, 93,837 bytes, SHA256 `ec2ad389eaf2c256b80665d3c0433d6f4a02fb7f8bdb77f7489348b97db930ee`.
