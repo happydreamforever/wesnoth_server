@@ -1,6 +1,12 @@
 # World D: first-package archive diagnostic
 
-## Current step: resume full preparation once
+## Current checkpoint: full preparation passed
+
+The resumed Windows full preparation reached package 107/107 and `WORLD WORKER ISOLATED DEPENDENCIES PREPARED`. Saved log: `diagnostics/world-worker-prepare-20261028-054104-451-ff7e6753e7d5430fa8fabdfa86549405.txt`. Accept full D at pasted-console scope; the saved log itself was not supplied. Preserve the cache, completed prefix, journal and diagnostic scratch. The original ReadError cause remains unknown; worker compilation/execution is not established by extraction.
+
+Proceed only to [E: schema 3→4 migration](WORLD_ACCEPTANCE_1192624.md#e-preserving-schema-3--4-migration). No new pull, download or repeated diagnostic/preparation is needed. The commands below are completed history.
+
+## Completed full preparation resume — do not repeat
 
 The returned Windows console confirms all diagnostic phases, including extraction and verification, and both PASSED/COMPLETE markers. Report stem: `diagnostics/world-worker-archive-20261028-053027-599-5b4e9714eeaa43a080042af7a50937a2`; the text/JSON files themselves were not supplied. Retain `build/world-worker-archive-check-464cf0e81cff4a5d859a1080f47528bc`.
 

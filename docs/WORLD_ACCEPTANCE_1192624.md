@@ -1,6 +1,6 @@
 # Windows acceptance — Companies and Territorial Wars 1192624
 
-Current checkpoint (2026-10-28): A/B, the signed 107-package cache and Python 3.12 P1–P3 remain accepted. The targeted Windows aom diagnostic now passes all phases, including extraction and verification, in the supplied console. Saved text/JSON files were not supplied. **Resume full World D once using the command below or the [current archive handoff](WORLD_ARCHIVE_DIAGNOSTIC_1192624.md); return its console/new log before E.** The earlier ReadError cause remains unresolved and full-prefix/worker readiness is not inferred from one package. Keep five services stopped, preparation files retained and Python 3.14 installed. No new pull, download, Python installation, backup or initialization is required.
+Current checkpoint (2026-10-28): A/B, Python 3.12 P1–P3, the targeted archive diagnostic and **full World D dependency preparation pass** at supplied Windows-console scope. The final log is `diagnostics/world-worker-prepare-20261028-054104-451-ff7e6753e7d5430fa8fabdfa86549405.txt`; its saved file was not supplied. Proceed only to **E: preserving schema 3→4 migration** below with the accepted exact backup. Keep all five services stopped and Python 3.14 installed. No new pull, backup, package download, Python installation or dependency preparation rerun is needed. Worker build/execution and E–Z remain pending.
 
 Use the existing `runtime-v2`, accounts, Teams, earned heroes, campaign saves, bundled public profile, original Android signer and one LDPlayer. This release explicitly upgrades schema 3 to 4 in place. It does not initialize another database, create founding Teams automatically or grant replacement heroes. Previously accepted results remain historical evidence; untested new behavior is NOT RUN.
 
@@ -14,7 +14,7 @@ The worker needs 107 pinned packages in total. The 83 additional archives total 
 
 The isolated prefix is assembled from verified archives, not from installed files that package scripts may have changed. Internal package hardlinks become independent files; installer scripts and hooks are not executed. The exact 57,474-file prefix occupies 1,686,953,610 bytes. Keep at least 3 GB free for dependency preparation, plus the additional space required by the full worker and retained Android builds. Cold backup, migration and build storage need their own headroom.
 
-A–D below retain the rollout sequence. Python P1–P3 and the one-package diagnostic are accepted; run only D's offline full-prefix resume now. Do not rerun the preliminary inventory or use `pacman -Syu`. Details and provenance: [worker dependency preparation](WORLD_WORKER_DEPENDENCIES_1192624.md).
+A–D below retain the completed rollout sequence; do not repeat them. The current next command is E's migration. Do not rerun the preliminary inventory or use `pacman -Syu`. Details and provenance: [worker dependency preparation](WORLD_WORKER_DEPENDENCIES_1192624.md).
 
 ## A. Save and stop
 
@@ -77,7 +77,7 @@ The following online download already passed on 2026-10-27; retain it as histori
 
 Expected: `WORLD WORKER PACKAGE CACHE VERIFIED`, 107 pinned archives/signatures verified, and the original package inventory preserved. Reports: `diagnostics\world-worker-packages-*.txt` and `.json`. Keep the cache and its journals. Existing mismatched files, a changed toolchain or failed signature stop preparation instead of being overwritten. No database or service is started. Stop here and return the console plus saved text/JSON reports, including on success. Continue with offline preparation only after this result has been reviewed.
 
-Current next step: the Windows one-package diagnostic passed and its console has been reviewed. Resume full D once below, retaining the existing cache, journal and partial output. Keep all five services stopped and WAN disconnected/local Ethernet retained; no new pull or download is needed:
+The following full D command has now passed on Windows. Retain its cache/prefix/journal and diagnostic scratch; do not rerun it. Continue at E below:
 
 ```powershell
 & {
@@ -95,20 +95,34 @@ The earlier `Test-WindowsWorldWorkerDependencies.ps1` audits installed MSYS file
 
 ## E. Preserving schema 3 → 4 migration
 
+Keep all five services stopped, WAN disconnected and local Ethernet connected. The helper starts and stops its own MongoDB process for migration; do not start a separate database window.
+
 ```powershell
-$ErrorActionPreference = 'Stop'
-$worldRuntime = Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2'
-$worldBackup = 'C:\Users\Uni\AppData\Local\WesnothAlliance\backups\before-1192624-20261027-234120-963-9a74eff719334e9d885999ef17b69d7d'
-if (-not $worldBackup -or -not (Test-Path -LiteralPath (Join-Path $worldBackup 'manifest.json') -PathType Leaf)) {
-    throw 'Restore the exact verified B backup path in $worldBackup first.'
+& {
+    $ErrorActionPreference = 'Stop'
+    if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) {
+        throw 'LOCALAPPDATA is missing. Stop and send this output.'
+    }
+
+    $worldRuntime = Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2'
+    $worldBackup = 'C:\Users\Uni\AppData\Local\WesnothAlliance\backups\before-1192624-20261027-234120-963-9a74eff719334e9d885999ef17b69d7d'
+
+    if (-not (Test-Path -LiteralPath (Join-Path $worldBackup 'manifest.json') -PathType Leaf)) {
+        throw 'The accepted backup manifest is missing. Stop and send this output.'
+    }
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Migrate-WindowsAllianceRuntime.ps1' `
+        -RuntimeRoot $worldRuntime `
+        -BackupPath $worldBackup
+
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Migration stopped. Preserve the backup and journals; send the saved diagnostic log.'
+    }
 }
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-    -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Migrate-WindowsAllianceRuntime.ps1' `
-    -RuntimeRoot $worldRuntime -BackupPath $worldBackup
-if ($LASTEXITCODE -ne 0) { throw 'Migration stopped. Keep the same backup and journals; send the saved log.' }
 ```
 
-Expected: schema_version 4, status complete/already_complete, `ALLIANCE SCHEMA 4 MIGRATION COMPLETE`. A retry uses the same command and exact B backup. Preserve the old schema-2→3 journal and the new schema-3→4 journals. No world, starter soldiers or new account is created here. Log: `diagnostics\alliance-migration-*.txt`.
+Expected: schema_version 4, status complete/already_complete, `ALLIANCE SCHEMA 4 MIGRATION COMPLETE`. Return the console and `diagnostics\alliance-migration-*.txt` before F. If stopped, retain the same exact B backup and all migration journals for review; do not reset or automatically retry. This does not initialize another runtime, create World geography, enlist starter soldiers or create accounts. Keep the private backup/runtime files on Windows; send only the diagnostic output.
 
 ## F. Rebuild the coordinated binaries offline
 
