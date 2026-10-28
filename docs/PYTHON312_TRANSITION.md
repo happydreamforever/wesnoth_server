@@ -1,6 +1,6 @@
 # Windows Python 3.12 transition
 
-The Python 3.12 transition P1–P3 is now accepted on Windows. The targeted archive diagnostic, full World D preparation and E schema-4 migration have also passed. Continue at [World F coordinated builds](WORLD_ACCEPTANCE_1192624.md#f-rebuild-the-coordinated-binaries-offline); do not repeat the transition commands below. Keep all five services stopped. Keep the accepted cold backup, package cache, installed game, saves and runtime-v2. Do not repeat database initialization or the 107-package download.
+The Python 3.12 transition P1–P3 is now accepted on Windows. The targeted archive diagnostic, full World D preparation and E schema-4 migration have also passed. The bridge and Room server have also built successfully. The World worker stopped at a relocated compiler header lookup; continue at [the worker-only compiler correction](WORLD_WORKER_SYSROOT_1192624.md). Android has not built yet. Do not repeat the transition commands below. Keep all five services stopped. Keep the accepted cold backup, package cache, installed game, saves and runtime-v2. Do not repeat database initialization or the 107-package download.
 
 ## Accepted Windows evidence
 

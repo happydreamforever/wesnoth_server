@@ -1,0 +1,1051 @@
+{
+  "format": 1,
+  "purpose": "world-worker-relocated-compiler-correction",
+  "date": "2026-10-28",
+  "release": 1192624,
+  "implementation_commit": "13e975a",
+  "windows_report": {
+    "attachment_bytes": 21685,
+    "attachment_sha256": "e070e908134657820ab99f053285589b0f7968bbeaad253bca2b4a91846e715a",
+    "bridge": "passed",
+    "native_room_server": "passed",
+    "world_worker": "failed at first Lua CXX compilation: string.h not found",
+    "android": "not run",
+    "worker_log": "diagnostics/world-worker-build-20261028-065115-429-661ddeee6ac449e6beeb5c1272b687bf.txt",
+    "bridge_logs": [
+      "diagnostics/alliance-bridge-build-20261028-064538-647-cfe16d12164c4a7ea3a2f8e7c2b984ed.txt",
+      "diagnostics/alliance-bridge-rebuild-20261028-064536-828-6581e5f61e9b41908e2470261af64912.txt"
+    ],
+    "room_log": "diagnostics/unified-multiplayer-build-20261028-064703-851-690e6bcce6e34115bb6271ce8750e9d1.txt",
+    "saved_windows_files_opened": false
+  },
+  "cause": "Pinned headers match receipt, but relocated GCC retains compiled-in /mingw64 sysroot. Explicit isolated sysroot reproduces/fixes actual PE header lookup; windres additionally needs explicit preprocessing root and temp-file mode.",
+  "fix": [
+    "Owned CMake toolchain sets CMAKE_SYSROOT for C/CXX including try-compiles and Lua.",
+    "Explicit windres preprocessing sysroot and --use-temp-file also handle spaced prefixes.",
+    "Retained preflight compiles/links/runs C/CXX threads and checks a native x86_64 resource object before stage changes.",
+    "Only exact recognized old incomplete stage is retained using immutable external inventory/journal; interrupted rename resumes, with no reuse of old objects.",
+    "Compiler contamination environment removed, exact toolchain bound to new artifact verification, diagnostic names corrected."
+  ],
+  "focused_tests": {
+    "passed": 67,
+    "skipped": 0,
+    "python": "3.12.10",
+    "network": "disabled",
+    "toolchain": 17,
+    "adjacent_dependencies": 14,
+    "recovery_and_dispatch": 36
+  },
+  "actual_execution": {
+    "pinned_windows_gcc": "16.2.0",
+    "wine": "10.0 (Debian 10.0~repack-6)",
+    "prefix_and_engine": "read-only mounts; package files unchanged",
+    "preflight": "all six production phases passed with spaced prefix; subprocess paths translated to Wine Z drive only",
+    "lua": [
+      "original lapi.c",
+      "original lauxlib.c"
+    ],
+    "resource": "original engine wesnoth.rc plus production version-resource probe compiled",
+    "linux_cmake_4_3": "real C/CXX propagation/compile/link/run; resource argument propagation with controlled recorder",
+    "linux_cmake_3_31_6": "production toolchain actual PE C/CXX, try-compiles, Lua, resource build and executable runtime under Wine"
+  },
+  "limitations": [
+    "No full 589-step Windows worker build or Windows-native test is claimed.",
+    "No new Android build, five-service readiness or gameplay acceptance.",
+    "Filesystem recovery has actual local operations; compiler/overlay boundaries in dispatch tests are simulated.",
+    "Parsed PowerShell handoff commands were not executed on Windows."
+  ],
+  "earlier_attempts": "Retained. Initial proof reproduced missing headers; resource spacing attempts exposed windres shell quoting. Earlier Wine-only XDG/font-cache stderr noise caused strict marker checks to fail; verification environment corrected without weakening production checks.",
+  "preservation": [
+    "Existing runtime-v2/schema4, backup and migration journals unchanged.",
+    "107-package cache/prefix and original MSYS tools unchanged.",
+    "Client production sources, Android package/signing/OBB/saves unchanged.",
+    "Both unrelated README edits left untouched."
+  ],
+  "source_sha256": {
+    "tools/build_world_worker.py": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26",
+    "tools/world_worker_recovery.py": "c1f46b53066aeac5725caa01bdf6af972a5010ca0812ff11f5443a8646134187",
+    "tools/Build-WindowsWorldWorker.ps1": "951f74fe60de987045f045c0957a4e53867c819689fe4208f629d2701919cefd",
+    "tests/test_world_worker_toolchain.py": "cac1e420eff5fe8f15bbea6c567185f03fcc0ddb3e1aadfe1ed9e6f2f538c81b",
+    "tests/test_world_worker_recovery.py": "f5a38441ee14ce8a5cec13bed9edf29e5fbff3aeb76edb34b4a1d5d8c3b02740"
+  },
+  "evidence": [
+    {
+      "path": "build/audit-world-worker-headers-20261028/research/toolchain-regression-verification.json",
+      "sha256": "bdf4df41fba02f04bc5fe537064fdf444d8480eb41594577d65133e296744ec6",
+      "details": {
+        "format": 1,
+        "purpose": "world-worker-toolchain-regression-verification",
+        "python": "3.12.10",
+        "container": "wesnoth-alliance-native-verify:python3.14.3-gcc16.2",
+        "network": "disabled",
+        "tests": 31,
+        "new_toolchain_tests": 17,
+        "adjacent_dependency_tests": 14,
+        "skips": 0,
+        "elapsed_seconds": 3.408,
+        "log": "build/audit-world-worker-headers-20261028/research/toolchain-and-dependencies-python312-final.log",
+        "log_sha256": "fb412d9912f719994e38e5bac29dce6d81df9e2c7f50560056b2f65d60295284",
+        "source_sha256": {
+          "tools/build_world_worker.py": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26",
+          "tests/test_world_worker_toolchain.py": "cac1e420eff5fe8f15bbea6c567185f03fcc0ddb3e1aadfe1ed9e6f2f538c81b",
+          "tests/test_world_worker_dependencies.py": "621c58155e3d9ff4f49b7a453a9c00ff5a4f21d0937247b5255edf6628a0aa62"
+        },
+        "scope": {
+          "actual_linux_cmake": "4.3.0",
+          "actual_linux_gcc": "16.2.0",
+          "actual_cmake_C_CXX_compile_link_execute": true,
+          "actual_cmake_RC_argument_generation": true,
+          "RC_process_for_this_test": "controlled Python argument recorder; actual PE resource evidence belongs to separate peer Wine run",
+          "preflight_failure_paths": "controlled subprocess boundaries",
+          "full_Windows_worker_build": false
+        },
+        "assertions": [
+          "C/C++ standard-header compile/link/runtime stages are all required",
+          "Resource compilation requires x86_64 COFF confirmation",
+          "Missing output markers, nonzero exits, timeout and missing compiler fail",
+          "Compiler environment removes inherited C/C++/RC and SDK include or library settings",
+          "CMAKE_SYSROOT propagates into Lua .c compiled as C++",
+          "CMake/Ninja retains quoted windres sysroot with spaces as one argument",
+          "Prior worker stage cannot be archived or mutated when compiler preflight fails",
+          "Exact generated toolchain reuse; conflicting bytes and symlink preserved"
+        ]
+      }
+    },
+    {
+      "path": "build/audit-world-worker-headers-20261028/research/artifact-layout-and-cmake-propagation.json",
+      "sha256": "061551faf691d6e60999411570298ee347b5fd2bd3bb74cfabd0a94bc993e4a7",
+      "details": {
+        "scope": "Read-only actual pinned Windows compiler/header artifact inspection plus Linux CMake propagation; not native Windows execution",
+        "manifest_sha256": "dcff87184e3a549d9ec25296d4363a0ff983295eb680491081b2760b0847aec7",
+        "receipt_sha256": "bf2f48a84d716f8e3e2c36b2264f35b8f59907dbf2693c21ff73512a264c240e",
+        "files": [
+          {
+            "relative": "include/string.h",
+            "exists": true,
+            "bytes": 9825,
+            "sha256": "b73a68fa1a1439b3afb0ab9e1b6001e4d4bc2c611453902118ef2188681624a5",
+            "matches_receipt": true
+          },
+          {
+            "relative": "include/stdint.h",
+            "exists": true,
+            "bytes": 6412,
+            "sha256": "d622b8a9acd4a6ff0d0ab33b4d77d83af31f46035660bdcb9c2aa6e56308b95d",
+            "matches_receipt": true
+          },
+          {
+            "relative": "include/_mingw.h",
+            "exists": true,
+            "bytes": 20097,
+            "sha256": "3227915ec20706ee7dadc9f165391742a1a39545d9d5dd6df69edd77d9882e4d",
+            "matches_receipt": true
+          },
+          {
+            "relative": "include/windows.h",
+            "exists": true,
+            "bytes": 2529,
+            "sha256": "e931bc163a9980e71982a522879073f41f934c3d94b423d489ee9f387093899f",
+            "matches_receipt": true
+          },
+          {
+            "relative": "include/pthread.h",
+            "exists": true,
+            "bytes": 36473,
+            "sha256": "d3ccf27efcff918405bc81f6a4e05b244eeea8f5b412c8c91bd18b81dcb51ae4",
+            "matches_receipt": true
+          },
+          {
+            "relative": "lib/gcc/x86_64-w64-mingw32/16.2.0/include/stddef.h",
+            "exists": true,
+            "bytes": 14159,
+            "sha256": "b906ffac02185b219217c5de4064b21988e437340c74f91d9a607575decaa6aa",
+            "matches_receipt": true
+          },
+          {
+            "relative": "include/c++/16.2.0/cstring",
+            "exists": true,
+            "bytes": 3281,
+            "sha256": "3ea247dc4883449b15b72297136498452b3b5cc9ef1fa38a135f22cfca456837",
+            "matches_receipt": true
+          },
+          {
+            "relative": "bin/gcc.exe",
+            "exists": true,
+            "bytes": 3302709,
+            "sha256": "ab37c11763fdcb3bf6f809b5d033a31ebeb77f10ba5934c72fa37287ee56144f",
+            "matches_receipt": true
+          },
+          {
+            "relative": "bin/g++.exe",
+            "exists": true,
+            "bytes": 3305269,
+            "sha256": "fe03455c28ab0c69f1adb0ccde202124091f01d02b0c0ede8578f606063cc894",
+            "matches_receipt": true
+          },
+          {
+            "relative": "lib/gcc/x86_64-w64-mingw32/16.2.0/cc1plus.exe",
+            "exists": true,
+            "bytes": 42069261,
+            "sha256": "c8136249c20cb5e6ab7f03ac190cda15ea33d2bddbe083c7040bb120e4be978d",
+            "matches_receipt": true
+          }
+        ],
+        "target_triple_header_directory_exists": false,
+        "compiler_embedded_configuration": [
+          "../gcc-16.2.0/configure --prefix=/mingw64 --with-sysroot=/mingw64 --with-build-sysroot=D:/M/msys64/mingw64 --with-local-prefix=/local --with-native-system-header-dir=/include --libexecdir=/mingw64/lib --enable-bootstrap --enable-checking=release --with-arch=nocona --with-tune=generic --enable-mingw-wildcard --enable-languages=c,c++,ada,fortran,lto,objc,obj-c++,jit --enable-shared --enable-static --enable-libatomic --enable-threads=posix --enable-tls --enable-graphite --enable-fully-dynamic-string --enable-libstdcxx-backtrace=yes --enable-libstdcxx-filesystem-ts --enable-libstdcxx-time --disable-libstdcxx-pch --enable-libgomp --disable-libssp --disable-multilib --disable-rpath --disable-win32-registry --disable-nls --disable-werror --disable-symvers --with-libiconv --with-system-zlib --with-gmp=/mingw64 --with-mpfr=/mingw64 --with-mpc=/mingw64 --with-isl=/mingw64 --with-pkgversion='Rev3, Built by MSYS2 project' --with-bugurl=https://github.com/msys2/MINGW-packages/issues --with-gnu-as --with-gnu-ld --with-libstdcxx-zoneinfo=yes --disable-libstdcxx-debug --enable-lto --enable-plugin --with-boot-ldflags=-static-libstdc++ --with-stage1-ldflags=-static-libstdc++"
+        ],
+        "relevant_packages": [
+          {
+            "archive_sha256": "79dd8c19890ea2391b7c378614b88e98c3cc64df25b2292d2bd64cfb95b856ff",
+            "manifest_sha256": "dcff87184e3a549d9ec25296d4363a0ff983295eb680491081b2760b0847aec7",
+            "mtree_sha256": "b42efd1bf076f5d61e732da5113bf23d0a53d69d222235faf811fe6f83685ffe",
+            "name": "mingw-w64-x86_64-crt",
+            "signature_sha256": "50d00453e5a135ca072a23036cb00a41f18fe6b00e7cafa49c85d8d9842b9420",
+            "version": "14.0.0.r283.ga7cb47123-1"
+          },
+          {
+            "archive_sha256": "8b37c953ae12f3d8fa05c854236463231ea0a294dff423007cbd93d4d8089f9f",
+            "manifest_sha256": "dcff87184e3a549d9ec25296d4363a0ff983295eb680491081b2760b0847aec7",
+            "mtree_sha256": "6fd8d310aafb02dcba50f0eb72932fa78dc749bbff0c1d42bb5e979021d618c0",
+            "name": "mingw-w64-x86_64-gcc",
+            "signature_sha256": "9fa3860720f650e8071487e76f72a21db10ce56d2187f8bbecd93f5d44d9d7f0",
+            "version": "16.2.0-3"
+          },
+          {
+            "archive_sha256": "27cd76f5013d7c032f5a4289c695f07e7cda98a35a4e6e7ebec7d176b5caecae",
+            "manifest_sha256": "dcff87184e3a549d9ec25296d4363a0ff983295eb680491081b2760b0847aec7",
+            "mtree_sha256": "7d6dc5ea7ef6602e4793716c9cb82dabbcfc6b4d8aadc968b426fd2283180e33",
+            "name": "mingw-w64-x86_64-headers",
+            "signature_sha256": "12906f057b343764730e33d5a0fe44d3d3593755744453016e32102313a80123",
+            "version": "14.0.0.r283.ga7cb47123-1"
+          },
+          {
+            "archive_sha256": "201e7b3bc31159350281a6261878ecd8fd03b037165842d803386f2612f1e566",
+            "manifest_sha256": "dcff87184e3a549d9ec25296d4363a0ff983295eb680491081b2760b0847aec7",
+            "mtree_sha256": "ab23f35a93651793d41d03f2b8e7bd078ae8bffb7822159b06c32084c7da5109",
+            "name": "mingw-w64-x86_64-winpthreads",
+            "signature_sha256": "3a1038800d8b0de043c7fd1a816973d5f1188b836e7d079be188ff0dce6ca99e",
+            "version": "14.0.0.r283.ga7cb47123-1"
+          }
+        ],
+        "cmake_propagation": {
+          "log_sha256": "bad10f67b708957fefa359d7adc7d0ff8191bd5e10c6a59b4b1984899e407c30",
+          "toolchain_sets_sysroot": true,
+          "C_CXX_compile_commands": [
+            {
+              "directory": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-headers-20261028/research/cmake-lua-propagation-build",
+              "command": "/usr/local/bin/c++ --sysroot=/ -x c++  -include \"/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-headers-20261028/research/cmake-lua-propagation/forced_config.h\" -x c++ -o CMakeFiles/lua_probe.dir/probe.c.o -c /home/uni/Documents/future/wesnoth_server/build/audit-world-worker-headers-20261028/research/cmake-lua-propagation/probe.c",
+              "file": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-headers-20261028/research/cmake-lua-propagation/probe.c",
+              "output": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-headers-20261028/research/cmake-lua-propagation-build/CMakeFiles/lua_probe.dir/probe.c.o"
+            },
+            {
+              "directory": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-headers-20261028/research/cmake-lua-propagation-build",
+              "command": "/usr/bin/cc --sysroot=/ -o CMakeFiles/c_probe.dir/c_probe.c.o -c /home/uni/Documents/future/wesnoth_server/build/audit-world-worker-headers-20261028/research/cmake-lua-propagation/c_probe.c",
+              "file": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-headers-20261028/research/cmake-lua-propagation/c_probe.c",
+              "output": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-headers-20261028/research/cmake-lua-propagation-build/CMakeFiles/c_probe.dir/c_probe.c.o"
+            }
+          ],
+          "C_link_and_run": "passed",
+          "CXX_forced_string_header_Lua_pattern": "passed",
+          "network": "disabled Docker container"
+        },
+        "primary_sources": [
+          "https://cmake.org/cmake/help/v4.3/variable/CMAKE_SYSROOT.html",
+          "https://gcc.gnu.org/install/configure.html",
+          "https://gcc.gnu.org/onlinedocs/gcc/Directory-Options.html",
+          "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.2.0/gcc/gcc.cc",
+          "https://raw.githubusercontent.com/msys2/MINGW-packages/master/mingw-w64-gcc/PKGBUILD"
+        ],
+        "notes": [
+          "Current MSYS2 master is package revision6, not pinned revision3; embedded binary configuration is the version-specific evidence.",
+          "Compiler root lookup reproduced with actual pinned PE tools under Wine; no package upgrade or file layout mutation is needed.",
+          "CMAKE_FIND_ROOT_PATH affects discovery; toolchain CMAKE_SYSROOT propagates compiler --sysroot without editing Lua or copying headers."
+        ],
+        "corroborating_peer_PE_evidence": {
+          "builtin_sysroot.log": {
+            "path": "build/audit-world-worker-headers-20261028/tests/wine-run-001/logs/builtin_sysroot.log",
+            "sha256": "62372b38f667914e85bfbab427efcdec982117bd05d5ba996e7802222176fc65"
+          },
+          "header_before.log": {
+            "path": "build/audit-world-worker-headers-20261028/tests/wine-run-001/logs/header_before.log",
+            "sha256": "fa699aa23fd33e4b88c6fcd874813dca84b709bd44a15a4a712a0e4af4f1e3b7"
+          },
+          "header_after.log": {
+            "path": "build/audit-world-worker-headers-20261028/tests/wine-run-001/logs/header_after.log",
+            "sha256": "2a518b1f9dcccbd5564462d293d106029d7e447ea8db9f9ba0e020a57800bf58"
+          },
+          "lua_lapi.log": {
+            "path": "build/audit-world-worker-headers-20261028/tests/wine-run-001/logs/lua_lapi.log",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "lua_lauxlib.log": {
+            "path": "build/audit-world-worker-headers-20261028/tests/wine-run-001/logs/lua_lauxlib.log",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        "observed_PE_behavior": {
+          "builtin_sysroot": "/mingw64",
+          "before": "compiler excludes actual relocated prefix/include and reports missing string.h",
+          "after": "explicit --sysroot makes same compiler load actual prefix/include/string.h",
+          "scope": "Peer-agent actual immutable PE binaries under Wine10, not a Windows host or full worker build"
+        }
+      }
+    },
+    {
+      "path": "build/audit-world-worker-headers-20261028/tests/actual-compiler-result.json",
+      "sha256": "d9c9b8dcd9063980ad04974ee5b119e0a1b9ee2322c1840cd313b63fd33712d2",
+      "details": {
+        "after": [
+          "string.h preprocessing",
+          "C compile/link/run",
+          "C++ string/vector/thread compile/link/run",
+          "pthread compile/link/run",
+          "actual Lua lapi.c compile",
+          "actual Lua lauxlib.c compile"
+        ],
+        "before": "fatal error: string.h: No such file or directory",
+        "configured_builtin_sysroot": "/mingw64",
+        "engine_mount": "read-only",
+        "explicit_sysroot": "Z:/verified-prefix",
+        "gcc_version": "16.2.0",
+        "image": "sha256:fde871904f9c06b6c40d4946f537b8a10f332f4dc570df8e867bb65cb5dd9b80",
+        "network_during_tests": "none",
+        "outputs": {
+          "header.cpp": {
+            "bytes": 20,
+            "sha256": "7c7dfb862fbd4063378bb2086e49db0857322c3de8cb9d570f175da1d253a682"
+          },
+          "lapi.obj": {
+            "bytes": 31162,
+            "sha256": "ab7193981d95d0c6e5f17c0c349b4eb2a76b0762a87f0897930cf70aad0be0da"
+          },
+          "lauxlib.obj": {
+            "bytes": 29756,
+            "sha256": "01f12ebb47464da8b8a9a70fe6d4ea5588dc9bc204bff629fd32acfc07ce52f6"
+          },
+          "pthread.c": {
+            "bytes": 300,
+            "sha256": "b52e29a2d97570075a0354cfd68c6e2f5725badc8129245c8ae64572eec97396"
+          },
+          "results.tsv": {
+            "bytes": 190,
+            "sha256": "5635e49a7a95c387873637eda5b48bff6a72d01da25734d722851bcdc25f50f8"
+          },
+          "runtime-c.exe": {
+            "bytes": 247805,
+            "sha256": "a610743a39d49a931e786bd0a8087cf21ddee5cafed8c9cdaa9881a9b9192704"
+          },
+          "runtime-cpp.exe": {
+            "bytes": 162445,
+            "sha256": "456afa502c7b2036d763e34fda736cbfd7bc13d6136548a0dd66d00bc460da43"
+          },
+          "runtime-pthread.exe": {
+            "bytes": 97288,
+            "sha256": "c4c4a13835bbb0594201ed635f1606cd75ab88ce67e5a4e9adb22765978f32b3"
+          },
+          "runtime.c": {
+            "bytes": 238,
+            "sha256": "03f6bcc032b435051c8863e1f17c1134c2ea98aa7f8b9d27da4497ca3cb99d53"
+          },
+          "runtime.cpp": {
+            "bytes": 346,
+            "sha256": "2cf5c65a26935fed08a9c7816f8cb7890673267abc22bda1e223baf2a5614bda"
+          }
+        },
+        "prefix_mount": "read-only",
+        "scope": "Actual pinned Windows PE GCC/CRT executed under Linux Wine, not native Windows acceptance",
+        "script_sha256": "29b5e3e97f76fecd6c8a534fe5c00652fea956c3f7da26ed03b8630630ec0c06",
+        "verified_pinned_inputs": {
+          "bin/g++.exe": {
+            "bytes": 3305269,
+            "sha256": "fe03455c28ab0c69f1adb0ccde202124091f01d02b0c0ede8578f606063cc894"
+          },
+          "bin/gcc.exe": {
+            "bytes": 3302709,
+            "sha256": "ab37c11763fdcb3bf6f809b5d033a31ebeb77f10ba5934c72fa37287ee56144f"
+          },
+          "bin/libwinpthread-1.dll": {
+            "bytes": 63875,
+            "sha256": "8d7a192a8fbbccb0cebeac272701f66a580f493eff2336739a96144119260723"
+          },
+          "include/pthread.h": {
+            "bytes": 36473,
+            "sha256": "d3ccf27efcff918405bc81f6a4e05b244eeea8f5b412c8c91bd18b81dcb51ae4"
+          },
+          "include/string.h": {
+            "bytes": 9825,
+            "sha256": "b73a68fa1a1439b3afb0ab9e1b6001e4d4bc2c611453902118ef2188681624a5"
+          },
+          "lib/crt2.o": {
+            "bytes": 26842,
+            "sha256": "518b33e9e4eed87f69e90449d1994b065fe12395fb049bcd751cd04fe50e34d6"
+          },
+          "lib/gcc/x86_64-w64-mingw32/16.2.0/cc1.exe": {
+            "bytes": 39363730,
+            "sha256": "7ca0315702e255fca656d72b31965b7d7d4f3ba893f995d6ceacb62ab862fe84"
+          },
+          "lib/gcc/x86_64-w64-mingw32/16.2.0/cc1plus.exe": {
+            "bytes": 42069261,
+            "sha256": "c8136249c20cb5e6ab7f03ac190cda15ea33d2bddbe083c7040bb120e4be978d"
+          },
+          "lib/libmsvcrt.a": {
+            "bytes": 2349696,
+            "sha256": "2d2236e67e4f9bb121ec16126bd346266817a42c84d83f8d1335bf6c5822c2c2"
+          }
+        },
+        "wine_version": "10.0 (Debian 10.0~repack-6)"
+      }
+    },
+    {
+      "path": "build/audit-world-worker-headers-20261028/tests/production-preflight-final/verification.json",
+      "sha256": "5b1fba499ffc5d6941ebed5d87f7595235d00bb9707daceca93feb0606d4bcae",
+      "details": {
+        "scope": "Production C/C++ preflight, exact Python 3.12.10 and pinned Windows PE GCC16.2 under network-disabled Linux Wine10; not native Windows acceptance.",
+        "python": "3.12.10 (main, Oct 28 2026, 05:56:53) [GCC 16.2.0]",
+        "builder_sha256": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26",
+        "builder_final_sha256": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26",
+        "result": {
+          "format": 1,
+          "purpose": "world-worker-compiler-check",
+          "status": "passed",
+          "prefix": "/verified prefix",
+          "sysroot": "/verified prefix",
+          "phases": [
+            {
+              "phase": "c-compile",
+              "exit": 0,
+              "status": "passed"
+            },
+            {
+              "phase": "c-run",
+              "exit": 0,
+              "status": "passed"
+            },
+            {
+              "phase": "cxx-compile",
+              "exit": 0,
+              "status": "passed"
+            },
+            {
+              "phase": "cxx-run",
+              "exit": 0,
+              "status": "passed"
+            },
+            {
+              "phase": "rc-compile",
+              "exit": 0,
+              "status": "passed"
+            },
+            {
+              "phase": "rc-verify",
+              "exit": 0,
+              "status": "passed"
+            }
+          ],
+          "c": {
+            "source_sha256": "d3bccccd89b4951c6a39ac2522d39b78ea7ab0a333458fab30891f0c944fdca3",
+            "executable_sha256": "40f77c37793a3d5434a29ecd7d48324e88f3f621a49454edc352b201a7abaf2d"
+          },
+          "cxx": {
+            "source_sha256": "8beacb6675f3d675eee5129b5f587f91ba4711abd05b0ae9e95fc422659c491c",
+            "executable_sha256": "1ea66a252ad8e0d48e46b4940babb2aee69dfe6b3d739efe673ba6862b3ab16f"
+          },
+          "rc": {
+            "source_sha256": "9659f15d750ac6db8a232e096401ec70c450b5f30746d24032b022c8a5642d29",
+            "object_sha256": "15908081d0553aca130ba0ed0675018b29fb2c87cf136733bcc13a0b6a95fb34"
+          }
+        },
+        "subprocess_boundary": [
+          {
+            "production": [
+              "/verified prefix/bin/gcc.exe",
+              "--sysroot=/verified prefix",
+              "-pthread",
+              "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe.c",
+              "-o",
+              "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-c.exe"
+            ],
+            "wine_boundary": [
+              "/usr/lib/wine/wine64",
+              "Z:/verified prefix/bin/gcc.exe",
+              "--sysroot=Z:/verified prefix",
+              "-pthread",
+              "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe.c",
+              "-o",
+              "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-c.exe"
+            ]
+          },
+          {
+            "production": [
+              "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-c.exe"
+            ],
+            "wine_boundary": [
+              "/usr/lib/wine/wine64",
+              "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-c.exe"
+            ]
+          },
+          {
+            "production": [
+              "/verified prefix/bin/g++.exe",
+              "--sysroot=/verified prefix",
+              "-pthread",
+              "-std=c++17",
+              "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe.cpp",
+              "-o",
+              "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-cxx.exe"
+            ],
+            "wine_boundary": [
+              "/usr/lib/wine/wine64",
+              "Z:/verified prefix/bin/g++.exe",
+              "--sysroot=Z:/verified prefix",
+              "-pthread",
+              "-std=c++17",
+              "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe.cpp",
+              "-o",
+              "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-cxx.exe"
+            ]
+          },
+          {
+            "production": [
+              "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-cxx.exe"
+            ],
+            "wine_boundary": [
+              "/usr/lib/wine/wine64",
+              "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-cxx.exe"
+            ]
+          },
+          {
+            "production": [
+              "/verified prefix/bin/windres.exe",
+              "--use-temp-file",
+              "--preprocessor-arg=--sysroot=/verified prefix",
+              "-O",
+              "coff",
+              "-i",
+              "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe.rc",
+              "-o",
+              "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-resource.o"
+            ],
+            "wine_boundary": [
+              "/usr/lib/wine/wine64",
+              "Z:/verified prefix/bin/windres.exe",
+              "--use-temp-file",
+              "--preprocessor-arg=--sysroot=Z:/verified prefix",
+              "-O",
+              "coff",
+              "-i",
+              "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe.rc",
+              "-o",
+              "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-resource.o"
+            ]
+          },
+          {
+            "production": [
+              "/verified prefix/bin/objdump.exe",
+              "-f",
+              "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-resource.o"
+            ],
+            "wine_boundary": [
+              "/usr/lib/wine/wine64",
+              "Z:/verified prefix/bin/objdump.exe",
+              "-f",
+              "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-resource.o"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "build/audit-world-worker-headers-20261028/tests/cmake-production-final/verification.json",
+      "sha256": "f84ea0eb9266fc2bf8942542677fc3ef8ff90780ba5d1392dc9a60934a45cdc3",
+      "details": {
+        "scope": "Production-generated sysroot/RC toolchain and actual pinned Windows PE compiler, resource compiler and two original Lua units under Linux CMake3.31.6/Wine10 in network-disabled container; subprocess path adaptation only, not native Windows acceptance.",
+        "python": "3.12.10 (main, Oct 28 2026, 05:56:53) [GCC 16.2.0]",
+        "builder_sha256": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26",
+        "builder_final_sha256": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26",
+        "toolchain_sha256": "a9b18da3b63bbb788096134b8f1eb80a209de8593395e982e0945b511b4bfba9",
+        "results": [
+          {
+            "name": "configure",
+            "exit": 0,
+            "command": [
+              "cmake",
+              "-S",
+              "/work/source",
+              "-B",
+              "/work/build",
+              "-G",
+              "Ninja",
+              "-DCMAKE_SYSTEM_NAME=Windows",
+              "-DCMAKE_TOOLCHAIN_FILE=/work/worker-toolchain.cmake",
+              "-DCMAKE_C_COMPILER=/work/bin/gcc",
+              "-DCMAKE_CXX_COMPILER=/work/bin/g++",
+              "-DCMAKE_RC_COMPILER=/work/bin/windres",
+              "-DCMAKE_AR=/work/bin/ar",
+              "-DCMAKE_RANLIB=/work/bin/ranlib"
+            ]
+          },
+          {
+            "name": "build",
+            "exit": 0,
+            "command": [
+              "cmake",
+              "--build",
+              "/work/build",
+              "--verbose",
+              "--parallel",
+              "1"
+            ]
+          },
+          {
+            "name": "c_probe",
+            "exit": 0,
+            "marker": "WORLD_WORKER_C_RUNTIME_OK"
+          },
+          {
+            "name": "cxx_probe",
+            "exit": 0,
+            "marker": "WORLD_WORKER_CXX_RUNTIME_OK"
+          }
+        ]
+      }
+    },
+    {
+      "path": "build/audit-world-worker-sysroot-review-1192624/recovery-tests.json",
+      "sha256": "03d92718a6063e5418646e9b3a2b9adc0b01393d8cda41d3a7aca349d1825cc9",
+      "details": {
+        "format": 1,
+        "purpose": "world-worker-sysroot-recovery-tests",
+        "started_utc": "2026-10-28T13:38:50.085179+00:00",
+        "exit": 0,
+        "runtime": {
+          "python": "3.12.10 (main, Oct 28 2026, 05:56:53) [GCC 16.2.0]",
+          "version": [
+            3,
+            12,
+            10
+          ]
+        },
+        "results": {
+          "tests_run": 36,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "passed": true
+        },
+        "source_files": {
+          "tools/world_worker_recovery.py": {
+            "bytes": 14078,
+            "sha256": "c1f46b53066aeac5725caa01bdf6af972a5010ca0812ff11f5443a8646134187"
+          },
+          "tools/build_world_worker.py": {
+            "bytes": 32006,
+            "sha256": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26"
+          },
+          "tests/test_world_worker_recovery.py": {
+            "bytes": 22870,
+            "sha256": "f5a38441ee14ce8a5cec13bed9edf29e5fbff3aeb76edb34b4a1d5d8c3b02740"
+          }
+        },
+        "source_files_unchanged": true,
+        "network": "container none",
+        "scope": "31 real temporary-filesystem recovery cases plus five build-dispatch tests with compiler/package/engine boundaries explicitly mocked; no Windows engine execution or full Windows build claim.",
+        "command": [
+          "docker",
+          "run",
+          "--rm",
+          "--network",
+          "none",
+          "-v",
+          "/home/uni/Documents/future:/home/uni/Documents/future",
+          "-w",
+          "/home/uni/Documents/future/wesnoth_server",
+          "wesnoth-alliance-native-verify:python3.14.3-gcc16.2",
+          "/home/uni/Documents/future/wesnoth_server/build/host-python-3.12.10/bin/python3.12",
+          "-B",
+          "-c",
+          "import json,sys,unittest; print(json.dumps({\"python\":sys.version,\"version\":list(sys.version_info[:3])}), flush=True); suite=unittest.defaultTestLoader.loadTestsFromName(\"tests.test_world_worker_recovery\"); result=unittest.TextTestRunner(verbosity=2).run(suite); print(json.dumps({\"tests_run\":result.testsRun,\"failures\":len(result.failures),\"errors\":len(result.errors),\"skipped\":len(result.skipped),\"passed\":result.wasSuccessful()}), flush=True); raise SystemExit(not result.wasSuccessful())"
+        ],
+        "log": "recovery-tests.log"
+      }
+    },
+    {
+      "path": "build/audit-world-worker-sysroot-review-1192624/review.json",
+      "sha256": "5e0a351e733d574a7c81873508844707a0e3c87dacfe9ddd462bb58ba0183685",
+      "details": {
+        "format": 1,
+        "purpose": "worker-sysroot-independent-handoff-review",
+        "powershell_ast_exit": 0,
+        "doc_powershell_blocks": 2,
+        "files_reviewed": {
+          "docs/WORLD_WORKER_SYSROOT_1192624.md": "b90748f95e14a1d397329a08380f79e8d99d2d2d79e02452b8cdeead29a13060",
+          "tools/build_world_worker.py": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26",
+          "tools/world_worker_recovery.py": "c1f46b53066aeac5725caa01bdf6af972a5010ca0812ff11f5443a8646134187",
+          "tools/Build-WindowsWorldWorker.ps1": "951f74fe60de987045f045c0957a4e53867c819689fe4208f629d2701919cefd"
+        },
+        "findings": [],
+        "scope": "Read-only source/handoff review and actual Linux PowerShell 7.4.6 AST parsing; no commands in the parsed Windows blocks executed. No full native Windows build or gameplay claim.",
+        "handoff": "Keep accepted F1 bridge and F2 Room builds. Server-only pull; retry worker only with -PreservePreviousBuild. Retain prefix, cache, runtime, migration, recovery journals and previous outputs. Review worker output before Android build."
+      }
+    },
+    {
+      "path": "build/audit-world-worker-sysroot-review-1192624/powershell-ast.json",
+      "sha256": "df22dbecf1b28a410f234a4282cea7b51f10f8d4c3fa4e3ae1d5fc516c174bf1",
+      "details": {
+        "mode": "parse_only_no_commands_executed",
+        "runtime": "7.4.6",
+        "files": [
+          {
+            "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-sysroot-review-1192624/doc-block-1.ps1",
+            "statements": 1,
+            "errors": []
+          },
+          {
+            "path": "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-sysroot-review-1192624/doc-block-2.ps1",
+            "statements": 1,
+            "errors": []
+          },
+          {
+            "path": "/home/uni/Documents/future/wesnoth_server/tools/Build-WindowsWorldWorker.ps1",
+            "statements": 8,
+            "errors": []
+          }
+        ],
+        "passed": true,
+        "platform": "Unix"
+      }
+    },
+    {
+      "path": "build/audit-world-worker-headers-20261028/tests/final-production-verification.json",
+      "sha256": "f02345ea5a2ceb6c810fc33378bd4f31baa9a42e8b8eb72f6e3e3873cee52c82",
+      "details": {
+        "actual_engine_resource": {
+          "format": "pe-x86-64",
+          "log": "build/audit-world-worker-headers-20261028/tests/wine-actual-engine-resource/objdump.log",
+          "output": {
+            "bytes": 123714,
+            "sha256": "daf881ef713ca804b116722baca5e14602079aae58b09a0302e1f44c521e89af"
+          },
+          "source": {
+            "bytes": 1049,
+            "sha256": "c737af07af9dc1c5972e7182a06bc97f364fe80ffa3790458ecb53ce6c006196"
+          },
+          "status": "passed"
+        },
+        "audit_scripts": {
+          "Dockerfile.cmake-wine": {
+            "bytes": 338,
+            "sha256": "1758f3d97ab383c24cd932de62440844854f404517f918bde8b1c4f2f0ff7e23"
+          },
+          "Dockerfile.wine": {
+            "bytes": 454,
+            "sha256": "66fbdceaab5a75721e37ed66b9fc3f94f2acb22e276366861da5cbc4c6ac4c2b"
+          },
+          "cmake-wine-wrapper.py": {
+            "bytes": 1062,
+            "sha256": "ce3e0b4f527d5e088cacb90bf25bd6860a23698b755b9b7aebf799d7a7f33e41"
+          },
+          "verify-cmake-production.py": {
+            "bytes": 4270,
+            "sha256": "2826e45f4b8f83d8496ef32f78c8dbef8b38e30b4a0a3105fd55ef04e9d5f20c"
+          },
+          "verify-engine-resource.sh": {
+            "bytes": 777,
+            "sha256": "b5abbb3879f8af47819d767adfb1417fd1c26eebcf911af39f53494ef5e52fb6"
+          },
+          "verify-production-preflight.py": {
+            "bytes": 2333,
+            "sha256": "b3e17e710055cf423137d7f4b64d0b8717b6b4f5d49084a352349cc07b4aed16"
+          },
+          "verify-windres-space.sh": {
+            "bytes": 1779,
+            "sha256": "3070de33de721549eb67a8f6eb6625dbeb5aaccc402e8c737a29094422db8f77"
+          }
+        },
+        "baseline_reproductions": {
+          "resource_with_space_prefix_use_temp_file_and_sysroot": "exit0",
+          "resource_with_space_prefix_without_tempfile": "exit1 malformed preprocessor shell command",
+          "resource_without_sysroot": "exit1 fatal error windows.h: No such file or directory",
+          "string_header_without_sysroot": "exit1 fatal error string.h: No such file or directory"
+        },
+        "engine_and_signed_prefix_mounts": "read-only",
+        "environment_failures_retained": "Earlier verification attempts emitted Wine XDG/font-cache warnings into production merged stdout. Their C runtime marker was correct. Final verification supplies owned writable XDG runtime/cache directories and changes no product stdout handling.",
+        "format": 1,
+        "images": {
+          "cmake_wine": "sha256:a3392433cd117aba4460753301ce09fc5f5dfdb2ecb83a5a3c6a7c5b973a8c17",
+          "wine": "sha256:fde871904f9c06b6c40d4946f537b8a10f332f4dc570df8e867bb65cb5dd9b80"
+        },
+        "network_during_tests": "none",
+        "production_builder": {
+          "bytes": 32006,
+          "sha256": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26"
+        },
+        "production_preflight": {
+          "builder_final_sha256": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26",
+          "builder_sha256": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26",
+          "python": "3.12.10 (main, Oct 28 2026, 05:56:53) [GCC 16.2.0]",
+          "result": {
+            "c": {
+              "executable_sha256": "40f77c37793a3d5434a29ecd7d48324e88f3f621a49454edc352b201a7abaf2d",
+              "source_sha256": "d3bccccd89b4951c6a39ac2522d39b78ea7ab0a333458fab30891f0c944fdca3"
+            },
+            "cxx": {
+              "executable_sha256": "1ea66a252ad8e0d48e46b4940babb2aee69dfe6b3d739efe673ba6862b3ab16f",
+              "source_sha256": "8beacb6675f3d675eee5129b5f587f91ba4711abd05b0ae9e95fc422659c491c"
+            },
+            "format": 1,
+            "phases": [
+              {
+                "exit": 0,
+                "phase": "c-compile",
+                "status": "passed"
+              },
+              {
+                "exit": 0,
+                "phase": "c-run",
+                "status": "passed"
+              },
+              {
+                "exit": 0,
+                "phase": "cxx-compile",
+                "status": "passed"
+              },
+              {
+                "exit": 0,
+                "phase": "cxx-run",
+                "status": "passed"
+              },
+              {
+                "exit": 0,
+                "phase": "rc-compile",
+                "status": "passed"
+              },
+              {
+                "exit": 0,
+                "phase": "rc-verify",
+                "status": "passed"
+              }
+            ],
+            "prefix": "/verified prefix",
+            "purpose": "world-worker-compiler-check",
+            "rc": {
+              "object_sha256": "15908081d0553aca130ba0ed0675018b29fb2c87cf136733bcc13a0b6a95fb34",
+              "source_sha256": "9659f15d750ac6db8a232e096401ec70c450b5f30746d24032b022c8a5642d29"
+            },
+            "status": "passed",
+            "sysroot": "/verified prefix"
+          },
+          "scope": "Production C/C++ preflight, exact Python 3.12.10 and pinned Windows PE GCC16.2 under network-disabled Linux Wine10; not native Windows acceptance.",
+          "subprocess_boundary": [
+            {
+              "production": [
+                "/verified prefix/bin/gcc.exe",
+                "--sysroot=/verified prefix",
+                "-pthread",
+                "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe.c",
+                "-o",
+                "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-c.exe"
+              ],
+              "wine_boundary": [
+                "/usr/lib/wine/wine64",
+                "Z:/verified prefix/bin/gcc.exe",
+                "--sysroot=Z:/verified prefix",
+                "-pthread",
+                "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe.c",
+                "-o",
+                "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-c.exe"
+              ]
+            },
+            {
+              "production": [
+                "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-c.exe"
+              ],
+              "wine_boundary": [
+                "/usr/lib/wine/wine64",
+                "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-c.exe"
+              ]
+            },
+            {
+              "production": [
+                "/verified prefix/bin/g++.exe",
+                "--sysroot=/verified prefix",
+                "-pthread",
+                "-std=c++17",
+                "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe.cpp",
+                "-o",
+                "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-cxx.exe"
+              ],
+              "wine_boundary": [
+                "/usr/lib/wine/wine64",
+                "Z:/verified prefix/bin/g++.exe",
+                "--sysroot=Z:/verified prefix",
+                "-pthread",
+                "-std=c++17",
+                "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe.cpp",
+                "-o",
+                "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-cxx.exe"
+              ]
+            },
+            {
+              "production": [
+                "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-cxx.exe"
+              ],
+              "wine_boundary": [
+                "/usr/lib/wine/wine64",
+                "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-cxx.exe"
+              ]
+            },
+            {
+              "production": [
+                "/verified prefix/bin/windres.exe",
+                "--use-temp-file",
+                "--preprocessor-arg=--sysroot=/verified prefix",
+                "-O",
+                "coff",
+                "-i",
+                "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe.rc",
+                "-o",
+                "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-resource.o"
+              ],
+              "wine_boundary": [
+                "/usr/lib/wine/wine64",
+                "Z:/verified prefix/bin/windres.exe",
+                "--use-temp-file",
+                "--preprocessor-arg=--sysroot=Z:/verified prefix",
+                "-O",
+                "coff",
+                "-i",
+                "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe.rc",
+                "-o",
+                "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-resource.o"
+              ]
+            },
+            {
+              "production": [
+                "/verified prefix/bin/objdump.exe",
+                "-f",
+                "/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-resource.o"
+              ],
+              "wine_boundary": [
+                "/usr/lib/wine/wine64",
+                "Z:/verified prefix/bin/objdump.exe",
+                "-f",
+                "Z:/work/world-worker-toolchain-check-f98c6cfbb4a84329ba6be9d166adec36/probe-resource.o"
+              ]
+            }
+          ]
+        },
+        "production_toolchain_cmake": {
+          "builder_final_sha256": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26",
+          "builder_sha256": "aba50875c0e92964f5b9b3a4a303e447eac91006c2fbe2a2125da2a137de3f26",
+          "python": "3.12.10 (main, Oct 28 2026, 05:56:53) [GCC 16.2.0]",
+          "results": [
+            {
+              "command": [
+                "cmake",
+                "-S",
+                "/work/source",
+                "-B",
+                "/work/build",
+                "-G",
+                "Ninja",
+                "-DCMAKE_SYSTEM_NAME=Windows",
+                "-DCMAKE_TOOLCHAIN_FILE=/work/worker-toolchain.cmake",
+                "-DCMAKE_C_COMPILER=/work/bin/gcc",
+                "-DCMAKE_CXX_COMPILER=/work/bin/g++",
+                "-DCMAKE_RC_COMPILER=/work/bin/windres",
+                "-DCMAKE_AR=/work/bin/ar",
+                "-DCMAKE_RANLIB=/work/bin/ranlib"
+              ],
+              "exit": 0,
+              "name": "configure"
+            },
+            {
+              "command": [
+                "cmake",
+                "--build",
+                "/work/build",
+                "--verbose",
+                "--parallel",
+                "1"
+              ],
+              "exit": 0,
+              "name": "build"
+            },
+            {
+              "exit": 0,
+              "marker": "WORLD_WORKER_C_RUNTIME_OK",
+              "name": "c_probe"
+            },
+            {
+              "exit": 0,
+              "marker": "WORLD_WORKER_CXX_RUNTIME_OK",
+              "name": "cxx_probe"
+            }
+          ],
+          "scope": "Production-generated sysroot/RC toolchain and actual pinned Windows PE compiler, resource compiler and two original Lua units under Linux CMake3.31.6/Wine10 in network-disabled container; subprocess path adaptation only, not native Windows acceptance.",
+          "toolchain_sha256": "a9b18da3b63bbb788096134b8f1eb80a209de8593395e982e0945b511b4bfba9"
+        },
+        "scope": "Actual signed Windows PE GCC16.2/binutils/CRT under Linux Wine10; not Windows host or full589-engine-build acceptance.",
+        "tools": {
+          "GCC": "actual pinned Windows16.2.0",
+          "cmake": "3.31.6 Debian (separate exactCMake4.3 evidence produced by other agent)",
+          "python": "3.12.10",
+          "wine": "10.0 Debian10.0~repack-6"
+        },
+        "verified_pinned_inputs": {
+          "bin/g++.exe": {
+            "bytes": 3305269,
+            "sha256": "fe03455c28ab0c69f1adb0ccde202124091f01d02b0c0ede8578f606063cc894"
+          },
+          "bin/gcc.exe": {
+            "bytes": 3302709,
+            "sha256": "ab37c11763fdcb3bf6f809b5d033a31ebeb77f10ba5934c72fa37287ee56144f"
+          },
+          "bin/libgcc_s_seh-1.dll": {
+            "bytes": 150998,
+            "sha256": "b37c1770c8ca092700875845b34918803ee6311573eba1c32ff4b1166e4a0e1e"
+          },
+          "bin/libstdc++-6.dll": {
+            "bytes": 2661299,
+            "sha256": "887c21dbe2a211ac4d1a790e4f608b7dee27fae12352856963004e7a715d2e6c"
+          },
+          "bin/libwinpthread-1.dll": {
+            "bytes": 63875,
+            "sha256": "8d7a192a8fbbccb0cebeac272701f66a580f493eff2336739a96144119260723"
+          },
+          "bin/objdump.exe": {
+            "bytes": 2662421,
+            "sha256": "b62d96dc750a9907421f49d9a8718e5fd4ecf982e88d7dd3b3dbd9c26c741080"
+          },
+          "bin/windres.exe": {
+            "bytes": 1386625,
+            "sha256": "0735184706376284f01ae409ada3636616e256c4475b19b609b02114c2430e01"
+          },
+          "include/pthread.h": {
+            "bytes": 36473,
+            "sha256": "d3ccf27efcff918405bc81f6a4e05b244eeea8f5b412c8c91bd18b81dcb51ae4"
+          },
+          "include/string.h": {
+            "bytes": 9825,
+            "sha256": "b73a68fa1a1439b3afb0ab9e1b6001e4d4bc2c611453902118ef2188681624a5"
+          },
+          "include/windows.h": {
+            "bytes": 2529,
+            "sha256": "e931bc163a9980e71982a522879073f41f934c3d94b423d489ee9f387093899f"
+          },
+          "lib/crt2.o": {
+            "bytes": 26842,
+            "sha256": "518b33e9e4eed87f69e90449d1994b065fe12395fb049bcd751cd04fe50e34d6"
+          },
+          "lib/libmsvcrt.a": {
+            "bytes": 2349696,
+            "sha256": "2d2236e67e4f9bb121ec16126bd346266817a42c84d83f8d1335bf6c5822c2c2"
+          }
+        }
+      }
+    }
+  ],
+  "next": "Server-only fast-forward pull, disconnect WAN/retain Ethernet, keep five services stopped, retry only Build-WindowsWorldWorker.ps1 -PreservePreviousBuild. Review full worker result before Android."
+}

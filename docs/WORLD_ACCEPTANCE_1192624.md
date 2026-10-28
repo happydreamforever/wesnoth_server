@@ -1,6 +1,6 @@
 # Windows acceptance — Companies and Territorial Wars 1192624
 
-Current checkpoint (2026-10-28): A/B, Python P1–P3, full D dependency preparation and **E schema-4 migration pass** at supplied Windows-console scope. E reports Python3.12.10, verified pinned dependencies, schema_version4/status complete and ALLIANCE SCHEMA 4 MIGRATION COMPLETE. Saved log: `diagnostics/alliance-migration-20261028-063143-375-e6ce0bc56bf444aa8b3abb598e73d25f.txt`; its file/private runtime were not supplied. Run only **F: coordinated offline builds** below. Keep five services stopped and Python3.14 installed. No new pull, dependency installation, backup, initialization or migration retry is needed. F–Z remain pending.
+Current checkpoint (2026-10-28): A–E, Python P1–P3, full D preparation, F bridge rebuild and F native Room server build pass at supplied Windows-console scope. The World worker failed at string.h lookup; Android rebuilding did not start. Follow [the compiler correction and worker-only retry](WORLD_WORKER_SYSROOT_1192624.md). Keep five services stopped and Python3.14 installed. Do not repeat accepted stages. Full F worker/Android and G–Z remain pending.
 
 Use the existing `runtime-v2`, accounts, Teams, earned heroes, campaign saves, bundled public profile, original Android signer and one LDPlayer. This release explicitly upgrades schema 3 to 4 in place. It does not initialize another database, create founding Teams automatically or grant replacement heroes. Previously accepted results remain historical evidence; untested new behavior is NOT RUN.
 
@@ -14,7 +14,7 @@ The worker needs 107 pinned packages in total. The 83 additional archives total 
 
 The isolated prefix is assembled from verified archives, not from installed files that package scripts may have changed. Internal package hardlinks become independent files; installer scripts and hooks are not executed. The exact 57,474-file prefix occupies 1,686,953,610 bytes. Keep at least 3 GB free for dependency preparation, plus the additional space required by the full worker and retained Android builds. Cold backup, migration and build storage need their own headroom.
 
-A–E below retain the completed rollout sequence; do not repeat them. The current next command is F's coordinated build batch. Do not rerun the preliminary inventory or use `pacman -Syu`. Details and provenance: [worker dependency preparation](WORLD_WORKER_DEPENDENCIES_1192624.md).
+A–E and F's successful bridge/Room commands below retain the completed rollout sequence; do not repeat them. The current next command is the linked worker-only correction. Do not rerun the preliminary inventory or use `pacman -Syu`. Details and provenance: [worker dependency preparation](WORLD_WORKER_DEPENDENCIES_1192624.md).
 
 ## A. Save and stop
 
@@ -126,7 +126,7 @@ Expected: schema_version 4, status complete/already_complete, `ALLIANCE SCHEMA 4
 
 ## F. Rebuild the coordinated binaries offline
 
-Current next step: keep all five services stopped, WAN disconnected and local Ethernet connected. No new pull or dependency preparation is required. Run all four builds sequentially in one PowerShell window; this block stops immediately if any helper fails:
+The original four-build batch below is retained history. Its bridge and Room builds passed, the worker failed, and Android did not start. **Do not rerun this whole block.** Use [the server-only correction and worker retry](WORLD_WORKER_SYSROOT_1192624.md), return its result, then resume Android. Keep five services stopped and retain local Ethernet with WAN disconnected during builds:
 
 ```powershell
 & {
