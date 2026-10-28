@@ -550,6 +550,7 @@ class WorkerRecoveryTests(unittest.TestCase):
             stack.enter_context(patch.object(builder, 'capture', side_effect=[
                 'cmake version 4.3.0', '1.13.2', 'x86_64-w64-mingw32', '16.2.0']))
             stack.enter_context(patch.object(builder, 'compiler_preflight'))
+            stack.enter_context(patch.object(builder, 'game_resource_preflight'))
             stack.enter_context(patch.object(builder, 'binding', return_value=self.expected))
             installed = stack.enter_context(patch.object(builder, 'installed_worker'))
             ready = stack.enter_context(patch.object(builder, 'prepare_toolchain',
@@ -603,6 +604,28 @@ class WorkerRecoveryTests(unittest.TestCase):
         self.assertEqual(recovery._inventory(self.stage), before)
         self.assertFalse(self.journal.exists())
         self.assertFalse(list(self.root.glob('windows-world-worker-before-*')))
+
+    def test_builder_creates_fresh_stage_without_recovery_journals(self):
+        import shutil
+        shutil.rmtree(self.stage)  # This test's disposable fixture only.
+        with self.builder_dispatch() as (run, ready, installed):
+            with self.assertRaisesRegex(BuildError, 'fixture reached corrected stage'):
+                run(True)
+            ready.assert_called_once()
+            installed.assert_not_called()
+        self.assertEqual(recovery._read_json(self.stage / 'owner.json'), self.expected)
+        self.assertFalse(self.journal.exists())
+        self.assertFalse(self.stage.with_name(self.stage.name + '.resource-recovery.json').exists())
+
+    def test_original_sysroot_stage_can_be_preserved_with_new_resource_helper_bound(self):
+        self.expected['inputs'][recovery.RESOURCE_RECOVERY_INPUT] = 'f' * 64
+        with self.builder_dispatch() as (run, ready, installed):
+            with self.assertRaisesRegex(BuildError, 'fixture reached corrected stage'):
+                run(True)
+            ready.assert_called_once()
+        retained = Path(recovery._read_json(self.journal)['retained'])
+        self.assertEqual(recovery._inventory(retained), self.initial)
+        self.assertEqual(recovery._read_json(self.stage / 'owner.json'), self.expected)
 
     def test_builder_reuses_verified_completed_current_stage(self):
         self.write_owner(self.expected)

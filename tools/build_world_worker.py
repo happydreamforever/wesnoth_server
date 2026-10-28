@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[1]
 CLIENT = ROOT.parent / 'wesnoth_client'
@@ -37,7 +38,14 @@ SYSTEM_DLLS = {'kernel32.dll','user32.dll','gdi32.dll','advapi32.dll','shell32.d
     'setupapi.dll','uuid.dll','msvcrt.dll','ucrtbase.dll','bcrypt.dll','crypt32.dll','secur32.dll','dwmapi.dll',
     'ntdll.dll','cfgmgr32.dll','iphlpapi.dll','winhttp.dll','dnsapi.dll','normaliz.dll','powrprof.dll','hid.dll',
     'wtsapi32.dll','winspool.drv','d3d11.dll','dxgi.dll','dinput8.dll','opengl32.dll','avrt.dll','d3d12.dll',
-    'dwrite.dll','windowscodecs.dll','propsys.dll','rpcrt4.dll','userenv.dll','psapi.dll','msimg32.dll'}
+    'dwrite.dll','windowscodecs.dll','propsys.dll','rpcrt4.dll','userenv.dll','psapi.dll','msimg32.dll',
+    'usp10.dll','wldap32.dll'}  # Windows Uniscribe (HarfBuzz) and Windows LDAP (curl).
+
+# The pinned .rc reads its own relative wesconfig.h, icon and manifest. It does
+# not need C/C++ target macros or include paths, whose nested quotes windres
+# reparses incorrectly on Windows (notably WESNOTH_PATH="Program Files ...").
+# Keep every C/C++ command unchanged so the interrupted engine can resume.
+RESOURCE_COMPILE_RULE = '<CMAKE_RC_COMPILER> -O coff <FLAGS> <SOURCE> <OBJECT>'
 
 
 def dependency_audit(msys, report):
@@ -98,6 +106,7 @@ def binding():
     paths = [ROOT / 'tools/build_world_worker.py', ROOT/'tools/world_worker_dependencies.py',
              ROOT/'tools/world_worker_packages.py', ROOT/'tools/world_worker_archive_prefix.py',
              ROOT/'tools/world_worker_recovery.py',
+             ROOT/'tools/world_worker_resource_recovery.py',
              ROOT/'tools/world-worker-packages-1192624.json', DEPENDENCY_PREFIX/'receipt.json']
     paths += [CLIENT/'tools'/name for name in ('prepare_android_source.py','verify_game_data.py','gamedata-1.19.26.reference.json')]
     paths += [path for directory in ('engine', 'alliance_game', 'alliance_native')
@@ -210,6 +219,49 @@ def prepare_source(client, source, generated, replacements, cmake_text):
     if actual!=expected:
         raise BuildError('Owned worker source copy is incomplete or changed. Retain it for review; original sources were not changed.')
     return expected
+
+
+def worker_overlay_inputs(output):
+    sys.path.insert(0, str(CLIENT / 'alliance_game'))
+    from world_worker_overlay import generate, WORLD_SOURCES
+    replacements = generate(CLIENT, output)
+    additions = [(CLIENT/'alliance_game'/(name+'.cpp')).as_posix()
+        for name in (*WORLD_SOURCES, 'hero_catalog', 'hero_unit_config', 'practice_plan', 'practice_scenario')]
+    additions += [(CLIENT/'alliance_native'/(name+'.cpp')).as_posix()
+        for name in ('transport', 'account_client', 'account_protocol')]
+    return replacements, worker_cmake(CLIENT, STAGE/'overlay', additions)
+
+
+def overlay_inventory(directory):
+    safe_path(directory, directory=True)
+    result = {}
+    for path in directory.rglob('*'):
+        safe_path(path, directory=path.is_dir())
+        if path.is_file():
+            result[path.relative_to(directory).as_posix()] = digest(path)
+    return result
+
+
+def prepare_worker_overlay(*, validate_existing=False):
+    """Derive outside the stage; preserve identical overlay/header timestamps."""
+    with tempfile.TemporaryDirectory(prefix='world-worker-source-check-', dir=STAGE.parent) as scratch:
+        temporary = Path(scratch) / 'overlay'
+        replacements, cmake_text = worker_overlay_inputs(temporary)
+        generated = STAGE / 'overlay'
+        if generated.exists():
+            if overlay_inventory(generated) != overlay_inventory(temporary):
+                raise BuildError('Owned worker overlay changed; preserve the stage for review.')
+        elif validate_existing:
+            raise BuildError('Worker resource retry requires its existing overlay; preserved.')
+        else:
+            shutil.copytree(temporary, generated)
+        if validate_existing:
+            safe_path(STAGE / 'source', directory=True)
+            toolchain = safe_path(STAGE / 'worker-toolchain.cmake')
+            if toolchain.stat().st_nlink != 1 or toolchain.read_bytes() != toolchain_text(DEPENDENCY_PREFIX):
+                raise BuildError('Worker resource retry toolchain changed; preserved.')
+            prepare_source(CLIENT, STAGE/'source', temporary, replacements, cmake_text)
+        return replacements, cmake_text
 
 
 def native(command, environment):
@@ -431,6 +483,8 @@ def installed_worker(required=True, expected_binding=None):
         toolchain = safe_path(STAGE / 'worker-toolchain.cmake')
         if toolchain.read_bytes() != toolchain_text(DEPENDENCY_PREFIX):
             raise BuildError('Worker compiler sysroot differs from the verified isolated prefix.')
+    if 'wesnoth_server/tools/world_worker_resource_recovery.py' in expected_binding.get('inputs', {}):
+        verify_resource_rule(STAGE)
     executable = safe_path(STAGE / 'bin/world-worker.exe')
     if row['executable'] != {'sha256':digest(executable),'bytes':executable.stat().st_size}:
         raise BuildError('World worker executable differs from its receipt.')
@@ -454,6 +508,75 @@ def installed_worker(required=True, expected_binding=None):
     data = safe_path(Path(row['game_data']), directory=True)
     if data_inventory(data) != row['game_data_files']: raise BuildError('Pinned game data differs from the worker receipt.')
     return {'executable': executable, 'game_data': data}
+
+
+def resource_rules_text():
+    # CMakeRCInformation includes the user rules AFTER Windows-windres, which
+    # overwrites a plain CMAKE_RC_COMPILE_OBJECT cache value. This rule affects
+    # only RC even when the same override file is loaded for C and C++.
+    return ('# Owned World worker resource rule; C/C++ settings stay unchanged.\n'
+            'set(CMAKE_RC_COMPILE_OBJECT [==[' + RESOURCE_COMPILE_RULE + ']==])\n').encode()
+
+
+def prepare_resource_rules(stage):
+    path = safe_path(Path(stage) / 'worker-resource-rules.cmake')
+    raw = resource_rules_text()
+    if path.exists():
+        if path.stat().st_nlink != 1 or path.read_bytes() != raw:
+            raise BuildError('Owned worker resource rule changed; preserve it for review.')
+    else:
+        with path.open('xb') as stream:
+            stream.write(raw); stream.flush(); os.fsync(stream.fileno())
+    return path
+
+
+def verify_resource_rule(stage):
+    rules = safe_path(Path(stage) / 'worker-resource-rules.cmake')
+    if rules.stat().st_nlink != 1 or rules.read_bytes() != resource_rules_text():
+        raise BuildError('Worker resource rule differs from its verified recipe.')
+    cache = safe_path(Path(stage) / 'engine/CMakeCache.txt')
+    if cache.stat().st_nlink != 1:
+        raise BuildError('Worker resource configuration cannot be linked.')
+    rows = [line for line in cache.read_text(encoding='utf-8').splitlines()
+            if line.startswith('CMAKE_USER_MAKE_RULES_OVERRIDE:')]
+    if rows != ['CMAKE_USER_MAKE_RULES_OVERRIDE:FILEPATH=' + rules.as_posix()]:
+        raise BuildError('Worker resource compile rule differs; preserve the stage for review.')
+
+
+def game_resource_preflight(prefix, environment):
+    """Exercise the actual pinned icon/version/manifest before resuming CMake."""
+    directory = ROOT / 'build' / ('world-worker-resource-check-' + uuid4().hex)
+    directory.mkdir()
+    resource = safe_path(CLIENT / 'engine/packaging/windows/wesnoth.rc')
+    output = directory / 'wesnoth-resource.o'
+    report = {'format': 1, 'purpose': 'world-worker-game-resource-check', 'status': 'failed',
+              'compile_rule': RESOURCE_COMPILE_RULE, 'source_sha256': digest(resource), 'phases': []}
+    phase = 'resource-compile'
+    try:
+        for phase, command in (
+                ('resource-compile', [prefix/'bin/windres.exe', '-O', 'coff', '--use-temp-file',
+                    '--preprocessor-arg=--sysroot=' + prefix.as_posix(), resource, output]),
+                ('resource-verify', [prefix/'bin/objdump.exe', '-f', output])):
+            result = subprocess.run([str(part) for part in command], env=environment,
+                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
+            (directory / (phase + '.txt')).write_bytes(result.stdout)
+            row = {'phase': phase, 'exit': result.returncode}
+            report['phases'].append(row)
+            if result.returncode:
+                print(result.stdout.decode('utf-8', 'replace'), flush=True)
+                raise BuildError('Pinned game resource check failed at ' + phase + '; retain its report.')
+            if phase == 'resource-verify' and (b'file format pe-x86-64' not in result.stdout
+                    or b'architecture: i386:x86-64' not in result.stdout):
+                raise BuildError('Pinned game resource is not an x86_64 COFF object; retain its report.')
+            row['status'] = 'passed'
+        report.update(status='passed', object_sha256=digest(output))
+        print('WORLD WORKER GAME RESOURCE CHECK PASSED', flush=True)
+        return report
+    finally:
+        if report['status'] != 'passed':
+            report['failure_phase'] = phase
+        write_new(directory / 'report.json', report)
+        print('Game resource report: ' + str(directory / 'report.json'), flush=True)
 
 
 def build(msys, cmake, game_data, preserve):
@@ -489,6 +612,17 @@ def build(msys, cmake, game_data, preserve):
     with build_step('source-binding'):
         expected = binding()
     STAGE.parent.mkdir(exist_ok=True)
+    with build_step('game-resource-check'):
+        game_resource_preflight(prefix, environment)
+    from tools.world_worker_resource_recovery import resource_recovery_pending, resume_resource_stage
+    if resource_recovery_pending(STAGE) or (STAGE.exists()
+            and not (STAGE/'receipt.json').exists()
+            and metadata(STAGE/'owner.json') != expected
+            and 'wesnoth_server/tools/world_worker_recovery.py' in metadata(STAGE/'owner.json').get('inputs', {})):
+        if not preserve:
+            raise BuildError('Worker resource retry requires -PreservePreviousBuild. Keep all existing files.')
+        resume_resource_stage(STAGE, expected, lambda: prepare_worker_overlay(validate_existing=True))
+        print('WORLD WORKER RESOURCE RETRY PREPARED; existing compilation retained', flush=True)
     from tools.world_worker_recovery import recovery_pending, preserve_failed_stage
     if recovery_pending(STAGE):
         if not preserve:
@@ -510,16 +644,12 @@ def build(msys, cmake, game_data, preserve):
             installed_worker(); print('WORLD NATIVE WORKER ARTIFACT VERIFIED'); return
     if not STAGE.exists(): STAGE.mkdir();write_new(STAGE/'owner.json',expected)
     toolchain = prepare_toolchain(STAGE, prefix)
-    sys.path.insert(0, str(CLIENT/'alliance_game'))
-    from world_worker_overlay import generate, WORLD_SOURCES
+    resource_rules = prepare_resource_rules(STAGE)
     generated = STAGE/'overlay'
-    replacements = generate(CLIENT, generated)
+    replacements, cmake_text = prepare_worker_overlay()
     source = STAGE/'source'
-    additions = [(CLIENT/'alliance_game'/(name+'.cpp')).as_posix() for name in (*WORLD_SOURCES,'hero_catalog','hero_unit_config','practice_plan','practice_scenario')]
-    additions += [(CLIENT/'alliance_native'/(name+'.cpp')).as_posix() for name in ('transport','account_client','account_protocol')]
-    cmake_text = worker_cmake(CLIENT, generated, additions)
     prepare_source(CLIENT,source,generated,replacements,cmake_text)
-    native([cmake,'-S',source,'-B',STAGE/'engine','-G','Ninja',f'-DCMAKE_TOOLCHAIN_FILE={toolchain.as_posix()}',f'-DCMAKE_CXX_COMPILER={(prefix/"bin/g++.exe").as_posix()}',
+    native([cmake,'-S',source,'-B',STAGE/'engine','-G','Ninja',f'-DCMAKE_USER_MAKE_RULES_OVERRIDE:FILEPATH={resource_rules.as_posix()}',f'-DCMAKE_TOOLCHAIN_FILE={toolchain.as_posix()}',f'-DCMAKE_CXX_COMPILER={(prefix/"bin/g++.exe").as_posix()}',
         f'-DCMAKE_C_COMPILER={(prefix/"bin/gcc.exe").as_posix()}',f'-DCMAKE_RC_COMPILER={(prefix/"bin/windres.exe").as_posix()}',
         f'-DPython_EXECUTABLE={safe_path(sys.executable).as_posix()}',
         f'-DCMAKE_MAKE_PROGRAM={ninja.as_posix()}',f'-DCMAKE_PREFIX_PATH={prefix.as_posix()}',f'-DBoost_ROOT={prefix.as_posix()}',
@@ -527,6 +657,7 @@ def build(msys, cmake, game_data, preserve):
         '-DCMAKE_FIND_USE_PACKAGE_REGISTRY=OFF','-DCMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY=OFF',
         '-DCMAKE_BUILD_TYPE=Release','-DENABLE_SERVER=OFF','-DENABLE_CAMPAIGN_SERVER=OFF','-DENABLE_TESTS=OFF',
         '-DENABLE_NLS=OFF','-DENABLE_STRICT_COMPILATION=OFF','-DENABLE_DISPLAY_REVISION=OFF'],environment)
+    verify_resource_rule(STAGE)
     native([cmake,'--build',STAGE/'engine','--target','wesnoth','--parallel','2'],environment)
     prepare_source(CLIENT,source,generated,replacements,cmake_text)
     candidates=list((STAGE/'engine').rglob('world-worker.exe'))

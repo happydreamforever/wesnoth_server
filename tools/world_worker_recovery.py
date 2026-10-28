@@ -20,6 +20,7 @@ PURPOSE = 'wesnoth-world-worker-sysroot-recovery'
 BINDING_PURPOSE = 'wesnoth-full-native-world-worker'
 BUILDER_INPUT = 'wesnoth_server/tools/build_world_worker.py'
 RECOVERY_INPUT = 'wesnoth_server/tools/world_worker_recovery.py'
+RESOURCE_RECOVERY_INPUT = 'wesnoth_server/tools/world_worker_resource_recovery.py'
 LEGACY_BUILDERS = frozenset({
     '1afb04004e3e1593d4f81150e6c8f4323ffcac34fd7bc58e2a9e441ea316dd05',
     '727dbb498fca33e947c85080bd2c50148a813d0637bcc7ec48c8dfce12178163',
@@ -138,7 +139,7 @@ def _legacy(owner, expected):
     _binding(expected)
     if (RECOVERY_INPUT not in expected['inputs'] or BUILDER_INPUT not in expected['inputs']
             or RECOVERY_INPUT in owner['inputs']
-            or set(owner['inputs']) != set(expected['inputs']) - {RECOVERY_INPUT}
+            or set(owner['inputs']) != set(expected['inputs']) - {RECOVERY_INPUT, RESOURCE_RECOVERY_INPUT}
             or owner['inputs'].get(BUILDER_INPUT) not in LEGACY_BUILDERS
             or any(value != expected['inputs'][name] for name, value in owner['inputs'].items()
                    if name != BUILDER_INPUT)):
