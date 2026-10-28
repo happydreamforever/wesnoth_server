@@ -41,7 +41,19 @@
     },
     "package_cache": "107 signed pinned archives verified in supplied console",
     "git_integrity_followup": "GIT_CHECK_EXIT: 0",
-    "scope": "Supplied Windows console only; saved reports/private backup not opened on VPS; Python3.12 Windows acceptance pending; WAN connected for prior download."
+    "scope": "Supplied Windows console only; saved reports/private backup not opened on VPS. Base CPython3.12.10 x64 execution passed; project dependency/environment verification and remaining World acceptance pending.",
+    "python312_base": {
+      "status": "accepted_supplied_console",
+      "version": "3.12.10",
+      "build": "tags/v3.12.10:0cc8128, Apr 8 2025, 12:21:36",
+      "compiler": "MSC v.1943 64 bit (AMD64)",
+      "platform": "AMD64",
+      "path": "%LOCALAPPDATA%\\Programs\\Python\\Python312\\python.exe",
+      "check_exit": 0,
+      "repeated_git_check_exit": 0,
+      "dependencies_or_services_tested": false,
+      "wan_status": "not supplied for this check"
+    }
   },
   "dependencies": {
     "versions_unchanged": 17,
@@ -431,7 +443,7 @@
     "no_game_rebuild_for_python_only": true
   },
   "limits": [
-    "No actual WindowsPython3.12 execution yet.",
+    "Windows base-interpreter execution passed in supplied console; actual Windows project dependencies/backend execution still pending.",
     "NativeABI smoke executes Linux CPython3.12 wheels on VPS; Windows wheels receive equivalent smoke at P3.",
     "PowerShell simulations are not Windows native execution.",
     "Existing native/Android gameplay evidence remains historical; this follow-up does not rerun fullengine gameplay or compile Android.",

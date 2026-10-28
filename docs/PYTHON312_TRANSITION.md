@@ -7,9 +7,11 @@ This checkpoint interrupts the pending 1192624 World rollout only to change the 
 - Cold backup: 113 files / 257,065,798 bytes, verified with no schema claim. Private path: `C:\Users\Uni\AppData\Local\WesnothAlliance\backups\before-1192624-20261027-234120-963-9a74eff719334e9d885999ef17b69d7d`.
 - The supplied pulls reached server `24129be2cb8c8a82c2943f0cf76beecdd4597a60` and client `5dff239ba895cd02c214c17c1ae1972519e1f697`. The client pull printed unavailable pack indexes; the subsequent read-only full Git check returned `GIT_CHECK_EXIT: 0`. No repository repair is needed on that evidence.
 - `WORLD WORKER PACKAGE CACHE VERIFIED` confirms the 107 pinned archives/signatures were prepared. Its supplied console reports original MSYS package records preserved. This is Windows console evidence; the saved JSON and private backup were not opened on the VPS.
-- No Windows Python 3.12 installation, isolated worker prefix, schema-4 migration, worker build or new gameplay acceptance has been reported yet.
+- P1 accepted on 2026-10-28: the explicit Windows Python312 interpreter reports CPython3.12.10, 64-bit AMD64, and PYTHON312_CHECK_EXIT:0. The repeated client Git check returns GIT_CHECK_EXIT:0. P2 dependency preparation and P3 isolated-environment installation are still pending, along with the isolated worker prefix, schema-4 migration, worker build and new gameplay acceptance.
 
 ## P1. Install the pinned interpreter alongside 3.14
+
+Accepted from the supplied Windows output. Retain the instructions below for reference; continue at P2 without reinstalling or repeating the base-interpreter check.
 
 While connected, download the installer (or copy it from a connected computer). Use the official [Python 3.12.10 release](https://www.python.org/downloads/release/python-31210/) and its **Windows installer (64-bit)**. This is the last official full Windows installer in the 3.12 series, not the latest source-only security release. Do not use the embeddable package, ARM64 or 32-bit installer.
 
@@ -23,11 +25,6 @@ This downloads about 1 MB when the previously verified cache is present. Fourtee
 & {
     $ErrorActionPreference = 'Stop'
     if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) { throw 'LOCALAPPDATA is missing.' }
-    $python312 = Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\python.exe'
-    if (-not (Test-Path -LiteralPath $python312 -PathType Leaf)) { throw 'Install Python 3.12.10 x64 first.' }
-    & $python312 -I -B -c 'import sys,platform; print(sys.version); print(platform.machine()); sys.exit(sys.version_info[:3] != (3,12,10) or sys.maxsize <= 2**32)'
-    if ($LASTEXITCODE -ne 0) { throw 'Expected CPython 3.12.10 x64. Stop here.' }
-
     $pythonBash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
     foreach ($name in @('wesnoth_server', 'wesnoth_client')) {
         $repo = '/d/Test/wesnoth-setup/' + $name
@@ -43,7 +40,7 @@ This downloads about 1 MB when the previously verified cache is present. Fourtee
 }
 ```
 
-Expected: Python `3.12.10`, architecture `AMD64`, then `ALLIANCE PYTHON 3.12 CACHE READY`. Report: `wesnoth_server\diagnostics\alliance-python312-prepare-*.txt`. Keep services stopped. On any unexpected output, stop and return the console and log before P3.
+Expected: both pulls succeed and print their commit IDs, followed by `ALLIANCE PYTHON 3.12 CACHE READY`. The preparation helper validates the selected interpreter automatically. Report: `wesnoth_server\diagnostics\alliance-python312-prepare-*.txt`. Keep services stopped. On any unexpected output, stop and return the console and log before P3.
 
 ## P3. Install and check offline
 
@@ -77,6 +74,6 @@ The isolated MINGW worker package closure contains its own Python 3.14.7 depende
 
 ## Verification scope
 
-See [the verification record](PYTHON312_VERIFICATION.json). VPS checks use actual CPython 3.12.10, disposable local MongoDB, retained APK/signature verification and real pinned archive contents, with networking disabled. Windows wrappers are exercised in Linux PowerShell simulations. No Windows execution is claimed until P1–P3 and the remaining World tests are reported.
+See [the verification record](PYTHON312_VERIFICATION.json). VPS checks use actual CPython 3.12.10, disposable local MongoDB, retained APK/signature verification and real pinned archive contents, with networking disabled. Windows wrappers are exercised in Linux PowerShell simulations. P1 Windows base-interpreter execution is now user-reported and accepted. Windows dependency preparation, isolated-environment execution and the remaining World tests are still pending.
 
 The historical Dockerfile remains the earlier 3.14 baseline. Exact 3.12 checks explicitly invoke the separately built pinned 3.12.10 interpreter inside the existing Mongo-compatible container; they do not use its default Python. Earlier APK/native execution evidence remains bound to its original inputs. No new game compilation or gameplay result is claimed for this interpreter-only change.
