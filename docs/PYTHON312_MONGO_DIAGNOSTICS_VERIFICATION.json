@@ -1,6 +1,6 @@
 {
   "recorded": "2026-10-28",
-  "status": "vps_verified_windows_p2_retry_accepted_p3_pending",
+  "status": "vps_verified_windows_p2_and_p3_accepted",
   "implementation_commit": "e936b29",
   "scope": "Existing MongoDB installation verification during Python 3.12 transition; no dependency or gameplay change.",
   "windows_evidence": {
@@ -20,10 +20,12 @@
     ],
     "wan_status": "not supplied for metadata collection",
     "p2_retry": "accepted_supplied_console",
-    "p3_install": "pending",
+    "p3_install": "accepted_supplied_windows_transcript",
     "p2_retry_head": "acd35a27984837a171e031eed984e83103d0768f",
     "p2_retry_log": "diagnostics/alliance-python312-prepare-20261028-005052-213-cb166be869bd477fbf6c44e3b8e48c61.txt",
-    "p2_retry_pinned_wheels": 17
+    "p2_retry_pinned_wheels": 17,
+    "p3_log": "diagnostics/alliance-python312-install-20261028-005353-591-384583f6976847d78505ea3e714b1606.txt",
+    "p3_wan_status": "WAN disconnected; local Ethernet retained, explicitly confirmed by user."
   },
   "behavior": {
     "used_installation_dump_metadata_only": true,
@@ -77,5 +79,5 @@
     "build/audit-python312-mongo-dumps-20261028/actual-artifacts-exact31210.log": "9f57a54bcca9f6256523cebbbf2f321838279f138fd4f3a59f741a12ce5402ab",
     "build/audit-python312-mongo-dumps-20261028/verify_actual_artifacts.py": "1f9151c7f43e5c1d732558a4cd62452c1378c1028ebc60f5c6e9667debfb5803"
   },
-  "handoff": "Offline P3 using the already delivered helper; keep five services stopped and Python3.14 installed. Return output and WAN status before World steps."
+  "handoff": "World D offline worker-prefix preparation using the already delivered helper; keep five services stopped and Python3.14 installed. Return D output before migration."
 }

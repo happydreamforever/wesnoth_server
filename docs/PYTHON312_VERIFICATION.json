@@ -1,6 +1,6 @@
 {
   "recorded": "2026-10-28",
-  "status": "vps_verified_windows_p2_accepted_p3_pending",
+  "status": "vps_verified_windows_python_transition_accepted_world_d_pending",
   "release": 1192624,
   "protocol": 4,
   "schema": 4,
@@ -41,7 +41,7 @@
     },
     "package_cache": "107 signed pinned archives verified in supplied console",
     "git_integrity_followup": "GIT_CHECK_EXIT: 0",
-    "scope": "Supplied Windows console only; saved reports/private backup not opened on VPS. Base CPython3.12.10 x64 execution and P2 dependency preparation passed; P3 environment installation and remaining World acceptance pending.",
+    "scope": "Supplied Windows console/transcript only; saved Windows reports/private backup not opened on VPS. Python3.12.10 x64 base check, P2 preparation and P3 installed-environment native-module execution accepted. Offline batch status explicitly confirmed. World prefix/migration/builds/services/gameplay remain pending.",
     "python312_base": {
       "status": "accepted_supplied_console",
       "version": "3.12.10",
@@ -66,7 +66,7 @@
       "mongo_archive_downloaded_or_extracted": false,
       "success_marker": "ALLIANCE PYTHON 3.12 CACHE READY",
       "saved_windows_file_opened_on_vps": false,
-      "new_environment_installation": "pending P3",
+      "new_environment_installation": "accepted P3 supplied Windows transcript",
       "wan_status": "Online preparation; no offline batch confirmation yet.",
       "initial_stopped_attempt": {
         "status": "stopped_before_wheels",
@@ -83,7 +83,35 @@
         ],
         "next": "Server-only retention-fix pull and P2 retry; return output before offline P3."
       },
-      "next": "Offline P3 with five services stopped and Python3.14 retained. No new pull."
+      "next": "World D offline worker-prefix preparation with all five services stopped; no new pull."
+    },
+    "python312_installation": {
+      "status": "accepted_supplied_windows_transcript",
+      "attachment_bytes": 7749,
+      "attachment_sha256": "279c8f3bf938edd57f73f020b748ce08bbbd9976196ea851be8593f2c085b14b",
+      "log": "diagnostics/alliance-python312-install-20261028-005353-591-384583f6976847d78505ea3e714b1606.txt",
+      "saved_windows_log_opened_on_vps": false,
+      "pinned_packages_installed": 17,
+      "source": "verified local wheel cache",
+      "pip_check": "No broken requirements found.",
+      "installed_versions_verified": true,
+      "native_module_check": "passed",
+      "native_check_scope": [
+        "Argon2 hash/verify",
+        "CFFI allocation",
+        "native BSON round trip",
+        "MarkupSafe native escaping",
+        "Flask local test-client request",
+        "backend imports",
+        "TLS1.2/1.3 context/cipher availability"
+      ],
+      "transition_verified": true,
+      "mongo_dumps_retained": 2,
+      "old_environment_and_mongo_preservation": "verified by helper; private inventories not supplied",
+      "database_initialized": false,
+      "world_prefix_worker_services_gameplay": "not tested by P3",
+      "wan_status": "User explicitly confirms WAN disconnected; local Ethernet retained.",
+      "next": "World D offline worker prefix; retain Python3.14 until five-service startup passes."
     }
   },
   "dependencies": {
