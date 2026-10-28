@@ -360,3 +360,118 @@ class WorldTests(unittest.TestCase):
                 else:self.assertEqual(self.domain.world_human_loaded(a,run,desc['generation'],'a'*64)['state'],'cancelled')
                 self.assertEqual(self.db.world_contracts.find_one({'_id':run})['state'],'cancelled')
                 self.assertEqual(self.db.network_battle_reservations.count_documents({}),0)
+
+    def add_member_company(self, team_index=0):
+        actor=self.company();self.domain.request_join(actor,self.teams[team_index]);self.domain.approve_member(self.players[team_index],self.teams[team_index],actor)
+        self.command(actor,'enroll');return actor
+
+    def test_fifth_same_team_company_is_refused_before_commit(self):
+        run=self.attack_neutral();members=[self.add_member_company() for _ in range(4)]
+        for actor in members[:3]:self.command(actor,'battle_join',run_id=run,team_id=self.teams[0])
+        self.assertFalse(self.domain.world_query(members[3],'battle',{'run_id':run})['data']['can_join'])
+        self.code('capacity',lambda:self.command(members[3],'battle_join',run_id=run,team_id=self.teams[0]))
+        self.assertEqual(len(self.db.world_contracts.find_one({'_id':run})['armies']),4)
+        self.assertEqual(self.db.network_battle_reservations.count_documents({}),0)
+
+    def test_fifth_approved_defense_is_refused_and_pending_offer_retained(self):
+        captain=self.players[0];castle=self.homes[0]['capital_id'];actors=[captain]+[self.add_member_company() for _ in range(4)]
+        offers=[]
+        for actor in actors:
+            row=self.command(actor,'defense_offer',castle_id=castle,bracket='scout')['defense'];offers.append(row)
+            if actor!=captain and len(offers)<=4:self.command(captain,'defense_approve',assignment_id=row['id'])
+        self.code('capacity',lambda:self.command(captain,'defense_approve',assignment_id=offers[4]['id']))
+        self.assertEqual(self.db.world_defenses.find_one({'_id':offers[4]['id']})['status'],'offered')
+        view=self.domain.world_query(captain,'castle',{'castle_id':castle})['data']
+        self.assertEqual(view['defense_capacity'],{'limit':4,'approved':4,'available':0})
+        self.assertFalse(next(row for row in view['defenses'] if row['id']==offers[4]['id'])['can_approve'])
+        # An existing approval does not consume a second seat. A queued withdrawal
+        # still occupies its frozen place until its active contract has ended.
+        self.command(captain,'defense_approve',assignment_id=offers[0]['id'])
+        self.db.world_defenses.update_one({'_id':offers[0]['id']},{'$set':{'status':'withdraw_pending'}})
+        self.code('capacity',lambda:self.command(captain,'defense_approve',assignment_id=offers[4]['id']))
+        self.db.world_defenses.update_one({'_id':offers[0]['id']},{'$set':{'status':'active'}})
+        self.command(actors[1],'defense_withdraw',assignment_id=offers[1]['id'])
+        self.command(captain,'defense_approve',assignment_id=offers[4]['id'])
+        self.assertEqual(self.domain.world_query(captain,'castle',{'castle_id':castle})['data']['defense_capacity']['approved'],4)
+
+    def test_captain_cannot_autoapprove_fifth_defense(self):
+        captain=self.players[0];castle=self.homes[0]['capital_id']
+        for _ in range(4):
+            actor=self.add_member_company();row=self.command(actor,'defense_offer',castle_id=castle,bracket='scout')['defense']
+            self.command(captain,'defense_approve',assignment_id=row['id'])
+        self.code('capacity',lambda:self.command(captain,'defense_offer',castle_id=castle,bracket='scout'))
+        self.assertEqual(self.db.company_asset_locks.count_documents({'owner_id':captain}),0)
+
+    def test_mixed_human_and_standing_defense_overflow_needs_review(self):
+        attacker,captain=self.players;defenders=[captain]+[self.add_member_company(1) for _ in range(4)]
+        self.command(attacker,'station',castle_id=self.homes[0]['frontier_id'])
+        for actor in defenders:self.command(actor,'station',castle_id=self.homes[1]['frontier_id'])
+        self.phase();offers=[]
+        for actor in defenders[:4]:
+            row=self.command(actor,'defense_offer',castle_id=self.homes[1]['frontier_id'],bracket='scout')['defense'];offers.append(row)
+            if actor!=captain:self.command(captain,'defense_approve',assignment_id=row['id'])
+        war=self.command(attacker,'war_propose',opponent_team_id=self.teams[1],target_ids=[self.homes[1]['frontier_id']],objective_area_id=None)['war']
+        self.command(captain,'war_approve',war_id=war['id'])
+        run=self.command(attacker,'attack',origin_id=self.homes[0]['frontier_id'],target_id=self.homes[1]['frontier_id'],bracket='scout',war_id=war['id'])['battle']['id']
+        self.command(defenders[4],'battle_join',run_id=run,team_id=self.teams[1])
+        for actor in (attacker,defenders[4]):self.command(actor,'battle_ready',run_id=run,ready=True)
+        for actor in (attacker,captain):self.command(actor,'battle_approve',run_id=run)
+        self.code('force_review',self.phase)
+        self.assertEqual(self.db.world_states.find_one()['phase'],'deployment')
+        self.assertEqual(len(self.db.world_contracts.find_one({'_id':run})['armies']),2)
+        self.assertEqual(self.db.network_battle_reservations.count_documents({}),0)
+        self.assertEqual(self.db.world_defenses.count_documents({'status':'active','run_id':None}),4)
+        self.command(defenders[3],'defense_withdraw',assignment_id=offers[3]['id']);self.phase()
+        committed=self.db.world_contracts.find_one({'_id':run})
+        self.assertEqual(sum(army['team_id']==self.teams[1] for army in committed['armies']),4)
+
+    def test_proposed_war_cancel_by_either_captain_retains_history(self):
+        a,b=self.players;before=[(row['_id'],row['supply']) for row in self.db.world_teams.find({})]
+        for actor in (a,b):
+            war=self.command(a,'war_propose',opponent_team_id=self.teams[1],target_ids=[self.homes[1]['frontier_id']],objective_area_id=None)['war']
+            nonce=str(uuid4());result=self.command(actor,'war_cancel',war_id=war['id'],command_id=nonce)
+            self.assertEqual(result,self.command(actor,'war_cancel',war_id=war['id'],command_id=nonce))
+            self.assertEqual(result['war']['state'],'cancelled');self.assertEqual(result['war']['cancelled_by'],actor)
+            self.assertIn(war['id'],[row['id'] for row in self.domain.world_query(actor,'snapshot',{})['data']['wars']])
+        self.assertEqual(before,[(row['_id'],row['supply']) for row in self.db.world_teams.find({})])
+        self.assertEqual(self.db.world_settlements.count_documents({}),0)
+
+    def test_war_cancel_requires_current_captain_and_proposed_state(self):
+        a,b=self.players;member=self.add_member_company()
+        war=self.command(a,'war_propose',opponent_team_id=self.teams[1],target_ids=[self.homes[1]['frontier_id']],objective_area_id=None)['war']
+        self.code('forbidden',lambda:self.command(member,'war_cancel',war_id=war['id']))
+        # A rejected/unanswered proposal is cancellable even after host deployment.
+        self.phase();self.phase();self.command(b,'war_cancel',war_id=war['id'])
+        self.finish_round()
+        other=self.command(a,'war_propose',opponent_team_id=self.teams[1],target_ids=[self.homes[1]['frontier_id']],objective_area_id=None)['war']
+        self.command(b,'war_approve',war_id=other['id'])
+        self.code('invalid_state',lambda:self.command(a,'war_cancel',war_id=other['id']))
+        self.assertEqual(self.db.world_wars.find_one({'_id':other['id']})['state'],'active')
+
+    def test_defense_capacity_serializes_competing_approvals(self):
+        captain=self.players[0];castle=self.homes[0]['capital_id'];offers=[]
+        self.command(captain,'defense_offer',castle_id=castle,bracket='scout')
+        for i in range(4):
+            actor=self.add_member_company();row=self.command(actor,'defense_offer',castle_id=castle,bracket='scout')['defense'];offers.append(row)
+            if i<2:self.command(captain,'defense_approve',assignment_id=row['id'])
+        def approve(row):
+            try:self.command(captain,'defense_approve',assignment_id=row['id']);return 'ok'
+            except DomainError as error:return error.code
+        with ThreadPoolExecutor(2) as pool:outcomes=list(pool.map(approve,offers[2:]))
+        self.assertEqual(sorted(outcomes),['capacity','ok'])
+        self.assertEqual(self.db.world_defenses.count_documents({'castle_id':castle,'status':'active'}),4)
+
+    def test_human_owner_replaces_own_standing_force_without_duplicate(self):
+        attacker,defender=self.players
+        for actor,home in zip(self.players,self.homes):self.command(actor,'station',castle_id=home['frontier_id'])
+        self.phase()
+        offer=self.command(defender,'defense_offer',castle_id=self.homes[1]['frontier_id'],bracket='scout')['defense']
+        war=self.command(attacker,'war_propose',opponent_team_id=self.teams[1],target_ids=[self.homes[1]['frontier_id']],objective_area_id=None)['war']
+        self.command(defender,'war_approve',war_id=war['id'])
+        run=self.command(attacker,'attack',origin_id=self.homes[0]['frontier_id'],target_id=self.homes[1]['frontier_id'],bracket='scout',war_id=war['id'])['battle']['id']
+        self.command(defender,'battle_join',run_id=run,team_id=self.teams[1])
+        for actor in self.players:
+            self.command(actor,'battle_ready',run_id=run,ready=True);self.command(actor,'battle_approve',run_id=run)
+        self.phase();record=self.db.world_contracts.find_one({'_id':run})
+        own=[army for army in record['armies'] if army['account_id']==defender]
+        self.assertEqual(len(own),1);self.assertEqual(own[0]['controller'],'human');self.assertEqual(own[0]['assignment_id'],offer['id'])

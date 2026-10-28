@@ -24,7 +24,7 @@ COMMAND_FIELDS={
  'defense_offer':('castle_id','bracket'), 'defense_approve':('assignment_id',), 'defense_withdraw':('assignment_id',),
  'attack':('origin_id','target_id','bracket'), 'battle_join':('run_id','team_id'),
  'battle_ready':('run_id','ready'), 'battle_approve':('run_id',), 'battle_cancel':('run_id',),
- 'war_propose':('opponent_team_id','target_ids','objective_area_id'), 'war_approve':('war_id',)}
+ 'war_propose':('opponent_team_id','target_ids','objective_area_id'), 'war_approve':('war_id',), 'war_cancel':('war_id',)}
 TERMINAL=('completed','cancelled')
 WORLD_COLLECTIONS=('companies','company_soldiers','company_wounds','company_asset_locks','world_states','world_areas',
  'world_castles','world_teams','world_enrollments','world_enrollment_history','world_orders','world_defenses','world_wars','world_contracts',
@@ -202,7 +202,7 @@ class WorldProduct(CompanyProduct):
             'team':{'id':team['_id'],'name':team['name'],'supply':treasury['supply'] if treasury else 0,'world_eligible':treasury is not None,'last_title':treasury.get('last_title') if treasury else None,'captain':team['captain_id']==actor,'captain_id':team['captain_id'],'members':roster} if team else None,
             'areas':areas,'castles':castles,'teams':[{'id':t['_id'],'name':t['name'],'captain_id':t['captain_id']} for t in teams],
             'company_location':company.get('location') if company else None,
-            'defenses':self._world_defense_rows({'$or':[{'owner_id':actor}]+([{'team_id':team['_id']}] if team else [])},session),
+            'defenses':self._world_defense_rows({'$or':[{'owner_id':actor}]+([{'team_id':team['_id']}] if team else [])},session,actor),
             'wars':list(self.db.world_wars.find({'team_ids':team['_id']},session=session).sort('created_at',-1).limit(20)) if team else [],
             'capabilities':{'captain':bool(team and team['captain_id']==actor),'governor':bool(self.db.world_castles.find_one({'governor_id':actor},session=session)), 'company':company is not None}}
 
@@ -212,7 +212,7 @@ class WorldProduct(CompanyProduct):
         castle['governor_name']=governor['username'] if governor else None
         return castle
 
-    def _world_defense_rows(self, query, session=None):
+    def _world_defense_rows(self, query, session=None, actor=None):
         result=[]
         active_query={'$and':[query,{'status':{'$in':['offered','active','needs_review','withdraw_pending']}}]}
         for row in self.db.world_defenses.find(active_query,session=session).sort('created_at',-1).limit(32):
@@ -223,6 +223,8 @@ class WorldProduct(CompanyProduct):
                     from .domain import DomainError
                     if not isinstance(error,DomainError):raise
                     row['status']='needs_review';row['reason']=error.code
+            capacity=self._world_defense_capacity(row['castle_id'],row['team_id'],session,row['_id'])
+            row['can_approve']=bool(actor and row['status'] in ('offered','needs_review','active') and capacity['available']>0 and self.db.teams.find_one({'_id':row['team_id'],'captain_id':actor,'status':'active'},session=session))
             result.append(row)
         return result
 
@@ -242,7 +244,8 @@ class WorldProduct(CompanyProduct):
                 can_station=own and (distance==1 or distance==2 and (origin['roadworks'] or castle['roadworks']))
         names={t['_id']:t['name'] for t in self.db.teams.find({'status':'active'},{'name':1}).limit(64)}
         castle=self._world_castle_labels(castle,names)
-        return {'castle':castle,'eligible_origins':origins,'can_station':can_station,'defenses':self._world_defense_rows({'castle_id':key,'team_id':team['_id']}) if own else [],
+        return {'castle':castle,'eligible_origins':origins,'can_station':can_station,'defenses':self._world_defense_rows({'castle_id':key,'team_id':team['_id']},actor=actor) if own else [],
+            'defense_capacity':self._world_defense_capacity(key,team['_id']) if own else None,
             'contracts':[self._world_public_contract(x,actor) for x in self.db.world_contracts.find({'target_id':key,'state':{'$nin':list(TERMINAL)}}).limit(20) if self._world_can_view(actor,x)],
             'can_govern':captain,'can_develop':captain,'can_propose_development':own and castle['governor_id']==actor,'can_offer_defense':own,'can_attack':bool(team and not own and team['captain_id']==actor)}
 
@@ -281,6 +284,7 @@ class WorldProduct(CompanyProduct):
         team=self.db.teams.find_one({'_id':{'$in':run['team_ids']},'members.account_id':actor,'status':'active'})
         company=self._company(actor,required=False)
         if not team or not company:return False
+        if sum(a['team_id']==team['_id'] for a in run['armies'])>=4:return False
         if run['kind']=='world':
             state=self._world_state(required=False)
             if not state or state['phase'] not in ('planning','deployment'):return False
@@ -327,7 +331,7 @@ class WorldProduct(CompanyProduct):
         from .domain import _id, _now
         if operation=='skirmish_create':return self._world_skirmish_create(actor,p,session)
         if operation.startswith('battle_'):return self._world_battle_mutate(actor,operation,p,session)
-        state=self._world_state(session) if operation=='defense_withdraw' else self._world_planning(session)
+        state=self._world_state(session) if operation in ('defense_withdraw','war_cancel') else self._world_planning(session)
         if operation=='defense_withdraw':return self._world_defense_command(actor,None,state,operation,p,session)
         team=self._world_team(actor,session);tid=team['_id']
         if operation=='enroll':
@@ -348,7 +352,7 @@ class WorldProduct(CompanyProduct):
                 self.db.world_enrollments.replace_one({'_id':actor},{'_id':actor,'team_id':tid,'homeland_frontier_id':home['frontier_id'],'created_at':_now()},upsert=True,session=session)
                 self.db.companies.update_one({'_id':actor},{'$set':{'location':location},'$inc':{'revision':1}},session=session)
             return self._world_snapshot(actor,session)
-        if operation in ('war_propose','war_approve'):return self._world_war_command(actor,team,state,operation,p,session)
+        if operation in ('war_propose','war_approve','war_cancel'):return self._world_war_command(actor,team,state,operation,p,session)
         if operation.startswith('defense_'):return self._world_defense_command(actor,team,state,operation,p,session)
         if operation=='station':
             self._world_enrolled(actor,tid,session)
@@ -415,6 +419,12 @@ class WorldProduct(CompanyProduct):
                 if team_id is None or rows[other]['owner_team_id']==team_id:q.append((other,dist+1))
         return None
 
+    def _world_defense_capacity(self, castle_id, team_id, session=None, exclude=None):
+        query={'castle_id':castle_id,'team_id':team_id,'approved':True,'status':{'$in':['active','needs_review','withdraw_pending']}}
+        if exclude:query['_id']={'$ne':exclude}
+        count=self.db.world_defenses.count_documents(query,session=session)
+        return {'limit':4,'approved':count,'available':max(0,4-count)}
+
     def _world_defense_command(self, actor, team, state, op, p, session):
         from .domain import _id, _now
         if op=='defense_offer':
@@ -424,6 +434,7 @@ class WorldProduct(CompanyProduct):
             company=self._company(actor,session);self._company_available(actor,session)
             if company.get('location')!=castle['_id']:fail('wrong_station','Station your company at this castle before volunteering.')
             selection=deepcopy(company['warband']);selection['bracket']=p['bracket'];force=self._company_force(actor,selection,session)
+            if team['captain_id']==actor and self._world_defense_capacity(castle['_id'],team['_id'],session)['available']==0:fail('capacity','This castle already has four approved defense companies. Withdraw a permission before approving another.')
             row={'_id':_id(),'owner_id':actor,'username':force['username'],'team_id':team['_id'],'castle_id':castle['_id'],
                  'selection':selection,'bracket':p['bracket'],'status':'active' if team['captain_id']==actor else 'offered',
                  'approved':team['captain_id']==actor,'captain_approved_by':actor if team['captain_id']==actor else None,'run_id':None,'created_at':_now(),'revision':0}
@@ -436,6 +447,7 @@ class WorldProduct(CompanyProduct):
             castle=self._world_castle(row['castle_id'],session)
             if castle['owner_team_id']!=row['team_id'] or row['status'] not in ('offered','needs_review','active'):fail('stale_revision','This defense permission is no longer eligible.')
             self._company_force(row['owner_id'],row['selection'],session)
+            if self._world_defense_capacity(row['castle_id'],row['team_id'],session,row['_id'])['available']==0:fail('capacity','This castle already has four approved defense companies. Withdraw a permission before approving another.')
             self.db.world_defenses.update_one({'_id':row['_id']},{'$set':{'approved':True,'status':'active','captain_approved_by':actor},'$inc':{'revision':1}},session=session)
         else:
             if actor!=row['owner_id']:fail('forbidden','Only the owner can withdraw their standing permission.')
@@ -461,6 +473,11 @@ class WorldProduct(CompanyProduct):
                  'end_round':state['round']+2,'created_at':_now()}
             self.db.world_wars.insert_one(row,session=session);return {'war':row}
         row=self.db.world_wars.find_one({'_id':identifier(p['war_id'])},session=session)
+        if op=='war_cancel':
+            if row and team['_id'] not in row['team_ids']:fail('forbidden','Only a participating captain can cancel this proposal.')
+            if not row or row['state']!='proposed':fail('invalid_state','Only a proposed war can be cancelled.')
+            self.db.world_wars.update_one({'_id':row['_id']},{'$set':{'state':'cancelled','cancelled_by':actor,'cancelled_at':_now()}},session=session)
+            return {'war':self.db.world_wars.find_one({'_id':row['_id']},session=session)}
         if not row or team['_id'] not in row['team_ids'] or row['state']!='proposed':fail('forbidden','This war is not awaiting your team approval.')
         approvals=sorted(set(row['approvals']+[team['_id']]))
         self.db.world_wars.update_one({'_id':row['_id']},{'$set':{'approvals':approvals,'state':'active' if len(approvals)==2 else 'proposed','start_round':state['round'],'end_round':state['round']+2}},session=session)
@@ -536,7 +553,7 @@ class WorldProduct(CompanyProduct):
             if not team:fail('team_required','Join a participating team first.')
             if p['team_id']!=team['_id'] or team['_id'] not in run['team_ids']:fail('forbidden','Join with your current participating team.')
             if own:fail('already_joined','Your company already participates in this contract.')
-            if len(armies)>=8:fail('capacity','This battle already has eight companies.')
+            if len(armies)>=8 or sum(a['team_id']==team['_id'] for a in armies)>=4:fail('capacity','Each team can deploy at most four companies in this battle.')
             if run['kind']=='world':
                 self._world_enrolled(actor,team['_id'],session)
                 self._world_order_once(actor,run['round'],'battle',session)
@@ -657,6 +674,7 @@ class WorldProduct(CompanyProduct):
                     if not standing or not war or set(war['approvals'])!=set(run['team_ids']):fail('consent_required','The defending captain must approve this human defense.')
                     run['defense_consent']={'kind':'standing_permission','war_id':war['_id'],'assignment_ids':[a['assignment_id'] for a in standing]}
                     run['approvals']=sorted(set(run['approvals']+[run['defender_team_id']]))
+            if any(sum(a['team_id']==team_id for a in run['armies'])>4 for team_id in run['team_ids']):fail('force_review','Human and standing defense forces exceed four companies for one team. Review the lineup and permissions; no force was silently omitted.')
             for army in run['armies']:
                 self._world_enrolled(army['account_id'],army['team_id'],session)
                 location=self._company(army['account_id'],session).get('location')
