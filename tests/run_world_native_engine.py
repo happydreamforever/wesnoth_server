@@ -30,7 +30,10 @@ async def main():
     parser.add_argument('--reconnect', action='store_true')
     parser.add_argument('--worker-restart', action='store_true')
     parser.add_argument('--unit-audit', action='store_true', help='Separate test binary: native tables and synthetic XP, no settlement.')
+    parser.add_argument('--mongo', action='store_true', help='Disposable real production-domain Company settlement.')
     args=parser.parse_args()
+    if args.mongo and (args.case!='company' or args.unit_audit or args.worker_restart):
+        parser.error('--mongo currently verifies the Company production path without synthetic unit setup or worker restart.')
     output=Path('/out')/('native-run-'+uuid4().hex);output.mkdir()
     identity=output/'identity'
     prepare_identity(identity,'127.0.0.1',15001,Path('/usr/bin/openssl'))
@@ -86,7 +89,13 @@ async def main():
             assert value in (token,second_token) and role=='player'
             return {'_id':opponent if value==second_token else actor,'username':'Native companion'}
     second_token=secrets.token_urlsafe(32)
-    daemon=SimpleNamespace(storage=output/'battles',domain=domain,auth=Auth())
+    auth=Auth();mongo=None;worker_id=str(uuid4())
+    if args.mongo:
+        from world_native_mongo_fixture import MongoNativeFixture
+        mongo=MongoNativeFixture(output,args.mission)
+        domain,auth,descriptor=mongo,mongo.auth,mongo.descriptor
+        actor,token,run,generation,worker_id=mongo.actor,mongo.token,mongo.run,mongo.generation,mongo.worker_id
+    daemon=SimpleNamespace(storage=output/'battles',domain=domain,auth=auth)
     executable=Path('/out/world-unit-audit' if args.unit_audit else '/out/world-worker')
     supervisor=WorldWorkerSupervisor(daemon,identity,executable,Path('/gamedata'))
     errors=[]
@@ -104,7 +113,7 @@ async def main():
             except Exception:pass
         finally:writer.close()
     server=await asyncio.start_server(handle,'127.0.0.1',15002)
-    worker=asyncio.create_task(supervisor.launch(descriptor,str(uuid4())))
+    worker=asyncio.create_task(supervisor.launch(descriptor,worker_id))
     while run not in supervisor.rooms:await asyncio.sleep(.05)
     children,logs=[],[]
     async def companion(account,password_token,replay=False):
@@ -181,6 +190,7 @@ async def main():
             'native_worker_restart':args.worker_restart,
             'native_replay_after_cache_loss':True,
             'completed':True,'wire_errors':errors,'command_count':room.count,'evidence':domain.finished}
+        if mongo:result['production_mongo']=mongo.verify()
         (output/'result.json').write_text(json.dumps(result,indent=2))
         print('ACTUAL NATIVE WORLD COMBAT AND TERMINAL EVIDENCE PASSED',output,flush=True)
     finally:
@@ -188,5 +198,6 @@ async def main():
             if p.returncode is None:p.kill();await p.wait()
         for log in logs:log.close()
         await supervisor.close();server.close();await server.wait_closed()
+        if mongo:mongo.close()
 
 if __name__=='__main__':asyncio.run(main())
