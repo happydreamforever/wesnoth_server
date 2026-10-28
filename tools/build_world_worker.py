@@ -108,6 +108,7 @@ def binding():
              ROOT/'tools/world_worker_recovery.py',
              ROOT/'tools/world_worker_resource_recovery.py',
              ROOT/'tools/world_worker_ninja_recovery.py',
+             ROOT/'tools/world_worker_account_recovery.py',
              ROOT/'tools/world-worker-packages-1192624.json', DEPENDENCY_PREFIX/'receipt.json']
     paths += [CLIENT/'tools'/name for name in ('prepare_android_source.py','verify_game_data.py','gamedata-1.19.26.reference.json')]
     paths += [path for directory in ('engine', 'alliance_game', 'alliance_native')
@@ -643,6 +644,24 @@ def build_locked(msys, cmake, game_data, preserve, ninja_report=None):
     STAGE.parent.mkdir(exist_ok=True)
     with build_step('game-resource-check'):
         game_resource_preflight(prefix, environment)
+    from tools import world_worker_account_recovery as account_source
+    account_pending = account_source.account_recovery_pending(STAGE)
+    account_owner = metadata(STAGE/'owner.json') if STAGE.exists() else None
+    account_revision = (account_owner is not None and not (STAGE/'receipt.json').exists()
+        and account_owner.get('inputs', {}).get('wesnoth_server/tools/build_world_worker.py')
+            in account_source.LEGACY_BUILDERS and account_owner != expected)
+    if ninja_report is not None and (account_pending or account_revision
+            or account_owner is not None and account_source.INPUT in account_owner.get('inputs', {})):
+        raise BuildError('Ninja history recovery is already complete. Omit -NinjaReportPath for this account-source continuation; retain the original report.')
+    if account_pending or account_revision:
+        if not preserve:
+            raise BuildError('Account-source continuation requires -PreservePreviousBuild; retain all existing files.')
+        def validate_account_source():
+            prepare_worker_overlay(validate_existing=True)
+            verify_resource_rule(STAGE)
+            verify_ninja_configuration(STAGE)
+        account_source.resume_account_stage(STAGE, expected, validate_account_source)
+        print('WORLD WORKER ACCOUNT SOURCE RETRY PREPARED; existing compilation retained', flush=True)
     if ninja_report is not None or ninja_state.pending(STAGE):
         if not preserve:
             raise BuildError('Pending Ninja recovery requires -PreservePreviousBuild; retain all files.')
