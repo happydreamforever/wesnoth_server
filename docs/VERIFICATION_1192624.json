@@ -990,5 +990,11 @@
     "No production Windows database, password, private profile, runtime or campaign save was accessed or reset.",
     "Historical user acceptance is retained. Windows1192624 A-Z and the earlier authored-campaign duplicate-reward check remain pending."
   ],
-  "worker_dependency_followup": "WORLD_WORKER_DEPENDENCY_VERIFICATION_1192624.json"
+  "worker_dependency_followup": "WORLD_WORKER_DEPENDENCY_VERIFICATION_1192624.json",
+  "python312_followup": {
+    "record": "PYTHON312_VERIFICATION.json",
+    "windows_guide": "PYTHON312_TRANSITION.md",
+    "prior_build_evidence_preserved": true,
+    "status": "vps_verified_windows_cutover_pending"
+  }
 }

@@ -1,6 +1,6 @@
 # Windows acceptance — Companies and Territorial Wars 1192624
 
-Status: the Windows inventory is reviewed: 24 existing pinned MINGW64 packages and their cached archives were reported. The complete worker closure adds 83 library packages in a separate prefix. Prepare the signed cache while connected, then verify and materialize it offline at D before migration. Windows worker compilation and A-Z acceptance remain pending. Final coordinated commits are supplied in the release handoff.
+Current checkpoint (2026-10-28): A/B and D's signed-package download have passed at the supplied Windows-console scope. The private backup contains 113 files / 257,065,798 bytes; all 107 worker archives/signatures are cached. The later client Git integrity check returned `GIT_CHECK_EXIT: 0` after the pull's unavailable-index warnings. No repair, repeat backup or repeat package download is needed. The user now requests Python 3.12: complete [P1–P3](PYTHON312_TRANSITION.md) first, then resume D at offline prefix preparation. Windows prefix preparation, schema-4 migration, builds and gameplay remain pending.
 
 Use the existing `runtime-v2`, accounts, Teams, earned heroes, campaign saves, bundled public profile, original Android signer and one LDPlayer. This release explicitly upgrades schema 3 to 4 in place. It does not initialize another database, create founding Teams automatically or grant replacement heroes. Previously accepted results remain historical evidence; untested new behavior is NOT RUN.
 
@@ -14,7 +14,7 @@ The worker needs 107 pinned packages in total. The 83 additional archives total 
 
 The isolated prefix is assembled from verified archives, not from installed files that package scripts may have changed. Internal package hardlinks become independent files; installer scripts and hooks are not executed. The exact 57,474-file prefix occupies 1,686,953,610 bytes. Keep at least 3 GB free for dependency preparation, plus the additional space required by the full worker and retained Android builds. Cold backup, migration and build storage need their own headroom.
 
-Follow A-B-C, then D below. Do not rerun the preliminary inventory or use `pacman -Syu`. Details and provenance: [worker dependency preparation](WORLD_WORKER_DEPENDENCIES_1192624.md).
+A–C and the online portion of D below are retained for the original sequence. At the current checkpoint, follow the Python transition and then D's offline command. Do not rerun the preliminary inventory or use `pacman -Syu`. Details and provenance: [worker dependency preparation](WORLD_WORKER_DEPENDENCIES_1192624.md).
 
 ## A. Save and stop
 
@@ -63,7 +63,7 @@ Expected: both pulls succeed and print the release commits. Preserve unrelated R
 
 ## D. Download once, then prepare the isolated worker offline
 
-After C, while internet is available, run:
+The following online download already passed on 2026-10-27; retain it as historical instructions, not the next command:
 
 ```powershell
 & {
@@ -77,7 +77,7 @@ After C, while internet is available, run:
 
 Expected: `WORLD WORKER PACKAGE CACHE VERIFIED`, 107 pinned archives/signatures verified, and the original package inventory preserved. Reports: `diagnostics\world-worker-packages-*.txt` and `.json`. Keep the cache and its journals. Existing mismatched files, a changed toolchain or failed signature stop preparation instead of being overwritten. No database or service is started. Stop here and return the console plus saved text/JSON reports, including on success. Continue with offline preparation only after this result has been reviewed.
 
-Disconnect WAN while keeping local Ethernet connected, record this once for the offline batch, then run:
+Next after Python P3 has been reviewed: keep WAN disconnected and local Ethernet connected, carrying P3's single batch status, then run:
 
 ```powershell
 & {
@@ -97,6 +97,8 @@ The earlier `Test-WindowsWorldWorkerDependencies.ps1` audits installed MSYS file
 
 ```powershell
 $ErrorActionPreference = 'Stop'
+$worldRuntime = Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2'
+$worldBackup = 'C:\Users\Uni\AppData\Local\WesnothAlliance\backups\before-1192624-20261027-234120-963-9a74eff719334e9d885999ef17b69d7d'
 if (-not $worldBackup -or -not (Test-Path -LiteralPath (Join-Path $worldBackup 'manifest.json') -PathType Leaf)) {
     throw 'Restore the exact verified B backup path in $worldBackup first.'
 }

@@ -1,0 +1,653 @@
+{
+  "recorded": "2026-10-28",
+  "status": "vps_verified_windows_transition_pending",
+  "release": 1192624,
+  "protocol": 4,
+  "schema": 4,
+  "target": "Official Windows CPython 3.12.10 x64; explicit helper paths and separate alliance-venv-py312",
+  "python_source": {
+    "version": "3.12.10",
+    "url": "https://www.python.org/ftp/python/3.12.10/Python-3.12.10.tar.xz",
+    "bytes": 20520960,
+    "sha256": "07ab697474595e06f06647417d3c7fa97ded07afc1a7e4454c5639919b46eaea",
+    "official_release_md5_matched": true,
+    "source_only_build_for_linux_verification": true
+  },
+  "verification_runtime": {
+    "python": "3.12.10",
+    "platform": "Linux x86_64",
+    "prefix": "wesnoth_server/build/host-python-3.12.10",
+    "built_from_official_source": true,
+    "source_build_network": "none",
+    "backend_test_network": "none",
+    "mongo": "8.0.32 disposable replica set",
+    "nofile": 65536,
+    "existing_container_names_include_python314_but_tests_explicitly_invoke_python31210": true
+  },
+  "windows_evidence": {
+    "attachment": {
+      "sha256": "b20cfa3a71fb8f4c442908f7586b0c99d22cde6ecdc501c7a9651ad573018056",
+      "bytes": 76815
+    },
+    "cold_backup": {
+      "files": 113,
+      "bytes": 257065798,
+      "schema_checked": false,
+      "private_path": "C:\\Users\\Uni\\AppData\\Local\\WesnothAlliance\\backups\\before-1192624-20261027-234120-963-9a74eff719334e9d885999ef17b69d7d"
+    },
+    "reported_heads": {
+      "server": "24129be2cb8c8a82c2943f0cf76beecdd4597a60",
+      "client": "5dff239ba895cd02c214c17c1ae1972519e1f697"
+    },
+    "package_cache": "107 signed pinned archives verified in supplied console",
+    "git_integrity_followup": "GIT_CHECK_EXIT: 0",
+    "scope": "Supplied Windows console only; saved reports/private backup not opened on VPS; Python3.12 Windows acceptance pending; WAN connected for prior download."
+  },
+  "dependencies": {
+    "versions_unchanged": 17,
+    "windows_wheel_changes": [
+      {
+        "filename": "cffi-2.1.1-cp312-cp312-win_amd64.whl",
+        "size": 185919,
+        "sha256": "f53e442b08449d42821fa4a4fba000095af9f62742a500f978a9f557ec44339a",
+        "requires_python": "Requires-Python: >=3.10"
+      },
+      {
+        "filename": "markupsafe-3.0.4-cp312-cp312-win_amd64.whl",
+        "size": 14303,
+        "sha256": "11935df9bf455ed0c04eb87bcd720f02b1fe5e02128a9430f23aed6f93336fc7",
+        "requires_python": "Requires-Python: >=3.9"
+      },
+      {
+        "filename": "pymongo-4.18.3-cp312-cp312-win_amd64.whl",
+        "size": 822079,
+        "sha256": "dc8ccf72b76c99a6b9fd05f8b89fe4a693128c5cfdba70f70e5792a6a563f6b0",
+        "requires_python": "Requires-Python: >=3.9"
+      }
+    ],
+    "new_bytes": 1022301,
+    "mongodb_pins_unchanged": true,
+    "legacy_manifest_and_requirements_archived_byte_identically": true
+  },
+  "tests": [
+    {
+      "group": "server wrappers/builders/workflow",
+      "count": 267,
+      "passed": 267,
+      "skipped": 0,
+      "runtime": "3.12.10",
+      "note": "Before final four publication regressions; affected transition tests rerun separately."
+    },
+    {
+      "group": "current unified/flexible/Company/World/worker-authority/migration",
+      "count": 111,
+      "passed": 111,
+      "skipped": 0,
+      "runtime": "3.12.10",
+      "note": "Real local MongoDB, worker authority fixtures; no new full-engine execution claim."
+    },
+    {
+      "group": "auth/admin/web/login diagnostics/TLS and transfer/history",
+      "count": 169,
+      "passed": 169,
+      "skipped": 0,
+      "runtime": "3.12.10"
+    },
+    {
+      "group": "cold migration/maintenance/deployment",
+      "unique_count": 31,
+      "passed": 31,
+      "runtime": "3.12.10",
+      "note": "Initial run skipped the actual-deployment case without its env flag; rerun with owned mongod passed after correcting the obsolete1192617 expected health release."
+    },
+    {
+      "group": "worker archive/dependency cases",
+      "count": 36,
+      "passed": 36,
+      "skipped": 0,
+      "runtime": "3.12.10"
+    },
+    {
+      "group": "client builder/preservation",
+      "unique_count": 102,
+      "passed": 102,
+      "runtime": "3.12.10"
+    },
+    {
+      "group": "client PowerShell helper simulations",
+      "count": 48,
+      "passed": 48,
+      "runtime": "3.12.3 plus Linux PowerShell7.4.6"
+    },
+    {
+      "group": "PowerShell parsing",
+      "server_files": 25,
+      "client_files": 28,
+      "acceptance_blocks": 11,
+      "status": "passed"
+    }
+  ],
+  "publication_final_tests": {
+    "dependency_cache_suite": 73,
+    "full_transition_and_windows_helpers": 58,
+    "runtime": "3.12.10",
+    "network": "none",
+    "skipped": 0,
+    "note": "Linux PowerShell needed invariant globalization and its fixture Python path mapped to the explicit3.12.10 runtime. Initial harness-only failures retained."
+  },
+  "native_module_smoke": {
+    "status": "passed",
+    "runtime": "3.12.10",
+    "network": "none",
+    "checks": [
+      "Argon2 hash/verify fixture",
+      "CFFI allocation",
+      "native BSON roundtrip",
+      "MarkupSafe speedups",
+      "Flask testclient",
+      "Flask-WTF and Waitress imports",
+      "TLS1.2 and TLS1.3 contexts"
+    ],
+    "account_or_database_access": false
+  },
+  "archive_verification": {
+    "scope": "Actual Linux Python3.12.10 archive verification and existing isolated-prefix reuse; container network disabled; no Windows execution",
+    "python": "3.12.10",
+    "zstd": "*** Zstandard CLI (64-bit) v1.5.5, by Yann Collet ***",
+    "packages": 107,
+    "files": 57474,
+    "bytes": 1686953610,
+    "lock_sha256": "dcff87184e3a549d9ec25296d4363a0ff983295eb680491081b2760b0847aec7",
+    "receipt_preserved": true,
+    "receipt_sha256": "bf2f48a84d716f8e3e2c36b2264f35b8f59907dbf2693c21ff73512a264c240e",
+    "prefix_files_sha256": "118b1baf407947a528f80130cfebce9430149e138dea0974f1e312923c9a6b2f",
+    "windows_decoder_payload_pins_verified": true,
+    "elapsed_seconds": 109.85576721199322,
+    "inputs": {
+      "tools/world_worker_archive_prefix.py": "b79ce611920413c8f4d411b73dff11de443111ecd75478a2f43982c09b00fb2f",
+      "tools/build_world_worker.py": "1afb04004e3e1593d4f81150e6c8f4323ffcac34fd7bc58e2a9e441ea316dd05",
+      "tests/test_world_worker_archive_prefix.py": "214391a9590bc4d3d00326588c57dfa0e2e9dd25a1cc6561050f63bd07355c96",
+      "tests/test_world_worker_dependencies.py": "621c58155e3d9ff4f49b7a453a9c00ff5a4f21d0937247b5255edf6628a0aa62"
+    }
+  },
+  "client_verification": {
+    "scope": "Client Windows Python312 defaults and completed-build preservation; no native rebuild or Windows execution.",
+    "windows_runtime": "CPython 3.12.10 x64",
+    "tests": {
+      "exact_python31210_initial_builder_suite": 101,
+      "exact_python31210_final_alliance_suite": 21,
+      "unique_builder_tests_after_final_addition": 102,
+      "python3123_account_powershell_simulations": 35,
+      "python3123_alliance_powershell_simulations": 13,
+      "changed_powershell_files_parsed": 28,
+      "python312_source_syntax_files": 37
+    },
+    "actual_retained_account_verification": {
+      "python": "3.12.10",
+      "network": "disabled",
+      "workspace": "read-only",
+      "bound_inputs": 198,
+      "receipt_sha256": "d9a0f21a2f6586c59dc87373f40963b26ed43e60af4e36e9129c6e9209d371df",
+      "apk_bytes": 47012576,
+      "apk_sha256": "c7a72c4dee4422cf403c88a9a08dd5a2e854b18dc507e285af558fa8c5483dc8",
+      "original_signer_reverified": true,
+      "public_profile": "original build fixture retained"
+    },
+    "preservation": {
+      "readme_bytes": 0,
+      "stages_deleted": false,
+      "receipts_rewritten": false,
+      "game_sources_changed": false
+    },
+    "logs": {
+      "python31210-final-alliance-tests.log": {
+        "bytes": 5031,
+        "sha256": "451f9cff2e2fcd84a87959e5fb82c06b38d612f5958755287ba2eef6a2df7712"
+      },
+      "python31210-account-artifacts.log": {
+        "bytes": 598,
+        "sha256": "b67c3a3b4889d92c60b7d0ea72474b36a0a3530e2ffd49c25d0c3600868d8df5"
+      },
+      "python312-windows-simulations.log": {
+        "bytes": 72798,
+        "sha256": "b6a247438593b00e616cf10661f662ed107bd4173a4341f708bae0803dad4275"
+      },
+      "python31210-builders.log": {
+        "bytes": 34669,
+        "sha256": "970198056da036caeca9a0c1ef08094fff3354c2fed4350566e38527122931d5"
+      },
+      "retained-alliance-verify.log": {
+        "bytes": 426,
+        "sha256": "ad1bff644927bae041f30fdf999fd2fd5f36de5f25a7b9e110361a735a8c50f9"
+      },
+      "python31210-account-signer.log": {
+        "bytes": 1052,
+        "sha256": "15f3be3ecd8ea80e71c3a66b8b7ae27bce3a2b5455a413dcdb6d17e93c556f54"
+      },
+      "python31210-account-verified.log": {
+        "bytes": 1871,
+        "sha256": "712baaacfd9cb7a50432503435a19333dda68ebbd002a7eaa8e2780cf8d39a9d"
+      },
+      "python312-alliance-windows-retest.log": {
+        "bytes": 1869,
+        "sha256": "195fe761e78910667c3aa3c6ddd12470e4a7f852e9730745835c79358468cc09"
+      },
+      "powershell-parse.log": {
+        "bytes": 31,
+        "sha256": "d3b26f21583056c5a9bde98e9db660ce947df97e17901f6fbe6d022dbf56ce82"
+      },
+      "python312-builders.log": {
+        "bytes": 34668,
+        "sha256": "6e7112e117f53a14e65f4f4ae293c276395390b131a85f1cf3928fd5fe843349"
+      }
+    },
+    "test_harness_note": "Initial combined unittest invocation omitted the standalone Alliance fixture required --pwsh argument; that fixture was rerun with its documented CLI and all13 tests passed. No production defect was implicated.",
+    "verification_context_note": "Host account receipt read stopped at existing permissions; initial container default .env was not the original public-build fixture. Final verification used the recorded fixture and read-only mounts and passed."
+  },
+  "backend_regression_review": {
+    "python": "3.12.10",
+    "status": "passed",
+    "tests": 169,
+    "skipped": 0,
+    "container": "wesnoth-alliance-verify:python3.14.3-mongo8.0.32",
+    "network": "none",
+    "nofile": 65536,
+    "database": "disposable MongoDB8.0.32 replica set, tmpfs",
+    "baseline_python": "3.14.3",
+    "baseline_result": "The unchanged old test fixtures reproduce21failures and2errors with raised descriptor limit; these are not Python3.12 regressions.",
+    "corrections": [
+      "Current schema4 positive diagnostic fixture retains unsupported-schema negatives.",
+      "Current implementation release1192624 health expectations retain stale/malformed/future-release negatives.",
+      "Recorded participants keep historical read access; departed members cannot mutate and unrelated strangers cannot read.",
+      "Governance checks actual preparing/running battles, not obsolete team-wide active_run_id.",
+      "Invalid request envelope, invalid domain fields, and missing record assertions have exact status/error pairs."
+    ],
+    "production_fix": "Validate captain successor using _player(new_captain_id, session), preserving current-member guard and serializing against suspension in same transaction. Independent before-fix HTTP test returned200 for suspended successor; after-fix409 busy and403 suspended tests pass.",
+    "evidence": [
+      {
+        "path": "build/audit-python312-transition-20261028/backend-python312.log",
+        "bytes": 158942,
+        "sha256": "5e88d8c04b59ab3af6548be93acfe9451489a3b0e5ead7bd31156a9e09fc0dae",
+        "summary": [
+          "Ran 154 tests in 132.869s",
+          "FAILED (failures=21, errors=23, skipped=5)"
+        ],
+        "skips": 5,
+        "mongo_descriptor_failure": true
+      },
+      {
+        "path": "build/audit-python312-transition-20261028/backend-legacy-python314-baseline.log",
+        "bytes": 45000,
+        "sha256": "873d3b6e566cd308cefad95ba6f83e45418dab8cf000e6321117309fb692f3fa",
+        "summary": [
+          "Ran 124 tests in 50.766s",
+          "FAILED (failures=21, errors=2)"
+        ],
+        "skips": 0,
+        "mongo_descriptor_failure": false
+      },
+      {
+        "path": "build/audit-python312-transition-20261028/backend-account-python312-focused.log",
+        "bytes": 8850,
+        "sha256": "b5071376cdc67532d93aa1ee5e681a843870a0ba3684c3a000b3e97002940068",
+        "summary": [
+          "Ran 51 tests in 31.457s",
+          "OK"
+        ],
+        "skips": 0,
+        "mongo_descriptor_failure": false
+      },
+      {
+        "path": "build/audit-python312-transition-20261028/captain-suspended-regression-before.log",
+        "bytes": 4930,
+        "sha256": "8f345cf7afba31af1986538e565363885a6413702312b16238c60aa4cd6aacb4",
+        "summary": [
+          "Ran 1 test in 1.270s",
+          "FAILED (failures=1)"
+        ],
+        "skips": 0,
+        "mongo_descriptor_failure": false
+      },
+      {
+        "path": "build/audit-python312-transition-20261028/backend-auth-web-tls-python312.log",
+        "bytes": 38638,
+        "sha256": "414fa05dfd95b91e744c4677166a14b4381d82ebd68244ae90d796c54a05cf73",
+        "summary": [
+          "Ran 166 tests in 41.975s",
+          "FAILED (failures=6)"
+        ],
+        "skips": 0,
+        "mongo_descriptor_failure": false
+      },
+      {
+        "path": "build/audit-python312-transition-20261028/backend-captain-affected-python312.log",
+        "bytes": 6096,
+        "sha256": "7a7258bec5fea8bc1796665ff16d007756db92c1c05195978438a2d308fb74d5",
+        "summary": [
+          "Ran 4 tests in 5.207s",
+          "FAILED (failures=1)"
+        ],
+        "skips": 0,
+        "mongo_descriptor_failure": false
+      },
+      {
+        "path": "build/audit-python312-transition-20261028/backend-auth-web-tls-python312-final.log",
+        "bytes": 29007,
+        "sha256": "b0df6ff457b3a43819d7b376cf8a6245a19f86dc9aec00474fb57abfc8a15974",
+        "summary": [
+          "Ran 169 tests in 47.529s",
+          "OK"
+        ],
+        "skips": 0,
+        "mongo_descriptor_failure": false
+      }
+    ],
+    "sources": {
+      "alliance/flexible.py": "177cbfa764528c171b0068d9c8eddea6349621435bf62a9f584c70609d99fde0",
+      "tests/test_alliance_web.py": "b45012f7ae806a833cd0ed4094a0d791f493ebdb11925b6c2383e728c1784dea",
+      "tests/test_alliance_login_check.py": "57b9d815172563736b3c160e4e6d334743e552ea4a58f189e82bc1b03b7c7143",
+      "tests/test_alliance_backend_check.py": "4b56ad9b03033def7cb4bd93b29caf6aa963a85c2f908650c8ca2e7c4aa12a86"
+    },
+    "limits": [
+      "VPS Linux runtime, not actual WindowsPython3.12 execution.",
+      "No production runtime, account, password or existing game data touched."
+    ]
+  },
+  "independent_server_review": {
+    "scope": "Read-only review of preserving server Python3.12 transition; no Windows execution or production data changes.",
+    "powershell_parser": "actual Linux PowerShell7.4.6",
+    "powershell_files": {
+      "tools/Alliance-Common.ps1": "4108e03b5d943ef2573b31f130ecdec42a9b85951ada0c9034ec652b1560f2e3",
+      "tools/Build-WindowsAllianceBridge.ps1": "34ca7024368a25444be916c70b5591667a57b893316c4e4bfc497325e9df2ac4",
+      "tools/Build-WindowsMultiplayer.ps1": "d757d488a8119b49d0ef6e46a9a988b9a1c137366faf5215156e0c3b64ec47a1",
+      "tools/Build-WindowsWorldWorker.ps1": "5479509466ccf302639e6638f7843c0c592e6cc28be9ea540655ba8850c513eb",
+      "tools/Initialize-WindowsUnifiedGame.ps1": "4e65dd18ab7e9919af35c370c26f4b3ae6bc32ff455a66b69850d065fab951d4",
+      "tools/Install-WindowsAlliancePython312.ps1": "5182ed5429cfc3e5fa94ac9ed9179e279697267bbe124fd1a03a3afd85d98831",
+      "tools/Invoke-WindowsAllianceMaintenance.ps1": "150ee894aaef4ad321021403442220abdb573a872a8e9d7aab432c8daf479ce6",
+      "tools/Migrate-WindowsAllianceRuntime.ps1": "355e3d8d0911f1441d4bd010e1c3a57eaca89d27710f40aca58d4a04f6348274",
+      "tools/Prepare-WindowsAlliancePython312.ps1": "5bf371a108792bc9aca623aa8da7f75bd394ed8a956636f9576485604c9d2714",
+      "tools/Prepare-WindowsWorldWorker.ps1": "4a39833dbdb756d50580fa0d00d655a185e1dcf6d8da06c2c3541902ef71f8b3",
+      "tools/Prepare-WindowsWorldWorkerPackages.ps1": "669b259704764043c3665f944e7dbdfe92862011521aa091eaafa07d12798398",
+      "tools/Rebuild-WindowsAllianceBridge.ps1": "87429116a72f55f4d9b81b9f9338d0612540fbb8e301636acf3daac106a2d8e1",
+      "tools/Run-WindowsAllianceBattles.ps1": "36e6bb891551855905a73338b405a6111d9b805ae6a371f6c736156fad98a22d",
+      "tools/Run-WindowsAllianceBridge.ps1": "8002ede517e7ed45ff72717ad88c3a94f6f9d09ec6498e02362a86d7dcb243f2",
+      "tools/Run-WindowsMultiplayer.ps1": "6a074f06f51feb73f6bb3008b0735eeb7fbfaac3cec52470d33767aae1b4bb27",
+      "tools/Run-WindowsWorldCompanion.ps1": "f8948dbdb1907303a3eb993b1b6cdf122e03d5d5df90ecc5a7b1a469705a9df2",
+      "tools/Start-WindowsAllianceStack.ps1": "7dc0015bee491f16eed73ba2c36427882bee1854cb88bee73f05cb098e11118f",
+      "tools/Test-WindowsAllianceBackend.ps1": "a6b066d2de0b15bbc05c56ee325f48fea1f755150659869500d636d230a18873",
+      "tools/Test-WindowsAllianceLogin.ps1": "c6463c113c2a243fe19996e2b5b6c9693b58336f16845ae062c2c6a46b793727",
+      "tools/Test-WindowsAllianceNative.ps1": "79933642861321dc9a58fde199ca9cf4ed52062431887366d4be3fbd77ff7790",
+      "tools/Test-WindowsAllianceTransport.ps1": "65fd4bfa3144d7d78997a3180acef2dadf88e01e9b372e578e99b4820640e190",
+      "tools/Test-WindowsMongoStartup.ps1": "01e579333de4b4a6caa03450bc4f8a7c0eaa5e092a6c78a447597906aab774fb",
+      "tools/Test-WindowsServer.ps1": "5c26ee07fcbb126965ead19cfd708412a156d764a70f7d66d7830e32863bd997",
+      "tools/Test-WindowsWorldWorkerDependencies.ps1": "ecc6bc5a6c9255e0ee9650ca13df032fe45a22d7ec980fa3d0ae8a86966f3772",
+      "tools/Trace-WindowsAllianceLogin.ps1": "b178ecd4212fa41cf3ed93b75d30e0d2deb08b28ae65dc4bf3362f68bfc4fc1f"
+    },
+    "powershell_parse": "pass",
+    "findings": [
+      {
+        "code": "partial-canonical-wheel-on-copy-interruption",
+        "status": "resolved: exclusive atomic publication and verified temporary-file offline resume",
+        "reproduction": {
+          "canonical_partial_retained": true,
+          "complete_download_retained": false,
+          "retry_rejected": "Dependency differs from its pin; preserved for inspection: fixture.whl"
+        },
+        "resolution": {
+          "canonical_file_absent_after_publication_failure": true,
+          "verified_download_retained": true,
+          "offline_resume_publishes_complete_bytes": true,
+          "network_during_resume": false,
+          "result_hard_links": 1,
+          "review_runtime": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+          "source_sha256": "ecdf0d1a5ec604ff9a0b98edfb10c122c7a811fc4e7742c471e215a60c8a576f"
+        }
+      }
+    ],
+    "reviewed": [
+      "tools/alliance_dependencies.py",
+      "tools/Prepare-WindowsAlliancePython312.ps1",
+      "tools/Install-WindowsAlliancePython312.ps1"
+    ],
+    "otherwise_confirmed": [
+      "new venv is separate from legacy venv and MongoDB; overlaps/links rejected",
+      "five service ports are held exclusively during transition",
+      "offline installation uses no-index, require-hashes, no-deps and wheel-only flags",
+      "old venv and MongoDB inventories checked before/after and across retries",
+      "runtime files and schema are not opened",
+      "installed version and native ABI checks run through the new interpreter",
+      "completed transition checks again without reinstalling"
+    ],
+    "final_review": "No remaining handoff blocker identified in reviewed Python transition paths.",
+    "powershell_files_unchanged_since_parse": true
+  },
+  "preservation": {
+    "old_venv_and_mongodb_inventory_checked_by_transition": true,
+    "windows_runtime_not_accessed_on_vps": true,
+    "package_lock_unchanged": true,
+    "apk_and_original_signer_unchanged": true,
+    "both_user_readme_bytes": 0,
+    "no_build_stage_deleted": true,
+    "no_game_rebuild_for_python_only": true
+  },
+  "limits": [
+    "No actual WindowsPython3.12 execution yet.",
+    "NativeABI smoke executes Linux CPython3.12 wheels on VPS; Windows wheels receive equivalent smoke at P3.",
+    "PowerShell simulations are not Windows native execution.",
+    "Existing native/Android gameplay evidence remains historical; this follow-up does not rerun fullengine gameplay or compile Android.",
+    "Python3.12.10 is the last official full Windows installer, not latest source-only security patch.",
+    "Isolated MINGW closure retains its own Python3.14.7 package; it is not the project interpreter."
+  ],
+  "logs": [
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/actual-deployment-python312-final.log",
+      "bytes": 269,
+      "sha256": "b48f3a5117069c541dc62a361ad5935979940e040de1ea094716b059747af1f6"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/actual-deployment-python312.log",
+      "bytes": 894,
+      "sha256": "a063f2a0a7cec42eb4f118a507a5e888bd498870078f3807b3348168abaed0fc"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/atomic-publication-exact31210.log",
+      "bytes": 12311,
+      "sha256": "f6cbaa2ae0f5c347e419b423fbdde4a9f36122eabe10cccfe919d2174c22aead"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/atomic-publication-tests.log",
+      "bytes": 12311,
+      "sha256": "6e5a9571de8df7c7df145faa18ae4d30390b831cd909ee64cf4a2fb6f1b34b6b"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/backend-account-python312-focused.log",
+      "bytes": 8850,
+      "sha256": "b5071376cdc67532d93aa1ee5e681a843870a0ba3684c3a000b3e97002940068"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/backend-auth-web-tls-python312-final.log",
+      "bytes": 29007,
+      "sha256": "b0df6ff457b3a43819d7b376cf8a6245a19f86dc9aec00474fb57abfc8a15974"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/backend-auth-web-tls-python312.log",
+      "bytes": 38638,
+      "sha256": "414fa05dfd95b91e744c4677166a14b4381d82ebd68244ae90d796c54a05cf73"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/backend-captain-affected-python312.log",
+      "bytes": 6096,
+      "sha256": "7a7258bec5fea8bc1796665ff16d007756db92c1c05195978438a2d308fb74d5"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/backend-legacy-python314-baseline.log",
+      "bytes": 45000,
+      "sha256": "873d3b6e566cd308cefad95ba6f83e45418dab8cf000e6321117309fb692f3fa"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/backend-python312.log",
+      "bytes": 158942,
+      "sha256": "5e88d8c04b59ab3af6548be93acfe9451489a3b0e5ead7bd31156a9e09fc0dae"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/captain-suspended-regression-before.log",
+      "bytes": 4930,
+      "sha256": "8f345cf7afba31af1986538e565363885a6413702312b16238c60aa4cd6aacb4"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/cold-recovery-python312.log",
+      "bytes": 5802,
+      "sha256": "db533db1e50c755f33e384c52112c7fd2b9db312ef17891f9dbd23bff3d0d76b"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/current-backend-python312.log",
+      "bytes": 17538,
+      "sha256": "ce606f16ff45ec56f2c92e495a59efcb9b005efa78865cf0caf1806e42cb1e1c"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/dependency-tests.log",
+      "bytes": 10559,
+      "sha256": "2692dba9a8b09968a59871e192417581a775b2e543b38c45fa79238006bf3788"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/full-transition-windows-exact31210-configured.log",
+      "bytes": 12312,
+      "sha256": "b8d1ac09207b0a13842d7903b695fd3fc79bde23570a25a2f4c2a0ece66f424b"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/full-transition-windows-exact31210-invariant.log",
+      "bytes": 20748,
+      "sha256": "a539cc9e7ab22d7110d5e37d8d1ff7e7d29a5e71064bb228db002752706e832e"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/full-transition-windows-exact31210.log",
+      "bytes": 22539,
+      "sha256": "5497957a7afa361b785364820a59a7597c561d88ac4cd22dfe5a77247e8d490c"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/handoff-parse.log",
+      "bytes": 38,
+      "sha256": "6ec4f3896020a5c603151722f1957fc9b669010c9ce10c6c1887930262a96a84"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/linux-offline-install.log",
+      "bytes": 4079,
+      "sha256": "20c1e823bba40682145fd536ee4c26ef4de642633dbabd1493fa05a2cefecb9d"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/linux-wheel-download.log",
+      "bytes": 6504,
+      "sha256": "ffc1418a60820f6922efda0557708e257e52a9877df0e444002ca0aaa9a1118e"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/native-smoke-actual31210.log",
+      "bytes": 94,
+      "sha256": "e13e7ee755fac5e4e76b7470e4e77505c3f7e33ec671dc810fa69bc20c527aab"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/native-smoke-transition-tests.log",
+      "bytes": 3108,
+      "sha256": "7cea35de02d4d51de29d64c15ebc8de62d2a71d62690204001a4c29dc72fce35"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/python-build.log",
+      "bytes": 1757510,
+      "sha256": "65c3071ebd16ae48620f6156d942bea66a019990732e312d4b26cada12bfdc80"
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/wrappers-and-builders-python312.log",
+      "bytes": 56391,
+      "sha256": "3653d28fc0c698925d2a160917d392ecaef8b84edc27523bf0635adbee5ac647"
+    }
+  ],
+  "sources": {
+    "wesnoth_server/alliance/flexible.py": "177cbfa764528c171b0068d9c8eddea6349621435bf62a9f584c70609d99fde0",
+    "wesnoth_server/tests/test_alliance_backend_check.py": "4b56ad9b03033def7cb4bd93b29caf6aa963a85c2f908650c8ca2e7c4aa12a86",
+    "wesnoth_server/tests/test_alliance_backend_windows.py": "8877c21849306656fe6ad4c01e059b3954c7c61f25f133dda7d0f1d763db00f0",
+    "wesnoth_server/tests/test_alliance_deployment.py": "b79186d2994d5c0ddee3e02c3a074dfb262509802230ff53202a434900623e3e",
+    "wesnoth_server/tests/test_alliance_login_check.py": "57b9d815172563736b3c160e4e6d334743e552ea4a58f189e82bc1b03b7c7143",
+    "wesnoth_server/tests/test_alliance_login_trace_windows.py": "51a9c21637bc39bcfad52dbfb671d731a89d32639bb21d87b3abdaab7ed6963c",
+    "wesnoth_server/tests/test_alliance_login_windows.py": "7ba17e7274ffcafc36f65036cbfdad71b167fb52ea4198f3e049e9b550aa056f",
+    "wesnoth_server/tests/test_alliance_native_windows.py": "f6f32758baece0b8b01c396f1659a2b8fadc08c7f4edaeb3bd001322417554c8",
+    "wesnoth_server/tests/test_alliance_operations_windows.py": "929cc27e11e31bf758cf7801dd3ad7073308db045b1ea5d83cf0a98109ac0589",
+    "wesnoth_server/tests/test_alliance_python312.py": "47e1442b60b2e5d5c18600d186eb689b08924ae1d22f40e9616fa1816094caa1",
+    "wesnoth_server/tests/test_alliance_runtime_windows.py": "b96c6bd63caab1702b754565f897e34517ee18ddd814bf3850eeea24ec6ad037",
+    "wesnoth_server/tests/test_alliance_transport_windows.py": "48785cfc150b3b17cdd5ee8e86619336dad12ae937e0fcdb759ccc046492dfa7",
+    "wesnoth_server/tests/test_alliance_web.py": "b45012f7ae806a833cd0ed4094a0d791f493ebdb11925b6c2383e728c1784dea",
+    "wesnoth_server/tests/test_alliance_windows.py": "cb39331a6d721c37a01a3d62e54c79528f2dea828d3d709ffe846c543bdacc46",
+    "wesnoth_server/tests/test_mongodb_startup_windows.py": "296e7ff8a723fd9b10462618da89c3ee35f17aa8e31c3e55801a55d7b931b576",
+    "wesnoth_server/tests/test_world_worker_archive_prefix.py": "214391a9590bc4d3d00326588c57dfa0e2e9dd25a1cc6561050f63bd07355c96",
+    "wesnoth_server/tests/test_world_worker_dependencies.py": "621c58155e3d9ff4f49b7a453a9c00ff5a4f21d0937247b5255edf6628a0aa62",
+    "wesnoth_server/tools/Alliance-Common.ps1": "4108e03b5d943ef2573b31f130ecdec42a9b85951ada0c9034ec652b1560f2e3",
+    "wesnoth_server/tools/Build-WindowsAllianceBridge.ps1": "34ca7024368a25444be916c70b5591667a57b893316c4e4bfc497325e9df2ac4",
+    "wesnoth_server/tools/Build-WindowsMultiplayer.ps1": "d757d488a8119b49d0ef6e46a9a988b9a1c137366faf5215156e0c3b64ec47a1",
+    "wesnoth_server/tools/Build-WindowsWorldWorker.ps1": "5479509466ccf302639e6638f7843c0c592e6cc28be9ea540655ba8850c513eb",
+    "wesnoth_server/tools/Dockerfile.alliance-verify": "c3a1598d85bf7907a058775f92ce5d016f5f6fa834d1b04b83a756af2ad243b2",
+    "wesnoth_server/tools/Initialize-WindowsUnifiedGame.ps1": "4e65dd18ab7e9919af35c370c26f4b3ae6bc32ff455a66b69850d065fab951d4",
+    "wesnoth_server/tools/Install-WindowsAlliancePython312.ps1": "5182ed5429cfc3e5fa94ac9ed9179e279697267bbe124fd1a03a3afd85d98831",
+    "wesnoth_server/tools/Invoke-WindowsAllianceMaintenance.ps1": "150ee894aaef4ad321021403442220abdb573a872a8e9d7aab432c8daf479ce6",
+    "wesnoth_server/tools/Migrate-WindowsAllianceRuntime.ps1": "355e3d8d0911f1441d4bd010e1c3a57eaca89d27710f40aca58d4a04f6348274",
+    "wesnoth_server/tools/Prepare-WindowsAlliancePython312.ps1": "5bf371a108792bc9aca623aa8da7f75bd394ed8a956636f9576485604c9d2714",
+    "wesnoth_server/tools/Prepare-WindowsWorldWorker.ps1": "4a39833dbdb756d50580fa0d00d655a185e1dcf6d8da06c2c3541902ef71f8b3",
+    "wesnoth_server/tools/Prepare-WindowsWorldWorkerPackages.ps1": "669b259704764043c3665f944e7dbdfe92862011521aa091eaafa07d12798398",
+    "wesnoth_server/tools/Rebuild-WindowsAllianceBridge.ps1": "87429116a72f55f4d9b81b9f9338d0612540fbb8e301636acf3daac106a2d8e1",
+    "wesnoth_server/tools/Run-WindowsAllianceBattles.ps1": "36e6bb891551855905a73338b405a6111d9b805ae6a371f6c736156fad98a22d",
+    "wesnoth_server/tools/Run-WindowsAllianceBridge.ps1": "8002ede517e7ed45ff72717ad88c3a94f6f9d09ec6498e02362a86d7dcb243f2",
+    "wesnoth_server/tools/Run-WindowsMultiplayer.ps1": "6a074f06f51feb73f6bb3008b0735eeb7fbfaac3cec52470d33767aae1b4bb27",
+    "wesnoth_server/tools/Run-WindowsWorldCompanion.ps1": "f8948dbdb1907303a3eb993b1b6cdf122e03d5d5df90ecc5a7b1a469705a9df2",
+    "wesnoth_server/tools/Start-WindowsAllianceStack.ps1": "7dc0015bee491f16eed73ba2c36427882bee1854cb88bee73f05cb098e11118f",
+    "wesnoth_server/tools/Test-WindowsAllianceBackend.ps1": "a6b066d2de0b15bbc05c56ee325f48fea1f755150659869500d636d230a18873",
+    "wesnoth_server/tools/Test-WindowsAllianceLogin.ps1": "c6463c113c2a243fe19996e2b5b6c9693b58336f16845ae062c2c6a46b793727",
+    "wesnoth_server/tools/Test-WindowsAllianceNative.ps1": "79933642861321dc9a58fde199ca9cf4ed52062431887366d4be3fbd77ff7790",
+    "wesnoth_server/tools/Test-WindowsAllianceTransport.ps1": "65fd4bfa3144d7d78997a3180acef2dadf88e01e9b372e578e99b4820640e190",
+    "wesnoth_server/tools/Test-WindowsMongoStartup.ps1": "01e579333de4b4a6caa03450bc4f8a7c0eaa5e092a6c78a447597906aab774fb",
+    "wesnoth_server/tools/Test-WindowsServer.ps1": "5c26ee07fcbb126965ead19cfd708412a156d764a70f7d66d7830e32863bd997",
+    "wesnoth_server/tools/Test-WindowsWorldWorkerDependencies.ps1": "ecc6bc5a6c9255e0ee9650ca13df032fe45a22d7ec980fa3d0ae8a86966f3772",
+    "wesnoth_server/tools/Trace-WindowsAllianceLogin.ps1": "b178ecd4212fa41cf3ed93b75d30e0d2deb08b28ae65dc4bf3362f68bfc4fc1f",
+    "wesnoth_server/tools/alliance-dependencies/requirements-python314.txt": "ba278b9dacbf45f6dcaf066a0e38b674976a27b60ee0e09696e6f298ab663dbc",
+    "wesnoth_server/tools/alliance-dependencies/requirements-windows.txt": "1e32c79db68f1f57792f0c32d292739cdf5e3dc927a07d538b8e9b9c6a023a3c",
+    "wesnoth_server/tools/alliance-dependencies/windows-python314.json": "792f59c12911ffe185245be0c378df96201a6c6fc85ea5cb0d01adc5d3b55d1b",
+    "wesnoth_server/tools/alliance-dependencies/windows.json": "ea47192630bad1d1d89367b5e55178d167bc17ab6e547ee5e7a57bc9bea8792c",
+    "wesnoth_server/tools/alliance_dependencies.py": "ecdf0d1a5ec604ff9a0b98edfb10c122c7a811fc4e7742c471e215a60c8a576f",
+    "wesnoth_server/tools/build_alliance_bridge.py": "76d289f3b5411bff11fe732cdbd423fc6b90afcda7548d324ff83c6ae25b5baa",
+    "wesnoth_server/tools/build_world_worker.py": "1afb04004e3e1593d4f81150e6c8f4323ffcac34fd7bc58e2a9e441ea316dd05",
+    "wesnoth_server/tools/world_worker_archive_prefix.py": "b79ce611920413c8f4d411b73dff11de443111ecd75478a2f43982c09b00fb2f",
+    "wesnoth_server/tools/world_worker_packages.py": "95d88f70b919c543c6ee0ffe64696727e35f8e71e118e3787ec13d4e4d44b8b1",
+    "wesnoth_client/tests/test_android_alliance_builder.py": "59d8caa0866e70c97f21bad7a54e016f09ab1956f2d23e7ce0c01b23433ee362",
+    "wesnoth_client/tools/Build-WindowsAndroidAccountGame.ps1": "972c767a5b910b556574b68b9b88aa65f93e43445191656dd19d29dabaeb6be4",
+    "wesnoth_client/tools/Build-WindowsAndroidAlliance.ps1": "c19bb87f9ced92d0fbea915e13fda5b96a31981eac0a1e69cd2ff2de23deeded",
+    "wesnoth_client/tools/Build-WindowsAndroidBoost.ps1": "b845bbc2f58c2cf5c7ec829de747c2728e0d6eafbfc0e76147bdeeb05800ea08",
+    "wesnoth_client/tools/Build-WindowsAndroidBootstrap.ps1": "790606f4de72253f028edc4ff5bbfac18f251f7f02dc11186b15bb979d3451d3",
+    "wesnoth_client/tools/Build-WindowsAndroidEngine.ps1": "585a108059233ae265c4772be1448fdd0adf873714fcae5d72cfab19e7e7b720",
+    "wesnoth_client/tools/Build-WindowsAndroidFonts.ps1": "1a0cf9203aa7b0fc9021729f77f8f9a5e932f56bd4857d273e6d5ed7c8775a4b",
+    "wesnoth_client/tools/Build-WindowsAndroidGame.ps1": "0de9b1ddfb0d0ceba060fdc4f48eee9f471163e8ab989f32c9128d3d8deb590c",
+    "wesnoth_client/tools/Build-WindowsAndroidIcu.ps1": "774c4c595a459c77988b3106cfe248b24abc4e704ab84c6c01d6b86d10680687",
+    "wesnoth_client/tools/Build-WindowsAndroidMedia.ps1": "ff8989c3f46a9fd5460c00fda79c5b9e91a94e8f2dbbcf24963023d27e82b551",
+    "wesnoth_client/tools/Build-WindowsAndroidNetwork.ps1": "0a5256e3e64e5cbd76a7616a245e4c270fc6ff7a8ec42cd100b005c3b2a3d3b0",
+    "wesnoth_client/tools/Build-WindowsSdlCheck.ps1": "0f7d1705f4edc0d874fb9e7828b46a8e638414bec4b9173a1dc84771b3af5b11",
+    "wesnoth_client/tools/Install-AndroidAccountGame.ps1": "de1248b28bcccddace2effd6a70782dbf79899d531e0180e467ae66256d40c6a",
+    "wesnoth_client/tools/Prepare-WindowsAndroidTools.ps1": "d369d42b14e773952cebf3d3856d2958bde748d4a4d36030bccae697a02eab99",
+    "wesnoth_client/tools/Rebuild-WindowsAndroidAccountGame.ps1": "d27c629804bae3cb4318a8dadab9146a0c8d2f3868e2eb3ae47ddda188eaffa4",
+    "wesnoth_client/tools/Run-AndroidAllianceCompanion.ps1": "98f1754d6225d963094a659c4e144fa6249b501b1825d84ad63aa92c31d4cfa2",
+    "wesnoth_client/tools/Run-AndroidIndividualCompanion.ps1": "3333c19d20290c0a10750b9abb349c70d3a9f8f7cbb805feca01f6366da73a48",
+    "wesnoth_client/tools/Test-AndroidAlliance.ps1": "2e0ddfe0cd7f39f62f71006cd24a1d1363bf2f3402752d1db49d5e842873b8f8",
+    "wesnoth_client/tools/Test-AndroidBoost.ps1": "1091bc8fba7b6a80455b889c8ba839c31a850f60487a4be3e951a2a69f66dcbd",
+    "wesnoth_client/tools/Test-AndroidEngine.ps1": "2fe46becc19a4def4dd198aea2765ab1579fa564c985ecf5e24c857a08f2d5d8",
+    "wesnoth_client/tools/Test-AndroidGame.ps1": "959bd3294496e57db7aeffa7e58efec14164ff5261db644ec9b188da4c3c7382",
+    "wesnoth_client/tools/Test-AndroidGlib.ps1": "3a16186d18f763837cb680c1821fd3232d637717f57abc284a9829b62879b6f9",
+    "wesnoth_client/tools/Test-AndroidGlibDeps.ps1": "f660b4e5219cb03a6f69262dc7bc87ba877720ff1466e094fafd2952bfe03774",
+    "wesnoth_client/tools/Test-AndroidIcu.ps1": "b06d5a3dac81e74629c3599b0313e23c0160802d12560a59a3dffd19515717c2",
+    "wesnoth_client/tools/Test-AndroidNetwork.ps1": "254f4bc808dd307e2099626b8b95448dbe9bc879800ed084e08f0e93a30a00dd",
+    "wesnoth_client/tools/Test-AndroidTextBase.ps1": "b54306deb06057cfd7d8f444bc59ec248b3933545bc1d5265589bda182f93889",
+    "wesnoth_client/tools/Test-AndroidTextLayout.ps1": "7a924ebc6c617ff538be64228efd454c2afb3a530164b3727802ead5b82affa2",
+    "wesnoth_client/tools/Test-AndroidTextRender.ps1": "0e86945a5bf44ad4794bcf95c422a59eca76d7753dfc6af7abc045425c829f4d",
+    "wesnoth_client/tools/Test-WindowsGameData.ps1": "088448a6653aae09a1d1d770feb0c57a01d696181bce68ac4235aef5c2f1ea27",
+    "wesnoth_client/tools/build_android_alliance.py": "79fceca3f56949626c7c11672462bc6b73e4090ecb623db632529ed075965532"
+  },
+  "implementation_commits": {
+    "server_runtime": "a7a8bf6",
+    "server_archive_compatibility": "3b57cce",
+    "server_captain_regression": "be39491",
+    "client_tools": "af3cb14"
+  }
+}
