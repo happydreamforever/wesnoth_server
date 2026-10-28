@@ -796,7 +796,7 @@ void server::login_client(boost::asio::yield_context yield, SocketPtr socket)
 {
 	if(alliance_) {
 		simple_wml::document greeting; auto& version = greeting.root().add_child("version");
-		version.set_attr("alliance_protocol", "3").set_attr("implementation_release", "1192621").set_attr("individual_rooms", "1");
+		version.set_attr("alliance_protocol", "4").set_attr("implementation_release", "1192624").set_attr("individual_rooms", "1");
 		coro_send_doc(socket, greeting, yield);
 	} else coro_send_doc(socket, version_query_response_, yield);
 
@@ -3862,7 +3862,7 @@ int main(int argc, char** argv)
 					  << "  -w, --dump-wml             Print all WML sent to clients to stdout.\n";
 			return 0;
 		} else if(val == "--unified-version") {
-            std::cout << "WESNOTH_UNIFIED_MULTIPLAYER release=1192621 protocol=3\n";
+            std::cout << "WESNOTH_UNIFIED_MULTIPLAYER release=1192624 protocol=4\n";
             return 0;
 		} else if(val == "--version" || val == "-V") {
 			std::cout << "Battle for Wesnoth server " << game_config::wesnoth_version.str() << "\n";

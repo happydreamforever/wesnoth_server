@@ -12,7 +12,7 @@
     {% if g.admin %}<div class="operator"><span>{{ g.admin.username }}</span><form method="post" action="{{ url_for('logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="secondary" type="submit">Sign out</button></form></div>{% endif %}
   </header>
   {% if g.admin %}<nav aria-label="Administration">
-    {% for endpoint, label in [('dashboard', 'Overview'), ('accounts', 'Players'), ('teams', 'Teams'), ('areas', 'Areas'), ('runs', 'Game runs'), ('audit', 'Audit log')] %}<a href="{{ url_for(endpoint) }}"{% if request.endpoint == endpoint %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+    {% for endpoint, label in [('dashboard', 'Overview'), ('accounts', 'Players'), ('teams', 'Teams'), ('areas', 'Areas'), ('world_admin', 'World'), ('runs', 'Game runs'), ('audit', 'Audit log')] %}<a href="{{ url_for(endpoint) }}"{% if request.endpoint == endpoint %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
   </nav>{% endif %}
   <main>
     {% for message in get_flashed_messages() %}<p class="notice" role="status">{{ message }}</p>{% endfor %}

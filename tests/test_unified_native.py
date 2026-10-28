@@ -62,7 +62,7 @@ class Peer:
             if '['+tag+']' in value:return value
             if '[error]' in value or 'was refused' in value:raise AssertionError(value)
         raise AssertionError('Missing '+tag)
-    def rpc(self,op,body,token=None,version=3):
+    def rpc(self,op,body,token=None,version=4):
         self.close();self.__init__(self.port,self.profile)
         value={'v':version,'id':uuid4().hex,'op':op,'body':body}
         if token:value['token']=token
@@ -136,7 +136,7 @@ class Native(unittest.TestCase):
         return p,token,login['data']['account']
     def lobby(self,token,api,account):
         ticket=api.rpc('casual_ticket',{},token);self.assertTrue(ticket['ok'],ticket)
-        p=self.peer(15000);greeting=p.until('version');self.assertIn('alliance_protocol="3"',greeting);self.assertIn('implementation_release="1192621"',greeting)
+        p=self.peer(15000);greeting=p.until('version');self.assertIn('alliance_protocol="4"',greeting);self.assertIn('implementation_release="1192624"',greeting)
         p.send(wml('version',{'version':'1.19.26'}));p.until('mustlogin')
         p.send(wml('login',{'username':account['username'],'alliance_ticket':ticket['data']['ticket']}));p.until('join_lobby');p.until('gamelist')
         return p,ticket['data']['ticket']
@@ -197,7 +197,7 @@ class Native(unittest.TestCase):
         try:
             self.assertNotEqual(client.get('/internal/v1/health',headers=headers).status_code,200)
             self.assertNotEqual(client.post('/internal/v1/casual/capabilities',json={},headers=headers).status_code,200)
-        finally:self.db.schema_metadata.update_one({'_id':'alliance'},{'$set':{'version':3}})
+        finally:self.db.schema_metadata.update_one({'_id':'alliance'},{'$set':{'version':4}})
 
     def test_authenticated_listener_refuses_standard_create(self):
         api,token,account=self.account();peer,_=self.lobby(token,api,account)

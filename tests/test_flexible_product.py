@@ -8,7 +8,7 @@ from uuid import uuid4
 from test_unified_product import UnifiedProduct as Fixture
 from alliance.domain import DomainError, _now
 from alliance.flexible import DEFAULT_SETTINGS
-from alliance.schema import migrate_schema_2_to_3
+from alliance.schema import migrate_schema_2_to_3, migrate_schema_3_to_4
 
 @unittest.skipUnless(os.environ.get('ALLIANCE_TEST_MONGO_URI'), 'Requires disposable replica set')
 class FlexibleProduct(unittest.TestCase):
@@ -192,6 +192,9 @@ class FlexibleProduct(unittest.TestCase):
         self.db.schema_metadata.update_one({'_id':'alliance'},{'$set':{'version':2}})
         self.db.drop_collection('network_battle_reservations')
         migrate_schema_2_to_3(self.db,'a'*64)
+        # Current clients require the preserving second upgrade before using
+        # the draft retained by the historical schema-2 migration.
+        migrate_schema_3_to_4(self.db,'b'*64)
         battle=self.read(ps[0][0],battle)
         self.assertEqual(battle['format'],2);self.assertEqual(battle['room_state'],'')
         for actor in sum(ps,[]):battle=self.domain.directory_ready_plan(actor,battle['id'],battle['revision'],True)

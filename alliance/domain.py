@@ -1799,5 +1799,8 @@ from .product import UnifiedProduct
 from .flexible import FlexibleProduct, flexible
 
 
-class AllianceService(FlexibleProduct, UnifiedProduct, LegacyAllianceService):
+from .world import WorldProduct
+
+
+class AllianceService(WorldProduct, FlexibleProduct, UnifiedProduct, LegacyAllianceService):
     pass

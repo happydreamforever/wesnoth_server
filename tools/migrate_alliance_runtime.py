@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Explicit offline schema 2->3 upgrade of the existing runtime-v2.
+"""Explicit offline schema 3->4 upgrade of the existing runtime-v2.
 
 Always preserve a verified cold copy first. Never initialize, replace or reset
 accounts, storage, identity, completed runs or replay files. Public errors are
@@ -16,16 +16,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from pymongo.errors import PyMongoError
 from alliance.deployment import _check_mongod, _client, _credentials, _uri, _write_new
 from alliance.runtime_lock import runtime_lock
-from alliance.schema import migrate_schema_2_to_3
+from alliance.schema import migrate_schema_2_to_3, migrate_schema_3_to_4
 from tools.alliance_maintenance import (backup, validate_runtime, reserved_ports, battle_storage_lock,
     inventory, read_small, digest, MaintenanceError, local_path)
 
 
-def migrate(runtime, destination, mongod):
+def migrate(runtime, destination, mongod, *, target_schema=4):
+    if target_schema not in (3, 4):
+        raise MaintenanceError('unsupported_migration_target')
+    transition = '2-to-3' if target_schema == 3 else '3-to-4'
+    migrate_database = migrate_schema_2_to_3 if target_schema == 3 else migrate_schema_3_to_4
     runtime = validate_runtime(runtime); destination = local_path(destination)
-    journal = runtime / 'schema-2-to-3.json'
+    journal = runtime / ('schema-' + transition + '.json')
     _check_mongod(mongod)
-    started_journal = runtime / 'schema-2-to-3.started.json'
+    started_journal = runtime / ('schema-' + transition + '.started.json')
     if journal.exists():
         receipt = json.loads(read_small(journal))
         if receipt.get('format') != 1 or receipt.get('backup') != str(destination):
@@ -80,7 +84,7 @@ def migrate(runtime, destination, mongod):
                         if client.admin.command('hello').get('isWritablePrimary'): break
                     except PyMongoError: time.sleep(.25)
                 else: raise MaintenanceError('migration_database_start_timeout')
-                result = migrate_schema_2_to_3(client.wesnoth_game, receipt['manifest_sha256'])
+                result = migrate_database(client.wesnoth_game, receipt['manifest_sha256'])
         finally:
             if process.poll() is None:
                 with _client(_uri('wesnoth_operator', credentials['database_admin_password'], 'admin')) as client:
@@ -96,10 +100,10 @@ def migrate(runtime, destination, mongod):
 
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--runtime',type=Path,required=True);p.add_argument('--backup',type=Path,required=True);p.add_argument('--mongod',type=Path,required=True);a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--runtime',type=Path,required=True);p.add_argument('--backup',type=Path,required=True);p.add_argument('--mongod',type=Path,required=True);p.add_argument('--target-schema',type=int,choices=(3,4),default=4);a=p.parse_args()
     try:
-        result=migrate(a.runtime,a.backup,a.mongod)
-        print(json.dumps(result,sort_keys=True));print('ALLIANCE SCHEMA 3 MIGRATION COMPLETE')
+        result=migrate(a.runtime,a.backup,a.mongod,target_schema=a.target_schema)
+        print(json.dumps(result,sort_keys=True));print(f'ALLIANCE SCHEMA {a.target_schema} MIGRATION COMPLETE')
         return 0
     except Exception as error:
         code=str(error) if isinstance(error,MaintenanceError) else 'migration_failed_preserve_backup_and_journal'

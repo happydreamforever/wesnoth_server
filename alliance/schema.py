@@ -8,7 +8,7 @@ from pymongo.errors import CollectionInvalid
 
 from .rules import MAPS
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 def _object(required, properties):
@@ -119,6 +119,15 @@ SCHEMAS['game_runs'] = {'$and': [SCHEMAS['game_runs'], {'$or': [
 ]}]}
 
 
+# Freeze the historical target for explicit schema-2 recovery. Later additive
+# validators must never make the older migration initialize World records.
+from copy import deepcopy as _deepcopy
+SCHEMA_3_SCHEMAS = _deepcopy(SCHEMAS)
+from .world import WORLD_SCHEMAS, bootstrap_world_schema
+SCHEMAS['network_battle_reservations']['$jsonSchema']['properties']['kind']['enum'] += ['company', 'world', 'skirmish']
+SCHEMAS.update(WORLD_SCHEMAS)
+
+
 def _migration_idle(db, session=None):
     """A stopped listener alone does not prove that a durable battle is idle."""
     if (db.game_runs.find_one({'kind': 'alliance', '$or': [
@@ -207,7 +216,7 @@ def migrate_schema_2_to_3(db, backup_digest, *, checkpoint=None):
         'version': 3, 'phase': 'started', 'backup_digest': backup_digest,
         'database_generation': current['database_generation'], 'created_at': datetime.now(timezone.utc)}}, upsert=True)
     if checkpoint: checkpoint('started')
-    for name, validator in SCHEMAS.items():
+    for name, validator in SCHEMA_3_SCHEMAS.items():
         if name not in db.list_collection_names():
             if name != 'network_battle_reservations':
                 raise RuntimeError('Schema 2 is incomplete; migration will not initialize missing data.')
@@ -251,6 +260,67 @@ def migrate_schema_2_to_3(db, backup_digest, *, checkpoint=None):
     return {'schema_version': 3, 'status': 'complete', 'database_generation': current['database_generation']}
 
 
+def migrate_schema_3_to_4(db, backup_digest, *, checkpoint=None):
+    """Preserving, resumable additive migration with a cold-backup identity fence.
+
+    This creates empty collections and indexes only. Enrollment, troop grants,
+    existing documents and all replay bytes remain outside this operation.
+    """
+    import re
+    if not isinstance(backup_digest, str) or not re.fullmatch(r'[0-9a-f]{64}', backup_digest):
+        raise RuntimeError('A verified cold backup digest is required.')
+    current = db.schema_metadata.find_one({'_id': 'alliance'})
+    if current is None or current.get('version') not in (3, 4):
+        raise RuntimeError('Only the existing schema 3 database can be upgraded.')
+    generation = current.get('database_generation')
+    journal_id = 'migration-3-to-4'
+    journal = db.schema_metadata.find_one({'_id': journal_id})
+    if journal and (journal.get('database_generation') != generation or journal.get('backup_digest') != backup_digest):
+        raise RuntimeError('Resume with the original database and verified migration backup.')
+    if current['version'] == 4:
+        if not journal or journal.get('phase') != 'complete':
+            raise RuntimeError('The completed migration receipt is missing.')
+        return {'schema_version': 4, 'status': 'already_complete', 'database_generation': generation}
+    _migration_idle(db)
+    existing = set(db.list_collection_names())
+    if any(name not in existing for name in SCHEMA_3_SCHEMAS):
+        raise RuntimeError('Schema 3 is incomplete; migration will not initialize missing data.')
+    # New World collections may exist only as empty artifacts of this migration.
+    if any(db[name].find_one({}, {'_id': 1}) for name in WORLD_SCHEMAS if name in existing):
+        raise RuntimeError('Unexpected World records precede migration; preserve them for review.')
+    db.schema_metadata.update_one({'_id': journal_id}, {'$setOnInsert': {
+        'version': 4, 'phase': 'started', 'backup_digest': backup_digest,
+        'database_generation': generation, 'created_at': datetime.now(timezone.utc)}}, upsert=True)
+    if checkpoint: checkpoint('started')
+    for name, validator in SCHEMAS.items():
+        if name not in existing:
+            db.create_collection(name, validator=validator, validationLevel='strict', validationAction='error')
+        else:
+            if db[name].find_one({'$nor': [validator]}, {'_id': 1}):
+                raise RuntimeError('An existing record is incompatible; preserve it for review.')
+            db.command('collMod', name, validator=validator, validationLevel='strict', validationAction='error')
+        if checkpoint: checkpoint('collection:' + name)
+    db.schema_metadata.update_one({'_id': journal_id}, {'$set': {'phase': 'validators'}})
+    if checkpoint: checkpoint('validators')
+    bootstrap_world_schema(db)
+    db.schema_metadata.update_one({'_id': journal_id}, {'$set': {'phase': 'indexes'}})
+    if checkpoint: checkpoint('indexes')
+    with db.client.start_session() as session:
+        def commit(s):
+            if not db.schema_metadata.find_one({'_id': 'alliance', 'version': 3,
+                    'database_generation': generation}, session=s):
+                raise RuntimeError('The database identity changed during migration.')
+            _migration_idle(db, s)
+            if any(db[name].find_one({}, {'_id': 1}, session=s) for name in WORLD_SCHEMAS):
+                raise RuntimeError('World enrollment cannot occur during migration.')
+            db.schema_metadata.update_one({'_id': 'alliance', 'version': 3}, {'$set': {'version': 4}}, session=s)
+            db.schema_metadata.update_one({'_id': journal_id}, {'$set': {
+                'phase': 'complete', 'completed_at': datetime.now(timezone.utc)}}, session=s)
+        session.with_transaction(commit)
+    if checkpoint: checkpoint('complete')
+    return {'schema_version': 4, 'status': 'complete', 'database_generation': generation}
+
+
 def bootstrap_schema(db):
     """Install the current schema only in a fresh owned database; never migrate implicitly.
 
@@ -285,6 +355,7 @@ def bootstrap_schema(db):
     db.story_checkpoints.create_index([('run_id', ASCENDING), ('sequence', ASCENDING)], unique=True, name='story_sequence')
     db.casual_tickets.create_index('expires_at', expireAfterSeconds=0, name='ticket_expiry')
     db.admin_audit.create_index([('created_at', -1)], name='audit_time')
+    bootstrap_world_schema(db)
     db.schema_metadata.update_one({'_id': 'alliance'}, {'$setOnInsert': {
         'version': SCHEMA_VERSION, 'database_generation': str(uuid4()),
         'created_at': datetime.now(timezone.utc)}}, upsert=True)

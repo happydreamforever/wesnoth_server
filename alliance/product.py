@@ -34,7 +34,7 @@ class UnifiedProduct:
         from .schema import SCHEMA_VERSION
         record = self.db.schema_metadata.find_one({'_id': 'alliance', 'version': SCHEMA_VERSION}, session=session)
         if record is None or not isinstance(record.get('database_generation'), str):
-            raise DomainError('unsupported_ruleset', 'This product requires the explicit schema 3 migration.')
+            raise DomainError('unsupported_ruleset', 'This product requires the explicit schema 4 migration.')
         return record['database_generation']
 
     def register(self, username, password_hash):

@@ -277,7 +277,7 @@ def verify_restore(runtime, mongod, ports):
             db = client.wesnoth_game
             metadata = db.schema_metadata.find_one({"_id": "alliance"})
             schema = metadata.get("version") if metadata else None
-            if type(schema) is not int or schema not in (1, 2, SCHEMA_VERSION):
+            if type(schema) is not int or schema not in (1, 2, 3, SCHEMA_VERSION):
                 raise MaintenanceError("unsupported_restored_database_schema")
             if schema != SCHEMA_VERSION:
                 required = {"accounts", "teams", "areas", "game_runs", "settlements", "schema_metadata",
@@ -329,7 +329,7 @@ def restore(runtime, backup_path, destination, mongod):
     manifest = json.loads(read_small(archived / "manifest.json", 8 * 1024**2))
     if (manifest.get("purpose") != PURPOSE or manifest.get("format") != 1 or
         manifest.get("mongodb_version") != MONGO_VERSION or
-        manifest.get("producer_schema_version") not in (1, 2, SCHEMA_VERSION)):
+        manifest.get("producer_schema_version") not in (1, 2, 3, SCHEMA_VERSION)):
         raise MaintenanceError("unsupported_backup_version")
     files = manifest.get("files")
     if not isinstance(files, dict) or len(files) > MAX_FILES or set(CONTROLS) - files.keys():

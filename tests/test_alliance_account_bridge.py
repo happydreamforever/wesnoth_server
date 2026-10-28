@@ -96,7 +96,7 @@ class BridgeIdentityTests(unittest.TestCase):
                     return
                 cls.calls.append(self.path)
                 if self.path == "/internal/v1/health":
-                    value = {"status": "ok", "service": "alliance", "api_version": 1, "product_schema_version": 3, "implementation_release": 1192621}
+                    value = {"status": "ok", "service": "alliance", "api_version": 1, "product_schema_version": 4, "implementation_release": 1192624}
                 else:
                     value = {"account": ACCOUNT}
                 data = json.dumps(value).encode()
@@ -186,7 +186,7 @@ class BridgeIdentityTests(unittest.TestCase):
             self.assertEqual(BridgeTests.read_exact(raw, 4), b"\0\0\0\0")
             context = ssl.create_default_context(cadata=self.profile["certificate_pem"])
             with context.wrap_socket(raw, server_hostname="127.0.0.1") as peer:
-                value = {"v": 3, "id": "b" * 32, "op": "me", "body": {},
+                value = {"v": 4, "id": "b" * 32, "op": "me", "body": {},
                          "token": secrets.token_urlsafe(32)}
                 encoded = gzip.compress(json.dumps(value).encode())
                 peer.sendall(struct.pack("!I", len(encoded)) + encoded)
@@ -298,7 +298,7 @@ class BridgeTests(unittest.TestCase):
                     code, response = 401, {"error": "wrong bridge credential"}
                 elif self.path == "/internal/v1/health":
                     code, response = 200, {"status": "ok", "service": "alliance",
-                                           "api_version": 2 if parent.mode == "badhealth" else 1, "product_schema_version": 3, "implementation_release": 1192621}
+                                           "api_version": 2 if parent.mode == "badhealth" else 1, "product_schema_version": 4, "implementation_release": 1192624}
                 elif parent.mode == "outage":
                     code, response = 503, {"error": {"code": "private_config", "message": "must-not-leave-backend"}}
                 elif parent.mode == "oversized":
@@ -306,7 +306,7 @@ class BridgeTests(unittest.TestCase):
                 elif self.path in ("/internal/v1/me", "/internal/v1/logout") and (
                         self.headers.get("X-Player-Token") != parent.token or parent.revoked):
                     code, response = 401, {"error": {"code": "invalid_session"}}
-                elif self.path.startswith(("/internal/v1/team-directory/", "/internal/v1/progression/", "/internal/v1/coordination/", "/internal/v1/shared/")):
+                elif self.path.startswith(("/internal/v1/team-directory/", "/internal/v1/progression/", "/internal/v1/coordination/", "/internal/v1/shared/", "/internal/v1/world/")):
                     if self.headers.get("X-Player-Token") != parent.token or parent.revoked:
                         code, response = 401, {"error": {"code": "invalid_session"}}
                     elif parent.directory_override is not None:
@@ -431,7 +431,7 @@ class BridgeTests(unittest.TestCase):
         return data
 
     def request(self, operation="me", body=None, token=None):
-        value = {"v": 3, "id": "a" * 32, "op": operation, "body": body or {}}
+        value = {"v": 4, "id": "a" * 32, "op": operation, "body": body or {}}
         if operation in ("me", "logout", "areas", "teams", "my_team", "create_team", "team_detail",
                          "my_applications", "team_applicants", "apply_team", "withdraw_application",
                          "approve_application", "reject_application", "application_decisions", "ack_decision",
@@ -439,7 +439,7 @@ class BridgeTests(unittest.TestCase):
                          "battle_detail", "propose_battle", "approve_battle", "battle_ready", "cancel_battle",
                          "progression_catalog", "progression_start", "progression_status", "progression_finish",
                          "progression_cancel", "progression_advance", "progression_history",
-                         "coordination_orders", "coordination_post", "shared_review", "shared_confirm"):
+                         "coordination_orders", "coordination_post", "shared_review", "shared_confirm", "world_query", "world_command"):
             value["token"] = token or self.token
         return value
 
@@ -461,7 +461,7 @@ class BridgeTests(unittest.TestCase):
             peer.sendall(struct.pack('!I', len(body)) + body)
             size, = struct.unpack('!I', self.read_exact(peer, 4))
             result = gzip.decompress(self.read_exact(peer, size)).decode()
-            self.assertEqual(result, '[alliance_health]\nservice="alliance-accounts"\napi="3"\nimplementation_release="1192621"\n[/alliance_health]\n')
+            self.assertEqual(result, '[alliance_health]\nservice="alliance-accounts"\napi="4"\nimplementation_release="1192624"\n[/alliance_health]\n')
         self.assertEqual(len(self.calls), before)
         for request in (b'[alliance_health]\ntoken="secret"\n[/alliance_health]\n',
                         b'[alliance_health]\n[/alliance_health]\n[login]\n[/login]\n'):
@@ -497,16 +497,16 @@ class BridgeTests(unittest.TestCase):
             value['v'] = 2
             reply = self.exchange(value)
             self.assertEqual(reply, {'v': 2, 'id': value['id'], 'ok': False, 'status': 426,
-                'data': {'code': 'protocol', 'message': 'Update the game to release 1192621 before connecting to this server.'}})
+                'data': {'code': 'protocol', 'message': 'Update the game to release 1192624 before connecting to this server.'}})
         self.assertEqual(len(self.calls), before)
         self.assertFalse(type(self).revoked)
         log = self.log_path.read_text()
-        self.assertIn('ALLIANCE ACCOUNT CLIENT UPDATE REQUIRED protocol=2 required_protocol=3 implementation_release=1192621', log)
+        self.assertIn('ALLIANCE ACCOUNT CLIENT UPDATE REQUIRED protocol=2 required_protocol=4 implementation_release=1192624', log)
         for private in (password, self.token, self.secret):
             self.assertNotIn(private, log)
         # This rejection is not a compatibility parser for malformed/unknown
         # envelopes, and must not weaken the current protocol validation.
-        for change in ({'v': 1}, {'v': 4}, {'v': '2'}, {'id': 'A'*32},
+        for change in ({'v': 1}, {'v': 5}, {'v': '2'}, {'id': 'A'*32},
                        {'body': []}, {'op': 'unsafe\noperation'}, {'token': 'invalid'}, {'extra': True}):
             malformed = dict(requests[0], **change)
             with self.subTest(change=change), self.connect() as peer:
@@ -516,15 +516,46 @@ class BridgeTests(unittest.TestCase):
                     self.read_exact(peer, 4)
         self.assertEqual(len(self.calls), before)
 
+    def test_protocol3_is_rejected_before_dispatch(self):
+        before=len(self.calls)
+        value=self.request('me');value['v']=3
+        reply=self.exchange(value)
+        self.assertEqual(reply['v'],3);self.assertEqual(reply['status'],426)
+        self.assertEqual(len(self.calls),before)
+
+    def test_world_envelope_scopes_actor_and_forbids_reward_and_host_commands(self):
+        envelope={'version':1,'balance_revision':'world-company-1',
+                  'database_generation':ACCOUNT['database_generation'],'actor_id':ACCOUNT['_id'],
+                  'data':{'company':None,'available':False}}
+        type(self).directory_override=(200,envelope)
+        request=self.request('world_query',{'operation':'company','payload':{}})
+        reply=self.exchange(request)
+        self.assertTrue(reply['ok']);self.assertEqual(reply['data'],envelope)
+        self.assertEqual(self.calls[-1][1],'/internal/v1/world/query')
+        self.assertEqual(self.calls[-1][2]['X-Player-Token'],self.token)
+        self.assertEqual(json.loads(self.calls[-1][3]),request['body'])
+        for operation,payload in [('worker_settle',{}),('bootstrap',{}),('company_initialize',{'earned_xp':500}),
+                ('battle_ready',{'run_id':BATTLE['id'],'ready':True,'actor_id':ACCOUNT['_id']})]:
+            before=len(self.calls)
+            value=self.request('world_command',{'operation':operation,'payload':dict(payload,command_id=ACCOUNT['_id'])})
+            with self.subTest(operation=operation),self.connect() as peer:
+                body=gzip.compress(json.dumps(value).encode());peer.sendall(struct.pack('!I',len(body))+body)
+                with self.assertRaises((EOFError,ssl.SSLError,ConnectionError)):self.read_exact(peer,4)
+            self.assertEqual(len(self.calls),before)
+        type(self).directory_override=(409,{'error':{'code':'force_review','message':'PRIVATE arbitrary server text'}})
+        rejected=self.exchange(self.request('world_command',{'operation':'company_initialize','payload':{'command_id':ACCOUNT['_id']}}))
+        self.assertFalse(rejected['ok']);self.assertEqual(rejected['data']['code'],'force_review')
+        self.assertNotIn('PRIVATE',json.dumps(rejected))
+
     def test_invalid_requests_never_reach_backend(self):
         samples = []
         base = self.request()
         for change in ({"op": "settle"}, {"id": "A" * 32}, {"path": "/internal/v1/runs"},
                        {"body": {"xp": 999}}, {"token": "x\r\nHeader: unsafe"}):
             samples.append(json.dumps(dict(base, **change)).encode())
-        samples.append(json.dumps(base).replace('"v": 3', '"v": 3, "v": 3').encode())
-        samples.append(json.dumps(base).replace('"v": 3', '"v": 3, "\\u0076": 3').encode())
-        samples.append(json.dumps({"v": 3, "id": "a" * 32, "op": "register", "token": self.token,
+        samples.append(json.dumps(base).replace('"v": 4', '"v": 4, "v": 4').encode())
+        samples.append(json.dumps(base).replace('"v": 4', '"v": 4, "\\u0076": 4').encode())
+        samples.append(json.dumps({"v": 4, "id": "a" * 32, "op": "register", "token": self.token,
                                    "body": {"username": "BridgePlayer", "password": "example-pass-1234"}}).encode())
         for value in samples:
             with self.subTest(value=value), self.connect() as peer:

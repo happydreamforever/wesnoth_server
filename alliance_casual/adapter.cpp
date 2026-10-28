@@ -30,7 +30,7 @@ adapter::adapter(const config&cfg){
  catalog_=json::parse(read_file(cfg["alliance_catalog"].str(),4194304)).as_object();
  require(str(catalog_,"version")=="unified-heroes-v1");
  const auto capabilities=call("capabilities",{});wire::keys(capabilities,{"protocol","implementation_release","schema_version"});
- require(number(capabilities,"protocol")==3&&number(capabilities,"implementation_release")==1192621&&number(capabilities,"schema_version")==3);
+ require(number(capabilities,"protocol")==4&&number(capabilities,"implementation_release")==1192624&&number(capabilities,"schema_version")==4);
 }
 json::object adapter::call(const std::string& op,const json::object& body){
  asio::io_context io;asio::ip::tcp::socket socket(io);boost::beast::flat_buffer buffer;

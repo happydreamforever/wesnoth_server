@@ -7,6 +7,8 @@ game integration must authenticate its transport before forwarding credentials.
 from datetime import timedelta
 from functools import wraps
 import hmac
+import json
+from uuid import uuid4
 import re
 
 from flask import Flask, abort, flash, g, jsonify, redirect, render_template, request, session, url_for
@@ -409,6 +411,105 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
         records = list(db.admin_audit.find({}, {"_id": 1, "actor_id": 1, "action": 1, "target_id": 1, "reason": 1, "created_at": 1}).sort("created_at", -1).limit(100))
         return render_template("audit.html", records=records)
 
+    def world_payload():
+        # The bridge also validates this envelope. Keep the service boundary
+        # independently bounded and reject duplicate keys before interpretation.
+        def pairs(items):
+            result = {}
+            for key, value in items:
+                if key in result:
+                    abort(400)
+                result[key] = value
+            return result
+        raw = request.get_data(cache=True)
+        if len(raw) > 65536:
+            abort(413)
+        try:
+            value = json.loads(raw, object_pairs_hook=pairs,
+                               parse_constant=lambda _value: abort(400))
+        except (ValueError, UnicodeError, RecursionError):
+            abort(400)
+        if not isinstance(value, dict) or set(value) != {'operation', 'payload'}:
+            abort(400)
+        if not isinstance(value['operation'], str) or not re.fullmatch(r'[a-z_]{1,32}', value['operation']):
+            abort(400)
+        if not isinstance(value['payload'], dict):
+            abort(400)
+        def bound(item, depth=0):
+            if depth > 10:
+                abort(400)
+            if isinstance(item, dict):
+                if len(item) > 64:
+                    abort(400)
+                for key, child in item.items():
+                    if not isinstance(key, str) or not 1 <= len(key) <= 128 or any(ord(c) < 32 or c in '$.\x7f' for c in key):
+                        abort(400)
+                    bound(child, depth + 1)
+            elif isinstance(item, list):
+                if len(item) > 256:
+                    abort(400)
+                for child in item:
+                    bound(child, depth + 1)
+            elif isinstance(item, str):
+                if len(item.encode('utf-8')) > 4096 or any(ord(c) < 32 or ord(c) == 127 for c in item):
+                    abort(400)
+            elif item is not None and type(item) not in (int, bool):
+                abort(400)
+            elif type(item) is int and not -(2**63) <= item < 2**63:
+                abort(400)
+        bound(value['payload'])
+        return value
+
+    @internal_route('/world/query')
+    def world_query():
+        value = world_payload()
+        return jsonify(domain.world_query(g.player['_id'], value['operation'], value['payload']))
+
+    @internal_route('/world/command')
+    def world_command():
+        value = world_payload()
+        return jsonify(domain.world_command(g.player['_id'], value['operation'], value['payload']))
+
+    @app.get('/world')
+    @admin_required
+    def world_admin():
+        snapshot = domain.world_admin_snapshot(g.admin['_id'])['data']
+        return render_template('world.html', snapshot=snapshot, command_id=str(uuid4()))
+
+    @app.post('/world/command')
+    @admin_required
+    def world_admin_action():
+        operation = request.form.get('operation')
+        fields = {'bootstrap': {'team_one', 'team_two', 'confirmation'},
+                  'phase': {'expected_phase'}, 'advance': {'confirmation'},
+                  'cancel': {'run_id', 'reason', 'confirmation'},
+                  'enroll_team': {'team_id', 'homeland_frontier_id', 'confirmation'}}
+        if operation not in fields or request.args or request.files:
+            abort(400)
+        expected = {'csrf_token', 'command_id', 'operation'} | fields[operation]
+        if set(request.form) != expected or any(len(request.form.getlist(key)) != 1 for key in expected):
+            abort(400)
+        values = {'command_id': form_text('command_id', 36)}
+        if operation == 'bootstrap':
+            if request.form['confirmation'] != 'confirmed':
+                abort(400)
+            values['team_ids'] = [form_text('team_one', 36), form_text('team_two', 36)]
+        elif operation == 'enroll_team':
+            if request.form['confirmation'] != 'confirmed':
+                abort(400)
+            values.update(team_id=form_text('team_id',36), homeland_frontier_id=form_text('homeland_frontier_id',36))
+        elif operation == 'phase':
+            values['expected_phase'] = form_text('expected_phase', 20)
+        elif operation == 'cancel':
+            if request.form['confirmation'] != 'confirmed':
+                abort(400)
+            values.update(run_id=form_text('run_id', 36), reason=form_text('reason', 200))
+        elif request.form['confirmation'] != 'confirmed':
+            abort(400)
+        domain.world_admin_command(g.admin['_id'], operation, values)
+        flash('World action saved. Review the current round and engagements below.')
+        return redirect(url_for('world_admin'))
+
     @internal_route("/health", methods=("GET",), player=False)
     def health():
         db.command("ping")
@@ -417,8 +518,8 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
         # Capability metadata is not a live native-client or game-daemon probe.
         return jsonify(status="ok", service="alliance", api_version=1,
                        game_bridge_integrated=True, campaign_content_ready=CAMPAIGN_CONTENT_READY,
-                       health_scope="backend_only", native_runtime_checked=False, implementation_release=1192621,
-                       product_schema_version=3, flexible_teams=True)
+                       health_scope="backend_only", native_runtime_checked=False, implementation_release=1192624,
+                       product_schema_version=4, flexible_teams=True)
 
     @internal_route("/register", player=False)
     def register():
@@ -503,7 +604,7 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     def casual_capabilities():
         progression_payload()
         domain._generation()
-        return jsonify(protocol=3, implementation_release=1192621, schema_version=3)
+        return jsonify(protocol=4, implementation_release=1192624, schema_version=4)
 
     @internal_route('/casual/network_prepare', player=False)
     def casual_network_prepare():

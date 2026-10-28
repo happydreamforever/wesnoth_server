@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
 $stage = Join-Path $repo 'build\alliance-account-bridge'
 $legacyInputs = @('alliance_bridge/CMakeLists.txt', 'alliance_bridge/main.cpp', 'tools/build_alliance_bridge.py')
-$inputs = @('alliance_bridge/CMakeLists.txt', 'alliance_bridge/main.cpp', 'alliance_bridge/progression_protocol.hpp', 'alliance_bridge/unified_protocol.hpp', 'alliance_bridge/flexible_protocol.hpp', 'tools/build_alliance_bridge.py')
+$inputs = @('alliance_bridge/CMakeLists.txt', 'alliance_bridge/main.cpp', 'alliance_bridge/progression_protocol.hpp', 'alliance_bridge/unified_protocol.hpp', 'alliance_bridge/flexible_protocol.hpp', 'alliance_bridge/world_protocol.hpp', 'tools/build_alliance_bridge.py')
 $started = $false
 $result = 1
 $log = $null
@@ -51,6 +51,8 @@ function Test-CompletedBridge([bool]$CurrentSources) {
     $bindingInputs = $inputs
     if (-not $CurrentSources -and @($owner.inputs.PSObject.Properties.Name).Count -eq $legacyInputs.Count) {
         $bindingInputs = $legacyInputs
+    } elseif (-not $CurrentSources -and @($owner.inputs.PSObject.Properties.Name).Count -eq 6) {
+        $bindingInputs = @('alliance_bridge/CMakeLists.txt', 'alliance_bridge/main.cpp', 'alliance_bridge/progression_protocol.hpp', 'alliance_bridge/unified_protocol.hpp', 'alliance_bridge/flexible_protocol.hpp', 'tools/build_alliance_bridge.py')
     } elseif (-not $CurrentSources -and @($owner.inputs.PSObject.Properties.Name).Count -eq 5) {
         $bindingInputs = @('alliance_bridge/CMakeLists.txt', 'alliance_bridge/main.cpp', 'alliance_bridge/progression_protocol.hpp', 'alliance_bridge/unified_protocol.hpp', 'tools/build_alliance_bridge.py')
     } elseif (-not $CurrentSources -and @($owner.inputs.PSObject.Properties.Name).Count -eq 4) {

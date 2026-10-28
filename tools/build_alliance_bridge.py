@@ -13,7 +13,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 STAGE = ROOT / "build/alliance-account-bridge"
-INPUTS = ("alliance_bridge/CMakeLists.txt", "alliance_bridge/main.cpp", "alliance_bridge/progression_protocol.hpp", "alliance_bridge/unified_protocol.hpp", "alliance_bridge/flexible_protocol.hpp", "tools/build_alliance_bridge.py")
+INPUTS = ("alliance_bridge/CMakeLists.txt", "alliance_bridge/main.cpp", "alliance_bridge/progression_protocol.hpp", "alliance_bridge/unified_protocol.hpp", "alliance_bridge/flexible_protocol.hpp", "alliance_bridge/world_protocol.hpp", "tools/build_alliance_bridge.py")
 PURPOSE = "wesnoth-alliance-account-bridge"
 
 
@@ -144,7 +144,7 @@ def build(msys, cmake):
     native([cmake, "--build", STAGE, "--parallel", "2", "--", "-d", "keepdepfile"], environment)
     executable = safe_path(STAGE / "alliance-account-bridge.exe")
     version = capture([executable, "--version"], environment)
-    if version != "WESNOTH_ALLIANCE_ACCOUNT_BRIDGE protocol=3 max_connections=32 timeout_seconds=10":
+    if version != "WESNOTH_ALLIANCE_ACCOUNT_BRIDGE protocol=4 max_connections=32 timeout_seconds=10":
         raise BuildError("Built executable version did not match the account protocol.")
     if binding() != expected:
         raise BuildError("Source inputs changed during the build; completed output was preserved.")

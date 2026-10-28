@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}World host · Alliance{% endblock %}
+{% block content %}
+<h1>World host</h1>
+{% if not snapshot.world %}
+<section class="panel"><h2>Open the first territorial world</h2>
+<p>Select two existing founding Teams. Each receives its capital and frontier; both supply towns remain neutral. This assignment is recorded once.</p>
+<form method="post" action="{{ url_for('world_admin_action') }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="command_id" value="{{ command_id }}"><input type="hidden" name="operation" value="bootstrap">
+<label>Dawnreach homeland<select required name="team_one"><option value="">Choose Team</option>{% for team in snapshot.teams %}<option value="{{ team.id }}">{{ team.name }}</option>{% endfor %}</select></label>
+<label>Mistvale homeland<select required name="team_two"><option value="">Choose Team</option>{% for team in snapshot.teams %}<option value="{{ team.id }}">{{ team.name }}</option>{% endfor %}</select></label>
+<label><input required type="checkbox" name="confirmation" value="confirmed">These are the two founding Teams.</label>
+<button type="submit">Open world</button></form></section>
+{% else %}
+<section class="panel"><h2>Round {{ snapshot.world.round }} · {{ snapshot.world.phase|capitalize }}</h2>
+<p>World rounds advance only through these controls. Every committed engagement must finish or be explicitly cancelled before the next round.</p>
+<form method="post" action="{{ url_for('world_admin_action') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="command_id" value="{{ command_id }}">
+{% if snapshot.world.phase == 'settlement' %}<input type="hidden" name="operation" value="advance"><label><input required type="checkbox" name="confirmation" value="confirmed">Close this round and recover territorial wounds due next round.</label><button type="submit">Begin next round</button>
+{% else %}<input type="hidden" name="operation" value="phase"><input type="hidden" name="expected_phase" value="{{ snapshot.world.phase }}"><button type="submit">{% if snapshot.world.phase == 'planning' %}Apply deployment orders{% elif snapshot.world.phase == 'deployment' %}Lock engagements{% elif snapshot.world.phase == 'committed' %}Open tactical battles{% else %}Review round settlement{% endif %}</button>{% endif %}
+</form></section>
+<section class="panel"><h2>Castles</h2><div class="table-wrap"><table><thead><tr><th>Castle</th><th>Owner</th><th>Roadworks</th></tr></thead><tbody>{% for castle in snapshot.castles %}<tr><td>{{ castle.name }}</td><td>{% if castle.owner_team_id %}{% for team in snapshot.teams if team.id == castle.owner_team_id %}{{ team.name }}{% endfor %}{% else %}Neutral{% endif %}</td><td>{{ 'Built' if castle.roadworks else 'None' }}</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="panel"><h2>Enroll another Team</h2><p>Enrollment grants no land or Supply. The selected frontier remains this Team's permanent return objective if it is landless.</p>
+<form method="post" action="{{ url_for('world_admin_action') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="command_id" value="{{ command_id }}"><input type="hidden" name="operation" value="enroll_team"><label>Team<select required name="team_id"><option value="">Choose Team</option>{% for team in snapshot.teams %}<option value="{{ team.id }}">{{ team.name }}</option>{% endfor %}</select></label><label>Return frontier<select required name="homeland_frontier_id">{% for castle in snapshot.castles if castle.kind == 'frontier' %}<option value="{{ castle.id }}">{{ castle.name }}</option>{% endfor %}</select></label><label><input required type="checkbox" name="confirmation" value="confirmed">Assign this permanent return objective.</label><button type="submit">Enroll Team</button></form></section>
+{% endif %}
+<section class="panel"><h2>Unresolved engagements</h2>{% for battle in snapshot.contracts %}
+<details><summary>{{ battle.kind|capitalize }} · {{ battle.state|capitalize }} · {{ battle.created_at }}</summary>
+<p>Cancellation releases this engagement without a victory, land transfer or reward. A completed result cannot be cancelled.</p>
+<form method="post" action="{{ url_for('world_admin_action') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="command_id" value="{{ command_id }}"><input type="hidden" name="operation" value="cancel"><input type="hidden" name="run_id" value="{{ battle.id }}"><label>Reason<input required name="reason" minlength="3" maxlength="200"></label><label><input required type="checkbox" name="confirmation" value="confirmed">Cancel this engagement.</label><button type="submit" class="secondary">Cancel engagement</button></form>
+</details>{% else %}<p>No unresolved engagements.</p>{% endfor %}</section>
+{% endblock %}

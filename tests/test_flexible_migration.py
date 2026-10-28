@@ -85,7 +85,7 @@ class Migration(unittest.TestCase):
                     if phase=='draft_converted':raise RuntimeError('injected draft interruption')
                 return migrate_schema_2_to_3(db,digest,checkpoint=fail)
             with patch.object(migration,'migrate_schema_2_to_3',side_effect=interrupted):
-                with self.assertRaisesRegex(RuntimeError,'injected'):migration.migrate(runtime,backup,mongod)
+                with self.assertRaisesRegex(RuntimeError,'injected'):migration.migrate(runtime,backup,mongod,target_schema=3)
             self.assertEqual(maintenance.inventory(backup/'runtime'),cold)
             process=_start_mongo(runtime,mongod)
             try:
@@ -100,8 +100,8 @@ class Migration(unittest.TestCase):
                     self.assertEqual(BSON.encode(db.game_runs.find_one({'plan_format':2})),converted)
                     db.schema_metadata.update_one({'_id':'alliance'},{'$set':{'database_generation':identity['database_generation']}})
             finally:_stop_owned(process,runtime)
-            self.assertEqual(migration.migrate(runtime,backup,mongod),{'schema_version':3,'status':'complete'})
-            self.assertEqual(migration.migrate(runtime,backup,mongod),{'schema_version':3,'status':'already_complete'})
+            self.assertEqual(migration.migrate(runtime,backup,mongod,target_schema=3),{'schema_version':3,'status':'complete'})
+            self.assertEqual(migration.migrate(runtime,backup,mongod,target_schema=3),{'schema_version':3,'status':'already_complete'})
             self.assertEqual({n:(runtime/n).read_bytes() for n in maintenance.CONTROLS},controls)
             process=_start_mongo(runtime,mongod)
             try:
@@ -137,7 +137,7 @@ class Migration(unittest.TestCase):
             self.assertEqual(json.loads((root/'schema2-recovery/restore-verified.json').read_text())['schema_version'],2)
             self.assertEqual(maintenance.inventory(backup/'runtime'),cold)
             with self.assertRaisesRegex(maintenance.MaintenanceError,'migration_resume_backup_mismatch'):
-                migration.migrate(runtime,root/'different-backup',mongod)
+                migration.migrate(runtime,root/'different-backup',mongod,target_schema=3)
             self.assertFalse((root/'different-backup').exists())
 
 if __name__=='__main__':unittest.main()
