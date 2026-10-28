@@ -10,7 +10,7 @@ try {
     $arguments=@('-I','-B',(Join-Path $PSScriptRoot 'build_world_worker.py'),'--msys',$MsysRoot,'--cmake',$CMakePath,'--game-data',$GameDataRoot)
     if($PreservePreviousBuild){$arguments+='--preserve-previous'}
     & $PythonPath @arguments | Out-Host
-    if($LASTEXITCODE -ne 0){throw 'Full native World worker build stopped. Send this log and the dependency report.'}
+    if($LASTEXITCODE -ne 0){throw 'Full native World worker build stopped. Send this log and the compiler-check report if produced.'}
     $result=0
 } catch {Write-Host ('ERROR: '+$_.Exception.Message)} finally {Stop-Transcript | Out-Null;Write-Host "Saved log: $log"}
 exit $result

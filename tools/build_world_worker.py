@@ -16,12 +16,14 @@ ROOT = Path(__file__).resolve().parents[1]
 CLIENT = ROOT.parent / 'wesnoth_client'
 STAGE = ROOT / 'build/windows-world-worker'
 sys.path.insert(0, str(ROOT))
-from tools.build_alliance_bridge import BuildError, write_new, native, capture, check_host
+from tools.build_alliance_bridge import BuildError, write_new, capture, check_host
 from tools.world_worker_dependencies import safe_path, digest, package_records, manifest as dependency_manifest, PREFIX as DEPENDENCY_PREFIX
 
 REQUIRED = {
     'compiler': 'bin/g++.exe', 'C compiler':'bin/gcc.exe', 'resource compiler':'bin/windres.exe', 'linker': 'bin/ld.exe', 'objdump': 'bin/objdump.exe',
-    'pkg-config': 'bin/pkg-config.exe', 'OpenSSL': 'include/openssl/ssl.h',
+    'pkg-config': 'bin/pkg-config.exe', 'C headers': 'include/string.h',
+    'Windows headers': 'include/windows.h', 'POSIX thread headers': 'include/pthread.h',
+    'OpenSSL': 'include/openssl/ssl.h',
     'Boost': 'include/boost/json.hpp', 'ICU': 'include/unicode/ucnv.h',
     'SDL3': 'include/SDL3/SDL.h', 'SDL3_image': 'include/SDL3_image/SDL_image.h',
     'SDL3_mixer': 'include/SDL3_mixer/SDL_mixer.h', 'Pango': 'include/pango-1.0/pango/pangocairo.h',
@@ -94,6 +96,7 @@ def binding():
     verify_engine()
     paths = [ROOT / 'tools/build_world_worker.py', ROOT/'tools/world_worker_dependencies.py',
              ROOT/'tools/world_worker_packages.py', ROOT/'tools/world_worker_archive_prefix.py',
+             ROOT/'tools/world_worker_recovery.py',
              ROOT/'tools/world-worker-packages-1192624.json', DEPENDENCY_PREFIX/'receipt.json']
     paths += [CLIENT/'tools'/name for name in ('prepare_android_source.py','verify_game_data.py','gamedata-1.19.26.reference.json')]
     paths += [path for directory in ('engine', 'alliance_game', 'alliance_native')
@@ -208,6 +211,177 @@ def prepare_source(client, source, generated, replacements, cmake_text):
     return expected
 
 
+def native(command, environment):
+    result = subprocess.run([str(part) for part in command], env=environment, stdin=subprocess.DEVNULL)
+    if result.returncode:
+        raise BuildError(f'Native World worker build failed with exit {result.returncode}. Keep the saved log.')
+
+
+def compiler_environment(prefix, cmake, environ=None):
+    """Use only the selected compiler closure and the Windows system tools."""
+    environment = dict(os.environ if environ is None else environ)
+    for name in list(environment):
+        if name.upper().startswith(('CMAKE_', 'PKG_CONFIG_')) or name.upper() in (
+                'CPATH', 'C_INCLUDE_PATH', 'CPLUS_INCLUDE_PATH', 'OBJC_INCLUDE_PATH', 'LIBRARY_PATH',
+                'GCC_EXEC_PREFIX', 'COMPILER_PATH', 'CC', 'CXX', 'CPP', 'CFLAGS', 'CXXFLAGS', 'CPPFLAGS',
+                'LDFLAGS', 'RCFLAGS', 'LIB', 'INCLUDE', 'BOOST_ROOT', 'BOOST_INCLUDEDIR', 'BOOST_LIBRARYDIR', 'SDKROOT'):
+            environment.pop(name)
+    system = Path(environment['SystemRoot'])
+    environment['PATH'] = os.pathsep.join((str(prefix / 'bin'), str(system / 'System32'), str(system), str(Path(cmake).parent)))
+    environment['PKG_CONFIG_LIBDIR'] = str(prefix / 'lib/pkgconfig') + os.pathsep + str(prefix / 'share/pkgconfig')
+    return environment
+
+
+def toolchain_text(prefix):
+    value = Path(prefix).absolute().as_posix()
+    if any(token in value for token in (';','\n','\r','\x00','"',']==]')):
+        raise BuildError('The isolated prefix path cannot be represented in the worker toolchain.')
+    # Bracket arguments preserve spaces and literal dollar signs. CMAKE_SYSROOT
+    # must be set by a toolchain file so it also reaches compiler try-compiles.
+    # CMake does not forward CMAKE_SYSROOT to windres. A temp file avoids
+    # windres's shell pipeline, which also mishandles compiler paths with spaces.
+    return ('# Owned World worker compiler root; the signed prefix remains unchanged.\n'
+            'set(CMAKE_SYSROOT [==[' + value + ']==])\n'
+            'set(CMAKE_RC_FLAGS_INIT [==[--use-temp-file "--preprocessor-arg=--sysroot='
+            + value + '"]==])\n').encode('utf-8')
+
+
+def prepare_toolchain(stage, prefix):
+    path = safe_path(Path(stage) / 'worker-toolchain.cmake')
+    expected = toolchain_text(prefix)
+    if path.exists():
+        if path.stat().st_nlink != 1 or path.read_bytes() != expected:
+            raise BuildError('Owned worker toolchain changed; preserve it for review.')
+    else:
+        with path.open('xb') as stream:
+            stream.write(expected); stream.flush(); os.fsync(stream.fileno())
+    return path
+
+
+COMPILER_PROBES = {
+    'c': ('gcc.exe', 'c', 'WORLD_WORKER_C_RUNTIME_OK', r'''#include <string.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <windows.h>
+#include <pthread.h>
+static void *run(void *value) { *(int *)value = 7; return NULL; }
+int main(void) {
+    int value = 0; pthread_t thread; char text[8];
+    memcpy(text, "worker", 7);
+    if (!GetCurrentProcessId() || strcmp(text, "worker") || sizeof(uint64_t) != 8) return 1;
+    if (pthread_create(&thread, NULL, run, &value) || pthread_join(thread, NULL) || value != 7) return 2;
+    puts("WORLD_WORKER_C_RUNTIME_OK"); return 0;
+}
+'''),
+    'cxx': ('g++.exe', 'cpp', 'WORLD_WORKER_CXX_RUNTIME_OK', r'''#include <cstring>
+#include <string>
+#include <thread>
+#include <mutex>
+#include <vector>
+#include <iostream>
+#include <stdexcept>
+int main() {
+    std::vector<int> values(1, 0); std::mutex mutex;
+    std::thread thread([&] { std::lock_guard<std::mutex> guard(mutex); values[0] = 7; }); thread.join();
+    if (values[0] != 7 || std::strcmp(std::string("worker").c_str(), "worker")) return 1;
+    try { throw std::runtime_error("probe"); } catch (const std::runtime_error&) {}
+    std::cout << "WORLD_WORKER_CXX_RUNTIME_OK\n"; return 0;
+}
+'''),
+}
+
+
+RESOURCE_PROBE = '''#include <windows.h>
+1 VERSIONINFO
+ FILEVERSION 1,19,26,0
+ PRODUCTVERSION 1,19,26,0
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_APP
+BEGIN
+ BLOCK "StringFileInfo"
+ BEGIN
+  BLOCK "040904b0"
+  BEGIN
+   VALUE "FileDescription", "World worker compiler check\\0"
+  END
+ END
+END
+'''
+
+
+def compiler_preflight(prefix, environment, root=None):
+    """Compile/link/run C/C++ and compile an actual Windows resource."""
+    parent = safe_path(Path(root) if root is not None else ROOT / 'build', directory=True)
+    prefix = safe_path(prefix, directory=True)
+    toolchain_text(prefix)  # Apply the same path restrictions as the real build.
+    directory = parent / ('world-worker-toolchain-check-' + uuid4().hex)
+    directory.mkdir(mode=0o700)
+    write_new(directory / 'owner.json', {'format': 1, 'purpose': 'world-worker-compiler-check', 'prefix': str(prefix)})
+    report = {'format': 1, 'purpose': 'world-worker-compiler-check', 'status': 'failed',
+              'prefix': str(prefix), 'sysroot': prefix.as_posix(), 'phases': []}
+    phase = 'prepare'
+    print('Checking isolated C/C++ headers, threads and runtime DLLs: ' + str(directory), flush=True)
+    try:
+        for name, (compiler, extension, marker, source) in COMPILER_PROBES.items():
+            source_path = directory / ('probe.' + extension)
+            source_path.write_bytes(source.encode('utf-8'))
+            executable = directory / ('probe-' + name + '.exe')
+            command = [str(prefix / 'bin' / compiler), '--sysroot=' + prefix.as_posix(), '-pthread']
+            if name == 'cxx': command.append('-std=c++17')
+            command += [str(source_path), '-o', str(executable)]
+            for action, arguments in (('compile', command), ('run', [str(executable)])):
+                phase = name + '-' + action
+                completed = subprocess.run(arguments, env=environment, stdin=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
+                (directory / (phase + '.txt')).write_bytes(completed.stdout)
+                row = {'phase': phase, 'exit': completed.returncode}
+                report['phases'].append(row)
+                if completed.returncode:
+                    print(completed.stdout.decode('utf-8', 'replace'), flush=True)
+                    raise BuildError('Isolated compiler check failed at ' + phase + '; retain its folder and the build log.')
+                if action == 'run' and completed.stdout.decode('utf-8', 'replace').strip() != marker:
+                    raise BuildError('Isolated compiler runtime did not confirm ' + phase + '; retain its report.')
+                row['status'] = 'passed'
+            report[name] = {'source_sha256': digest(source_path), 'executable_sha256': digest(executable)}
+            print('PASS isolated ' + name.upper() + ' headers, threads and runtime', flush=True)
+        resource = directory / 'probe.rc'
+        resource.write_bytes(RESOURCE_PROBE.encode('utf-8'))
+        resource_object = directory / 'probe-resource.o'
+        resource_command = [str(prefix / 'bin/windres.exe'), '--use-temp-file',
+            '--preprocessor-arg=--sysroot=' + prefix.as_posix(), '-O', 'coff',
+            '-i', str(resource), '-o', str(resource_object)]
+        for phase, arguments in (
+                ('rc-compile', resource_command),
+                ('rc-verify', [str(prefix / 'bin/objdump.exe'), '-f', str(resource_object)])):
+            completed = subprocess.run(arguments, env=environment, stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
+            (directory / (phase + '.txt')).write_bytes(completed.stdout)
+            row = {'phase': phase, 'exit': completed.returncode}
+            report['phases'].append(row)
+            if completed.returncode:
+                print(completed.stdout.decode('utf-8', 'replace'), flush=True)
+                raise BuildError('Isolated compiler check failed at ' + phase + '; retain its folder and the build log.')
+            if phase == 'rc-verify' and (b'file format pe-x86-64' not in completed.stdout
+                    or b'architecture: i386:x86-64' not in completed.stdout):
+                raise BuildError('Isolated resource compiler did not produce an x86_64 COFF object; retain its report.')
+            row['status'] = 'passed'
+        report['rc'] = {'source_sha256': digest(resource), 'object_sha256': digest(resource_object)}
+        print('PASS isolated Windows resource headers and x86_64 object', flush=True)
+        report['status'] = 'passed'
+        print('WORLD WORKER COMPILER CHECK PASSED', flush=True)
+        return report
+    except subprocess.TimeoutExpired:
+        report['failure_phase'] = phase
+        report['error'] = 'timeout'
+        raise BuildError('Isolated compiler check timed out at ' + phase + '; retain its folder.') from None
+    except (BuildError, OSError):
+        report['failure_phase'] = phase
+        raise
+    finally:
+        write_new(directory / 'report.json', report)
+        print('Compiler check report: ' + str(directory / 'report.json'), flush=True)
+
+
 def installed_worker(required=True, expected_binding=None):
     receipt_path = STAGE / 'receipt.json'
     if not receipt_path.exists():
@@ -223,6 +397,10 @@ def installed_worker(required=True, expected_binding=None):
             raise BuildError('World worker build-tool receipt is invalid.')
         if digest(safe_path(tool['path']))!=tool['sha256']:
             raise BuildError('A pinned native worker build tool changed. Preserve the completed worker stage.')
+    if 'wesnoth_server/tools/world_worker_recovery.py' in expected_binding.get('inputs', {}):
+        toolchain = safe_path(STAGE / 'worker-toolchain.cmake')
+        if toolchain.read_bytes() != toolchain_text(DEPENDENCY_PREFIX):
+            raise BuildError('Worker compiler sysroot differs from the verified isolated prefix.')
     executable = safe_path(STAGE / 'bin/world-worker.exe')
     if row['executable'] != {'sha256':digest(executable),'bytes':executable.stat().st_size}:
         raise BuildError('World worker executable differs from its receipt.')
@@ -255,16 +433,7 @@ def build(msys, cmake, game_data, preserve):
     data=safe_path(game_data,directory=True)
     initial_inventory=data_inventory(data)
     prefix = safe_path(DEPENDENCY_PREFIX, directory=True)
-    environment = os.environ.copy()
-    for name in list(environment):
-        if name.upper().startswith(('CMAKE_','PKG_CONFIG_')) or name.upper() in (
-                'CPATH','C_INCLUDE_PATH','CPLUS_INCLUDE_PATH','OBJC_INCLUDE_PATH','LIBRARY_PATH',
-                'GCC_EXEC_PREFIX','COMPILER_PATH','CC','CXX','CPP','CFLAGS','CXXFLAGS','CPPFLAGS',
-                'LDFLAGS','LIB','INCLUDE','BOOST_ROOT','BOOST_INCLUDEDIR','BOOST_LIBRARYDIR'):
-            environment.pop(name)
-    environment['PATH'] = os.pathsep.join((str(prefix/'bin'),str(Path(os.environ['SystemRoot'])/'System32'),str(Path(os.environ['SystemRoot'])),str(Path(cmake).parent)))
-    environment['PKG_CONFIG_LIBDIR'] = str(prefix / 'lib/pkgconfig') + os.pathsep + str(prefix / 'share/pkgconfig')
-    environment.pop('PKG_CONFIG_PATH', None)
+    environment = compiler_environment(prefix, cmake)
     cmake=safe_path(cmake);ninja=safe_path(Path(msys)/'ucrt64/bin/ninja.exe')
     cmake_version=capture([cmake,'--version'],environment).splitlines()[0]
     ninja_version=capture([ninja,'--version'],environment)
@@ -278,18 +447,30 @@ def build(msys, cmake, game_data, preserve):
     if (capture([prefix/'bin/g++.exe','-dumpmachine'],environment) != 'x86_64-w64-mingw32'
             or capture([prefix/'bin/g++.exe','-dumpfullversion','-dumpversion'],environment) != '16.2.0'):
         raise BuildError('Use the previously verified MINGW64 GCC 16.2.0 toolchain.')
+    compiler_preflight(prefix, environment)
     expected = binding()
     STAGE.parent.mkdir(exist_ok=True)
+    from tools.world_worker_recovery import recovery_pending, preserve_failed_stage
+    if recovery_pending(STAGE):
+        if not preserve:
+            raise BuildError('Worker recovery is pending. Preserve all files and use the documented preservation command.')
+        retained = preserve_failed_stage(STAGE, expected)
+        print('Incomplete worker build preserved: ' + str(retained), flush=True)
     if STAGE.exists():
         owner = metadata(STAGE/'owner.json')
         if owner != expected:
-            if not preserve or not (STAGE/'receipt.json').is_file():
-                raise BuildError('Existing worker stage differs or is incomplete; preserve it for review.')
-            installed_worker(expected_binding=owner)
-            STAGE.rename(STAGE.with_name(STAGE.name+'-before-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid4().hex))
+            if not preserve:
+                raise BuildError('Existing worker stage differs; preserve it for review.')
+            if not (STAGE/'receipt.json').exists():
+                retained = preserve_failed_stage(STAGE, expected)
+                print('Incomplete worker build preserved: ' + str(retained), flush=True)
+            else:
+                installed_worker(expected_binding=owner)
+                STAGE.rename(STAGE.with_name(STAGE.name+'-before-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid4().hex))
         elif (STAGE/'receipt.json').exists():
             installed_worker(); print('WORLD NATIVE WORKER ARTIFACT VERIFIED'); return
     if not STAGE.exists(): STAGE.mkdir();write_new(STAGE/'owner.json',expected)
+    toolchain = prepare_toolchain(STAGE, prefix)
     sys.path.insert(0, str(CLIENT/'alliance_game'))
     from world_worker_overlay import generate, WORLD_SOURCES
     generated = STAGE/'overlay'
@@ -299,7 +480,7 @@ def build(msys, cmake, game_data, preserve):
     additions += [(CLIENT/'alliance_native'/(name+'.cpp')).as_posix() for name in ('transport','account_client','account_protocol')]
     cmake_text = worker_cmake(CLIENT, generated, additions)
     prepare_source(CLIENT,source,generated,replacements,cmake_text)
-    native([cmake,'-S',source,'-B',STAGE/'engine','-G','Ninja',f'-DCMAKE_CXX_COMPILER={(prefix/"bin/g++.exe").as_posix()}',
+    native([cmake,'-S',source,'-B',STAGE/'engine','-G','Ninja',f'-DCMAKE_TOOLCHAIN_FILE={toolchain.as_posix()}',f'-DCMAKE_CXX_COMPILER={(prefix/"bin/g++.exe").as_posix()}',
         f'-DCMAKE_C_COMPILER={(prefix/"bin/gcc.exe").as_posix()}',f'-DCMAKE_RC_COMPILER={(prefix/"bin/windres.exe").as_posix()}',
         f'-DPython_EXECUTABLE={safe_path(sys.executable).as_posix()}',
         f'-DCMAKE_MAKE_PROGRAM={ninja.as_posix()}',f'-DCMAKE_PREFIX_PATH={prefix.as_posix()}',f'-DBoost_ROOT={prefix.as_posix()}',
