@@ -17,6 +17,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
 import shutil
 import socket
 import ssl
@@ -45,6 +46,7 @@ MONGO_FILES = (
     "LICENSE-Community.txt", "MPL-2", "README", "THIRD-PARTY-NOTICES",
     "bin/mongod.exe", "bin/vc_redist.x64.exe",
 )
+MONGO_DUMP_NAME = re.compile(r"mongod\.[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}-[0-9]{2}-[0-9]{2}\.mdmp")
 
 
 class PreparationError(RuntimeError):
@@ -229,8 +231,8 @@ def write_json_new(path: Path, data: dict) -> None:
         output.write("\n")
 
 
-def _mongodb_tree_snapshot(directory: Path, item: dict) -> dict:
-    """Verify the exact owned tree and capture its identity before publication."""
+def _mongodb_tree_snapshot(directory: Path, item: dict, *, allow_crash_dumps: bool = False) -> dict:
+    """Verify owned files; only an already used installation may retain dumps."""
     if directory.is_symlink() or directory.is_junction() or not directory.is_dir():
         raise PreparationError(f"MongoDB directory is missing or redirected; preserved: {directory}")
     marker = directory / "alliance-owned.json"
@@ -239,13 +241,41 @@ def _mongodb_tree_snapshot(directory: Path, item: dict) -> dict:
     folder = directory / "bin"
     if folder.is_symlink() or folder.is_junction() or not folder.is_dir():
         raise PreparationError(f"MongoDB directory is missing or redirected; preserved: {folder}")
-    names = (".", "bin", "alliance-owned.json", *MONGO_FILES)
+    expected_top = {Path(name).parts[0] for name in MONGO_FILES} | {marker.name}
+    expected_bin = {"mongod.exe", "vc_redist.x64.exe"}
+
+    def diagnostic_names():
+        top = {p.name for p in directory.iterdir()}
+        children = {p.name for p in folder.iterdir()}
+        if top != expected_top or not expected_bin.issubset(children):
+            raise PreparationError("MongoDB directory contains unexpected files; preserved.")
+        extras = tuple(sorted(children - expected_bin))
+        if extras and not allow_crash_dumps:
+            raise PreparationError("MongoDB directory contains unexpected files; preserved.")
+        for name in extras:
+            if not MONGO_DUMP_NAME.fullmatch(name):
+                raise PreparationError("MongoDB directory contains unexpected files; preserved.")
+            try:
+                datetime.strptime(name, "mongod.%Y-%m-%dT%H-%M-%S.mdmp")
+            except ValueError:
+                raise PreparationError("MongoDB diagnostic filename is invalid; preserved.") from None
+            # Never follow a redirected diagnostic or inspect its private contents.
+            value = (folder / name).lstat()
+            if (not stat.S_ISREG(value.st_mode) or value.st_nlink != 1
+                    or getattr(value, "st_file_attributes", 0) & 0x400):
+                raise PreparationError("MongoDB diagnostic is redirected, linked or not a regular file; preserved.")
+        return extras
+
+    diagnostics = diagnostic_names()
+    names = (".", "bin", "alliance-owned.json", *MONGO_FILES,
+             *("bin/" + name for name in diagnostics))
 
     def identities():
         result = {}
         for name in names:
             value = (directory / name).lstat()
-            result[name] = (value.st_dev, value.st_ino, value.st_mode, value.st_size, value.st_mtime_ns)
+            result[name] = (value.st_dev, value.st_ino, value.st_mode, value.st_size,
+                            value.st_mtime_ns, value.st_nlink, getattr(value, "st_file_attributes", 0))
         return result
 
     before = identities()
@@ -256,12 +286,10 @@ def _mongodb_tree_snapshot(directory: Path, item: dict) -> dict:
         raise PreparationError("MongoDB receipt file selection differs from the recipe.")
     if set(receipt) != {"owner", "archive_sha256", "files"}:
         raise PreparationError("MongoDB ownership receipt changed; preserved.")
-    expected_top = {Path(name).parts[0] for name in MONGO_FILES} | {marker.name}
-    if ({p.name for p in directory.iterdir()} != expected_top or
-            {p.name for p in (directory / "bin").iterdir()} != {"mongod.exe", "vc_redist.x64.exe"}):
-        raise PreparationError("MongoDB directory contains unexpected files; preserved.")
     for name, expected in item["files"].items():
         verify(directory / name, {**expected, "filename": name})
+    if diagnostic_names() != diagnostics:
+        raise PreparationError("MongoDB directory changed during verification; preserved.")
     after = identities()
     if after != before:
         raise PreparationError("MongoDB directory changed during verification; preserved.")
@@ -303,7 +331,7 @@ def extract_mongodb(manifest: dict, cache: Path, destination: Path) -> Path:
     verify(archive, item)
     marker = destination / "alliance-owned.json"
     if destination.exists() or destination.is_symlink() or destination.is_junction():
-        _mongodb_tree_snapshot(destination, item)
+        _mongodb_tree_snapshot(destination, item, allow_crash_dumps=True)
         return destination / "bin" / "mongod.exe"
     destination.parent.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix=destination.name + ".extract-", dir=destination.parent))
@@ -438,7 +466,7 @@ def validate_existing_venv(venv: Path, manifest: dict) -> None:
 def install(manifest: dict, cache: Path, venv: Path, mongodb: Path, *, existing_mongodb: bool = False) -> None:
     assert_windows_python()
     if existing_mongodb:
-        _mongodb_tree_snapshot(mongodb, manifest["mongodb"])
+        _mongodb_tree_snapshot(mongodb, manifest["mongodb"], allow_crash_dumps=True)
         prepare_wheels(manifest, cache)
         mongod = mongodb / "bin/mongod.exe"
     else:
@@ -500,7 +528,9 @@ def prepare_python312(manifest: dict, cache: Path, mongodb: Path, download=False
     if manifest['python'] != '3.12.10':
         raise PreparationError('Python 3.12 preparation requires its pinned dependency manifest.')
     _safe_local_path(mongodb, directory=True)
-    _mongodb_tree_snapshot(mongodb, manifest['mongodb'])
+    snapshot = _mongodb_tree_snapshot(mongodb, manifest['mongodb'], allow_crash_dumps=True)
+    retained = sum(name.startswith('bin/mongod.') and name.endswith('.mdmp') for name in snapshot)
+    print(f'Pinned MongoDB files verified; retained diagnostic dumps: {retained}.', flush=True)
     prepare_wheels(manifest, cache, download)
     print('ALLIANCE PYTHON 3.12 CACHE READY', flush=True)
     print('Existing MongoDB files are verified and unchanged; its archive was not downloaded or extracted.', flush=True)
