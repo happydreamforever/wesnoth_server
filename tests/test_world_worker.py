@@ -141,6 +141,23 @@ class WorkerAuthorityTests(unittest.TestCase):
             self.assertEqual((room.count,room.current_side),(1,2))
         asyncio.run(run())
 
+    def test_sync_failure_disputes_domain_immediately_without_waiting_for_exit(self):
+        async def run():
+            self.daemon.domain.world_worker_pause=Mock()
+            room=WorldRoom(self.supervisor,self.descriptor,self.root);room.started=True
+            room.authorize=AsyncMock();room.broadcast_notice=AsyncMock()
+            peer=WorldPeer(None,None,self.actor,'x'*43);peer.loaded=True;peer.sides=[1]
+            room.peers['worker']=SimpleNamespace(loaded=True,actor='machine-1234')
+            await room.command(peer,Node(children=[Node('info',{'condition':'out of sync'})]))
+            self.assertTrue(room.paused);self.assertEqual(room.pause_reason,'native_sync_error')
+            self.daemon.domain.world_worker_pause.assert_called_once_with(
+                self.run,'machine-1234',self.generation,'native_sync_error')
+            with self.assertRaises(WireError):
+                await room.command(peer,Node(children=[Node('turn',children=[Node('command',
+                    {'from_side':'1'},[Node('end_turn',{'next_player_number':'2'})])])]))
+            self.assertEqual(room.count,0)
+        asyncio.run(run())
+
     def proof(self):
         row={'sequence':0,'run_id':self.run,'generation':self.generation,'previous':'0'*64,
              'instance_id':'h','kind':'deployed','unit_type':'Fighter','amount':0}

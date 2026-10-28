@@ -260,8 +260,11 @@ class WorldRoom:
                 if node.attrs.get('condition') == 'out of sync':
                     self.paused = True
                     self.pause_reason = "native_sync_error"
-                    self.update_availability()
+                    self.available.set()  # Release waiting packets into the paused-state guard.
                     self.persist()
+                    witness = self.peers["worker"]
+                    await asyncio.to_thread(self.supervisor.daemon.domain.world_worker_pause,
+                        self.run_id, witness.actor, self.generation, self.pause_reason)
                     await self.broadcast_notice('Synchronization failed. The battle is paused; no result was settled.')
                 return  # Native advisory is never terminal evidence.
             raise WireError("Unsupported World command.")
