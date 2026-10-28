@@ -4,7 +4,7 @@
 
 The resumed Windows full preparation reached package 107/107 and `WORLD WORKER ISOLATED DEPENDENCIES PREPARED`. Saved log: `diagnostics/world-worker-prepare-20261028-054104-451-ff7e6753e7d5430fa8fabdfa86549405.txt`. Accept full D at pasted-console scope; the saved log itself was not supplied. Preserve the cache, completed prefix, journal and diagnostic scratch. The original ReadError cause remains unknown; worker compilation/execution is not established by extraction.
 
-Proceed only to [E: schema 3→4 migration](WORLD_ACCEPTANCE_1192624.md#e-preserving-schema-3--4-migration). No new pull, download or repeated diagnostic/preparation is needed. The commands below are completed history.
+E schema-4 migration has subsequently passed. Proceed only to [F coordinated builds](WORLD_ACCEPTANCE_1192624.md#f-rebuild-the-coordinated-binaries-offline). No new pull, download or repeated diagnostic/preparation is needed. The commands below are completed history.
 
 ## Completed full preparation resume — do not repeat
 

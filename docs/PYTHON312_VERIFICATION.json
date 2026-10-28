@@ -1,6 +1,6 @@
 {
   "recorded": "2026-10-28",
-  "status": "windows_python_transition_and_full_world_prefix_preparation_accepted_migration_pending",
+  "status": "windows_python_transition_world_prefix_and_schema4_migration_accepted_builds_pending",
   "release": 1192624,
   "protocol": 4,
   "schema": 4,
@@ -41,7 +41,7 @@
     },
     "package_cache": "107 signed pinned archives verified in supplied console",
     "git_integrity_followup": "GIT_CHECK_EXIT: 0",
-    "scope": "Supplied Windows console/transcripts; saved Windows reports/private backup not opened on VPS. Python3.12.10 base, P2 cache and P3 native module checks accepted. Full World D prefix preparation now accepted; migration, worker build/execution, service startup and gameplay remain pending. P3 WAN status explicitly confirmed; no new network measurement inferred.",
+    "scope": "Supplied Windows console/transcripts; saved reports/private runtime/backup not opened on VPS. Python3.12.10 base, P2 cache, P3 native modules, full World D prefix and E schema4 migration accepted. F builds, worker/service startup and gameplay remain pending. P3 WAN status user-confirmed; new console is not a physical network measurement.",
     "python312_base": {
       "status": "accepted_supplied_console",
       "version": "3.12.10",
@@ -165,6 +165,19 @@
       "earlier_readerror_cause": "unresolved; did not recur in resumed preparation",
       "network_status": "No new physical WAN measurement; previous P3 user confirmation retained.",
       "next": "E preserving schema3-to4 migration with accepted cold backup and existing runtime-v2; no new pull/repeated preparation. Return console/log before F."
+    },
+    "world_migration": {
+      "status": "accepted_supplied_windows_console",
+      "python": "3.12.10 Windows x86_64",
+      "pinned_environment_and_mongodb_verified": true,
+      "schema_version": 4,
+      "migration_status": "complete",
+      "success_marker": "ALLIANCE SCHEMA 4 MIGRATION COMPLETE",
+      "log": "diagnostics/alliance-migration-20261028-063143-375-e6ce0bc56bf444aa8b3abb598e73d25f.txt",
+      "saved_log_and_private_runtime_supplied": false,
+      "scope": "Migration completion including owned-MongoDB shutdown gate; no new per-account values, worker execution or gameplay observed.",
+      "network_status": "No new physical WAN evidence in console; retain previous batch confirmation.",
+      "next": "F four sequential offline builds with stopped services; no new pull/download/install/backup/migration retry. Return first failure or all four success markers before G startup/H installation."
     }
   },
   "dependencies": {

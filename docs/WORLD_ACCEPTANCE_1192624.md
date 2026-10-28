@@ -1,6 +1,6 @@
 # Windows acceptance — Companies and Territorial Wars 1192624
 
-Current checkpoint (2026-10-28): A/B, Python 3.12 P1–P3, the targeted archive diagnostic and **full World D dependency preparation pass** at supplied Windows-console scope. The final log is `diagnostics/world-worker-prepare-20261028-054104-451-ff7e6753e7d5430fa8fabdfa86549405.txt`; its saved file was not supplied. Proceed only to **E: preserving schema 3→4 migration** below with the accepted exact backup. Keep all five services stopped and Python 3.14 installed. No new pull, backup, package download, Python installation or dependency preparation rerun is needed. Worker build/execution and E–Z remain pending.
+Current checkpoint (2026-10-28): A/B, Python P1–P3, full D dependency preparation and **E schema-4 migration pass** at supplied Windows-console scope. E reports Python3.12.10, verified pinned dependencies, schema_version4/status complete and ALLIANCE SCHEMA 4 MIGRATION COMPLETE. Saved log: `diagnostics/alliance-migration-20261028-063143-375-e6ce0bc56bf444aa8b3abb598e73d25f.txt`; its file/private runtime were not supplied. Run only **F: coordinated offline builds** below. Keep five services stopped and Python3.14 installed. No new pull, dependency installation, backup, initialization or migration retry is needed. F–Z remain pending.
 
 Use the existing `runtime-v2`, accounts, Teams, earned heroes, campaign saves, bundled public profile, original Android signer and one LDPlayer. This release explicitly upgrades schema 3 to 4 in place. It does not initialize another database, create founding Teams automatically or grant replacement heroes. Previously accepted results remain historical evidence; untested new behavior is NOT RUN.
 
@@ -14,7 +14,7 @@ The worker needs 107 pinned packages in total. The 83 additional archives total 
 
 The isolated prefix is assembled from verified archives, not from installed files that package scripts may have changed. Internal package hardlinks become independent files; installer scripts and hooks are not executed. The exact 57,474-file prefix occupies 1,686,953,610 bytes. Keep at least 3 GB free for dependency preparation, plus the additional space required by the full worker and retained Android builds. Cold backup, migration and build storage need their own headroom.
 
-A–D below retain the completed rollout sequence; do not repeat them. The current next command is E's migration. Do not rerun the preliminary inventory or use `pacman -Syu`. Details and provenance: [worker dependency preparation](WORLD_WORKER_DEPENDENCIES_1192624.md).
+A–E below retain the completed rollout sequence; do not repeat them. The current next command is F's coordinated build batch. Do not rerun the preliminary inventory or use `pacman -Syu`. Details and provenance: [worker dependency preparation](WORLD_WORKER_DEPENDENCIES_1192624.md).
 
 ## A. Save and stop
 
@@ -95,7 +95,7 @@ The earlier `Test-WindowsWorldWorkerDependencies.ps1` audits installed MSYS file
 
 ## E. Preserving schema 3 → 4 migration
 
-Keep all five services stopped, WAN disconnected and local Ethernet connected. The helper starts and stops its own MongoDB process for migration; do not start a separate database window.
+Accepted on Windows with schema_version4/status complete. The command below is retained history; do not repeat it. Continue at F. The helper has already stopped its owned MongoDB process.
 
 ```powershell
 & {
@@ -126,7 +126,7 @@ Expected: schema_version 4, status complete/already_complete, `ALLIANCE SCHEMA 4
 
 ## F. Rebuild the coordinated binaries offline
 
-Run sequentially; stop immediately if any helper fails:
+Current next step: keep all five services stopped, WAN disconnected and local Ethernet connected. No new pull or dependency preparation is required. Run all four builds sequentially in one PowerShell window; this block stops immediately if any helper fails:
 
 ```powershell
 & {
@@ -149,7 +149,7 @@ Run sequentially; stop immediately if any helper fails:
 }
 ```
 
-Expected markers: `ALLIANCE ACCOUNT BRIDGE REBUILD PASSED`, `UNIFIED MULTIPLAYER BUILD PASSED`, `FULL NATIVE WORLD WORKER BUILD PASSED`, `ANDROID ACCOUNT GAME REBUILD COMPLETE`. The full worker is a new build; it can take substantially longer than the bridge. Native tools remain GCC 16.2.0, CMake 4.3.0 and Ninja 1.13.2. Reports stay in each repository's `diagnostics` directory. Old completed stages, signer, OBB and journals remain retained.
+Expected markers: `ALLIANCE ACCOUNT BRIDGE REBUILD PASSED`, `UNIFIED MULTIPLAYER BUILD PASSED`, `FULL NATIVE WORLD WORKER BUILD PASSED`, `ANDROID ACCOUNT GAME REBUILD COMPLETE`. The full worker is a new build; it can take substantially longer than the bridge. Native tools remain GCC 16.2.0, CMake 4.3.0 and Ninja 1.13.2. Reports stay in each repository's `diagnostics` directory. Old completed stages, signer, OBB and journals remain retained. Return the full console after this batch, or the first error and that helper's saved logs. Review F before G startup and H installation; generic helper suggestions do not skip the checked service sequence.
 
 ## G. Start five services and verify worker availability
 

@@ -2,7 +2,7 @@
   "recorded": "2026-10-28",
   "release": 1192624,
   "implementation_commit": "75a82a2914bab045e09728b9da4be2ffd0cb0ffd",
-  "status": "windows_one_package_and_full_prefix_preparation_accepted_migration_pending",
+  "status": "windows_archive_and_full_prefix_accepted_subsequent_schema4_migration_accepted",
   "windows_evidence": {
     "status": "stopped_first_package_extraction",
     "package": "mingw-w64-x86_64-aom",
@@ -124,5 +124,18 @@
     "migration_sources_unchanged_since": "0de282c",
     "powershell_document_blocks_parsed": 14,
     "independent_migration_handoff_review": "passed; no blocker"
+  },
+  "windows_migration_followup": {
+    "status": "accepted_supplied_windows_console",
+    "python": "3.12.10 Windows x86_64",
+    "pinned_environment_and_mongodb_verified": true,
+    "schema_version": 4,
+    "migration_status": "complete",
+    "success_marker": "ALLIANCE SCHEMA 4 MIGRATION COMPLETE",
+    "log": "diagnostics/alliance-migration-20261028-063143-375-e6ce0bc56bf444aa8b3abb598e73d25f.txt",
+    "saved_log_and_private_runtime_supplied": false,
+    "scope": "Migration completion including owned-MongoDB shutdown gate; no new per-account values, worker execution or gameplay observed.",
+    "network_status": "No new physical WAN evidence in console; retain previous batch confirmation.",
+    "next": "F four sequential offline builds with stopped services; no new pull/download/install/backup/migration retry. Return first failure or all four success markers before G startup/H installation."
   }
 }
