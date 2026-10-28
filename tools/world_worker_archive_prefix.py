@@ -19,6 +19,7 @@ import shutil
 import subprocess
 import tarfile
 import threading
+import time
 import uuid
 
 from tools import world_worker_dependencies as deps
@@ -213,13 +214,47 @@ class _BoundedDecoderStream:
         return value
 
 
+class ArchiveReadError(deps.BuildError):
+    """Bounded, public diagnostic metadata; never raw stderr or exception text."""
+    def __init__(self, details):
+        self.details = details
+        super().__init__('Pinned package archive could not be read.')
+
+    def __str__(self):
+        data = self.details
+        prefix = ('The archive decoder timed out or rejected the compressed package'
+                  if data['category'].startswith('decoder_')
+                  else 'Pinned package archive could not be read')
+        fields = ('category', 'phase', 'package', 'member', 'decoder_stage', 'tar_reason',
+                  'decoded_bytes', 'elapsed_ms', 'timed_out', 'decoder_exit',
+                  'decoder_exit_hex', 'forced_cleanup', 'cleanup_exit', 'errno', 'winerror')
+        return prefix + ': ' + '; '.join(f'{key}={data[key]}' for key in fields if key in data)
+
+
+def _archive_error(error=None, *, category=None, stage='launch'):
+    reason = None
+    if isinstance(error, (tarfile.TarError, EOFError)):
+        category = 'tar_read_error'
+        reason = {'empty file': 'empty_tar', 'truncated header': 'truncated_header',
+                  'unexpected end of data': 'truncated_payload', 'invalid header': 'invalid_header',
+                  'bad checksum': 'invalid_checksum'}.get(str(error), 'invalid_tar')
+    elif isinstance(error, subprocess.TimeoutExpired):
+        category = 'decoder_wait_timeout'
+    elif isinstance(error, OSError):
+        category = 'io_error'
+    return ArchiveReadError({
+        'category': category, 'tar_reason': reason, 'decoder_stage': stage,
+        'errno': getattr(error, 'errno', None), 'winerror': getattr(error, 'winerror', None),
+    })
+
+
 @contextmanager
 def _open_archive(archive, decoder):
     """Stream zstd into Python 3.12 tarfile, with bounded lifetime and output."""
     _verify_decoder(decoder)
-    process = subprocess.Popen([str(decoder['executable']), '-q', '-d', '-c', '--memory=128MB', '--', str(archive)],
-                               stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                               cwd=decoder['cwd'], env=decoder['environment'], shell=False)
+    started = time.monotonic()
+    process = None; timer = None; stream = None; failure = None; stage = 'launch'
+    observed_exit = None; forced_cleanup = False; cleanup_exit = None
     expired = threading.Event()
     def timeout():
         expired.set()
@@ -227,35 +262,71 @@ def _open_archive(archive, decoder):
             process.kill()
         except OSError:
             pass
-    timer = threading.Timer(DECODER_TIMEOUT, timeout)
-    timer.daemon = True
-    timer.start()
-    stream = _BoundedDecoderStream(process.stdout)
     try:
+        process = subprocess.Popen([str(decoder['executable']), '-q', '-d', '-c', '--memory=128MB', '--', str(archive)],
+                                   stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                   cwd=decoder['cwd'], env=decoder['environment'], shell=False)
+        timer = threading.Timer(DECODER_TIMEOUT, timeout)
+        timer.daemon = True
+        timer.start()
+        stream = _BoundedDecoderStream(process.stdout)
+        stage = 'parse'
         with tarfile.open(fileobj=stream, mode='r|') as tar:
             yield tar
         # tarfile stops at the tar terminator; drain to establish decompressor
         # success, including the compressed frame checksum and trailing frames.
+        stage = 'drain'
         while stream.read(CHUNK):
             pass
+        stage = 'wait'
         status = process.wait(timeout=10)
         if expired.is_set() or status != 0:
-            raise deps.BuildError('The archive decoder timed out or rejected the compressed package.')
-        _verify_decoder(decoder)
-    except subprocess.TimeoutExpired:
-        raise deps.BuildError('The archive decoder did not stop within its time bound.') from None
+            observed_exit = status
+            failure = _archive_error(category='decoder_timeout' if expired.is_set() else 'decoder_exit', stage=stage)
+        else:
+            _verify_decoder(decoder)
+    except (tarfile.TarError, EOFError, OSError, subprocess.TimeoutExpired) as error:
+        failure = _archive_error(error, stage=stage)
     finally:
-        timer.cancel()
-        if process.poll() is None:
+        if timer is not None:
+            timer.cancel()
+        if process is not None:
+            if observed_exit is None:
+                observed_exit = process.poll()
+            if failure is not None and observed_exit is None:
+                # EOF can arrive just before process exit. Allow that exit to
+                # become observable before cleanup, without blocking on a full pipe.
+                try:
+                    observed_exit = process.wait(timeout=0.25)
+                except subprocess.TimeoutExpired:
+                    pass
+            if process.poll() is None:
+                forced_cleanup = True
+                try:
+                    process.kill()
+                except OSError:
+                    pass
             try:
-                process.kill()
-            except OSError:
-                pass
-        process.stdout.close()
-        try:
-            process.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            raise deps.BuildError('The archive decoder could not be stopped; preserve the preparation log.') from None
+                process.stdout.close()
+            except OSError as error:
+                if failure is None:
+                    failure = _archive_error(error, stage='cleanup')
+            finally:
+                try:
+                    cleanup_exit = process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    raise deps.BuildError('The archive decoder could not be stopped; preserve the preparation log.') from None
+        if failure is not None:
+            failure.details.update(
+                decoded_bytes=stream.total if stream is not None else 0,
+                elapsed_ms=round((time.monotonic() - started) * 1000),
+                timed_out=expired.is_set(), decoder_exit=observed_exit,
+                decoder_exit_hex=f'0x{observed_exit & 0xffffffff:08X}' if observed_exit is not None else None,
+                forced_cleanup=forced_cleanup, cleanup_exit=cleanup_exit)
+            if expired.is_set():
+                failure.details['category'] = 'decoder_timeout'
+    if failure is not None:
+        raise failure from None
 
 
 def _file_bytes(stream, size, destination=None):
@@ -304,10 +375,12 @@ def _file_bytes(stream, size, destination=None):
 def _scan(pin, cache, destination=None, decoder=None):
     archive = _check_cache(pin, cache)
     seen = {}; names = {}; actual = {}; regular = {}; links = {}; metadata = {}; expanded = 0
+    last_member = None
     try:
         with _open_archive(archive, decoder) as tar:
             for member in tar:
                 name = _path(member.name)
+                last_member = name
                 if name in seen or name.casefold() in names:
                     raise deps.BuildError('Archive has duplicate or case-colliding paths.')
                 names[name.casefold()] = name
@@ -344,6 +417,10 @@ def _scan(pin, cache, destination=None, decoder=None):
                     output = Path(destination) / name[len('mingw64/'):] if destination is not None and name.startswith('mingw64/') else None
                     value = _file_bytes(source, member.size, output)
                 actual[name] = value; regular[name] = value
+    except ArchiveReadError as error:
+        error.details.update(package=pin['name'], phase='extract' if destination is not None else 'preflight',
+                             member=last_member)
+        raise
     except (tarfile.TarError, EOFError, OSError) as error:
         raise deps.BuildError('Pinned package archive could not be read: ' + type(error).__name__) from None
     if not {'.MTREE', '.PKGINFO'}.issubset(metadata):
