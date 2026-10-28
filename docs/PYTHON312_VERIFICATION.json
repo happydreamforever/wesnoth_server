@@ -1,6 +1,6 @@
 {
   "recorded": "2026-10-28",
-  "status": "vps_verified_windows_transition_pending",
+  "status": "vps_verified_windows_p2_layout_check_stopped",
   "release": 1192624,
   "protocol": 4,
   "schema": 4,
@@ -53,6 +53,18 @@
       "repeated_git_check_exit": 0,
       "dependencies_or_services_tested": false,
       "wan_status": "not supplied for this check"
+    },
+    "python312_preparation": {
+      "status": "stopped_before_wheels",
+      "server_head": "810988e78d1c40997b81d01fa9bce10397eed3b1",
+      "client_head": "044af5d228b90bcc0b8b6c5a3c4d19030533b06f",
+      "error": "MongoDB directory contains unexpected files; preserved.",
+      "log": "diagnostics\\alliance-python312-prepare-20261028-003528-963-5f1da516b7864b69a593ad54048dabd2.txt",
+      "attachment_bytes": 10663,
+      "attachment_sha256": "736205f627f47933b667e46a80449fae9aaac45cfa4b6d7869fd6ef8f7732a2d",
+      "known_file_hash_checks_reached": false,
+      "differing_names": "not supplied",
+      "next": "Read-only root/bin directory metadata listing; preserve existing files."
     }
   },
   "dependencies": {

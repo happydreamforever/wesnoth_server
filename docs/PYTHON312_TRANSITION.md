@@ -19,6 +19,8 @@ Choose Customize installation, retain pip and venv support, and install for the 
 
 ## P2. Pull and prepare the three replacement wheels while connected
 
+The latest attempt stopped at the folder-layout check. Use the diagnostic below before retrying these retained preparation instructions.
+
 This downloads about 1 MB when the previously verified cache is present. Fourteen wheels are reused; CFFI, MarkupSafe and PyMongo receive their CPython 3.12 x64 builds. Dependency versions and MongoDB 8.0.32 remain unchanged. The MongoDB ZIP is neither downloaded nor extracted by this transition.
 
 ```powershell
@@ -42,6 +44,44 @@ This downloads about 1 MB when the previously verified cache is present. Fourtee
 
 Expected: both pulls succeed and print their commit IDs, followed by `ALLIANCE PYTHON 3.12 CACHE READY`. The preparation helper validates the selected interpreter automatically. Report: `wesnoth_server\diagnostics\alliance-python312-prepare-*.txt`. Keep services stopped. On any unexpected output, stop and return the console and log before P3.
 
+## Current P2 stop: inspect the MongoDB installation folder
+
+The 2026-10-28 supplied console confirms both pulls (server810988e/client044af5d) but preparation stops with `MongoDB directory contains unexpected files; preserved.` P2 has not passed. The code stopped before wheel preparation and before checking the known MongoDB file contents. An entry-name mismatch alone does not establish corruption or reveal which entry differs.
+
+Keep the five services stopped and Python3.14 installed. Do not repeat P2 or proceed to P3 yet. Run this read-only listing; it reads only directory metadata and writes a new diagnostic transcript. It does not open file contents, recurse into extra folders, execute MongoDB or access runtime-v2.
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $repo = 'D:\Test\wesnoth-setup\wesnoth_server'
+    $mongoInstall = Join-Path $repo 'build\alliance-mongodb'
+    $diagnostics = Join-Path $repo 'diagnostics'
+    $null = New-Item -ItemType Directory -Path $diagnostics -Force
+    $log = Join-Path $diagnostics ('mongo-install-layout-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N') + '.txt')
+
+    Start-Transcript -LiteralPath $log -NoClobber | Out-Null
+    try {
+        foreach ($folder in @($mongoInstall, (Join-Path $mongoInstall 'bin'))) {
+            $item = Get-Item -LiteralPath $folder -Force
+            if (-not $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+                throw 'Unexpected folder type or redirected path. Files were preserved.'
+            }
+            Write-Host "FOLDER: $folder"
+            Get-ChildItem -LiteralPath $folder -Force |
+                Sort-Object Name |
+                Select-Object Name,PSIsContainer,Length,Attributes,LastWriteTimeUtc |
+                Format-List
+        }
+        Write-Host 'READ-ONLY MONGODB FOLDER CHECK COMPLETE'
+    } finally {
+        Stop-Transcript | Out-Null
+        Write-Host "Saved log: $log"
+    }
+}
+```
+
+Expected: two folder listings and `READ-ONLY MONGODB FOLDER CHECK COMPLETE`. This marker means collection completed, not that MongoDB passed verification. Send the saved text log and console. Do not send any extra files shown by the listing. Choose the correction and affected retest only after those actual names are reviewed. No new pull is needed for this inline command.
+
 ## P3. Install and check offline
 
 Disconnect WAN while retaining local Ethernet. Record this once for the new interpreter/World test batch. Keep all five services stopped; the helper holds their ports while installing.
@@ -64,7 +104,7 @@ Report: `wesnoth_server\diagnostics\alliance-python312-install-*.txt`. The check
 
 The new environment is `wesnoth_server\build\alliance-venv-py312`. The old `build\alliance-venv` and MongoDB files are inventoried before and after. Runtime-v2, database schema, accounts and saves are not opened or changed. Recovery records are retained in `build\alliance-python312-transition`; do not delete its locks or journals if a run stops. Completed reruns verify rather than reinstall.
 
-Send P2/P3 output and batch WAN status. After review, resume [World step D](WORLD_ACCEPTANCE_1192624.md#d-download-once-then-prepare-the-isolated-worker-offline) at **offline prefix preparation**, using the accepted 107-package cache. Then continue E migration, F coordinated builds and G five-service readiness. Do not skip these World gates because Python passed.
+Return each step separately: P2 output first, then P3 output and batch WAN status after preparation is accepted. After review, resume [World step D](WORLD_ACCEPTANCE_1192624.md#d-download-once-then-prepare-the-isolated-worker-offline) at **offline prefix preparation**, using the accepted 107-package cache. Then continue E migration, F coordinated builds and G five-service readiness. Do not skip these World gates because Python passed.
 
 ## P4. Remove the old system Python after successful cutover
 
