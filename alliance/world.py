@@ -931,9 +931,14 @@ class WorldProduct(CompanyProduct):
         def write(session):
             run=self._world_run(run_id,session)
             if run.get('worker_id')!=worker_id or run['generation']!=generation:fail('forbidden','Worker authority does not match this run.')
-            if run['state'] not in TERMINAL:
-                self.db.world_contracts.update_one({'_id':run_id},{'$set':{'state':'paused','pause_reason':str(reason)[:100],'worker_loaded':False}},session=session)
-            return {'state':'paused' if run['state'] not in TERMINAL else run['state']}
+            # Cleanup after a failed load/result must never turn a durable
+            # dispute or a verified captain-confirmation wait into a retryable
+            # interruption. Keep its frozen evidence and reservations intact.
+            state=run['state']
+            if state in ('preparing','running','paused'):
+                state='disputed' if reason in ('native_sync_error','native_evidence_conflict') else 'paused'
+                self.db.world_contracts.update_one({'_id':run_id},{'$set':{'state':state,'pause_reason':str(reason)[:100],'worker_loaded':False}},session=session)
+            return {'state':state}
         return self._tx(write)
 
     def world_worker_finish(self, run_id, worker_id, generation, evidence):

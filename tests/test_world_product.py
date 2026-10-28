@@ -146,8 +146,34 @@ class WorldTests(unittest.TestCase):
         desc=self.load(run);self.assertEqual(len(desc['worker_sides']),2)
         self.domain.world_worker_finish(run,'test_worker_123',desc['generation'],self.evidence(desc))
         self.assertEqual(self.db.world_contracts.find_one({'_id':run})['state'],'awaiting_confirmation');self.assertEqual(self.db.world_settlements.count_documents({}),0)
+        staged=self.db.world_contracts.find_one({'_id':run})
+        self.assertEqual(self.domain.world_worker_pause(run,'test_worker_123',desc['generation'])['state'],'awaiting_confirmation')
+        self.assertEqual(self.db.world_contracts.find_one({'_id':run}),staged)
         self.command(a,'battle_confirm',run_id=run);self.assertEqual(self.db.world_settlements.count_documents({}),0)
         self.command(b,'battle_confirm',run_id=run);self.assertEqual(self.db.world_settlements.count_documents({}),1)
+
+    def test_scenario_dispute_survives_worker_cleanup_without_reacquisition(self):
+        run=self.attack_neutral();self.phase();self.phase();self.phase();desc=self.load(run)
+        rejected=self.domain.world_worker_loaded(run,'test_worker_123',desc['generation'],'b'*64)
+        self.assertEqual(rejected['state'],'disputed')
+        before=self.db.world_contracts.find_one({'_id':run})
+        self.assertEqual(self.domain.world_worker_pause(run,'test_worker_123',desc['generation'])['state'],'disputed')
+        self.assertEqual(self.db.world_contracts.find_one({'_id':run}),before)
+        self.assertIsNone(self.domain.world_worker_acquire('other_worker_123'))
+        self.assertEqual(self.db.network_battle_reservations.count_documents({'run_id':run}),1)
+        self.assertEqual(self.db.world_settlements.count_documents({}),0)
+        self.assertIsNone(self.neutral()['owner_team_id'])
+
+    def test_native_sync_conflict_is_disputed_and_cannot_become_retryable(self):
+        run=self.attack_neutral();self.phase();self.phase();self.phase();desc=self.load(run)
+        self.assertEqual(self.domain.world_worker_pause(run,'test_worker_123',desc['generation'],'native_sync_error')['state'],'disputed')
+        before=self.db.world_contracts.find_one({'_id':run})
+        self.assertEqual(self.domain.world_worker_pause(run,'test_worker_123',desc['generation'],'worker_interrupted')['state'],'disputed')
+        self.assertEqual(self.db.world_contracts.find_one({'_id':run}),before)
+        self.assertIsNone(self.domain.world_worker_acquire('other_worker_123'))
+        self.code('battle_locked',lambda:self.domain.world_worker_finish(run,'test_worker_123',desc['generation'],self.evidence(desc)))
+        self.assertEqual(self.db.world_settlements.count_documents({}),0)
+        self.assertEqual(self.db.world_castle_reservations.count_documents({'run_id':run}),1)
         self.assertEqual([t['rating'] for t in self.db.teams.find({})],[1000,1000])
 
     def test_old_training_same_hero_locked_other_hero_allowed(self):
