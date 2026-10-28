@@ -36,8 +36,8 @@ class WorkflowNative(base.Native):
                 time.sleep(.02)
         greeting = peer.receive()
         fields = parse(greeting).one('version').attrs
-        self.assertEqual(fields, {'alliance_protocol': '3',
-                                 'implementation_release': '1192621',
+        self.assertEqual(fields, {'alliance_protocol': '4',
+                                 'implementation_release': '1192624',
                                  'individual_rooms': '1'})
         account_health = workflow.bridge_check(self.profile)
         multiplayer_health = workflow.bridge_check(self.profile, multiplayer=True)

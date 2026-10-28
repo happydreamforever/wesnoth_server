@@ -32,7 +32,7 @@ STEPS = (("W02", "database", 27018, "Run-WindowsAllianceDatabase.ps1"),
          ("W04", "bridge", 15001, "Run-WindowsAllianceBridge.ps1"))
 BATTLE_STEP = ("W05", "battles", 15002, "Run-WindowsAllianceBattles.ps1")
 MULTIPLAYER_STEP = ("W06", "multiplayer", 15000, "Run-WindowsMultiplayer.ps1")
-EXPECTED_IMPLEMENTATION_RELEASE = 1192621
+EXPECTED_IMPLEMENTATION_RELEASE = 1192624
 BACKEND_RELEASE_ERROR = "W03_backend_release_mismatch"
 
 
@@ -116,18 +116,22 @@ def receive_exact(peer, length, deadline):
     return bytes(data)
 
 
-def valid_service_health(raw, *, battles=False):
+def valid_service_health(raw, *, battles=False, world_workers=None):
     # Accept only this fixed, credential-free protocol response. No generic WML
     # evaluation, nested tags or arbitrary response content enters the report.
     lines = [line.strip() for line in raw.decode("utf-8").splitlines() if line.strip()]
-    if len(lines) != 5 or lines[0] != "[alliance_health]" or lines[-1] != "[/alliance_health]": return False
+    if len(lines) != (6 if battles else 5) or lines[0] != "[alliance_health]" or lines[-1] != "[/alliance_health]": return False
     fields = {}
     for line in lines[1:-1]:
-        match = re.fullmatch(r'(service|api|implementation_release)\s*=\s*"([^"\\]*)"', line)
+        match = re.fullmatch(r'(service|api|implementation_release|native_workers)\s*=\s*"([^"\\]*)"', line)
         if not match or match[1] in fields: return False
         fields[match[1]] = match[2]
+    if battles:
+        workers=fields.pop("native_workers", "")
+        if workers not in ("1", "2", "3", "4"): return False
+        if world_workers is not None and workers!=str(world_workers):return False
     return fields == {"service": "alliance-battles" if battles else "alliance-accounts",
-                      "api": "1" if battles else "3",
+                      "api": "1" if battles else "4",
                       "implementation_release": str(EXPECTED_IMPLEMENTATION_RELEASE)}
 
 
@@ -144,11 +148,11 @@ def valid_multiplayer_health(raw):
         match = re.fullmatch(r'(alliance_protocol|implementation_release|individual_rooms)\s*=\s*"([0-9]+)"', line)
         if not match or match[1] in fields: return False
         fields[match[1]] = match[2]
-    return fields == {"alliance_protocol": "3", "implementation_release": str(EXPECTED_IMPLEMENTATION_RELEASE),
+    return fields == {"alliance_protocol": "4", "implementation_release": str(EXPECTED_IMPLEMENTATION_RELEASE),
                       "individual_rooms": "1"}
 
 
-def bridge_check(profile, *, battles=False, multiplayer=False):
+def bridge_check(profile, *, battles=False, multiplayer=False, world_workers=None):
     try:
         context = tls_client_context(profile)
         deadline = time.monotonic() + 6
@@ -168,7 +172,7 @@ def bridge_check(profile, *, battles=False, multiplayer=False):
                 decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
                 message = decoder.decompress(compressed, 16385)
                 if len(message) > 16384 or not decoder.eof or decoder.unused_data or decoder.unconsumed_tail: return False
-                return valid_multiplayer_health(message) if multiplayer else valid_service_health(message, battles=battles)
+                return valid_multiplayer_health(message) if multiplayer else valid_service_health(message, battles=battles,world_workers=world_workers)
     except Exception: return False
 
 
@@ -176,7 +180,8 @@ def quoted(value):
     return "'" + str(value).replace("'", "''") + "'"
 
 
-def launcher_script(wrapper, runtime, msys, log, powershell):
+def launcher_script(wrapper, runtime, msys, log, powershell, world_workers=1):
+    if type(world_workers) is not int or not 1 <= world_workers <= 4: raise WorkflowError("invalid_worker_count")
     if wrapper not in {row[3] for row in (*STEPS, BATTLE_STEP, MULTIPLAYER_STEP)}:
         raise WorkflowError("unsupported_service_wrapper")
     # A native child PowerShell converts its Write-Host/Out-Host output into
@@ -184,7 +189,7 @@ def launcher_script(wrapper, runtime, msys, log, powershell):
     # host-only readiness/error lines from the step log.
     command = "& " + quoted(powershell) + " -NoProfile -ExecutionPolicy Bypass -File " + quoted(ROOT / "tools" / wrapper) + " -RuntimeRoot " + quoted(runtime)
     if wrapper in ("Run-WindowsAllianceBridge.ps1", "Run-WindowsMultiplayer.ps1"): command += " -MsysRoot " + quoted(msys)
-    if wrapper == "Run-WindowsAllianceBattles.ps1": command += " -IdentityRoot " + quoted(ROOT / "runtime/alliance-transport")
+    if wrapper == "Run-WindowsAllianceBattles.ps1": command += " -IdentityRoot " + quoted(ROOT / "runtime/alliance-transport") + " -Workers " + str(world_workers)
     # Arguments are PowerShell single-quoted literals, not command interpolation.
     # Only these noninteractive service wrappers are transcribed here.
     return "$ErrorActionPreference='Continue'; " + command + " 2>&1 | ForEach-Object { " + \
@@ -192,16 +197,17 @@ def launcher_script(wrapper, runtime, msys, log, powershell):
         ", $line + [Environment]::NewLine); Write-Host $line }; exit $LASTEXITCODE"
 
 
-def launch(wrapper, runtime, msys, log):
+def launch(wrapper, runtime, msys, log, world_workers=1):
     if os.name != "nt": raise WorkflowError("start_requires_windows")
     powershell = Path(os.environ["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
-    script = launcher_script(wrapper, runtime, msys, log, powershell)
+    script = launcher_script(wrapper, runtime, msys, log, powershell, world_workers)
     encoded = base64.b64encode(script.encode("utf-16le")).decode("ascii")
     return subprocess.Popen([str(powershell), "-NoProfile", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded],
         cwd=ROOT, creationflags=subprocess.CREATE_NEW_CONSOLE)
 
 
-def run(runtime, msys, start, report, *, include_battles=False):
+def run(runtime, msys, start, report, *, include_battles=False, world_workers=1):
+    if type(world_workers) is not int or not 1 <= world_workers <= 4: raise WorkflowError("invalid_worker_count")
     runtime = validate_runtime(runtime)
     profile = public_profile()
     if include_battles and not (ROOT / "tools" / BATTLE_STEP[3]).is_file():
@@ -214,8 +220,10 @@ def run(runtime, msys, start, report, *, include_battles=False):
             check = (lambda: database_check(runtime)) if name == "database" else (
                 (lambda: backend_check(runtime)) if name == "backend" else (
                     (lambda: bridge_check(profile, multiplayer=True)) if name == "multiplayer" else
-                    (lambda: bridge_check(profile, battles=name == "battles"))))
+                    (lambda: bridge_check(profile, battles=True,world_workers=world_workers)) if name=="battles" else
+                    (lambda: bridge_check(profile))))
             row = {"id": step, "service": name, "status": "checking", "action": "none"}
+            if name=="battles":row["requested_native_workers"]=world_workers
             report["steps"].append(row)
             def checked():
                 try: return check()
@@ -225,8 +233,10 @@ def run(runtime, msys, start, report, *, include_battles=False):
             if open_port(address, port):
                 if not checked():
                     row["status"] = "failed"
+                    if name=="battles":raise WorkflowError("W05_existing_health_or_worker_count_differs_safe_restart_required")
                     raise WorkflowError(step + "_occupied_but_unhealthy")
                 row.update(status="passed", action="reused")
+                if name=="battles":row["verified_native_workers"]=world_workers
                 print(step + " PASS existing " + name, flush=True)
                 continue
             if not start:
@@ -235,16 +245,17 @@ def run(runtime, msys, start, report, *, include_battles=False):
             log = Path(report["report_path"]).with_name(Path(report["report_path"]).stem + "-" + step + ".txt")
             with log.open("x", encoding="utf-8") as output: output.write(step + " " + name + " startup\n")
             row["log"] = str(log)
-            child = launch(wrapper, runtime, msys, log)
+            child = launch(wrapper, runtime, msys, log, world_workers)
             row.update(action="started", launcher_pid=child.pid)
             print(step + " START " + name + "; log: " + str(log), flush=True)
-            deadline = time.monotonic() + 75
+            deadline = time.monotonic() + (300 if name == "battles" else 75)
             while time.monotonic() < deadline:
                 if child.poll() is not None:
                     row["status"] = "failed"
                     raise WorkflowError(step + "_launcher_exited")
                 if open_port(address, port) and checked():
                     row["status"] = "passed"
+                    if name=="battles":row["verified_native_workers"]=world_workers
                     break
                 time.sleep(1)
             else:
@@ -263,6 +274,7 @@ def main(argv=None):
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--start", action="store_true")
     parser.add_argument("--include-battles", action="store_true")
+    parser.add_argument("--world-workers", type=int, choices=(1,2,3,4), default=1)
     args = parser.parse_args(argv)
     report = {"format": 1, "purpose": "wesnoth-alliance-service-workflow", "status": "failed", "steps": [],
         "created_at": datetime.now(timezone.utc).isoformat(), "report_path": str(args.report),
@@ -272,7 +284,7 @@ def main(argv=None):
     try:
         path = local_path(args.report)
         with path.open("x", encoding="utf-8") as output:
-            try: run(args.runtime, args.msys, args.start, report, include_battles=args.include_battles)
+            try: run(args.runtime, args.msys, args.start, report, include_battles=args.include_battles, world_workers=args.world_workers)
             except WorkflowError as error: report["error"] = str(error)
             except (Exception, KeyboardInterrupt): report["error"] = "workflow_incomplete"
             json.dump(report, output, indent=2); output.write("\n")

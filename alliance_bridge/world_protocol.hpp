@@ -45,7 +45,7 @@ inline void request(const std::string& outer, const json::object& body) {
         {"defense_approve",{"assignment_id"}},{"defense_withdraw",{"assignment_id"}},
         {"attack",{"origin_id","target_id","bracket"}},{"battle_join",{"run_id","team_id"}},
         {"battle_ready",{"run_id","ready"}},{"battle_approve",{"run_id"}},{"battle_cancel",{"run_id"}},
-        {"war_propose",{"opponent_team_id","target_ids","objective_area_id"}},{"war_approve",{"war_id"}}};
+        {"war_propose",{"opponent_team_id","target_ids","objective_area_id"}},{"war_approve",{"war_id"}},{"war_cancel",{"war_id"}}};
     if(!operation(outer)) invalid();
     const auto& table=outer=="world_query"?queries:commands;
     auto found=table.find(op); if(found==table.end()) invalid();
@@ -97,7 +97,7 @@ inline std::string public_error(const std::string& code) {
         {"hero_required","Complete a story scenario to earn your first hero."},
         {"team_required","Join a team to take part in territorial battles."},
         {"world_unavailable","The host has not opened the world yet."},
-        {"not_enrolled","Your team has not enrolled in this world."},
+        {"not_enrolled","Enter the world with your current team first."},
         {"force_review","This company needs a force review before deployment."},
         {"round_locked","This round is locked. Wait for the next planning phase."},
         {"round_limit","This company or team already has an order for this round."},
@@ -107,7 +107,8 @@ inline std::string public_error(const std::string& code) {
         {"war_required","Both captains must approve the territorial objective first."},
         {"busy","This company is committed elsewhere."},
         {"wounded","These units need recovery before deployment."},
-        {"capacity","Your company already has twelve soldiers."},
+        {"capacity","There is no space for another soldier or company here."},
+        {"invalid_state","This action is no longer available. Refresh and review the current state."},
         {"insufficient_supply","Your team needs more Supply for this improvement."},
         {"already_built","This castle already has Roadworks."},
         {"already_enrolled","This team is already enrolled."},

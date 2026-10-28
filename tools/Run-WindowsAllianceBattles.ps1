@@ -2,7 +2,8 @@
 [CmdletBinding()]
 param(
     [AllowEmptyString()][string]$RuntimeRoot,
-    [string]$IdentityRoot = (Join-Path (Split-Path $PSScriptRoot -Parent) 'runtime\alliance-transport')
+    [string]$IdentityRoot = (Join-Path (Split-Path $PSScriptRoot -Parent) 'runtime\alliance-transport'),
+    [ValidateRange(1,4)][int]$Workers = 1
 )
 . (Join-Path $PSScriptRoot 'Alliance-Common.ps1')
 $ErrorActionPreference = 'Stop'
@@ -26,7 +27,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'The installed Python 3.14.3 runtime is required.' }
     & $python -I -B (Join-Path $PSScriptRoot 'alliance_dependencies.py') check-installed | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Pinned Alliance installation verification failed.' }
-    & $python -I -B (Join-Path $PSScriptRoot 'run_alliance_battles.py') --runtime $RuntimeRoot --identity $IdentityRoot | Out-Host
+    & $python -I -B (Join-Path $PSScriptRoot 'run_alliance_battles.py') --runtime $RuntimeRoot --identity $IdentityRoot --workers $Workers | Out-Host
     $result = $LASTEXITCODE
     if ($result -ne 0) { throw 'Shared battle service stopped. Send this saved log.' }
 } catch {

@@ -4,7 +4,8 @@ param(
     [string]$RuntimeRoot = (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2'),
     [string]$MsysRoot = 'D:\Test\wesnoth-setup\msys64',
     [switch]$CheckOnly,
-    [switch]$IncludeBattles
+    [switch]$IncludeBattles,
+    [ValidateRange(1,4)][int]$WorldWorkers = 1
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Alliance-Common.ps1')
@@ -34,7 +35,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Pinned offline dependency check failed.' }
     $arguments = @('-I','-B',$helper,'--runtime',$RuntimeRoot,'--msys',$MsysRoot,'--report',$report)
     if (-not $CheckOnly) { $arguments += '--start' }
-    if ($IncludeBattles) { $arguments += '--include-battles' }
+    if ($IncludeBattles) { $arguments += @('--include-battles','--world-workers',[string]$WorldWorkers) }
     & $python @arguments | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Workflow stopped. Follow the named step guidance and send this log plus the JSON report; keep unrelated service windows open.' }
     $result = 0

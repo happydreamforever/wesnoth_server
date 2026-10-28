@@ -534,6 +534,11 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(self.calls[-1][1],'/internal/v1/world/query')
         self.assertEqual(self.calls[-1][2]['X-Player-Token'],self.token)
         self.assertEqual(json.loads(self.calls[-1][3]),request['body'])
+        cancelled=self.request('world_command',{'operation':'war_cancel','payload':{
+            'command_id':ACCOUNT['_id'],'war_id':BATTLE['id']}})
+        self.assertTrue(self.exchange(cancelled)['ok'])
+        self.assertEqual(self.calls[-1][1],'/internal/v1/world/command')
+        self.assertEqual(json.loads(self.calls[-1][3]),cancelled['body'])
         for operation,payload in [('worker_settle',{}),('bootstrap',{}),('company_initialize',{'earned_xp':500}),
                 ('battle_ready',{'run_id':BATTLE['id'],'ready':True,'actor_id':ACCOUNT['_id']})]:
             before=len(self.calls)
