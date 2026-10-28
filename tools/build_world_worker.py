@@ -17,7 +17,7 @@ CLIENT = ROOT.parent / 'wesnoth_client'
 STAGE = ROOT / 'build/windows-world-worker'
 sys.path.insert(0, str(ROOT))
 from tools.build_alliance_bridge import BuildError, write_new, native, capture, check_host
-from tools.world_worker_dependencies import safe_path, digest, package_records, manifest as dependency_manifest, prepare as prepare_prefix, verify as verify_prefix, PREFIX as DEPENDENCY_PREFIX
+from tools.world_worker_dependencies import safe_path, digest, package_records, manifest as dependency_manifest, PREFIX as DEPENDENCY_PREFIX
 
 REQUIRED = {
     'compiler': 'bin/g++.exe', 'C compiler':'bin/gcc.exe', 'resource compiler':'bin/windres.exe', 'linker': 'bin/ld.exe', 'objdump': 'bin/objdump.exe',
@@ -92,7 +92,9 @@ def verify_engine():
 
 def binding():
     verify_engine()
-    paths = [ROOT / 'tools/build_world_worker.py', ROOT/'tools/world_worker_dependencies.py', DEPENDENCY_PREFIX/'receipt.json']
+    paths = [ROOT / 'tools/build_world_worker.py', ROOT/'tools/world_worker_dependencies.py',
+             ROOT/'tools/world_worker_packages.py', ROOT/'tools/world_worker_archive_prefix.py',
+             ROOT/'tools/world-worker-packages-1192624.json', DEPENDENCY_PREFIX/'receipt.json']
     paths += [CLIENT/'tools'/name for name in ('prepare_android_source.py','verify_game_data.py','gamedata-1.19.26.reference.json')]
     paths += [path for directory in ('engine', 'alliance_game', 'alliance_native')
               for path in sorted((CLIENT / directory).rglob('*')) if path.is_file() and path.suffix not in ('.pyc',)]
@@ -248,7 +250,8 @@ def installed_worker(required=True, expected_binding=None):
 
 def build(msys, cmake, game_data, preserve):
     check_host()
-    verify_prefix()
+    from tools.world_worker_archive_prefix import verify_locked_prefix
+    verify_locked_prefix()
     data=safe_path(game_data,directory=True)
     initial_inventory=data_inventory(data)
     prefix = safe_path(DEPENDENCY_PREFIX, directory=True)
@@ -333,7 +336,12 @@ def main():
     args=parser.parse_args()
     try:
         if args.prepare_dependencies:
-            check_host();prepare_prefix(args.msys,REQUIRED.values());return 0
+            check_host()
+            from tools.world_worker_packages import execute, CACHE, MANIFEST
+            from tools.world_worker_archive_prefix import prepare_archive_prefix
+            execute(args.msys, download=False)
+            prepare_archive_prefix(manifest_path=MANIFEST, cache=CACHE, prefix=DEPENDENCY_PREFIX)
+            return 0
         if args.audit:return 0 if dependency_audit(args.msys,args.audit)['complete'] else 1
         if args.verify:installed_worker();print('WORLD NATIVE WORKER ARTIFACT VERIFIED');return 0
         build(args.msys,args.cmake,args.game_data,args.preserve_previous);return 0

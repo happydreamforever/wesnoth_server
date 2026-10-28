@@ -1,4 +1,4 @@
-# Freeze verified installed MINGW64 dependencies; no package download or upgrade.
+# Build the isolated prefix from signed pinned archives; no MSYS2 installation.
 [CmdletBinding()]
 param(
     [string]$MsysRoot = 'D:\Test\wesnoth-setup\msys64',
@@ -11,8 +11,11 @@ $log = Join-Path $repo ('diagnostics\world-worker-prepare-' + (Get-Date -Format 
 $result = 1
 Start-Transcript -LiteralPath $log -NoClobber | Out-Null
 try {
+    Write-Host 'Preparing the isolated worker prefix from the verified offline package cache.'
+    Write-Host 'Verifying 107 packages and preparing the full engine libraries may take several minutes.'
+    Write-Host 'Existing MSYS2 packages remain unchanged; package scripts and hooks are not run.'
     & $PythonPath -I -B (Join-Path $PSScriptRoot 'build_world_worker.py') --msys $MsysRoot --prepare-dependencies | Out-Host
-    if ($LASTEXITCODE -ne 0) { throw 'Worker dependency preparation stopped. Preserve installed tools and send this log with the dependency audit.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Worker dependency preparation stopped. Preserve the package cache and preparation journal; send this log.' }
     $result = 0
 } catch { Write-Host ('ERROR: ' + $_.Exception.Message) }
 finally { Stop-Transcript | Out-Null; Write-Host "Saved log: $log" }

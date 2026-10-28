@@ -132,4 +132,32 @@ class DependencyPrefix(unittest.TestCase):
             build.verify_engine()
         self.assertEqual((client/'engine/source-manifest.json').read_text(),'{}')
 
+    def test_worker_build_requires_pinned_archive_prefix_before_native_tools(self):
+        from tools import world_worker_archive_prefix as archive
+        with patch.object(build,'check_host'), patch.object(archive,'verify_locked_prefix',
+                side_effect=deps.BuildError('unapproved dependency prefix')) as verify, \
+                patch.object(build,'data_inventory') as data:
+            with self.assertRaisesRegex(deps.BuildError,'unapproved dependency prefix'):
+                build.build(self.msys,self.root/'cmake',self.root/'data',False)
+            verify.assert_called_once_with()
+            data.assert_not_called()
+
+    def test_prefix_preparation_verifies_offline_cache_before_extraction(self):
+        from tools import world_worker_archive_prefix as archive
+        from tools import world_worker_packages as packages
+        calls=[]
+        with patch.object(build,'check_host'), \
+                patch.object(build.sys,'argv',['build_world_worker.py','--msys',str(self.msys),'--prepare-dependencies']), \
+                patch.object(packages,'execute',side_effect=lambda *a,**k:calls.append(('cache',a,k))), \
+                patch.object(archive,'prepare_archive_prefix',side_effect=lambda *a,**k:calls.append(('prefix',a,k))):
+            self.assertEqual(build.main(),0)
+        self.assertEqual([row[0] for row in calls],['cache','prefix'])
+        self.assertEqual(calls[0][2],{'download':False})
+        with patch.object(build,'check_host'), \
+                patch.object(build.sys,'argv',['build_world_worker.py','--msys',str(self.msys),'--prepare-dependencies']), \
+                patch.object(packages,'execute',side_effect=deps.BuildError('signature rejected')), \
+                patch.object(archive,'prepare_archive_prefix') as prepare, redirect_stdout(io.StringIO()):
+            self.assertEqual(build.main(),1)
+            prepare.assert_not_called()
+
 if __name__=='__main__':unittest.main()
