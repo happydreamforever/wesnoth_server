@@ -1,8 +1,6 @@
 # Emerald Court — Companies, Castles and Territorial Wars
 
-Status: implementation in progress. This checklist records the approved design,
-not completed verification or Windows acceptance. Target: client 1192624,
-account protocol 4, schema 4 in the existing runtime-v2.
+Status: implementation and VPS verification complete; Windows dependency inventory and A-Z acceptance pending. Client 1192624, account protocol 4, schema 4 in the existing runtime-v2. See VERIFICATION_1192624.json for evidence and scope. Do not migrate Windows until the installed full-engine dependency audit passes.
 
 ## Approved product rules
 
@@ -111,25 +109,34 @@ Balance values are provisional versioned rules, not proven equivalence.
 
 ## Implementation and verification checklist
 
-- [ ] Company catalogue/model, recruitment, branches, brackets, wounds and ledger.
-- [ ] World/Area/Castle enrollment, permissions, movement, Supply and development.
-- [ ] Standing defense, wars, round scheduler, reservations and atomic settlement.
-- [ ] Native World/Company scenarios, worker/witness, AI, replay and reconnect.
-- [ ] Persistent mobile Team workspace, in-place refresh, conflict handling,
-      return reports, 48dp targets, safe areas and no-Team/zero-hero states.
-- [ ] Protocol 4 backend, bridge, native client and worker interfaces together.
-- [ ] Resumable preserving schema 3-to-4 migration; cold backup and legacy restore.
-- [ ] Isolated MINGW64 worker dependency/DLL inventory and offline build tooling.
-- [ ] Real Mongo concurrency, native combat, worker failure/terminal evidence,
+- [x] Company catalogue/model, recruitment, branches, brackets, wounds and ledger.
+- [x] World/Area/Castle enrollment, permissions, movement, Supply and development.
+- [x] Standing defense, wars, round scheduler, reservations and atomic settlement.
+- [x] Native World/Company scenarios, worker/witness, AI, replay and reconnect.
+- [x] Persistent mobile Team workspace, in-place refresh, conflict handling,
+      return reports, 48 logical-unit targets, safe areas and no-Team/zero-hero states.
+      Physical Android density/touch acceptance remains in the Windows checklist.
+- [x] Protocol 4 backend, bridge, native client and worker interfaces together.
+- [x] Resumable preserving schema 3-to-4 migration; cold backup and legacy restore.
+- [x] Isolated MINGW64 worker dependency/DLL inventory and offline build tooling.
+- [x] Real Mongo concurrency, native combat, worker failure/terminal evidence,
       replay authorization, clock/round and migration-interruption checks.
-- [ ] Actual GUI2 renders at 1280x720/1920x1080 with touch-role flows.
-- [ ] Offline Android build and independent package/version/original-signer check.
-- [ ] Preservation inventories for sources, OBB, signer, prior builds/journals,
+- [x] Actual GUI2 renders at 1280x720/1920x1080 with touch-role flows.
+- [x] Offline Android build and independent package/version/original-signer check.
+- [x] Preservation inventories for sources, OBB, signer, prior builds/journals,
       existing saves/runtime identity and unrelated README edits.
-- [ ] One coordinated Windows A-Z batch with exact commands, expectations and
+- [x] One coordinated Windows A-Z batch with exact commands, expectations and
       diagnostic paths. Single LDPlayer plus worker/authenticated companions,
       never described as multiple-human acceptance. WAN recorded once per batch.
 
 Commit in coherent company, world, worker, UI and migration/delivery stages.
 Stop Windows acceptance on first unexpected result; preserve logs, reproduce/fix
 on VPS, retest the affected step/regressions without repeating accepted work.
+
+## Remaining Windows gates
+
+- [ ] Actual installed MINGW64 dependency inventory; prepare any missing pinned packages before the offline batch.
+- [ ] Actual Windows full-engine worker compilation and DLL execution.
+- [ ] A-Z Windows/LDPlayer acceptance, reported one group at a time.
+
+The checked implementation items above are VPS/source evidence, not acceptance of the unchecked Windows gates. Native command validation is bounded; this release does not claim complete modified-client anti-cheat.

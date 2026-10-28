@@ -1,0 +1,993 @@
+{
+  "release": 1192624,
+  "protocol": 4,
+  "schema": 4,
+  "recorded": "2026-10-28",
+  "status": "vps_verified_windows_dependency_gate_pending",
+  "apk": {
+    "status": "passed",
+    "version_code": 1192624,
+    "launcher": "org.wesnoth.offline.OfflineInitActivity",
+    "apk": {
+      "path": "build/android-account-game/app/build/outputs/apk/debug/app-debug.apk",
+      "bytes": 47012576,
+      "sha256": "c7a72c4dee4422cf403c88a9a08dd5a2e854b18dc507e285af558fa8c5483dc8"
+    },
+    "retained_previous_apk": {
+      "path": "build/android-account-game-before-world-companies-20261028T041924Z-339f278ca0b5488393ab2e3a1578fbf8/app/build/outputs/apk/debug/app-debug.apk",
+      "bytes": 46635073,
+      "sha256": "aa91fbd5b87b9796589e6e527c4895d4d766a556f2d7343fb236d5a40947f2c1"
+    },
+    "journal": {
+      "path": "build/.wesnoth-account-game-update-1192624.json",
+      "bytes": 317808,
+      "sha256": "27fcc07889ed1679ce80c48ded1dfbb9237f85d82978389ea97383539648ae33"
+    },
+    "original_signer_sha256": "7e346dc5ec05098674444abdb61508270da51de9e57421133340c07834343074",
+    "assets": {
+      "alliance-public-profile.json": {
+        "bytes": 1499,
+        "sha256": "f526e6ad272c0a959522c7b8ecc926dea279f1c7e378b3a53e3b95efb09ee159"
+      },
+      "alliance-ui-manifest.json": {
+        "bytes": 391,
+        "sha256": "239bd2b62e12ed30a0182bbcca39e68cd45638cec743dab6efcb54bda58189bd"
+      },
+      "alliance-ui/background/citadel-dawn.png": {
+        "bytes": 2739237,
+        "sha256": "ff3271e5ac176041517c42739ab15afbd2d57c69b56fbf290164d793e42b36ce"
+      },
+      "alliance-ui/hero/refumee.png": {
+        "bytes": 2092869,
+        "sha256": "cb05c9f0da6d16a068355e2b7fb59201ecf1296ebcafdfdb11763f43f30c04f8"
+      },
+      "alliance-ui/hero/thea.png": {
+        "bytes": 2190871,
+        "sha256": "1e3fe73953569a247e6055780e84125cf3bbe5148546fe449a3c7057d1a3f7f7"
+      },
+      "startup/Akademie Alte.ttf": {
+        "bytes": 61620,
+        "sha256": "3b5c0ac12ccba9a49cdc01348d984d62141309ba23535fa179dd75377e4a79c2"
+      },
+      "startup/Lato-Regular.ttf": {
+        "bytes": 657212,
+        "sha256": "6f6940be0835c3ddec9199e5fc42be4cbc61ebcfd58c623fdf719366253f1780"
+      }
+    },
+    "previous_public_profile_bytes_unchanged": true,
+    "previous_gamedata_manifest_bytes_unchanged": true,
+    "scope": "Independent aapt2/apksigner and exact ZIP bytes; original and previous signer equality; unchanged disposable public trust and OBB manifest. No Windows/LDPlayer execution or Android visual claim."
+  },
+  "preservation": {
+    "status": "passed",
+    "files_verified": {
+      "foundation-before.json": 17731,
+      "account-before.json": 8219,
+      "pinned-engine-source-before.json": 1454,
+      "pins-before.json": 20
+    },
+    "trees_verified": 51,
+    "remap": {
+      "wesnoth_client/build/android-account-engine": "wesnoth_client/build/android-account-engine-before-world-companies-20261028T041924Z-339f278ca0b5488393ab2e3a1578fbf8",
+      "wesnoth_client/build/android-account-game": "wesnoth_client/build/android-account-game-before-world-companies-20261028T041924Z-339f278ca0b5488393ab2e3a1578fbf8"
+    },
+    "seconds": 106.25
+  },
+  "production_input_count": 198,
+  "evidence": [
+    {
+      "scope": "backend_domain",
+      "path": "wesnoth_server/build/audit-world-domain-1192624/evidence.json",
+      "bytes": 4764,
+      "sha256": "4ea70e237002ef39f49c63e75964f2b99e77bd4253782c10b6a2eb692719256d"
+    },
+    {
+      "scope": "native_client_tls",
+      "path": "wesnoth_client/build/audit-world-client-tests-final-03.log",
+      "bytes": 10044,
+      "sha256": "04a0bd52221e55f304c87f370d9e9a00477e0a00c8f8b6fa50518fcc86f2fb41"
+    },
+    {
+      "scope": "native_account_bridge",
+      "path": "wesnoth_server/build/audit-world-bridge-1192624/bridge-tests-final-03.log",
+      "bytes": 6873,
+      "sha256": "9cc6769f4b0f45b46246fdab2d15df2179019693c2ded4596586191a547d2948"
+    },
+    {
+      "scope": "native_room_server",
+      "path": "wesnoth_server/build/audit-world-bridge-1192624/native-lobby-tests-final-02.log",
+      "bytes": 922,
+      "sha256": "e30d796398c4869fbb88d90ec11407473cbf50d7de979d986f3db5bac2d54143"
+    },
+    {
+      "scope": "schema_migration",
+      "path": "wesnoth_server/build/audit-world-bridge-1192624/migration-tests.log",
+      "bytes": 633,
+      "sha256": "1784fd1fb3c8795dab8da4c6538e2fc446c15cc17eaab7695c8d62711e081015"
+    },
+    {
+      "scope": "cold_migration_restore",
+      "path": "wesnoth_server/build/audit-world-bridge-1192624/cold-migration-tests-final-03.log",
+      "bytes": 99,
+      "sha256": "16833e2b25e6fea4fb10195cb379626b45ee36cde3890da3319e196d87df3a41"
+    },
+    {
+      "scope": "web_api",
+      "path": "wesnoth_server/build/audit-world-bridge-1192624/web-tests.log",
+      "bytes": 539,
+      "sha256": "debb465d0444b1b5f8df31639a559d8149804ca5ac532361eba26d78c99bd8e2"
+    },
+    {
+      "scope": "worker_delivery",
+      "path": "wesnoth_server/build/world-worker-delivery-command-guard.log",
+      "bytes": 111,
+      "sha256": "fe28fe8e83a3e97c1dd9ca047468e19cd97e711d1c84581e1b40b8a6750e8e48"
+    },
+    {
+      "scope": "worker_original_data_pin",
+      "path": "wesnoth_server/build/audit-world-bridge-1192624/worker-data-pin-validation.json",
+      "bytes": 182,
+      "sha256": "6fcaeae79e30db110c1ea0a11c054a8b19d542d7654a3ae4c8292190c8405404"
+    },
+    {
+      "scope": "worker_cmake_native_object",
+      "path": "wesnoth_server/build/audit-world-worker-cmake-1192624/review-evidence.json",
+      "bytes": 2868,
+      "sha256": "0c3103af33d181cf6d0c1e3706be2f6a93a6d475c6171915fbbe10277d059912"
+    },
+    {
+      "scope": "workflow",
+      "path": "wesnoth_server/build/audit-world-bridge-1192624/workflow-with-workers-final-04.log",
+      "bytes": 3385,
+      "sha256": "f4540acdf28d66fe31c55afd55b1d378b87753de00dba47cc875e337b1b10297"
+    },
+    {
+      "scope": "native_room_delivery",
+      "path": "wesnoth_server/build/audit-world-bridge-1192624/multiplayer-delivery-tests.log",
+      "bytes": 2774,
+      "sha256": "ec8e5ddb2ce2e58076eb3e8bc87a09aa14e3fed165e4ce2740f3127187eb1f65"
+    },
+    {
+      "scope": "bridge_builder",
+      "path": "wesnoth_server/build/audit-world-bridge-1192624/bridge-build-receipts-final.log",
+      "bytes": 780,
+      "sha256": "8e08d50f4a2087f7c11705605dc708df989c6620dbe5cdb74c4820352ac7a55f"
+    },
+    {
+      "scope": "bridge_rebuild",
+      "path": "wesnoth_server/build/audit-world-bridge-1192624/bridge-rebuild-helper-tests-final.log",
+      "bytes": 131,
+      "sha256": "77a1b53b5675819937dfaa144f2d239e689742c3913f7413db8559ab0db249af"
+    },
+    {
+      "scope": "android_builder",
+      "path": "wesnoth_client/build/audit-world-engine-1192624/android-builder-command-guard.log",
+      "bytes": 16045,
+      "sha256": "6b0f905cb3ae5b7d6099a2bfa7b2d7ede4cfca47c676c7b409e33226dda30af9"
+    },
+    {
+      "scope": "android_windows_helpers",
+      "path": "wesnoth_client/build/audit-world-preservation-1192624/windows-helper-tests-final.log",
+      "bytes": 135,
+      "sha256": "3c01c03062fb85c539a0cee6ad36af98ebd0213060ab6bb914dc0b5c826cb03c"
+    },
+    {
+      "scope": "powershell_syntax",
+      "path": "wesnoth_server/build/audit-world-bridge-1192624/powershell-parse-final.log",
+      "bytes": 733,
+      "sha256": "66037751dc1ac847a1b814e4e8609782dfc217ee180d8b0703723fb6224cf986"
+    },
+    {
+      "scope": "companion",
+      "path": "wesnoth_client/build/audit-companion-1192624/evidence.json",
+      "bytes": 1503,
+      "sha256": "60d0c21b9d5c1c0756dcf26e60413ea13cd2deb83f9b5f7cb4169608e6d3ac66"
+    },
+    {
+      "scope": "actual_offline_android_build",
+      "path": "wesnoth_client/build/audit-world-delivery-1192624/android-build-03.log",
+      "bytes": 15485,
+      "sha256": "51a8f17c98d7766a394a660b0c5aeff4fa3997c717b010ed13e052127c5b1862"
+    },
+    {
+      "scope": "same_input_reuse",
+      "path": "wesnoth_client/build/audit-world-delivery-1192624/android-reuse-03.log",
+      "bytes": 1567,
+      "sha256": "f339fb77e954999986ed91d87bee70c1163ea33a6586dcbee2f984a4eacf0bd0"
+    },
+    {
+      "scope": "standalone_android_verification",
+      "path": "wesnoth_client/build/audit-world-delivery-1192624/android-verify-03.log",
+      "bytes": 1487,
+      "sha256": "f2c4d8adfa14ec6ea6dd439c9c0378846bd5646963bebdbea402b5de8d575448"
+    },
+    {
+      "scope": "journal_recheck",
+      "path": "wesnoth_client/build/audit-world-delivery-1192624/android-prepare-recheck-03.log",
+      "bytes": 1794,
+      "sha256": "1b3d9f3937a4949892a31cc4920ab181d3837afa355fc1908fa086c10657776c"
+    },
+    {
+      "scope": "independent_apk",
+      "path": "wesnoth_client/build/audit-world-delivery-1192624/android-independent-02/independent-apk-validation.json",
+      "bytes": 2273,
+      "sha256": "5054f27617eca01ed88bb7f1b1c071597ba28d05b34e07790b9451af9ce58597"
+    },
+    {
+      "scope": "frozen_android_inputs",
+      "path": "wesnoth_client/build/audit-world-delivery-1192624/production-inputs-final-03.json",
+      "bytes": 34186,
+      "sha256": "00e14a8aec981b7b1f748491b354c45acf4bc8e3c86e4fb570d944c33d56675f"
+    },
+    {
+      "scope": "retained_unpublished_attempt01",
+      "path": "wesnoth_client/build/audit-world-delivery-1192624/journal-recovery-01.json",
+      "bytes": 4464,
+      "sha256": "43765407946cff7314fc351db96088f0ee8243161ed32e6a1df9fcd37a8a71ad"
+    },
+    {
+      "scope": "retained_unpublished_attempt02",
+      "path": "wesnoth_client/build/audit-world-delivery-1192624/journal-recovery-02.json",
+      "bytes": 4241,
+      "sha256": "8d38ee6c48012d6606d40f51065f52c84e6314154bafd7451b9d6dd1a0eb8c1c"
+    },
+    {
+      "scope": "preservation",
+      "path": "wesnoth_client/build/audit-world-preservation-1192624/final-verification.json",
+      "bytes": 595,
+      "sha256": "e94a997b7bcf9d5932974b4db8c753fe2e596f52d388b9c25de546cfd3d16e82"
+    },
+    {
+      "scope": "actual_gui2_rendering",
+      "path": "wesnoth_client/docs/WORLD_MOBILE_VERIFICATION_1192624.json",
+      "bytes": 33076,
+      "sha256": "cca2ee8d7af3942413a995714c3250325d656e35ccbb1f417dda9bdee0d067a8"
+    },
+    {
+      "scope": "actual_native_execution",
+      "path": "wesnoth_client/build/audit-world-engine-1192624/WORLD_NATIVE_VERIFICATION_1192624.json",
+      "bytes": 28621,
+      "sha256": "086bc102b84e460a17ffdb79cfcf0c796e40276165b3e1d1d3032cfa533f0d6f"
+    },
+    {
+      "scope": "legacy_schema_chain",
+      "path": "wesnoth_server/build/audit-world-bridge-1192624/legacy-chain-regression-final.log",
+      "bytes": 282,
+      "sha256": "57a83a18cbaaa5458635047afec27d7ae7f461dc865aea7525907bf055b017a5"
+    },
+    {
+      "scope": "acceptance_command_syntax",
+      "path": "wesnoth_server/build/audit-world-bridge-1192624/acceptance-powershell-parse-final-03.log",
+      "bytes": 2274,
+      "sha256": "ac90de1c5d7eccd28581be10090e4bf6e968d63c1c92cb96c2cf912342a4c47a"
+    }
+  ],
+  "native_execution": {
+    "release": 1192624,
+    "created_utc": "2026-10-28T04:27:45.838011+00:00",
+    "scope": {
+      "native_execution": "Actual Linux pinned full native engines over TLS: scoped native worker and separately authenticated AI companions control only assigned sides. Commands, native terminal evidence and native replay playback are exercised.",
+      "database_authority": "Six native combat cases use an in-memory domain fixture. Three additional Company cases join actual native engines and durable evidence to unmodified production AllianceService/AuthService with disposable actual MongoDB replica sets. They verify win/loss atomic settlement, matching/concurrent duplicates, conflicting proof rejection, authorization, native replay and actual free-rest wound healing. Fixture account/earned hero and pre-battle soldier XP are identified separately.",
+      "physical_clients": "No Windows native worker execution, LDPlayer rendering, physical-input acceptance or multiple-human testing is claimed.",
+      "build_network": "Native fixtures and builds use the network-disabled cached integration image. Local loopback TLS is enabled within each fixture."
+    },
+    "final_native_worker": {
+      "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/world-worker",
+      "bytes": 77530432,
+      "sha256": "438b3bd890b0551d2be81d36735cb4846d81bf17dbe59ed6a542313442b3aa2d"
+    },
+    "final_native_worker_link_log": {
+      "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/relink-11-source-guard.log",
+      "bytes": 38,
+      "sha256": "a949334b5e9084e73be253f3e334061aebe5d75ea65c8d4e27082f12c740004c"
+    },
+    "native_cases": [
+      {
+        "name": "company_border_patrol_human_reconnect",
+        "log": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-test-18.log",
+          "bytes": 186,
+          "sha256": "e04b546811fca59ff792537f98dc536f0223ad782c3b5fe5640616f4abb2921c"
+        },
+        "result": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-run-f68ff2527c904100926dcaa8c2e94f98/result.json",
+          "bytes": 1366,
+          "sha256": "9ebb9dfc9a416a9847bcc1e141c4f2d828154a3686f7e6dade3a812a3b60b69b"
+        },
+        "completed": true,
+        "command_packets": 111,
+        "native_rounds": 5,
+        "ledger_events": 10,
+        "native_terminal": "defeat",
+        "outcome": "loss",
+        "human_reconnect": true,
+        "worker_killed_and_restarted": false,
+        "native_replay_after_daemon_cache_loss": true,
+        "replay_sha256": "ff33ecba0e21ab3851e0707b3f1c2936bf6adf54caa6977bf1df713b53c3b709",
+        "ledger_sha256": "7ac0dd0049165c8526ab39ec02688283e6efd0de3db84b556293e782504f0736",
+        "command_chain_sha256": "de8764b2da80e9fcc3561fa51b1f27cdcbcaae241f6f8cbbc0ec3b6cf8bb3db8",
+        "combat_soldier_progress": [
+          {
+            "final_type": "Royal Guard",
+            "earned_xp": 20,
+            "final_xp": 19,
+            "dead": false,
+            "deployed": true
+          }
+        ],
+        "binary_scope": "Retained native binary before scoped opposing-unit source guard; combat, reconnect and replay rules otherwise unchanged."
+      },
+      {
+        "name": "all_human_pure_witness",
+        "log": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-test-13.log",
+          "bytes": 186,
+          "sha256": "6e61459bee09bc6e3259174ccb46d0c2f3fef9ad0e28b37b1e2851a4038c31d4"
+        },
+        "result": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-run-39b9848ecd5648a3af8d918181300285/result.json",
+          "bytes": 1846,
+          "sha256": "4ea636666a7d1b0d360dda63f53d86ee176b35adde32852fe170ffe19417037a"
+        },
+        "completed": true,
+        "command_packets": 135,
+        "native_rounds": 7,
+        "ledger_events": 13,
+        "native_terminal": "victory",
+        "outcome": "win",
+        "human_reconnect": false,
+        "worker_killed_and_restarted": false,
+        "native_replay_after_daemon_cache_loss": true,
+        "replay_sha256": "37a7048318f89c146b361c37e8a81b85e22e37f5527fb0286fcb7cd391ad90e6",
+        "ledger_sha256": "f116967985424327ab671b8e4304b542bd2443cb9ed3654abef70b7fc94ce927",
+        "command_chain_sha256": "1ed7143488a354ca855e4b042f2f7b7ce37ea411ba396fa3bf8949763095e43a",
+        "combat_soldier_progress": [
+          {
+            "final_type": "Royal Guard",
+            "earned_xp": 1,
+            "final_xp": 0,
+            "dead": false,
+            "deployed": true
+          },
+          {
+            "final_type": "Javelineer",
+            "earned_xp": 12,
+            "final_xp": 11,
+            "dead": false,
+            "deployed": true
+          }
+        ],
+        "binary_scope": "Retained native binary before scoped opposing-unit source guard; combat, reconnect and replay rules otherwise unchanged."
+      },
+      {
+        "name": "company_river_crossing",
+        "log": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-test-14.log",
+          "bytes": 186,
+          "sha256": "8bcfecb20a3ff5d47a711700dff6e064bd83220efcb215d3483ef082b32d3cc1"
+        },
+        "result": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-run-fd70bbe57d394941bbe8fa44c29b0f24/result.json",
+          "bytes": 1401,
+          "sha256": "ba1f3f54ecf70fceecb6833b468dbcc2ee7cf9d84c99cd0a66e58dfdcaa34da1"
+        },
+        "completed": true,
+        "command_packets": 157,
+        "native_rounds": 9,
+        "ledger_events": 12,
+        "native_terminal": "defeat",
+        "outcome": "win",
+        "human_reconnect": false,
+        "worker_killed_and_restarted": false,
+        "native_replay_after_daemon_cache_loss": true,
+        "replay_sha256": "c1ae6c36066cc4ae7901c44e7657bb22967a8a90ea60f7f200118a7f69f11fbc",
+        "ledger_sha256": "79bff0c1b259b012e9e2fa035e3f94acf531d0b348f33208ad3b6de38b274121",
+        "command_chain_sha256": "977665d9347d1da0f44cf22ec49eb084a879aecc478de820f6546ee93bebbde4",
+        "combat_soldier_progress": [
+          {
+            "final_type": "Royal Guard",
+            "earned_xp": 18,
+            "final_xp": 17,
+            "dead": false,
+            "deployed": true
+          }
+        ],
+        "binary_scope": "Retained native binary before scoped opposing-unit source guard; combat, reconnect and replay rules otherwise unchanged."
+      },
+      {
+        "name": "company_old_fortress",
+        "log": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-test-15.log",
+          "bytes": 186,
+          "sha256": "c57a20d1f854555a92d9afdde66a95e2087824fb2e01775f05e27ff24e8c5d9f"
+        },
+        "result": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-run-9d4e5b3e0a714d27909fecc5509cecd5/result.json",
+          "bytes": 1364,
+          "sha256": "065bdc30462fbf8a01172e07e21f7739c12798dbc094de1163911ecfcd7eaab7"
+        },
+        "completed": true,
+        "command_packets": 237,
+        "native_rounds": 15,
+        "ledger_events": 2,
+        "native_terminal": "defeat",
+        "outcome": "loss",
+        "human_reconnect": false,
+        "worker_killed_and_restarted": false,
+        "native_replay_after_daemon_cache_loss": true,
+        "replay_sha256": "c0dad898a3ac0b2f86c2d094d85f6f85570544902d4edd47d81823837474815d",
+        "ledger_sha256": "67323489527a17b4bf5e2ff06bdad54af6edfd1eeea318f034648d3a04fe4281",
+        "command_chain_sha256": "cafa910b50e9c6321a25a9bd5411b349fa3ef2812e3ea747820fa3ebba1ce41c",
+        "combat_soldier_progress": [
+          {
+            "final_type": "Swordsman",
+            "earned_xp": 0,
+            "final_xp": 79,
+            "dead": false,
+            "deployed": false
+          }
+        ],
+        "binary_scope": "Retained native binary before scoped opposing-unit source guard; combat, reconnect and replay rules otherwise unchanged."
+      },
+      {
+        "name": "standing_defense_closed_sides_strict_turn_order",
+        "log": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-test-16.log",
+          "bytes": 186,
+          "sha256": "4b4e4786f8d13ecc9f23c29c3fa1bd2d8c814fc3938b32de803789ccdeec8fc0"
+        },
+        "result": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-run-c909e8d9e0da4835aff5b0e4a8cfe706/result.json",
+          "bytes": 1844,
+          "sha256": "378edff703fe0b2432311808d2e5e6b27280b242e7db7bb15d319231b580d18d"
+        },
+        "completed": true,
+        "command_packets": 159,
+        "native_rounds": 8,
+        "ledger_events": 21,
+        "native_terminal": "defeat",
+        "outcome": "win",
+        "human_reconnect": false,
+        "worker_killed_and_restarted": false,
+        "native_replay_after_daemon_cache_loss": true,
+        "replay_sha256": "dce2279494abc9bee650d92f36b1906da9c764a6a543d3abcfbc0ccd44c5dc94",
+        "ledger_sha256": "aa29ba7b8d3065a0db6bdcc95ffd752a26b7f7466625c621c72882367a3da595",
+        "command_chain_sha256": "8c67ef22d88861748be181474795e7201c5ddb407fc4a7859f95fcc1783b8c10",
+        "combat_soldier_progress": [
+          {
+            "final_type": "Swordsman",
+            "earned_xp": 6,
+            "final_xp": 5,
+            "dead": true,
+            "deployed": true
+          },
+          {
+            "final_type": "Royal Guard",
+            "earned_xp": 21,
+            "final_xp": 20,
+            "dead": false,
+            "deployed": true
+          }
+        ],
+        "binary_scope": "Retained native binary before scoped opposing-unit source guard; combat, reconnect and replay rules otherwise unchanged."
+      },
+      {
+        "name": "standing_defense_actual_worker_kill_restart",
+        "log": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-test-17.log",
+          "bytes": 414,
+          "sha256": "4846c98b2677bdebcbaa6c59fafba948f86c1ba8cc4effd6e945670450ad6d7b"
+        },
+        "result": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-run-013b12c7ba4d4532999cff19b61dd14e/result.json",
+          "bytes": 1846,
+          "sha256": "030e36ac44f07db8a2762eaab5f19d84032d94caf7627d875ebd18178ab6b194"
+        },
+        "completed": true,
+        "command_packets": 276,
+        "native_rounds": 13,
+        "ledger_events": 30,
+        "native_terminal": "defeat",
+        "outcome": "loss",
+        "human_reconnect": false,
+        "worker_killed_and_restarted": true,
+        "native_replay_after_daemon_cache_loss": true,
+        "replay_sha256": "04544c908a11026e1b09a44561094178e47b05dcbdba19a9141bcafb2c6c8075",
+        "ledger_sha256": "d2169ce3f7da22455519f460d4238a06376d524684b583930c243df011a64320",
+        "command_chain_sha256": "442ecc1399fdd90db04f19ed3d1451499b8ee97fd138afd0ce5c5848f700b2ce",
+        "combat_soldier_progress": [
+          {
+            "final_type": "Swordsman",
+            "earned_xp": 15,
+            "final_xp": 14,
+            "dead": true,
+            "deployed": true
+          },
+          {
+            "final_type": "Royal Guard",
+            "earned_xp": 20,
+            "final_xp": 19,
+            "dead": true,
+            "deployed": true
+          }
+        ],
+        "binary_scope": "Retained native binary before scoped opposing-unit source guard; combat, reconnect and replay rules otherwise unchanged."
+      },
+      {
+        "name": "company_native_to_production_mongodb",
+        "log": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-test-20-mongo.log",
+          "bytes": 186,
+          "sha256": "2cfbfadef4d7cc7bce06ac6631d3a0de5898ab9dd8bae8321ad1118da10461be"
+        },
+        "result": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-run-65f9254289a94e0db6aab82c29bb06e9/result.json",
+          "bytes": 3414,
+          "sha256": "7b1374971764f8d01e13e1e895996fb38d227670fb7628122f69487a281d56b4"
+        },
+        "completed": true,
+        "command_packets": 185,
+        "native_rounds": 8,
+        "ledger_events": 9,
+        "native_terminal": "defeat",
+        "outcome": "win",
+        "native_replay_after_daemon_cache_loss": true,
+        "replay_sha256": "0f3e975f9f0636920bd0be300e3e0990d432b6659ec78f8e131664980bbecd92",
+        "ledger_sha256": "fe08caeaf51ded4d95712b39667d90718c85de1399444027d9b7b005c4a31d78",
+        "command_chain_sha256": "e1be0b87b5132d41e7e71dce24cbc397daffb64fcd69d68f4905b8cb59a993ac",
+        "production_mongo": {
+          "database": "actual MongoDB replica set",
+          "account_authentication": "production AuthService",
+          "fixture_setup": "Disposable account with earned Konrad form at permanent level 5; one starter Spearman begins at 41 XP. No battle result or post-battle XP was fabricated.",
+          "production_descriptor": true,
+          "production_worker_lease": true,
+          "production_atomic_settlement": true,
+          "settlements": 1,
+          "concurrent_matching_duplicates": 2,
+          "conflicting_duplicate_rejected": true,
+          "hero_xp_before": 210,
+          "hero_xp_awarded": 20,
+          "hero_xp_after": 230,
+          "soldiers": [
+            {
+              "final_type": "Swordsman",
+              "earned_xp": 8,
+              "final_xp": 7,
+              "dead": false,
+              "deployed": true
+            },
+            {
+              "final_type": "Dwarvish Fighter",
+              "earned_xp": 0,
+              "final_xp": 0,
+              "dead": false,
+              "deployed": false
+            },
+            {
+              "final_type": "Bowman",
+              "earned_xp": 0,
+              "final_xp": 0,
+              "dead": false,
+              "deployed": false
+            },
+            {
+              "final_type": "Elvish Shaman",
+              "earned_xp": 0,
+              "final_xp": 0,
+              "dead": false,
+              "deployed": false
+            }
+          ],
+          "reservations_released": true,
+          "asset_locks_released": true,
+          "unrelated_replay_rejected": true,
+          "company_rest_wounds_cleared": 0
+        },
+        "binary_scope": "Retained native binary before scoped opposing-unit source guard; combat, reconnect and replay rules otherwise unchanged."
+      },
+      {
+        "name": "company_loss_native_to_production_mongodb",
+        "log": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-test-21-mongo.log",
+          "bytes": 186,
+          "sha256": "c009c5575e112b219cf3df0ff27833229e6d3c0739e5c3e402fbc62111982f9d"
+        },
+        "result": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-run-6154db09a1094b86bef4a719c7c29e2e/result.json",
+          "bytes": 3374,
+          "sha256": "b8ec397b5f5dbc17a209cb343cad4e5ad92b5314b176fa2eb2fd4b413b32b068"
+        },
+        "completed": true,
+        "command_packets": 64,
+        "native_rounds": 2,
+        "ledger_events": 5,
+        "native_terminal": "defeat",
+        "outcome": "loss",
+        "native_replay_after_daemon_cache_loss": true,
+        "replay_sha256": "813a5c8e0a92d805df30cd2851db1f039d09f8fe868e956418ba8c16506b730d",
+        "ledger_sha256": "9f6926106fcf1db9e47a196424d8c811a4e564e4c68e3b7e53fd0fcca92b84e4",
+        "command_chain_sha256": "d46ac33af1ba0575a4cab5f99481116f7c7990089ce8cd7a5ec626a68693c54d",
+        "production_mongo": {
+          "database": "actual MongoDB replica set",
+          "account_authentication": "production AuthService",
+          "fixture_setup": "Disposable account with earned Konrad form at permanent level 5; one starter Spearman begins at 41 XP. No battle result or post-battle XP was fabricated.",
+          "production_descriptor": true,
+          "production_worker_lease": true,
+          "production_atomic_settlement": true,
+          "settlements": 1,
+          "concurrent_matching_duplicates": 2,
+          "conflicting_duplicate_rejected": true,
+          "hero_xp_before": 210,
+          "hero_xp_awarded": 0,
+          "hero_xp_after": 210,
+          "soldiers": [
+            {
+              "final_type": "Bowman",
+              "earned_xp": 0,
+              "final_xp": 0,
+              "dead": false,
+              "deployed": false
+            },
+            {
+              "final_type": "Elvish Shaman",
+              "earned_xp": 0,
+              "final_xp": 0,
+              "dead": false,
+              "deployed": false
+            },
+            {
+              "final_type": "Dwarvish Fighter",
+              "earned_xp": 0,
+              "final_xp": 0,
+              "dead": false,
+              "deployed": false
+            },
+            {
+              "final_type": "Pikeman",
+              "earned_xp": 4,
+              "final_xp": 3,
+              "dead": false,
+              "deployed": true
+            }
+          ],
+          "reservations_released": true,
+          "asset_locks_released": true,
+          "unrelated_replay_rejected": true,
+          "company_rest_wounds_cleared": 1
+        },
+        "binary_scope": "Retained native binary before scoped opposing-unit source guard."
+      },
+      {
+        "name": "company_source_guard_native_to_production_mongodb",
+        "log": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-test-22-mongo-guard.log",
+          "bytes": 186,
+          "sha256": "71e1414829eef0d11ea09c8943ead4d9b4cb3c77da9e9b1c0556f6ae41f176d5"
+        },
+        "result": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-run-681e242abcfc4cfc9732f160a9d01d28/result.json",
+          "bytes": 3379,
+          "sha256": "fd2b2ca40bc63643c00161be4a0fe2c0335afaee9286f76ef4093fec62d8b7e1"
+        },
+        "completed": true,
+        "command_packets": 196,
+        "native_rounds": 9,
+        "ledger_events": 13,
+        "native_terminal": "defeat",
+        "outcome": "loss",
+        "native_replay_after_daemon_cache_loss": true,
+        "replay_sha256": "d2c1c3ce11c8758959ffebdd13607a7c7537a58ca767e70f71a0ec60e42b0bda",
+        "ledger_sha256": "61082bd9d3efefa83d9c1ee0fe54aa414c5c2f960ed23895a66ca1d229805ac1",
+        "command_chain_sha256": "fcab5cde86ad2d7ccc91429e6b541afba9d0c15f45acd3078dfe2301e73bb6be",
+        "production_mongo": {
+          "database": "actual MongoDB replica set",
+          "account_authentication": "production AuthService",
+          "fixture_setup": "Disposable account with earned Konrad form at permanent level 5; one starter Spearman begins at 41 XP. No battle result or post-battle XP was fabricated.",
+          "production_descriptor": true,
+          "production_worker_lease": true,
+          "production_atomic_settlement": true,
+          "settlements": 1,
+          "concurrent_matching_duplicates": 2,
+          "conflicting_duplicate_rejected": true,
+          "hero_xp_before": 210,
+          "hero_xp_awarded": 0,
+          "hero_xp_after": 210,
+          "soldiers": [
+            {
+              "final_type": "Pikeman",
+              "earned_xp": 18,
+              "final_xp": 17,
+              "dead": true,
+              "deployed": true
+            },
+            {
+              "final_type": "Bowman",
+              "earned_xp": 0,
+              "final_xp": 0,
+              "dead": false,
+              "deployed": false
+            },
+            {
+              "final_type": "Dwarvish Fighter",
+              "earned_xp": 0,
+              "final_xp": 0,
+              "dead": false,
+              "deployed": false
+            },
+            {
+              "final_type": "Elvish Shaman",
+              "earned_xp": 0,
+              "final_xp": 0,
+              "dead": false,
+              "deployed": false
+            }
+          ],
+          "reservations_released": true,
+          "asset_locks_released": true,
+          "unrelated_replay_rejected": true,
+          "company_rest_wounds_cleared": 2
+        },
+        "binary_scope": "Final native binary including scoped source guard; SHA256 matches final_native_worker."
+      }
+    ],
+    "synthetic_unit_audit": {
+      "result": {
+        "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-run-872c42d720534d83a1de0d9aaa76048d/result.json",
+        "bytes": 460,
+        "sha256": "6ebe65a30e9512337fd9045219e8e42422b3c2d0f6db88b55070c22a989b990d"
+      },
+      "log": {
+        "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/unit-audit-test-01.log",
+        "bytes": 409,
+        "sha256": "135a3f23e7c3cecc05f2da6941e8710cb1b4c3ad22ae6cc04199dfb3850005b9"
+      },
+      "binary": {
+        "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/world-unit-audit",
+        "bytes": 77517520,
+        "sha256": "c773a7ed9c1054a134edd8ef2c5d44b2e15fec44d0b409e05a748c9f49a0d937"
+      },
+      "scope": "Separate test-only native binary after actual scenario/unit initialization; explicit synthetic 400 XP exercises two native advancement steps. No terminal settlement or earned-combat reward claim.",
+      "canonical_forms": 346,
+      "scaled_native_variants": 1384,
+      "ability_forms": 174,
+      "effective_levels": [
+        1,
+        5,
+        15,
+        30
+      ],
+      "synthetic_xp": 400,
+      "native_advancements": 2,
+      "terminal_xp": 149,
+      "terminal_amla_disabled": true,
+      "settlement": false
+    },
+    "authority_and_launch_tests": {
+      "worker_tests": 16,
+      "companion_tests": 4,
+      "worker_log": {
+        "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/worker-authority-final.log",
+        "bytes": 684,
+        "sha256": "b1179b1b10f7261b546c7e50c2bbd3294394bc9b3168ccbc5a87b8d705602a8b"
+      },
+      "companion_log": {
+        "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/companion-private-launch-final.log",
+        "bytes": 813,
+        "sha256": "8ed376fa1094012fc5be58efb7bc77328a0e77513e0ebef60c6465605d30f181"
+      },
+      "scope": "Authority, strict turn order, command history integrity, evidence rejection, immediate sync dispute, spawn/stdin cleanup, private ticket delivery and bounded logout/selection cancellation. Controlled fixtures, not combat evidence. World fire_event injection is rejected before durable admission; original legacy transport is unchanged."
+    },
+    "legacy_database_wire_regression": {
+      "tests": 28,
+      "log": {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/alliance-world-daemon-regression-1192624-final.log",
+        "bytes": 28100,
+        "sha256": "336b2f01d81a2730e821db3d5a3b8e2615ece19b9504f9a239245c651eb76e58"
+      },
+      "scope": "Actual MongoDB 8.0.32 transaction fixture and TLS legacy shared battle daemon/wire regressions; independent from native fixture domain."
+    },
+    "production_and_fixture_sources_sha256": {
+      "wesnoth_client/alliance_game/engine_overlay.py": "a9127538bce3c2febfd03958dcd10dc47ac59879f16c2e2e3123f4d0f4b049c7",
+      "wesnoth_client/alliance_game/shared_connection_overlay.py": "e27ffe3caa558bc090b3bede6fdcd2a0a3e44263ac8c862c3ebdba9f8ccdd486",
+      "wesnoth_client/alliance_game/world_launch.cpp": "f7f26caae6abed1327d6899837c93e9e748a201086957fda70bf0f8b8b7848b7",
+      "wesnoth_client/alliance_game/world_result.cpp": "4f0ffe1c1e7b339353c44dff8c207ce9ebd245eb315170567d1f3273dfa58ab3",
+      "wesnoth_client/alliance_game/world_scenario.cpp": "24acf041527e199ed6fdd8d039fdbe4f635e1249168491c39b9ad9ab48190864",
+      "wesnoth_client/alliance_game/world_storage.cpp": "60270c22f0cdd66aa72430c6743e9038af62328a72301edd878afcc79fec5da4",
+      "wesnoth_client/alliance_game/world_worker.cpp": "51411cdad4ff390bb797c6d0a83d9b84b45525ea03b5509796d453b592eab9bb",
+      "wesnoth_client/alliance_game/world_worker_overlay.py": "be80e31c49f52a0db96b681d6b650794857dc3e77942005798828458939f8a58",
+      "wesnoth_client/tests/build_world_command_audit.py": "29ce3be17b728ce7a3619b5d3f73ab62a6cc7f579000fca04aaf880a7a3463dd",
+      "wesnoth_client/tests/build_world_engine.py": "8a94affb84e4fcdc5deb5a8547305ebca8475162244713d545b74b046bce13ab",
+      "wesnoth_client/tests/test_android_account_game.py": "5398b678bb51001d65e3a253d4626466a87e263a7a3032df3859c59676e9f720",
+      "wesnoth_client/tests/world_native_command_probe.hpp": "747bc48a917c466c361c89d8d449dc5968dba6797f476d5fb6f8c5ebfb03faad",
+      "wesnoth_client/tests/world_native_units_probe.hpp": "f7456a76c06d0606f3982dca3e41b91eb7daf0179b3f931274ca13d332026ac9",
+      "wesnoth_server/alliance/battle_daemon.py": "64456d658b2234efd906177e5353bae3b860d517a5855ffac21d6ec559615b8f",
+      "wesnoth_server/alliance/world_execution.py": "4eae49e0860fb0b5ed406fee50c1622522440d11e68b49175c7db0260b863919",
+      "wesnoth_server/alliance/world_worker.py": "c801bb1446945fb3a30ad8890e3b6adb874c562f96f2149d855bf83b1c186330",
+      "wesnoth_server/tests/run_world_native_engine.py": "c967adb8bc70f70680758d81e8e279502847fdff63521276ed08eb1edfe391d7",
+      "wesnoth_server/tests/test_world_companion.py": "d0acb317d827f112e9ac5de255b3bc95ca805e33fcb6d44bcf036de45d04288a",
+      "wesnoth_server/tests/test_world_worker.py": "0924dedbc4a3dd4bfc92424096ba02672453a3469a154d88e657019ca9e991da",
+      "wesnoth_server/tests/world_native_mongo_fixture.py": "0e9e347244267fe6f7b08ae8d5dbbc6405d179e87ff279483f9f9b39efd99982",
+      "wesnoth_server/tools/run_world_companion.py": "0810db77d3c068908548a84dda5b32eed361d3efe60d54407387a9b4f5d9c6d2"
+    },
+    "commits": {
+      "native_client": "79b524d",
+      "worker_server": "cc0e013",
+      "turn_order_and_worker_cleanup": "bc55a3e",
+      "immediate_sync_dispute": "ed07e5b",
+      "joined_native_mongodb_audit": "374a53a",
+      "native_scoped_source_guard": "776c734",
+      "world_event_guard_and_native_audit": "49667b1"
+    },
+    "preservation": "Original builds, attempt logs, source data, identity and private journals retained; no gameplay or credential database was reset.",
+    "retained_nonproduct_attempts": [
+      {
+        "log": {
+          "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-test-19-mongo.log",
+          "bytes": 6002,
+          "sha256": "e9e3c54fa468a44ead23e59eb82dc45b0fd1c778dae34000c6197104ce8f8d20"
+        },
+        "reason": "First disposable database setup reused its pre-replica-set bootstrap client and cached sessions unsupported. Test-only setup now reconnects using the replicaSet URI before production domain operations. No combat or product defect claimed for that attempt."
+      }
+    ],
+    "updated_utc": "2026-10-28T04:40:05.405079+00:00",
+    "previous_native_worker_before_source_guard": {
+      "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/world-worker-before-source-guard",
+      "bytes": 77512320,
+      "sha256": "07cc81bd7557fffa1803c91c4c03f4644ef1526545cbaf92e3064fd554fa4af0"
+    },
+    "native_command_guard_audit": {
+      "scope": "Separate test-only actual native command registry dispatch on the initialized scenario board. Both engines reject opposing-unit move and attack before state changes. No terminal settlement is attempted. Expected incomplete-evidence worker pause and connection close follow the deliberate test-only exit. This is a narrow ownership guard, not complete anti-cheat.",
+      "log": {
+        "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/command-audit-test-01.log",
+        "bytes": 468,
+        "sha256": "2f6ed4068e2c7e50f1d317b4b1f199b28d8ad7a235d2870affbdde483ae27ae9"
+      },
+      "build_log": {
+        "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/command-audit-build-01.log",
+        "bytes": 49,
+        "sha256": "ae0582d7739bedf9cb0219d89132f3f2d213f608eec19f1629e361222a4da1c9"
+      },
+      "result": {
+        "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/native-run-c0e43e8abf21423a8890ca35852a68f4/result.json",
+        "bytes": 508,
+        "sha256": "a3e928386efbc69385c26e9ebb95170bbb41c0536e112f0da0ab4d5af3127bcd"
+      },
+      "binary": {
+        "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/world-command-audit",
+        "bytes": 77543704,
+        "sha256": "5d0254a4737acff5236cc1385af55b71d86ef7df533f2d0f12e0a7a757cba99c"
+      },
+      "opposing_move": "rejected",
+      "opposing_attack": "rejected",
+      "unchanged_board": true,
+      "settlement": false
+    },
+    "builder_and_delivery_tests": {
+      "android_builder_tests": 75,
+      "android_builder_log": {
+        "path": "/home/uni/Documents/future/wesnoth_client/build/audit-world-engine-1192624/android-builder-command-guard.log",
+        "bytes": 16045,
+        "sha256": "6b0f905cb3ae5b7d6099a2bfa7b2d7ede4cfca47c676c7b409e33226dda30af9"
+      },
+      "worker_delivery_dependency_tests": 12,
+      "worker_delivery_log": {
+        "path": "/home/uni/Documents/future/wesnoth_server/build/world-worker-delivery-command-guard.log",
+        "bytes": 111,
+        "sha256": "fe28fe8e83a3e97c1dd9ca047468e19cd97e711d1c84581e1b40b8a6750e8e48"
+      },
+      "scope": "Python builder/delivery contract tests; no Windows native compile or runtime claim."
+    }
+  },
+  "domain_tests": {
+    "capacity_war_cancel_commit": "e82148db555c6cc884d217fea122466494e150ff",
+    "catalogue": {
+      "file": "catalogue-check.txt",
+      "hero_forms": 346,
+      "result": "PASS",
+      "troop_forms": 28
+    },
+    "command_template": "docker run --rm --network none --ulimit nofile=65536:65536 -v \"$PWD:/workspace:ro\" -w /workspace wesnoth-alliance-verify:python3.14.3-mongo8.0.32 python -B tests/run_world_fixture.py [test names] (from wesnoth_server)",
+    "dispute_cleanup_commit": "0ac055f3519c2dbb3dcbfe61eaebb7347a2c4824",
+    "domain_commit": "0127b5ee2354925d2b69aabd0f1725ce56014451",
+    "environment": {
+      "docker_image": "wesnoth-alliance-verify:python3.14.3-mongo8.0.32",
+      "mongo": "8.0.32 isolated temporary replica set",
+      "network": "none",
+      "python": "3.14.3",
+      "ulimit_nofile": "65536:65536"
+    },
+    "followup_commit": "b0f0f29cb264f9d06d9c9774fc26144bb3878a2a",
+    "format": 1,
+    "inputs": {
+      "alliance/company.py": "8f97dcea28c8f467c4faadf2872ff5a5de938faa0f74323c5f4da49ffca29f32",
+      "alliance/company_hero_costs.json": "597ed79133f529628794eb0a83a400256a80c15bf6626083269beecf592ad093",
+      "alliance/company_source_manifest.json": "cacf5e92129a284b9e794c71cd3cc967f1a643712b7fd266a5d6322cc0164677",
+      "alliance/world.py": "22a2f6cb2da35eb275451a108d2525a9ff70a8c5768aca446706613f0d730948",
+      "tests/run_world_fixture.py": "da8c8b9d94c0f5f12f2cd60b13119662707474c04a0689711a475b63a1529c31",
+      "tests/test_company_product.py": "0709e94f02a53bea9bfe95c8e1ae25f3b945e300f45bf2763d8e81cd2ddd926c",
+      "tests/test_world_product.py": "03ba42ee6c01f7aa63d76548c5d7b892bdd5b9aa37ca5c391f4ba57d20e91dbf",
+      "tools/generate_company_catalogue.py": "372bcc310561a06bc974cdf4ee1727cee1eccc9c2f49a6e261ca2ac237baf07f"
+    },
+    "limits": [
+      "Domain transactions and validation only; trusted worker evidence is fixture-supplied.",
+      "No Windows compilation, Windows execution, Android rendering or multi-human gameplay acceptance is claimed.",
+      "Production runtimes, credentials and player data were not used."
+    ],
+    "release": 1192624,
+    "runs": [
+      {
+        "bytes": 5981,
+        "elapsed_seconds": 71.685,
+        "file": "mongo-domain-41.log",
+        "result": "PASS",
+        "scope": "Full Company and World domain suite before soldier-report presentation addition",
+        "sha256": "b9e28b3f74978105a74949cbc16f14db18af2541b02a08fa3743e09844db082d",
+        "tests": 41
+      },
+      {
+        "bytes": 1875,
+        "elapsed_seconds": 19.928,
+        "file": "mongo-settlement-regressions-13.log",
+        "result": "PASS",
+        "scope": "Final affected Company, neutral World and army-skirmish settlement regressions including soldier-report fields",
+        "sha256": "481c339b5cb5ca3913ad0b6fe06ff9b472bcb8786868bd0ca820fb1337e1a8f2",
+        "tests": 13
+      },
+      {
+        "bytes": 1019,
+        "elapsed_seconds": 10.856,
+        "file": "preparation-and-join-regressions.log",
+        "result": "PASS",
+        "scope": "Paused unstarted expiry on lease; preservation of started paused runs; eligible Join affordance; neighboring timeout/restart/skirmish regressions",
+        "sha256": "e2123a21794c0296c39d382ce6c27eace0c049e740aede8b8cfb839bb584cdcf",
+        "tests": 6
+      },
+      {
+        "bytes": 234,
+        "elapsed_seconds": 1.647,
+        "file": "paused-expiry-paths.log",
+        "result": "PASS",
+        "scope": "Paused unstarted expiry via worker acquisition and client-loaded paths; atomic reservation release",
+        "sha256": "452ce45cbc3eafb885966ca85fd532b336251f8606ddae8cd702d0f6fc25de81",
+        "tests": 1
+      },
+      {
+        "bytes": 1295,
+        "elapsed_seconds": 18.869,
+        "file": "capacity-and-war-cancel.log",
+        "result": "PASS",
+        "scope": "Four-per-Team battle and standing-permission capacity; pending offers; mixed force rollback; proposed war withdrawal/history/idempotency/authority; neighboring consent regressions",
+        "sha256": "e6aecbc2d6a0d2b59f468942bfd06abb2075b50957f9ff8aa4fec7d533542345",
+        "tests": 8
+      },
+      {
+        "bytes": 408,
+        "elapsed_seconds": 5.802,
+        "file": "defense-capacity-concurrency.log",
+        "result": "PASS",
+        "scope": "Competing fourth/fifth approvals serialize; a human owner replaces their standing army without double counting",
+        "sha256": "a77144d4d0524384963d748d6f88d6e537c8e2584572ab31c4db55824cea4a13",
+        "tests": 2
+      },
+      {
+        "bytes": 607,
+        "elapsed_seconds": 5.838,
+        "file": "dispute-cleanup-regressions.log",
+        "result": "PASS",
+        "scope": "Native scenario/synchronization disputes survive worker cleanup; no reacquisition or awards; verified skirmish captain confirmation remains pending through cleanup",
+        "sha256": "97cf9727aa0511debe1de106dd123f72ed4aab3a3ad34cc368cd1fc7de3600fc",
+        "tests": 3
+      }
+    ]
+  },
+  "mobile_evidence": "WORLD_MOBILE_VERIFICATION_1192624.json",
+  "limits": [
+    "Actual Windows installed full-engine package inventory is not supplied. Missing pinned packages cannot yet be selected; Windows MINGW compilation and DLL execution are NOT RUN.",
+    "Actual GUI2/SDL captures and logical touch geometry on Linux are not LDPlayer rendering, Android density measurements or physical touchscreen acceptance.",
+    "Single-LDPlayer companions and assigned native AI do not establish multiple-human usability.",
+    "Six original native cases use an in-memory domain fixture; joined Company cases use actual production AuthService/AllianceService and isolated MongoDB. Test-only earned-hero/initial-XP setup is labeled.",
+    "Native evidence, source ownership and command continuity checks are not complete modified-public-client anti-cheat.",
+    "No production Windows database, password, private profile, runtime or campaign save was accessed or reset.",
+    "Historical user acceptance is retained. Windows1192624 A-Z and the earlier authored-campaign duplicate-reward check remain pending."
+  ]
+}

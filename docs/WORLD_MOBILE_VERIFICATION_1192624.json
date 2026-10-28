@@ -1,0 +1,692 @@
+{
+  "release": 1192624,
+  "scope": "Linux production GUI2/SDL rendering and input-handler fixtures; synthetic public replies, no player database writes",
+  "production_commit": "9b76aef",
+  "source_sha256": {
+    "alliance_game/account_ui.cpp": "63b056e18792960a19d85bafb33f5581ec59de2a231baeb93841545de0ac845a",
+    "alliance_game/account_ui.hpp": "3cf6f10045e8fdfbaa3891efa40083e41b09351d2e87dc42a9c5825bc6a2b17a",
+    "alliance_game/team_views.hpp": "92ebddb5a596bc3f79b9f4318f68cbcb57b10b5012174c596168bf8d67ea3bc9",
+    "alliance_game/team_workspace.inc": "d8ebe6ca7eec0c7df8e5146f04ba0220f8e12f2853fdc91a1678586b24bcca20",
+    "alliance_game/world_ui.hpp": "c2de3709fe1a551b5c04907ed5d9b6a2629b9676849b7bfb0b236b060e79f35e",
+    "alliance_game/world_command_record.hpp": "9fe894720116313bfd21a6cad1e39f7402f66a95c643a813f25da1903cb838d8",
+    "tests/generate_world_mobile_render.py": "e2f8ba7a43c5c3c01887c2fe1f99909edc681efedbba470a1cc73cdac242e322",
+    "tests/world_command_record_tests.cpp": "79f6c4f22555a5cdb1af3d990a272ab906c2894785dd4dd6ed955113409633a4",
+    "tests/world_mobile_render_cases.hpp": "39c28f57709db482a7a940c05dc00b1c1b2373180ab6b3c52947a6b3d431e217"
+  },
+  "container_image": "sha256:525eaaba0da8694078a7fd5929c84410a62a0fc9d403205623310500c6e5c406",
+  "network": "Docker --network none",
+  "renderer": "SDL dummy video / software renderer; real GUI2 windows and pinned native engine",
+  "checks": {
+    "rendered_captures": 132,
+    "resolutions": [
+      "1280x720",
+      "1920x1080"
+    ],
+    "themes": [
+      "default",
+      "Celes (modern)"
+    ],
+    "company_and_map_guards": 27,
+    "durable_command_journal_assertions": 17,
+    "production_translation_units": [
+      "account_ui.cpp",
+      "team_views.cpp"
+    ],
+    "touch_equivalent_handlers": [
+      "map castle selection, Centre and zoom",
+      "company paging, four-slot removal/reselection, Save",
+      "war objective selection",
+      "refresh retains search and selected card",
+      "refresh retains vertical scroll at 150",
+      "rejected mutation is not automatically repeated",
+      "legacy company-conversion callback",
+      "captain-owned pending-defense approval/withdrawal chooser and separate confirmations; eight role/state permission guards"
+    ],
+    "presentation": [
+      "captain, member, no-Team",
+      "zero heroes, not enlisted, wounded",
+      "queued, preparing, running, paused, awaiting confirmation, cancelled, completed",
+      "native soldier return-report fields",
+      "visible-ancestor geometry within viewport and >=48 logical-canvas-unit hit rectangles",
+      "painted emerald surface verified before capture",
+      "World map aspect ratio preserved at both resolutions; hit testing uses identical contained image transform"
+    ]
+  },
+  "logs": [
+    "build/audit-world-mobile-1192624/render-build-19.log",
+    "build/audit-world-mobile-1192624/render-19-1280x720/combined.log",
+    "build/audit-world-mobile-1192624/render-19-1920x1080/combined.log",
+    "build/audit-world-mobile-1192624/compile-production-defense-final.log",
+    "build/audit-world-mobile-1192624/compile-production-final.log"
+  ],
+  "limits": [
+    "Not Windows or LDPlayer acceptance.",
+    "Input tests invoke native click handlers and SDL pointer placement, not physical touchscreen hardware.",
+    "Public response fixtures do not establish live backend authorization, native combat, reward settlement or worker recovery. Those are separate domain/engine checks.",
+    "Earlier stale-pixel captures from attempts05/06 were rejected. Only final attempt19 is accepted here.",
+    "Touch geometry is measured from actual laid-out GUI2 hit rectangles in SDL canvas units with pixel_scale=1; this does not measure Android density-independent pixels or physical LDPlayer touch accuracy."
+  ],
+  "captures": [
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-defense-approve-default.png",
+      "sha256": "83ef9c5ebab3188cdafaa7e66de8269abdbad4b9b9924c800655009531aeecb5"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-defense-approve-modern.png",
+      "sha256": "83ef9c5ebab3188cdafaa7e66de8269abdbad4b9b9924c800655009531aeecb5"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-defense-confirm-approve-default.png",
+      "sha256": "7198056bbe965b28869a2f8e828faf2e109618dea7a8a9e295dc0e55b9917b6a"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-defense-confirm-approve-modern.png",
+      "sha256": "7198056bbe965b28869a2f8e828faf2e109618dea7a8a9e295dc0e55b9917b6a"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-defense-confirm-withdraw-default.png",
+      "sha256": "b70fc092832d6e435e890ed66b8361fa77fc5cf8f89b4ab0d0d68aa9e3d0478c"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-defense-confirm-withdraw-modern.png",
+      "sha256": "b70fc092832d6e435e890ed66b8361fa77fc5cf8f89b4ab0d0d68aa9e3d0478c"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-defense-withdraw-default.png",
+      "sha256": "fca61bea11fd2d2ecfb181fd09cdfa28963634a6422fd7bf2e9204f1b1fac019"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-defense-withdraw-modern.png",
+      "sha256": "fca61bea11fd2d2ecfb181fd09cdfa28963634a6422fd7bf2e9204f1b1fac019"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-force-default.png",
+      "sha256": "62ad7a708cfaee12bc16cbe34fedf1bb5329ff838f1fb22c4a23c6b0fdbc8c3a"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-force-modern.png",
+      "sha256": "4058a07d97617c931b14e31a89e5f6038a0c7e4226c04769f307bf59bcaeac22"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-legacy-default.png",
+      "sha256": "69045a9ca52a77d00b40c9f5330a9d3dd9b6ceb629f8c56f845fcd20757af4ee"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-legacy-modern.png",
+      "sha256": "69045a9ca52a77d00b40c9f5330a9d3dd9b6ceb629f8c56f845fcd20757af4ee"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-objectives-default.png",
+      "sha256": "57adf2409ba5f5d8eb51aae569787c1051ee5159569a7edbb7c523f85c6155f1"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-objectives-modern.png",
+      "sha256": "57adf2409ba5f5d8eb51aae569787c1051ee5159569a7edbb7c523f85c6155f1"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-picker-default.png",
+      "sha256": "aa299579e2b615749ba6133dfd65b45fd31bff9139f8268df03c5b6bd0258fc6"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-picker-modern.png",
+      "sha256": "aa299579e2b615749ba6133dfd65b45fd31bff9139f8268df03c5b6bd0258fc6"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-touch-force-default.png",
+      "sha256": "8c2679e148254971c3eddd4bfda91d325894a074e19d68d1f340bc8f6785afe1"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-touch-force-modern.png",
+      "sha256": "8c2679e148254971c3eddd4bfda91d325894a074e19d68d1f340bc8f6785afe1"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-touch-map-default.png",
+      "sha256": "8f05348dafa2884235ebff53c8861ea510e30104d01ead5d3ee86ba5482daa31"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-touch-map-modern.png",
+      "sha256": "8f05348dafa2884235ebff53c8861ea510e30104d01ead5d3ee86ba5482daa31"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-touch-refresh-default.png",
+      "sha256": "2e17e45519b5037f0100792788a3e4f3d3e9a08a3dadf603dfcac9d925ec8415"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-touch-refresh-modern.png",
+      "sha256": "2e17e45519b5037f0100792788a3e4f3d3e9a08a3dadf603dfcac9d925ec8415"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-touch-unready-default.png",
+      "sha256": "819337ebcf2adcfe4274a7ce58a495ae364cd2a05683a3b21c95d42024efdbeb"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-touch-unready-modern.png",
+      "sha256": "819337ebcf2adcfe4274a7ce58a495ae364cd2a05683a3b21c95d42024efdbeb"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-battle-awaiting_confirmation.png",
+      "sha256": "8c4e55ec1bfc2e75369ad61a4aafdb1badd98986de2cf1e5df6b28061559de3b"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-battle-cancelled.png",
+      "sha256": "4857d2dbcc50fe6979dfceb16997ed0eb91979c6e1b9903b96368a4a226283c9"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-battle-paused.png",
+      "sha256": "e14c3eaca3eeb45731ddcb81c3d9183c21eb1ee837d12d2034a7d4575b4d5d83"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-battle-preparing.png",
+      "sha256": "5ab15bba4a6bc92b71544fb1e56578127558fb3495b09479c7b9c3ae3fff6db3"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-battle-queued.png",
+      "sha256": "17c856b92604102f2ba776f70c48bb0c4e2def6c68fadcb9f971e25603da3baa"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-battle-running.png",
+      "sha256": "ff2bbe0d425fbeb861dfc1357fdd674e9f91c414674576cdaa3ea7c55cec199e"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-captain-0.png",
+      "sha256": "954937b2dd2bcbb6bc88f1a169c455ff9bacd4a5c2cdd147093c54a3d236a465"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-captain-1.png",
+      "sha256": "039f246e186fdef5ba39e2209f5b434dfec1620f1b26b09253f1916a62ee24bb"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-captain-2.png",
+      "sha256": "d3434d8e6f5e78e4bfdcd587dec23ab6ae5770312090241348604442128cc5de"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-captain-3.png",
+      "sha256": "774932bd50c1ec63bdfebed2be1fcad8a7cfa85eb541010f301707efb5613697"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-company-not-enlisted.png",
+      "sha256": "704eae9c07816bec70936c5bfcecde8cacae26238655da987ba1a925c86282af"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-company-wounded.png",
+      "sha256": "272f46891f48d3929669497797311350c8433d32be5fff191708df96f2e2a7ad"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-company-zero-heroes.png",
+      "sha256": "ebc13a7f6fce07970cfc4a5fec130629e8d499fd645c42104d13e67ee4d4fca6"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-member-0.png",
+      "sha256": "1ca13dda99f21209ce936479f9289911a77283f5e1870063071dc609c08b9020"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-member-1.png",
+      "sha256": "63b20d0c18236ab66d207c88e224a69598a6d84753922cb4e1e00493e8259a2c"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-member-2.png",
+      "sha256": "6fa66da5085c88d6e85024f2abaf05fbf01f7f4167d862dd4a0395c4240bb175"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-member-3.png",
+      "sha256": "774932bd50c1ec63bdfebed2be1fcad8a7cfa85eb541010f301707efb5613697"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-no-team-0.png",
+      "sha256": "992ef661375919965424f30dfab63f4f16a96ff42633b0629fc37c6629d51fac"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-no-team-1.png",
+      "sha256": "65d81ae093fa98ec8fe3f8cd7d98c91900311ca4c2883ea048dd9d24b825a5af"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-no-team-2.png",
+      "sha256": "460355ad05c1def760f21002a2d5ba194fd849709de71f4276785eb2a023cd8b"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-default-no-team-3.png",
+      "sha256": "23e758671a6946b11a522c8b96acaa3338d338d17ffde8f27995a98bb9a46926"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-battle-awaiting_confirmation.png",
+      "sha256": "204e617798e051ad11c413b72b5f1255b3d453178b80c993720cedf397f48af0"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-battle-cancelled.png",
+      "sha256": "791d088377e40a01438870048b9df5a6734846852d44b9e6a15ac1486411321b"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-battle-paused.png",
+      "sha256": "c5b0bb98e427e12539e5594f5038fe5f97dfeba3bf725cb7c529bd4c7141bc2b"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-battle-preparing.png",
+      "sha256": "11bb5efbb00079246548e465289e6ccb6b42aff02a2f23f3c231dfaa87d748ed"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-battle-queued.png",
+      "sha256": "e8d5a2dddc41a5918c3163ebf3c7470adc938968ae7d96cf23edebb9e596a41e"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-battle-running.png",
+      "sha256": "dfc43cbf3f172c38be455db45b57c070ce6eb5aed92e7d2e34a0fdbe4a27788a"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-captain-0.png",
+      "sha256": "b85e510c861fbb547218520270d81f452f0d75bd910bb26f85000ee68565257f"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-captain-1.png",
+      "sha256": "9d4ff3f913dbdf0e8b2fb84676d300664cf0b9df0b0b2539f24154532e44c578"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-captain-2.png",
+      "sha256": "7cfb6e474623640094e7ed257bac43c266df6b40e5e9ec3bb9737aab671d4522"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-captain-3.png",
+      "sha256": "00035a4e8d3dcde487938ced431087ce824b70ac6c0655f094b4c3189c518b18"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-company-not-enlisted.png",
+      "sha256": "ccc88787d7f87d214e003f323948c9b4ac2baee92479ba806f7f0f2bfa252fba"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-company-wounded.png",
+      "sha256": "811edc146383c485d620bf2adc07368c7aeec888a7fe9846e0dca8f7304654a6"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-company-zero-heroes.png",
+      "sha256": "9d751bf0122a5988179ef445f9eba33b5c676cc3723f3b6e63fafba1006fd2b8"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-member-0.png",
+      "sha256": "b85e510c861fbb547218520270d81f452f0d75bd910bb26f85000ee68565257f"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-member-1.png",
+      "sha256": "7da5e41c8d9fdae5f66d5ead953a8b1108717612b29470ac14a7026fd1cdfac3"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-member-2.png",
+      "sha256": "505918e3380bdf30baa226237d25d68f8c1772c6e226070ab1de5a4392c0957d"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-member-3.png",
+      "sha256": "00035a4e8d3dcde487938ced431087ce824b70ac6c0655f094b4c3189c518b18"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-no-team-0.png",
+      "sha256": "76c1b8b1ad13d4cde61f7cfbeb041df5dd9bf4dc4bc0a359dd29c42ac600319a"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-no-team-1.png",
+      "sha256": "44249466767f763e4e6bca4775290d3d0b19c2b65f6a42bd9a7380dcea887975"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-no-team-2.png",
+      "sha256": "63df399284a8884bc0024b8880c7ffa2484e919fbdc5e407276c8c2665b1185d"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/world-workspace-modern-no-team-3.png",
+      "sha256": "4c420b358ab323e9c181c86ceb5311ca40893c35215791eb2757c1a66161fbda"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-defense-approve-default.png",
+      "sha256": "bd695004ec9067b186ddf99bef048a08b6452a71d01fc6acb3cd0b66fa3aeea9"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-defense-approve-modern.png",
+      "sha256": "bd695004ec9067b186ddf99bef048a08b6452a71d01fc6acb3cd0b66fa3aeea9"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-defense-confirm-approve-default.png",
+      "sha256": "1267d6caff4fb4d2d4eb36a870bad72f8c73e78d8fbc9a743831637eadb1fbd2"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-defense-confirm-approve-modern.png",
+      "sha256": "1267d6caff4fb4d2d4eb36a870bad72f8c73e78d8fbc9a743831637eadb1fbd2"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-defense-confirm-withdraw-default.png",
+      "sha256": "33e0e96bfffd668f1e763dae7e2dd9b317a64b076a3729e73c3bed6be2de1ae9"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-defense-confirm-withdraw-modern.png",
+      "sha256": "33e0e96bfffd668f1e763dae7e2dd9b317a64b076a3729e73c3bed6be2de1ae9"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-defense-withdraw-default.png",
+      "sha256": "e54cb700e4dd1da50003e378898c4ec9bd0bee89a74bff1de29a0913ab7fe5f8"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-defense-withdraw-modern.png",
+      "sha256": "e54cb700e4dd1da50003e378898c4ec9bd0bee89a74bff1de29a0913ab7fe5f8"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-force-default.png",
+      "sha256": "40f103587d86c4f6e6895601761d4811fb45f0f290f4c53ec3dacb38cbd1615b"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-force-modern.png",
+      "sha256": "430ba5dadf53a28dae956bb07aff555c53dbdc23ba180b270ea7d40f747f3714"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-legacy-default.png",
+      "sha256": "c1e023009c317e332930e20e38d299eab29804a182cfa17139c58476cf0522e0"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-legacy-modern.png",
+      "sha256": "c1e023009c317e332930e20e38d299eab29804a182cfa17139c58476cf0522e0"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-objectives-default.png",
+      "sha256": "e0f6f970bf2ee6086fcb9af85ec2fa2296866316cde41c54dd9d640d782f737f"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-objectives-modern.png",
+      "sha256": "e0f6f970bf2ee6086fcb9af85ec2fa2296866316cde41c54dd9d640d782f737f"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-picker-default.png",
+      "sha256": "02b84d7f4d513e4f510c0fdafc8b99912e8dc90568977ba809ed7790b3c27377"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-picker-modern.png",
+      "sha256": "02b84d7f4d513e4f510c0fdafc8b99912e8dc90568977ba809ed7790b3c27377"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-touch-force-default.png",
+      "sha256": "ac49d2a577917313dd1f3a4f797b514adc75406fb0bd186b5887dbe3864402bb"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-touch-force-modern.png",
+      "sha256": "4f6afe13f71754e810603192d79a106e3916052f00acc878cbd8564d157603bb"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-touch-map-default.png",
+      "sha256": "84cc330e472273443c4eeb0720f0661ea0c937e8348e808033aff8b6ba97c8b3"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-touch-map-modern.png",
+      "sha256": "84cc330e472273443c4eeb0720f0661ea0c937e8348e808033aff8b6ba97c8b3"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-touch-refresh-default.png",
+      "sha256": "bf5c363177d4cd738973d847a0817b3f690655a06bd7a958499df9d61ee1b12b"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-touch-refresh-modern.png",
+      "sha256": "bf5c363177d4cd738973d847a0817b3f690655a06bd7a958499df9d61ee1b12b"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-touch-unready-default.png",
+      "sha256": "fe51808c11dd58967234a0c00173442c83cd1aa5a1b0818eefe0c92183b11bc7"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-touch-unready-modern.png",
+      "sha256": "fe51808c11dd58967234a0c00173442c83cd1aa5a1b0818eefe0c92183b11bc7"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-battle-awaiting_confirmation.png",
+      "sha256": "8b4c6c9c4b2bf105eee009ea50edba222688a45f5eed3f895910afd865c73a8e"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-battle-cancelled.png",
+      "sha256": "c8a8ccf6a54de4311e387b5ffa325d541d4ad33d13c5df212f075a67d7eb6fc6"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-battle-paused.png",
+      "sha256": "b7375e7f512704f665f309ff5deb9998902ea2d888ca4b650662011be05dc9fc"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-battle-preparing.png",
+      "sha256": "9b812ffdc0dc33ca0337488dc86239a72e07948b6eafbce9f0bb70880bdad9bb"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-battle-queued.png",
+      "sha256": "df36631c8ebb72b25ba0dca2f85a579471598e2274cc85efa0ae4b30c5b4e3e3"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-battle-running.png",
+      "sha256": "7e7d7e6a494f88c77abf0f6be3b86bbddeb672f516e6bb3d8dcbf2fe09300a3e"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-captain-0.png",
+      "sha256": "957cdd9d499a99b43f4b9912a3b02c4142ce7976e1dea7afc3b250b78cb6dd87"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-captain-1.png",
+      "sha256": "d62b8a9fee17a610bedb3fcae5ec922aff242d960738c84a0954476c74955129"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-captain-2.png",
+      "sha256": "f2d3ef97c7beaa457c85f0629f928044071862d2b493d93312605e579604133e"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-captain-3.png",
+      "sha256": "222e214ebddc3fc60a34825c22dff2e8778de92431039eb91861ad05d43caaa3"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-company-not-enlisted.png",
+      "sha256": "13a9f6a2ffa0cbd050777083cee7538c31534f141ce3200cd6a71957abf5f74b"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-company-wounded.png",
+      "sha256": "d19b97ebc8a90f71afb436acdcabaf5da26d94cc71c531c39171093ee96e660f"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-company-zero-heroes.png",
+      "sha256": "2ceec7325cd300e1e2184f0ea5aa0c2ba9644c4aca195cb6301c8d3be899226c"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-member-0.png",
+      "sha256": "71490a229246142cb23b955d0bfd5a1e5162d015d4ada9940a19a86566502fd5"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-member-1.png",
+      "sha256": "fdaa1ed74d41b46c2fd27a0fe8892ad1a5942dc0b28f1bd3e134520c45f65f9b"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-member-2.png",
+      "sha256": "8404ee55388a83911814848a7e4b73495c49b99740c7e9a50bb5d41841bf3446"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-member-3.png",
+      "sha256": "222e214ebddc3fc60a34825c22dff2e8778de92431039eb91861ad05d43caaa3"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-no-team-0.png",
+      "sha256": "3973a48b71ff79385ee8fe7a2c854c5c67a735efd4391f17013b286d2221fec8"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-no-team-1.png",
+      "sha256": "ad6da4341e545b57d0ca3ce4bb2fae3fef6d5561437dcee9a9ea47cd20254ce7"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-no-team-2.png",
+      "sha256": "800d66b042c0685ec9423d002e6c37c07d203e95d75005a6b6c6358bfce4dcaa"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-default-no-team-3.png",
+      "sha256": "1b0c6d1378d8e4c2cee2460b3383ef7492c35dbf356ba11fe3bb59c63d95a410"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-battle-awaiting_confirmation.png",
+      "sha256": "a737cded34ded6aed9c960a362014f4bee9618baedb4c899f4ef5be446837436"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-battle-cancelled.png",
+      "sha256": "d68398ec9786a115a3f0784c1bbac55d958d3ad2dd17581311dfe13ac2eb2f7e"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-battle-paused.png",
+      "sha256": "83740682f7cbdd05c237bf76110b289bfaa53fe88c625dcb21660d3a9a48c5a2"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-battle-preparing.png",
+      "sha256": "ac68af74c0e42c78dffdc4492f320ca85621c7092ed66c5a63376879176d5c76"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-battle-queued.png",
+      "sha256": "260920dd6283b7422aa02db896379fc792e3b8fbdd5e930847f8babe0f615df8"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-battle-running.png",
+      "sha256": "1a66201d252fd9223aac5d41cc948b1738208e1c1dbf9b410c85525aeb3c4640"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-captain-0.png",
+      "sha256": "2f1587fa2a5acf817a0de3ab4118829654bb852978a94454bc95a7074d5811a9"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-captain-1.png",
+      "sha256": "f053113f72222944f49dd5a346cc32c92c6048c7f82b31b9bdc01880e07fabb6"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-captain-2.png",
+      "sha256": "b5b4db7457d62678c6d7dff80bb35e5cc6436d49175b769ce1fc77fa389c0041"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-captain-3.png",
+      "sha256": "b8e0ec01ed7a204ec546a47587a3bd7e4b07985f07aed0ba69d4194f3abd3885"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-company-not-enlisted.png",
+      "sha256": "77b33d9fbe5150a98d98f165937b0545f76371837d33846a39c974a173d1f459"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-company-wounded.png",
+      "sha256": "fe44ac8da26f3fcd159bf4254f19a4c727baf29cc3c8d6cb08a0bfc76bdf360e"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-company-zero-heroes.png",
+      "sha256": "cfd1196edfbf5fa1a123b97deede90b5b0286831952a7b90d2fde7a51f444abd"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-member-0.png",
+      "sha256": "2f1587fa2a5acf817a0de3ab4118829654bb852978a94454bc95a7074d5811a9"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-member-1.png",
+      "sha256": "2ff6721186cdcd7164489930ebcddba96aceb33333a3081922fdf8aea67f7b68"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-member-2.png",
+      "sha256": "596479c848c78aec675091e3af33861355252e87868a697978d8ba36dbbf5fca"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-member-3.png",
+      "sha256": "b8e0ec01ed7a204ec546a47587a3bd7e4b07985f07aed0ba69d4194f3abd3885"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-no-team-0.png",
+      "sha256": "05dd45fe6dd82a04cb3803bd3a59f09783c4e6ff757311c56ec176163c2f7ab6"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-no-team-1.png",
+      "sha256": "02921805b5eaeba4b2da4d80f9689f8b32be50a5119400bc249d03c6eacba937"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-no-team-2.png",
+      "sha256": "f77799ce04ab6e16949dbd1fafd94ee568902e44024b0d4ae871f64c41372baf"
+    },
+    {
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/world-workspace-modern-no-team-3.png",
+      "sha256": "3636f13d3a7c101206b560985f2313dd9d1f76a9426bbdd0bc6947c1abdafb51"
+    }
+  ],
+  "production_commits": [
+    "2a51796",
+    "07a87f5",
+    "9b76aef"
+  ],
+  "measured_touch_geometry": [
+    {
+      "resolution": "1280x720",
+      "path": "build/audit-world-mobile-1192624/render-19-1280x720/geometry.txt",
+      "sha256": "2477f2cbf176430e3479a70b758c3df36f5532841ade5e142871a0dda5404e4f",
+      "target_observations": 636,
+      "minimum_width": 111,
+      "minimum_height": 48,
+      "units": "GUI2 logical canvas; pixel_scale=1",
+      "named_targets": [
+        "world_roster",
+        "world_settings",
+        "cancel",
+        "world_tab_0",
+        "world_tab_1",
+        "world_tab_2",
+        "world_tab_3",
+        "world_zoom_out",
+        "world_zoom_in",
+        "world_centre",
+        "world_recruit",
+        "world_rest",
+        "world_expeditions",
+        "world_primary",
+        "world_secondary",
+        "world_more",
+        "world_refresh",
+        "force_slot_0",
+        "force_slot_3",
+        "force_select_0",
+        "force_select_5",
+        "force_choose_hero",
+        "force_bracket",
+        "force_previous",
+        "force_next",
+        "force_save",
+        "picker_choose",
+        "objective_castle_0",
+        "objective_castle_5",
+        "objective_area",
+        "objectives_accept",
+        "use_companies"
+      ]
+    },
+    {
+      "resolution": "1920x1080",
+      "path": "build/audit-world-mobile-1192624/render-19-1920x1080/geometry.txt",
+      "sha256": "e0de8858ca66e93198c33fe847b39564b218a36dbc7975e9f6e8e31d95a90977",
+      "target_observations": 636,
+      "minimum_width": 130,
+      "minimum_height": 48,
+      "units": "GUI2 logical canvas; pixel_scale=1",
+      "named_targets": [
+        "world_roster",
+        "world_settings",
+        "cancel",
+        "world_tab_0",
+        "world_tab_1",
+        "world_tab_2",
+        "world_tab_3",
+        "world_zoom_out",
+        "world_zoom_in",
+        "world_centre",
+        "world_recruit",
+        "world_rest",
+        "world_expeditions",
+        "world_primary",
+        "world_secondary",
+        "world_more",
+        "world_refresh",
+        "force_slot_0",
+        "force_slot_3",
+        "force_select_0",
+        "force_select_5",
+        "force_choose_hero",
+        "force_bracket",
+        "force_previous",
+        "force_next",
+        "force_save",
+        "picker_choose",
+        "objective_castle_0",
+        "objective_castle_5",
+        "objective_area",
+        "objectives_accept",
+        "use_companies"
+      ]
+    }
+  ]
+}
