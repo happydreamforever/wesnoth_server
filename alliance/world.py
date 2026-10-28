@@ -270,9 +270,40 @@ class WorldProduct(CompanyProduct):
         if not self._world_can_view(actor,run):fail('forbidden','This battle belongs to another company or team.')
         own=next((a for a in run['armies'] if a['account_id']==actor),None)
         captain=bool(self.db.teams.find_one({'_id':{'$in':run['team_ids']},'captain_id':actor,'status':'active'}))
-        return {'battle':self._world_public_contract(run,actor),'can_join':run['state']=='draft',
+        return {'battle':self._world_public_contract(run,actor),'can_join':self._world_can_join(actor,run,own),
                 'can_ready':bool(own and own['controller']=='human' and run['state']=='draft'),
                 'can_approve':captain and run['state']=='draft','can_confirm':captain and run['state']=='awaiting_confirmation','can_cancel':(captain or run['kind']=='company' and own is not None) and run['state'] in ('draft','queued','preparing')}
+
+    def _world_can_join(self, actor, run, own):
+        # Read-only UI affordance; the command repeats every authority check in
+        # its transaction. Never expose Join for an existing delegated owner.
+        if run['state']!='draft' or own or len(run['armies'])>=8:return False
+        team=self.db.teams.find_one({'_id':{'$in':run['team_ids']},'members.account_id':actor,'status':'active'})
+        company=self._company(actor,required=False)
+        if not team or not company:return False
+        if run['kind']=='world':
+            state=self._world_state(required=False)
+            if not state or state['phase'] not in ('planning','deployment'):return False
+            if not self.db.world_enrollments.find_one({'_id':actor,'team_id':team['_id']}):return False
+            if company.get('location')!=(run['origin_id'] if team['_id']==run['attacker_team_id'] else run['target_id']):return False
+            if self.db.world_round_participation.find_one({'owner_id':actor,'round':run['round']}):return False
+            if self.db.world_contracts.find_one({'kind':'world','round':run['round'],'armies.account_id':actor,'state':{'$nin':list(TERMINAL)}}):return False
+            if self.db.world_orders.find_one({'owner_id':actor,'round':run['round'],'state':{'$ne':'cancelled'},'$or':[{'kind':{'$ne':'move'}},{'kind':'move','state':'queued'}]}):return False
+        elif run['kind']=='skirmish':
+            occupied={a.get('side') for a in run['armies']}
+            if not any(x['team_id']==team['_id'] and x['side'] not in occupied and (x['kind']=='open' or x['kind']=='reserved' and x['account_id']==actor) for x in run['native_slots']):return False
+        else:return False
+        assignment=self.db.world_defenses.find_one({'owner_id':actor,'castle_id':run['target_id'],'status':{'$in':['active','offered','needs_review']},'run_id':None})
+        locks=list(self.db.company_asset_locks.find({'owner_id':actor}))
+        if any(x.get('run_id') or not assignment or x.get('assignment_id')!=assignment['_id'] for x in locks):return False
+        if self.db.network_battle_reservations.find_one({'_id':actor}):return False
+        try:
+            selection=deepcopy(company['warband']);selection['bracket']=run['bracket'];self._company_force(actor,selection)
+        except Exception as error:
+            from .domain import DomainError
+            if not isinstance(error,DomainError):raise
+            return False
+        return True
 
     def _world_list(self, actor, history, payload):
         team=self.db.teams.find_one({'members.account_id':actor,'status':'active'})
@@ -800,7 +831,7 @@ class WorldProduct(CompanyProduct):
         def write(session):
             now=_now();state=self._world_state(session,False)
             # Keep failed evidence and old descriptor. Expiry never awards a win.
-            for old in self.db.world_contracts.find({'state':'preparing','prepare_until':{'$lte':now},'has_started':{'$ne':True}},session=session):
+            for old in self.db.world_contracts.find({'state':{'$in':['preparing','paused']},'prepare_until':{'$lte':now},'has_started':{'$ne':True}},session=session):
                 self._world_cancel(old,'preparation_timeout',session)
             for old in self.db.world_contracts.find({'state':'running','lease_until':{'$lte':now}},session=session):
                 self.db.world_contracts.update_one({'_id':old['_id']},{'$set':{'state':'paused','pause_reason':'worker_unavailable'}},session=session)
@@ -822,6 +853,9 @@ class WorldProduct(CompanyProduct):
             run=self._world_run(run_id,session)
             if run.get('worker_id')!=worker_id or run['generation']!=generation or run['state'] not in ('preparing','running','paused'):
                 fail('forbidden','This worker does not hold the native execution lease.')
+            if not run.get('has_started') and run['state'] in ('preparing','paused') and run.get('prepare_until',_now())<=_now():
+                self._world_cancel(run,'preparation_timeout',session)
+                return {'run_id':run_id,'generation':generation,'state':'cancelled'}
             self.db.world_contracts.update_one({'_id':run_id},{'$set':{'lease_until':_now()+timedelta(seconds=90)}},session=session)
             return {'run_id':run_id,'generation':generation,'state':run['state']}
         return self._tx(write)
@@ -833,7 +867,7 @@ class WorldProduct(CompanyProduct):
             self.db.world_contracts.update_one({'_id':run['_id']},{'$set':{'state':'disputed','pause_reason':'scenario_mismatch'}},session=session)
             return {'state':'disputed','reason':'scenario_mismatch'}
         if run['state'] not in ('preparing','paused','running'):fail('battle_locked','This native battle is not loading.')
-        if run['state']=='preparing' and run.get('prepare_until',_now())<=_now():
+        if not run.get('has_started') and run['state'] in ('preparing','paused') and run.get('prepare_until',_now())<=_now():
             self._world_cancel(run,'preparation_timeout',session);return {'state':'cancelled','reason':'preparation_timeout'}
         loaded=sorted(set(run.get('loaded_humans',[])+([actor] if actor else [])))
         worker_loaded=worker or run.get('worker_loaded',False)

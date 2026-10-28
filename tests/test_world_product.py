@@ -322,3 +322,41 @@ class WorldTests(unittest.TestCase):
         active=self.command(a,'defense_offer',castle_id=castle,bracket='scout')['defense']
         rows=self.domain.world_query(a,'snapshot',{})['data']['defenses']
         self.assertEqual([r['id'] for r in rows],[active['id']]);self.assertEqual(self.db.world_defenses.count_documents({'status':'withdrawn'}),37)
+
+    def test_paused_unstarted_preparation_expires_on_heartbeat(self):
+        run=self.attack_neutral();self.phase();self.phase();self.phase();desc=self.domain.world_worker_acquire('test_worker_123')
+        self.domain.world_human_disconnect(self.players[0],run,desc['generation'])
+        self.db.world_contracts.update_one({'_id':run},{'$set':{'prepare_until':_now()-timedelta(seconds=1)}})
+        result=self.domain.world_worker_lease(run,'test_worker_123',desc['generation'])
+        self.assertEqual(result['state'],'cancelled');self.assertEqual(self.db.network_battle_reservations.count_documents({}),0)
+        self.assertIsNone(self.neutral()['owner_team_id'])
+
+    def test_paused_started_battle_does_not_expire_on_heartbeat(self):
+        run=self.attack_neutral();self.phase();self.phase();self.phase();desc=self.load(run)
+        self.domain.world_human_disconnect(self.players[0],run,desc['generation'])
+        self.db.world_contracts.update_one({'_id':run},{'$set':{'prepare_until':_now()-timedelta(seconds=1)}})
+        self.assertEqual(self.domain.world_worker_lease(run,'test_worker_123',desc['generation'])['state'],'paused')
+        self.assertEqual(self.db.network_battle_reservations.count_documents({}),1)
+
+    def test_join_affordance_requires_eligible_new_company(self):
+        a=self.players[0];run=self.attack_neutral()
+        self.assertFalse(self.domain.world_query(a,'battle',{'run_id':run})['data']['can_join'])
+        member=self.company();self.domain.request_join(member,self.teams[0]);self.domain.approve_member(a,self.teams[0],member)
+        self.assertFalse(self.domain.world_query(member,'battle',{'run_id':run})['data']['can_join'])
+        self.command(member,'enroll')
+        self.assertTrue(self.domain.world_query(member,'battle',{'run_id':run})['data']['can_join'])
+        self.command(member,'battle_join',run_id=run,team_id=self.teams[0])
+        self.assertFalse(self.domain.world_query(member,'battle',{'run_id':run})['data']['can_join'])
+
+    def test_paused_unstarted_expiry_at_acquire_and_load(self):
+        a=self.players[0]
+        for trigger in ('acquire','load'):
+            with self.subTest(trigger=trigger):
+                run=self.command(a,'company_expedition',mission_id='company_border_patrol')['battle']['id']
+                desc=self.domain.world_worker_acquire('test_worker_123')
+                self.domain.world_human_disconnect(a,run,desc['generation'])
+                self.db.world_contracts.update_one({'_id':run},{'$set':{'prepare_until':_now()-timedelta(seconds=1)}})
+                if trigger=='acquire':self.assertIsNone(self.domain.world_worker_acquire('other_worker_123'))
+                else:self.assertEqual(self.domain.world_human_loaded(a,run,desc['generation'],'a'*64)['state'],'cancelled')
+                self.assertEqual(self.db.world_contracts.find_one({'_id':run})['state'],'cancelled')
+                self.assertEqual(self.db.network_battle_reservations.count_documents({}),0)
