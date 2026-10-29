@@ -1,3 +1,5 @@
+**Current Windows step:** The returned JSON identifies a missing artifact. The diagnostic used the wrong linked-output path. Follow [the corrected standalone version diagnostic](WORLD_WORKER_VERSION_LAYOUT_1192624.md); keep services stopped and do not rebuild. Earlier instructions below are historical.
+
 # Inspect the linked Windows worker's version
 
 ## Current result: collection stopped before a version was recorded

@@ -1,0 +1,234 @@
+{
+  "status": "passed_with_scoped_evidence",
+  "date": "2026-10-29",
+  "returned_report": {
+    "source": "User pasted JSON contents; original saved Windows file not opened on VPS",
+    "saved_report": "diagnostics/world-worker-version-20261028-204353-453-06512b95db92479e86cff4c5655fa991.json",
+    "observed": {
+      "build_performed": false,
+      "collected_at_utc": "2026-10-29T02:43:53.946242+00:00",
+      "collection": {
+        "complete": false
+      },
+      "failure": {
+        "errno": 2,
+        "phase": "artifacts",
+        "type": "FileNotFoundError",
+        "winerror": 2
+      },
+      "format": 1,
+      "preservation": {},
+      "purpose": "wesnoth-world-worker-version-diagnostic",
+      "receipt_written": false,
+      "release": 1192624,
+      "result": {
+        "outcome": "not_run"
+      },
+      "scope": "existing-worker-version-only"
+    },
+    "accepted": "Ownership/source-binding/build-lock gates passed before phase artifacts; no captured executable version",
+    "cause_scope": "Report omits exact filename. Source establishes a deterministic wrong linked-executable path consistent with the reported missing file. No claim of original file bytes/hash or direct Windows filesystem inspection.",
+    "diagnostic_bug": {
+      "old": "build/windows-world-worker/engine/src/world-worker.exe",
+      "correct": "build/windows-world-worker/engine/world-worker.exe",
+      "producer_setting": "set(EXECUTABLE_OUTPUT_PATH \"${CMAKE_BINARY_DIR}\" CACHE STRING ...)",
+      "producer_file": "wesnoth_client/engine/CMakeLists.txt",
+      "producer_line": 37,
+      "configuration_build_directory": "build/windows-world-worker/engine"
+    },
+    "prior_verification_limit": "The32-test suite and Windows collector fixture mirrored the wrong output-path assumption. They did not exercise the actual CMake output layout. Their prior preservation/capture evidence remains scoped to those fixtures."
+  },
+  "change_scope": "Standalone diagnostic path correction and fixed sanitized failure labels; builder/recovery/client sources and bindings unchanged.",
+  "focused_tests": {
+    "tests": 37,
+    "skips": 0,
+    "failures": 0,
+    "python": "3.12.10",
+    "network": "none",
+    "provenance": {
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--user",
+        "1000:1000",
+        "-v",
+        "/home/uni/Documents/future:/workspace",
+        "-w",
+        "/workspace/wesnoth_server",
+        "wesnoth-alliance-native-verify:python3.14.3-gcc16.2",
+        "build/host-python-3.12.10/bin/python3.12",
+        "-B",
+        "-c",
+        "import sys,unittest; print(sys.version,flush=True); suite=unittest.defaultTestLoader.loadTestsFromNames(['tests.test_world_worker_version_inspection','tests.test_windows_world_worker_version']); result=unittest.TextTestRunner(verbosity=2).run(suite); sys.exit(not result.wasSuccessful())"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 39.878,
+      "source_hashes": {
+        "tools/inspect_world_worker_version.py": "f73db282d7e203b2a99d3715de0d070e0b1f48bb681c85cf1049eb5d55b74593",
+        "tests/test_world_worker_version_inspection.py": "502917d32753a286ce791792cfbd4d27198da57780a57bb3db5314a7511067fe",
+        "tools/Test-WindowsWorldWorkerVersion.ps1": "cb1cecae71fad451582568566ea1af7c0b072571def995920173476bda2751fc",
+        "tests/test_windows_world_worker_version.py": "4207cb3efd59ec5b7406205a1b48280d352920cc896988023b90e152ef7d8b9a"
+      },
+      "sources_unchanged": true,
+      "log": "build/audit-world-worker-version-layout-20261029/tests/final-37.log",
+      "log_sha256": "3fb95ca2591065b12fa5f213856b603c1d52314044d955e1466fb052c52024f0"
+    }
+  },
+  "real_cmake_layout": {
+    "status": "passed",
+    "python": "3.12.10 (main, Oct 28 2026, 05:56:53) [GCC 16.2.0]",
+    "versions": {
+      "cmake": "cmake version 4.3.0",
+      "ninja": "1.13.2.git.kitware.jobserver-pipe-1",
+      "g++": "g++ (GCC) 16.2.0"
+    },
+    "scope": "Actual reduced native Linux CMake/Ninja build with target declared in src and exact pinned EXECUTABLE_OUTPUT_PATH assignment. This independently verifies CMake output layout, not Windows compilation or full engine.",
+    "pinned_cmake_sha256": "37bb35a62902c75fddcbceb5c77065acb411f515091164bf2a2dae280baa317f",
+    "exact_output_path_setting": "set(EXECUTABLE_OUTPUT_PATH \"${CMAKE_BINARY_DIR}\" CACHE STRING \"change the dir where binaries are placed right at compile time\")",
+    "target_output": "engine/world-worker",
+    "src_output_exists": false,
+    "steps": [
+      {
+        "phase": "configure",
+        "command": [
+          "cmake",
+          "-S",
+          "/work/source",
+          "-B",
+          "/work/engine",
+          "-G",
+          "Ninja"
+        ],
+        "exit": 0
+      },
+      {
+        "phase": "build",
+        "command": [
+          "cmake",
+          "--build",
+          "/work/engine",
+          "--verbose"
+        ],
+        "exit": 0
+      },
+      {
+        "phase": "run",
+        "command": [
+          "/work/engine/world-worker"
+        ],
+        "exit": 0
+      }
+    ]
+  },
+  "windows_before": {
+    "all_stage_files_metadata_unchanged": true,
+    "collector_sha256": "601bad62c165cc29527b9c17e79d4f332ca352e20bf12f46f7dd1b43d4b03269",
+    "failure": {
+      "errno": 2,
+      "phase": "artifacts",
+      "type": "FileNotFoundError",
+      "winerror": 2
+    },
+    "no_process_or_scratch": true,
+    "outcome": "not_run",
+    "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+    "scope": "Actual Windows Python3.12.10 under Wine, original production collector, real owned PE fixture with actual linked executable in engine root and no engine/src executable. Only binding callback and small dependency receipt are synthetic. No subprocess or filesystem mocks.",
+    "status": "passed"
+  },
+  "windows_after": {
+    "status": "passed",
+    "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+    "collector_sha256": "f73db282d7e203b2a99d3715de0d070e0b1f48bb681c85cf1049eb5d55b74593",
+    "scope": "Actual Windows Python3.12.10 production corrected collector and real statically linked PE fixture under unprivileged network-disabled Wine. Same fixture previously reproduced the old error, with linked binary at engine root.",
+    "substitution": "Only binding_function supplies a synthetic owner. A small synthetic dependency receipt binds one real pinned DLL and the PE fixture substitutes for the unavailable user worker. Real filesystem, subprocess and preservation checks run without API mocks.",
+    "outcome": "version_match",
+    "linked_executable": "engine/world-worker.exe",
+    "layout_evidence": "Actual CMake build using verbatim pinned output-path assignment, cmake/verification.json",
+    "version": "1.19.26",
+    "all_stage_files_metadata_and_dependency_receipt_unchanged": true,
+    "no_worker_receipt_created": true,
+    "original_wrong_path_still_absent": true,
+    "diagnostic_report": "Z:\\work\\controlled-repo\\diagnostics\\corrected-report.json",
+    "limits": [
+      "This is not native Windows host or full-engine execution.",
+      "The actual user binary/version remains unobserved.",
+      "Native Linux CMake output-layout proof is separate."
+    ]
+  },
+  "native_evidence_index": {
+    "path": "wesnoth_server/build/audit-world-worker-version-layout-20261029/native-verification-index.json",
+    "bytes": 8693,
+    "sha256": "364504f7798167dc139a0fddbff992d4ef230a7dbdf2485f5376381b4cda4c3e"
+  },
+  "native_reports": [
+    {
+      "path": "wesnoth_server/build/audit-world-worker-version-layout-20261029/cmake/verification.json",
+      "bytes": 1291,
+      "sha256": "19973f5ba867f583d661bfb2296ace29a2df43d566b21f0050bf5d160d30af7a"
+    },
+    {
+      "path": "wesnoth_server/build/audit-world-worker-version-layout-20261029/native/before-verification.json",
+      "bytes": 728,
+      "sha256": "90b5a1e342b722597c308ff0e50924b60d84e0a83af9e48979212a02798e094b"
+    },
+    {
+      "path": "wesnoth_server/build/audit-world-worker-version-layout-20261029/native/after-verification.json",
+      "bytes": 1400,
+      "sha256": "9b75c026926af8dd9daf22f7193a6c3a914cb1bf9bba88af6fab27dff81e7c7f"
+    }
+  ],
+  "handoff": {
+    "syntax": {
+      "exit_code": 0,
+      "guide_sha256": "e5dcd97e72deab36e7163a8539f5e7981fab4605c5ed5eb543a488d4f7c9290e",
+      "blocks": 2,
+      "wrapper_parsed": true,
+      "stdout": "POWERSHELL_WORKER_VERSION_LAYOUT_HANDOFF_PARSED blocks=2 wrapper=1\n",
+      "stderr": ""
+    },
+    "log": {
+      "path": "wesnoth_server/build/audit-world-worker-version-layout-20261029/review/parse.log",
+      "bytes": 67,
+      "sha256": "dc3cbb826a80b06a2ad8ba75229f4a20a2c2c289c4230f4a9dcbbb965bf8e1bd"
+    },
+    "guide": {
+      "path": "wesnoth_server/docs/WORLD_WORKER_VERSION_LAYOUT_1192624.md",
+      "bytes": 4519,
+      "sha256": "e5dcd97e72deab36e7163a8539f5e7981fab4605c5ed5eb543a488d4f7c9290e"
+    },
+    "review": "Independent source/artifact-path/test/handoff review found no blocker."
+  },
+  "preservation": {
+    "status": "passed",
+    "tracked_non_document_files": 2370,
+    "intended_changed_files": [
+      "wesnoth_server/tests/test_world_worker_version_inspection.py",
+      "wesnoth_server/tools/inspect_world_worker_version.py"
+    ],
+    "unchanged_files": 2368,
+    "inventory": {
+      "path": "wesnoth_server/build/audit-world-worker-version-layout-20261029/protected-before.json",
+      "bytes": 389011,
+      "sha256": "a5098a4af94f118f828c93ea1c3d09b07a18e6bdf50a8e4f1165fca9519a4cdd"
+    },
+    "README_files": "Both preexisting empty README edits remain untouched and unstaged."
+  },
+  "pending": [
+    "Corrected diagnostic run on user Windows executable",
+    "Actual captured full-worker version",
+    "Preserving final worker build/version gate correction and receipt validation",
+    "Worker runtime/admission readiness before G",
+    "Android/gameplay acceptance"
+  ],
+  "not_repeated": [
+    "Unchanged181-test broad builder/recovery suite",
+    "Full native or Android build",
+    "Dependency preparation, database migration, bridge/Room builds"
+  ],
+  "implementation_commit": {
+    "wesnoth_server": "72b7a0be94a6ed661a69d166606cf1837c454310"
+  }
+}

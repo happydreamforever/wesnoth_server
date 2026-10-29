@@ -1,3 +1,5 @@
+**Current Windows step:** The returned JSON identifies a missing artifact. The diagnostic used the wrong linked-output path. Follow [the corrected standalone version diagnostic](WORLD_WORKER_VERSION_LAYOUT_1192624.md); keep services stopped and do not rebuild. Earlier instructions below are historical.
+
 **Current Windows step:** The version diagnostic returned `not_run` and incomplete collection. [Read and return the existing JSON report](WORLD_WORKER_VERSION_1192624.md) before any retry. No pull or build is currently requested. Earlier instructions below are historical.
 
 **Current Windows step:** Worker compilation and linking passed; final version capture stopped. Follow [the existing-executable version diagnostic](WORLD_WORKER_VERSION_1192624.md). Keep services stopped and return both reports before another build. Earlier instructions below are historical.
