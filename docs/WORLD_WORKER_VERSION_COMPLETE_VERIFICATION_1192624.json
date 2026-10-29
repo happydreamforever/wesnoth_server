@@ -1,0 +1,315 @@
+{
+  "date": "2026-10-29",
+  "release": 1192624,
+  "scope": "Reviewed Windows version evidence, preserving build completion and Windows inherited admission/log streams",
+  "implementation_commits": {
+    "completion": "49632f7afc08ff3754612ea799c6a04636357c9e",
+    "runtime_pipes": "4dc49f5ff75f416e5dbf28a230649d72602bf123",
+    "client_source_unchanged_from": "1adb3dbd05ea117035349c5aae65cda718c2778d"
+  },
+  "user_windows_evidence": {
+    "files": [
+      {
+        "path": "world-worker-version-20261028-211023-410-c59efbb7f4224168892e9220898dc14d.json",
+        "bytes": 21180,
+        "sha256": "5127d2a83fd5ada52cd3200414f741846f4e4b532f3d3407319fa0e240f9a729"
+      },
+      {
+        "path": "world-worker-version-20261028-211023-410-c59efbb7f4224168892e9220898dc14d.txt",
+        "bytes": 1542,
+        "sha256": "d10267c7f91d53f0fcafa91e4d093482a1b1e3e6a6818259d31d931331bc3e9f"
+      }
+    ],
+    "opened_and_reviewed": true,
+    "collection_complete": true,
+    "version": "1.19.26",
+    "exit_code": 0,
+    "stdout_hex": "312e31392e32360d0a",
+    "stderr_bytes": 0,
+    "elapsed_seconds": 0.265,
+    "preservation_checks_passed": 7,
+    "bin_files": 54,
+    "private_dlls": 53,
+    "bound_inputs": 1707,
+    "linked_and_bin_executable": {
+      "bytes": 49760583,
+      "sha256": "3ef934c178639d53fef336b32addc676399bfb5a960dfe3ff4204fa2cd5a7e83"
+    },
+    "accepted": "Actual Windows version capture and recorded artifact preservation; earlier compilation/linking remains accepted.",
+    "not_accepted": "Final build receipt, worker runtime/AI/gameplay, Android1192624 and five-service startup remain pending."
+  },
+  "completion_policy": {
+    "entry": "Build-WindowsWorldWorker.ps1 -PreservePreviousBuild -VersionReportPath <exact reviewed JSON>",
+    "binding_change": "Only the reviewed old builder hash and one new completion helper; unchanged original1707-input values otherwise.",
+    "before_publication": [
+      "full-operation and completion locks",
+      "exact report/owner/artifact identity",
+      "full original stage inventory and recovery history",
+      "source overlay and owned compiler/resource/Ninja configuration",
+      "locked prefix, pinned data and build-tool identity",
+      "read-only recursive DLL closure",
+      "bounded isolated exact native version probe",
+      "input/artifact stability"
+    ],
+    "mutation": "Retain new external journal; atomically replace owner and publish final receipt/marker. Existing binaries, objects, Ninja metadata and old journals remain unchanged.",
+    "resume": "Same original report or retained journal; reject changed files and resume exact owner/receipt publication states.",
+    "no_run": [
+      "CMake configure",
+      "compiler preflight",
+      "compilation",
+      "DLL copy",
+      "historical recovery rewrite",
+      "database/service startup"
+    ]
+  },
+  "focused_regression": {
+    "tests": 259,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "python": "3.12.10 (main, Oct 28 2026, 05:56:53) [GCC 16.2.0]",
+    "modules": [
+      "tests.test_world_worker_version_completion",
+      "tests.test_world_worker_completion_dispatch",
+      "tests.test_windows_world_worker_resume",
+      "tests.test_world_worker_toolchain",
+      "tests.test_world_worker_resource",
+      "tests.test_world_worker_recovery",
+      "tests.test_world_worker_resource_recovery",
+      "tests.test_world_worker_ninja_recovery",
+      "tests.test_world_worker_account_recovery",
+      "tests.test_world_worker_ninja_integration",
+      "tests.test_world_worker_dependencies",
+      "tests.test_world_worker_version_inspection",
+      "tests.test_windows_world_worker_version"
+    ],
+    "execution": {
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--user",
+        "1001:1001",
+        "-v",
+        "/home/uni/Documents/future:/workspace:ro",
+        "-v",
+        "/home/uni/Documents/future/wesnoth_server/build/audit-world-worker-version-complete-20261029:/work",
+        "-w",
+        "/workspace/wesnoth_server",
+        "-e",
+        "PYTHONPATH=/workspace/wesnoth_server",
+        "wesnoth-alliance-native-verify:python3.14.3-gcc16.2",
+        "build/host-python-3.12.10/bin/python3.12",
+        "-B",
+        "/work/run-regressions-final.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 252.3026349209249
+    },
+    "log": {
+      "path": "wesnoth_server/build/audit-world-worker-version-complete-20261029/regressions-final.log",
+      "bytes": 52974,
+      "sha256": "b4cd570ff218f2e1fd984f893ca16cdc602b869b4cd235671a0b15dd9861bcda"
+    },
+    "boundaries": "Linux exactCPython3.12.10 with networking disabled and repositories read-only. Includes actual Linux CMake/GCC and PowerShell wrapper execution; Windows build/child boundaries are controlled fixtures.",
+    "initial_attempt": "First259-test run had two old synthetic stages missing owner.json. Fixtures now include valid earlier ownership; no production guard weakened. Initial result-file write also used wrong container uid1000; final run uses workspace uid1001. First logs retained.",
+    "initial_log": {
+      "path": "wesnoth_server/build/audit-world-worker-version-complete-20261029/regressions.log",
+      "bytes": 56491,
+      "sha256": "fbe362b423f379e825df8f495a433e9ff78ec425d1397ce01c1a260ae86fff02"
+    }
+  },
+  "windows_completion": {
+    "groups": 8,
+    "cases": [
+      "success-idempotent",
+      "before-owner-resume",
+      "after-owner-resume",
+      "after-receipt-resume",
+      "missing-untrusted-report",
+      "changed-executable",
+      "changed-game-data",
+      "competing-lock-retry"
+    ],
+    "environment": {
+      "python": "official Windows CPython3.12.10",
+      "image": "sha256:fde871904f9c06b6c40d4946f537b8a10f332f4dc570df8e867bb65cb5dd9b80",
+      "network": "none",
+      "uid": 1001,
+      "repository_mount": "/repo read-only",
+      "python_mount": "/python312 read-only",
+      "fixture_mount": "/work writable",
+      "wine_prefix": "new disposable /tmp/wine-prefix"
+    },
+    "execution": "Actual Windows filesystem, file-ID/stat/hash checks, byte locks, atomic owner/receipt publication and bounded real PE version probe. Only reviewed report/binding SHA pins and prior-history provenance callback are synthetic; crash boundaries are injected.",
+    "preservation": "Successful transitions retain all synthetic compiled object/dependency/EXE/DLL bytes, mtime, mode, attributes, link counts and file identities. Only owner/receipt publication changes those metadata files; old journals remain byte/metadata-identical. Interrupted receipt reuse keeps its identity. Refusal cases leave the deliberately altered input untouched.",
+    "limitations": [
+      "The executable is a static PE version fixture, not the full game engine.",
+      "The 53 companion DLL records are nonexecuted synthetic metadata; no real DLL closure claim is made by this native fixture.",
+      "The callback validates synthetic game data and runs the actual version probe; full builder source/tool/data/DLL validation is tested separately.",
+      "Existing 575-output recovery-history provenance is covered by the regression fixture; native finalization uses a clearly substituted history callback over real retained files.",
+      "No user runtime, account, ticket, game save or private profile was read; no build or service was launched."
+    ],
+    "index": {
+      "path": "wesnoth_server/build/audit-world-worker-version-complete-20261029/completion-windows-index.json",
+      "bytes": 119521,
+      "sha256": "c4ca929c0cd5c891f6b6db19acb844c2b4663766c9c7b1efce3512e2ec91a35f"
+    },
+    "report": {
+      "path": "wesnoth_server/build/audit-world-worker-version-complete-20261029/completion-windows/verification.json",
+      "bytes": 3671,
+      "sha256": "f8e711c76930661184551bf41a4b5bad05cd4d2976146f42adf848e3fde532ae"
+    }
+  },
+  "runtime_pipe_verification": {
+    "change": "Both World worker and authenticated companion use the same unchanged native argument list plus --wnoconsole only on Windows. POSIX arguments remain identical.",
+    "regression": {
+      "python": "3.12.10",
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "network": "none",
+      "uid": 1001,
+      "image": "sha256:8fe629201b28e971844de3359bfc5797aef1bc0eb24626b77c7a8d6c416c1e31",
+      "repositories": "read-only mounts",
+      "command": "build/host-python-3.12.10/bin/python3.12 -B -m unittest tests.test_world_worker tests.test_world_companion",
+      "boundaries": "Existing simulated child/account transport boundaries; exact Windows/POSIX command policy and private stdin/log checks."
+    },
+    "native": {
+      "python": "official Windows CPython 3.12.10",
+      "compiler": "pinned PE MINGW64 GCC16.2.0",
+      "network": "none",
+      "uid": 1001,
+      "image": "sha256:fde871904f9c06b6c40d4946f537b8a10f332f4dc570df8e867bb65cb5dd9b80",
+      "mounts": {
+        "repository": "/repo read-only",
+        "client": "/client read-only",
+        "prefix": "/verified prefix read-only",
+        "python": "/python312 read-only",
+        "scratch": "/work writable disposable fixture"
+      },
+      "report": "native/verification.json",
+      "method": "Compile unchanged production log_windows.cpp and log_windows.hpp with a minimal fixture and stub logging/unused include dependencies. Real child created with CREATE_NO_WINDOW, real stdin pipe, real exclusive stdout/stderr log file. Use actual production native_engine_command without platform substitution.",
+      "baseline": "No console at entry. Wine cannot attach/allocate a console; production helper reaches stderr-to-console reopen and does not receive admission or preserve final output before the bounded timeout. Child is killed.",
+      "corrected": "--wnoconsole bypasses console redirection; disposable marker arrives through stdin and both stdout/stderr remain in the inherited file. Exit0, no timeout."
+    },
+    "limitations": [
+      "No full-engine runtime, AI, authenticated admission, network service or settlement was run.",
+      "No real account, ticket, private runtime, .env, saved game or campaign progress was read.",
+      "Wine console allocation differs from Windows; the exact observed baseline is timeout at console redirection, not proof of a successful console handover.",
+      "The current user has not reported this adjacent runtime failure; it is a source-known conditional defect reproduced in the isolated fixture.",
+      "An initial direct host test attempt lacked the required OpenSSL ABI; the final exact Python3.12.10 cached-image run passes all22 tests."
+    ],
+    "index": {
+      "path": "wesnoth_server/build/audit-world-worker-version-complete-20261029/runtime-verification-index.json",
+      "bytes": 5673,
+      "sha256": "ba9edd9e685a4acb72c6635dc56791c04c9fb482c8b2428a56dd363d4919ca59"
+    }
+  },
+  "summary": {
+    "focused_tests": 281,
+    "failures": 0,
+    "skips": 0,
+    "native_windows_completion_groups": 8
+  },
+  "handoff": {
+    "wrapper_and_exact_guide_blocks_parse": true,
+    "log": {
+      "path": "wesnoth_server/build/audit-world-worker-version-complete-20261029/handoff-parse.log",
+      "bytes": 134,
+      "sha256": "ca2ed160a358cb640ab6e971f82ee67b498fbf454b49c9997ecf96b182181576"
+    }
+  },
+  "preservation": {
+    "tracked_nondocument_files": 2370,
+    "unchanged": 2362,
+    "changed_only": [
+      "wesnoth_server/alliance/world_worker.py",
+      "wesnoth_server/tests/test_windows_world_worker_resume.py",
+      "wesnoth_server/tests/test_world_companion.py",
+      "wesnoth_server/tests/test_world_worker.py",
+      "wesnoth_server/tests/test_world_worker_ninja_integration.py",
+      "wesnoth_server/tools/Build-WindowsWorldWorker.ps1",
+      "wesnoth_server/tools/build_world_worker.py",
+      "wesnoth_server/tools/run_world_companion.py"
+    ],
+    "new_sources_tests": [
+      "wesnoth_server/tools/world_worker_version_completion.py",
+      "wesnoth_server/tests/test_world_worker_version_completion.py",
+      "wesnoth_server/tests/test_world_worker_completion_dispatch.py"
+    ],
+    "readme_edits_preserved": true,
+    "inventory": {
+      "path": "wesnoth_server/build/audit-world-worker-version-complete-20261029/preservation-final.json",
+      "bytes": 3318,
+      "sha256": "919aeba08f025651ac16ad2f704bc0ca613703df84884155d69691b093b51d6a"
+    }
+  },
+  "source_hashes": [
+    {
+      "path": "wesnoth_server/alliance/world_worker.py",
+      "bytes": 18519,
+      "sha256": "f5720d9b0ae3463c0d9ce23a8d11b8ab6674ebaa510b44d6cce30e89c4944c2e"
+    },
+    {
+      "path": "wesnoth_server/tests/test_windows_world_worker_resume.py",
+      "bytes": 6578,
+      "sha256": "282dcda5126e8cbc736c6c5dacdeeb39570f9fdd2405873ca7e44ddcbbcfe938"
+    },
+    {
+      "path": "wesnoth_server/tests/test_world_companion.py",
+      "bytes": 5452,
+      "sha256": "b2d41d327a490234dff3957352632746fb5671db1d5c2de1b10e0605a6b5ad2e"
+    },
+    {
+      "path": "wesnoth_server/tests/test_world_worker.py",
+      "bytes": 16984,
+      "sha256": "810a8e891343aa623c10881d43fe3307072c1782a4b96a16a1ea3e81632a1337"
+    },
+    {
+      "path": "wesnoth_server/tests/test_world_worker_ninja_integration.py",
+      "bytes": 5231,
+      "sha256": "f98e0b0b11caaea48e6529d86c2ea880de06c41c698c661d3358982d7e1ea058"
+    },
+    {
+      "path": "wesnoth_server/tools/Build-WindowsWorldWorker.ps1",
+      "bytes": 2104,
+      "sha256": "82b024d54a45082956eb6718bc0bd68e720ea882ce01b8d460ebd9e7c5044c1c"
+    },
+    {
+      "path": "wesnoth_server/tools/build_world_worker.py",
+      "bytes": 51124,
+      "sha256": "2184b198135586a595bbe78eae728c8cb9f7004dff4cd3623c9e34d27de2acef"
+    },
+    {
+      "path": "wesnoth_server/tools/run_world_companion.py",
+      "bytes": 7132,
+      "sha256": "706cbfe78b8a42b7cd6946a497752c6377aeaffc425ba81c675e407fb85db5ff"
+    },
+    {
+      "path": "wesnoth_server/tools/world_worker_version_completion.py",
+      "bytes": 20524,
+      "sha256": "68622aac487c78a35b8de69a4c2c6e65647940fbe94aa1a4f45fa32814be1fe3"
+    },
+    {
+      "path": "wesnoth_server/tests/test_world_worker_version_completion.py",
+      "bytes": 20644,
+      "sha256": "1f7acffacd25ba31e0b5603dbd285fb8df19f277d22095a6533e0f2f179a0a84"
+    },
+    {
+      "path": "wesnoth_server/tests/test_world_worker_completion_dispatch.py",
+      "bytes": 16187,
+      "sha256": "0b6ca5dfe6393202cf39eb243a941aa670aa3dac7d6693aeef4d197d989411d8"
+    }
+  ],
+  "not_repeated": [
+    "No new full native or Android compilation; C++/Android sources unchanged.",
+    "No dependency extraction/upgrade, migration, database initialization, runtime/account access, .env read, or service startup.",
+    "No unrelated accepted Windows tests repeated."
+  ],
+  "windows_next": "Server-only pull; disconnect WAN/retain Ethernet; keep five services stopped; complete exact reviewed build; return console/new world-worker-build log before Android/G/H.",
+  "network_status": "Prior once-per-batch WAN-disconnected/Ethernet-connected confirmation retained. Supplied version diagnostic does not independently measure physical network state."
+}

@@ -1,3 +1,5 @@
+**Current Windows step:** Both version reports have been reviewed: actual Windows version **1.19.26** and preservation checks pass. Follow [preserving worker completion](WORLD_WORKER_VERSION_COMPLETE_1192624.md) after a server-only update. Keep five services stopped; return the final build log before Android or service startup. Earlier instructions below are historical.
+
 # Correct the version diagnostic's linked-executable path
 
 The returned JSON identifies `failure.phase=artifacts`, `FileNotFoundError`, `errno=2` and `winerror=2`. It has `outcome=not_run`, no version result, and no build receipt. Its ownership/source-binding and build-lock checks completed before it entered the artifact phase.

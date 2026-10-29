@@ -1,3 +1,5 @@
+**Current Windows step:** Both version reports have been reviewed: actual Windows version **1.19.26** and preservation checks pass. Follow [preserving worker completion](WORLD_WORKER_VERSION_COMPLETE_1192624.md) after a server-only update. Keep five services stopped; return the final build log before Android or service startup. Earlier instructions below are historical.
+
 **Current Windows step:** The returned JSON identifies a missing artifact. The diagnostic used the wrong linked-output path. Follow [the corrected standalone version diagnostic](WORLD_WORKER_VERSION_LAYOUT_1192624.md); keep services stopped and do not rebuild. Earlier instructions below are historical.
 
 # Inspect the linked Windows worker's version
