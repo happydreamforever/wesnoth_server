@@ -34,6 +34,8 @@ disabled action is not permission to bypass its condition.
 
 ## I — Startup and existing account
 
+**Current next checks (2026-10-29):** The installer verified version 1192624 and launched the startup activity. Visible loading/Login and current account/save values have not yet been confirmed. Complete I1–I3 only and return each result before J. I1 also supplies H’s outstanding visual confirmation. Keep all five services open and use the existing player account.
+
 1. Open the game. Confirm the existing Emerald loading, Login and home remain
    intact, with no profile import. Sign in to the existing player.
 2. Check the same account name, owned-character count, campaign saves and actual
@@ -42,7 +44,13 @@ disabled action is not permission to bypass its condition.
    **Team settings** (or **Find a team**) and **Back** are reachable by tap.
 
 Expected: no new account, reset, altered home or automatic reward. An account
-without a Team can still open its personal Company. It cannot issue Team orders.
+without a Team can still open its personal Company. It cannot issue Team orders. Its
+Roster control is disabled and Team settings becomes **Find a team**; record
+member-only inspection as NOT RUN rather than joining a Team for this check.
+Inspect existing saves in the Load list without starting or overwriting them.
+Record current hero/form/level/XP values rather than substituting historical
+examples. Leave enlistment, recruitment, world enrollment and battles for later
+steps.
 
 ## J — Persistent touch workspace
 
