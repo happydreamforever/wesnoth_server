@@ -1,3 +1,5 @@
+**Current Windows step:** Full native worker completion passed. Run only the **Android rebuild** in [the current F section](WORLD_ACCEPTANCE_1192624.md#current-f-android-only). Keep five services stopped and return its rebuild/build logs before G startup or H installation. No new pull or worker retry is needed. Earlier instructions below are historical.
+
 **Current Windows step:** Both version reports have been reviewed: actual Windows version **1.19.26** and preservation checks pass. Follow [preserving worker completion](WORLD_WORKER_VERSION_COMPLETE_1192624.md) after a server-only update. Keep five services stopped; return the final build log before Android or service startup. Earlier instructions below are historical.
 
 **Current Windows step:** The returned JSON identifies a missing artifact. The diagnostic used the wrong linked-output path. Follow [the corrected standalone version diagnostic](WORLD_WORKER_VERSION_LAYOUT_1192624.md); keep services stopped and do not rebuild. Earlier instructions below are historical.
@@ -135,6 +137,32 @@ Accepted on Windows with schema_version4/status complete. The command below is r
 Expected: schema_version 4, status complete/already_complete, `ALLIANCE SCHEMA 4 MIGRATION COMPLETE`. Return the console and `diagnostics\alliance-migration-*.txt` before F. If stopped, retain the same exact B backup and all migration journals for review; do not reset or automatically retry. This does not initialize another runtime, create World geography, enlist starter soldiers or create accounts. Keep the private backup/runtime files on Windows; send only the diagnostic output.
 
 ## F. Rebuild the coordinated binaries offline
+
+### Current F: Android only
+
+The full native Windows worker is accepted from the returned completion console, saved as `world-worker-build-20261028-215719-033-581105ee09274ffb93ade105375f9c2b.txt`. The bridge and Room builds were already accepted. The remaining F action is to build **Android 1192624** using the existing Python 3.12 helper.
+
+Keep all five services stopped, WAN disconnected and local Ethernet connected. Run:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    Set-Location 'D:\Test\wesnoth-setup\wesnoth_client' -ErrorAction Stop
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File '.\tools\Rebuild-WindowsAndroidAccountGame.ps1'
+
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Android rebuild stopped. Preserve all files and send the complete console and saved rebuild/build logs.'
+    }
+}
+```
+
+Expected: `ANDROID ACCOUNT GAME BUILD PASS`, then `ANDROID ACCOUNT GAME REBUILD COMPLETE`. Return the complete console and client `diagnostics\android-account-rebuild-*.txt` and `diagnostics\android-account-build-*.txt`. Stop at the first unexpected result; do not delete a lock, stage or journal, or retry automatically.
+
+The helper preserves prior account stages, signer/package/public configuration, OBB and campaign saves. No pull, worker/bridge/Room rebuild, dependency preparation, migration or new backup is required. Keep Python 3.14 installed until G passes. Review this build before G five-service startup and H in-place installation; its generic “Next: Install” output does not skip G.
+
+### Historical F: original coordinated batch
 
 The original four-build batch below is retained history. Its bridge and Room builds passed, the worker failed, and Android did not start. **Do not rerun this whole block.** Use [the server-only correction and worker retry](WORLD_WORKER_SYSROOT_1192624.md), return its result, then resume Android. Keep five services stopped and retain local Ethernet with WAN disconnected during builds:
 

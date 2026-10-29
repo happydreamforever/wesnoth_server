@@ -1,3 +1,5 @@
+**Current Windows step:** Full native worker completion passed. Run only the **Android rebuild** in [the current F section](WORLD_ACCEPTANCE_1192624.md#current-f-android-only). Keep five services stopped and return its rebuild/build logs before G startup or H installation. No new pull or worker retry is needed. Earlier instructions below are historical.
+
 # Complete the verified Windows worker without recompiling
 
 Both supplied reports for run `20261028-211023-410-c59efbb7f4224168892e9220898dc14d` have been opened and reviewed on the VPS.
