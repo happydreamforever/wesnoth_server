@@ -1,3 +1,5 @@
+**Current Windows step:** G startup passed under Python **3.12.10**, including W05 worker-availability health. Keep all five service windows open and continue with [H: in-place Android installation](WORLD_ACCEPTANCE_1192624.md#h-install-in-place). Return install output and the visible startup/Login result. No pull, rebuild or startup rerun is needed. Earlier instructions below are historical.
+
 **Current Windows step:** All F builds, including Android **1192624**, passed. Continue with [G: five-service startup](WORLD_ACCEPTANCE_1192624.md#g-start-five-services-and-verify-worker-availability). Return workflow output and the shared-battle window’s worker-ready message before installing. No pull or rebuild is needed. Earlier instructions below are historical.
 
 **Current Windows step:** Full native worker completion passed. Run only the **Android rebuild** in [the current F section](WORLD_ACCEPTANCE_1192624.md#current-f-android-only). Keep five services stopped and return its rebuild/build logs before G startup or H installation. No new pull or worker retry is needed. Earlier instructions below are historical.
@@ -96,6 +98,8 @@ The new environment is `wesnoth_server\build\alliance-venv-py312`. The old `buil
 P1–P3 and their WAN-disconnected confirmation remain accepted. The targeted archive diagnostic, full World D preparation and E schema-4 migration now also pass on Windows. Continue only at [F coordinated builds](WORLD_ACCEPTANCE_1192624.md#f-rebuild-the-coordinated-binaries-offline), returning its console and saved logs before G five-service readiness. These later gates remain pending.
 
 ## P4. Remove the old system Python after successful cutover
+
+**Gate satisfied (2026-10-29):** P3 and World G now pass on Windows. The returned G console verifies Python 3.12.10 and all five services. Uninstalling the old standalone interpreter is optional and has not been reported; it is not required for H installation. Preserve the pinned worker prefix and retained recovery artifacts.
 
 After P3 and World G pass, use Windows Settings → Apps → Installed apps → **Python 3.14.3 (64-bit)** → Uninstall. Keep Python 3.12.10, the Python Launcher, both retained build environments and recovery journals. Do not manually delete the old interpreter folder as an uninstall method. Old virtual environments depend on their original base installation; the retained 3.14 environment is a recovery artifact after uninstall, not a working fallback. The archived dependency pins allow deliberate recovery if later needed.
 

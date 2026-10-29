@@ -1,3 +1,5 @@
+**Current Windows step:** G startup passed under Python **3.12.10**, including W05 worker-availability health. Keep all five service windows open and continue with [H: in-place Android installation](WORLD_ACCEPTANCE_1192624.md#h-install-in-place). Return install output and the visible startup/Login result. No pull, rebuild or startup rerun is needed. Earlier instructions below are historical.
+
 **Current Windows step:** All F builds, including Android **1192624**, passed. Continue with [G: five-service startup](WORLD_ACCEPTANCE_1192624.md#g-start-five-services-and-verify-worker-availability). Return workflow output and the shared-battle window’s worker-ready message before installing. No pull or rebuild is needed. Earlier instructions below are historical.
 
 **Current Windows step:** Full native worker completion passed. Run only the **Android rebuild** in [the current F section](WORLD_ACCEPTANCE_1192624.md#current-f-android-only). Keep five services stopped and return its rebuild/build logs before G startup or H installation. No new pull or worker retry is needed. Earlier instructions below are historical.
@@ -214,6 +216,8 @@ Use the default one worker for initial testing. Additional disjoint-worker accep
 
 ## H. Install in place
 
+**Current next action:** G passed in the returned startup console, including the strict W05 worker-availability check. Leave all five services open. Continue offline with local Ethernet connected; no new pull or rebuild is required.
+
 Open the existing LDPlayer instance and wait for Android home:
 
 ```powershell
@@ -227,6 +231,8 @@ Open the existing LDPlayer instance and wait for Android home:
 ```
 
 Expected: original-signer/package/artifact checks, streamed installation Success, version **1192624**, `ANDROID ACCOUNT GAME INSTALL COMPLETE`. The accepted Emerald Court startup opens directly into Login; no profile import or replacement account is needed. Log: client `diagnostics\android-account-install-*.txt`.
+
+Return the complete install console and saved client install log. Confirm the Emerald Court background/logo/progress reaches Login without a server-profile import page. Review this H result before I–Z. On error, retain the existing app/data and send the message; do not uninstall, clear data or reimport a profile.
 
 ## I–Z. Touch and gameplay acceptance
 
