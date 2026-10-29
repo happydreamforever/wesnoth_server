@@ -109,6 +109,7 @@ def binding():
              ROOT/'tools/world_worker_resource_recovery.py',
              ROOT/'tools/world_worker_ninja_recovery.py',
              ROOT/'tools/world_worker_account_recovery.py',
+             ROOT/'tools/world_worker_version_completion.py',
              ROOT/'tools/world-worker-packages-1192624.json', DEPENDENCY_PREFIX/'receipt.json']
     paths += [CLIENT/'tools'/name for name in ('prepare_android_source.py','verify_game_data.py','gamedata-1.19.26.reference.json')]
     paths += [path for directory in ('engine', 'alliance_game', 'alliance_native')
@@ -117,7 +118,7 @@ def binding():
             'inputs': {str(path.relative_to(ROOT.parent)).replace('\\','/'): digest(safe_path(path)) for path in paths}}
 
 
-def dll_closure(executable, prefix, output, environment):
+def dll_closure(executable, prefix, output, environment, *, copy_files=True):
     queue, copied, system = [executable], {}, set()
     names = {path.name.casefold(): path for path in (prefix / 'bin').glob('*.dll')}
     while queue:
@@ -132,7 +133,14 @@ def dll_closure(executable, prefix, output, environment):
             if source is None: raise BuildError('Native worker DLL is missing from the selected MINGW64 prefix: ' + name)
             safe_path(source)
             destination = output / source.name
-            shutil.copy2(source, destination)
+            if copy_files:
+                shutil.copy2(source, destination)
+            else:
+                safe_path(destination)
+                if (destination.stat().st_nlink != 1 or source.stat().st_nlink != 1
+                        or destination.stat().st_size != source.stat().st_size
+                        or digest(destination) != digest(source)):
+                    raise BuildError('Existing worker DLL differs from the pinned prefix; preserved.')
             copied[lower] = {'filename': source.name, 'bytes': destination.stat().st_size, 'sha256': digest(destination)}
             queue.append(destination)
     return {'private': copied, 'windows_system': sorted(system)}
@@ -475,6 +483,9 @@ def installed_worker(required=True, expected_binding=None):
     expected_binding = binding() if expected_binding is None else expected_binding
     if set(row)!={'binding','executable','dlls','version','game_data','game_data_files','build_tools'} or row['binding'] != expected_binding:
         raise BuildError('World worker sources differ from the verified build.')
+    if ('wesnoth_server/tools/world_worker_version_completion.py' in expected_binding.get('inputs', {})
+            and row['version'] != '1.19.26'):
+        raise BuildError('World worker receipt has an unexpected native engine version.')
     if set(row['build_tools'])!={'cmake','ninja'}:raise BuildError('World worker build-tool receipt is incomplete.')
     for tool in row['build_tools'].values():
         if set(tool)!={'path','sha256','version'} or not isinstance(tool['version'],str) or not tool['version']:
@@ -596,14 +607,87 @@ def game_resource_preflight(prefix, environment):
         print('Game resource report: ' + str(directory / 'report.json'), flush=True)
 
 
-def build(msys, cmake, game_data, preserve, ninja_report=None):
+def finish_linked_worker(msys, cmake, game_data, version_report):
+    """Complete the reviewed linked stage without configuring or compiling it."""
+    from tools import world_worker_version_completion as completion
+    from tools.world_worker_archive_prefix import verify_locked_prefix
+    with build_step('completion-source-binding'):
+        expected = binding()
+
+    def validate_stage():
+        with build_step('completion-dependencies'):
+            verify_locked_prefix()
+            prefix = safe_path(DEPENDENCY_PREFIX, directory=True)
+        with build_step('completion-game-data'):
+            data = safe_path(game_data, directory=True)
+            inventory = data_inventory(data)
+        with build_step('completion-build-tools'):
+            cmake_path = safe_path(cmake)
+            ninja = safe_path(Path(msys) / 'ucrt64/bin/ninja.exe')
+            environment = compiler_environment(prefix, cmake_path)
+            cmake_lines = capture([cmake_path, '--version'], environment).splitlines()
+            cmake_version = cmake_lines[0] if cmake_lines else ''
+            ninja_version = capture([ninja, '--version'], environment)
+            if cmake_version != 'cmake version 4.3.0' or ninja_version != '1.13.2':
+                raise BuildError('Use the previously verified CMake 4.3.0 and Ninja 1.13.2.')
+            build_tools = {name: {'path': str(path), 'sha256': digest(path), 'version': version}
+                for name, path, version in (('cmake', cmake_path, cmake_version), ('ninja', ninja, ninja_version))}
+        with build_step('completion-source-and-configuration'):
+            prepare_worker_overlay(validate_existing=True)
+            verify_resource_rule(STAGE)
+            verify_ninja_configuration(STAGE)
+        with build_step('completion-dll-closure'):
+            output = safe_path(STAGE / 'bin', directory=True)
+            executable = safe_path(output / 'world-worker.exe')
+            closure = dll_closure(executable, prefix, output, environment, copy_files=False)
+            expected_bin = {'world-worker.exe'} | {item['filename'].casefold() for item in closure['private'].values()}
+            actual_bin = []
+            for item in output.iterdir():
+                safe_path(item)
+                actual_bin.append(item.name.casefold())
+            if len(actual_bin) != len(set(actual_bin)) or set(actual_bin) != expected_bin:
+                raise BuildError('Existing worker bin differs from its DLL closure; preserved.')
+        with build_step('completion-version'):
+            version = completion.probe_version(executable, environment, STAGE.parent)
+        with build_step('completion-input-stability'):
+            if binding() != expected or data_inventory(data) != inventory:
+                raise BuildError('Worker inputs changed during completion; preserved.')
+            if any(digest(safe_path(item['path'])) != item['sha256'] for item in build_tools.values()):
+                raise BuildError('Worker build tools changed during completion; preserved.')
+        return {'binding': expected,
+                'executable': {'sha256': digest(executable), 'bytes': executable.stat().st_size},
+                'dlls': closure, 'version': version, 'game_data': str(data),
+                'game_data_files': inventory, 'build_tools': build_tools}
+
+    with build_step('reviewed-version-completion'):
+        completion.finalize_reviewed(STAGE, expected, version_report, validate_stage)
+    with build_step('completed-artifact-verification'):
+        installed_worker()
+    print('WORLD WORKER VERSION COMPLETION VERIFIED; existing compilation retained', flush=True)
+    print('FULL NATIVE WORLD WORKER BUILD PASSED', flush=True)
+
+
+def build(msys, cmake, game_data, preserve, ninja_report=None, version_report=None):
     with build_step('host'):
         check_host()
     if ninja_report is not None and not preserve:
         raise BuildError('Ninja recovery requires -PreservePreviousBuild and its reviewed report.')
+    if version_report is not None and (not preserve or ninja_report is not None):
+        raise BuildError('Version completion requires -PreservePreviousBuild and cannot use -NinjaReportPath.')
     from tools import world_worker_ninja_recovery as ninja_state
+    from tools import world_worker_version_completion as completion
     STAGE.parent.mkdir(exist_ok=True)
     with ninja_state.build_lock(STAGE):
+        # Match and retain the accepted stage before any historical recovery,
+        # configuration, copy or compile operation can touch it.
+        if version_report is not None or completion.pending(STAGE):
+            if not preserve or ninja_report is not None:
+                raise BuildError('Pending version completion requires -PreservePreviousBuild alone; preserve its journals.')
+            return finish_linked_worker(msys, cmake, game_data, version_report)
+        if STAGE.exists() and not (STAGE/'receipt.json').exists():
+            owner = metadata(STAGE/'owner.json')
+            if owner.get('inputs', {}).get('wesnoth_server/tools/build_world_worker.py') in completion.LEGACY_BUILDERS:
+                raise BuildError('The linked worker requires -VersionReportPath with the accepted version JSON; preserve all files.')
         # A killed configure can leave the logs safely in its durable backup.
         # Restore them before source transitions or any subsequent CMake/Ninja.
         ninja_state.resume_configure(STAGE)
@@ -724,9 +808,8 @@ def build_locked(msys, cmake, game_data, preserve, ninja_report=None):
     output=STAGE/'bin';output.mkdir(exist_ok=True)
     executable=output/'world-worker.exe';shutil.copy2(candidates[0],executable)
     closure=dll_closure(executable,prefix,output,environment)
-    clean=environment.copy();clean['PATH']=str(output)+os.pathsep+str(Path(environment['SYSTEMROOT'])/'System32')
-    version=capture([executable,'--version'],clean)
-    if '1.19.26' not in version: raise BuildError('Full native engine version differs.')
+    from tools.world_worker_version_completion import probe_version
+    version=probe_version(executable,environment,STAGE.parent)
     data=safe_path(game_data,directory=True)
     inventory=data_inventory(data)
     if inventory!=initial_inventory:raise BuildError('Pinned game data changed during the native worker build.')
@@ -746,10 +829,12 @@ def main():
     parser.add_argument('--prepare-dependencies',action='store_true');parser.add_argument('--audit',type=Path);parser.add_argument('--verify',action='store_true');parser.add_argument('--preserve-previous',action='store_true')
     parser.add_argument('--ninja-report', type=Path,
         help='Reviewed Ninja diagnostic for preserving recovery of the interrupted worker.')
+    parser.add_argument('--version-report', type=Path,
+        help='Reviewed version diagnostic for completing the linked worker without recompilation.')
     args=parser.parse_args()
     try:
-        if args.ninja_report is not None and (args.prepare_dependencies or args.audit or args.verify):
-            raise BuildError('Ninja recovery cannot be combined with another operation.')
+        if (args.ninja_report is not None or args.version_report is not None) and (args.prepare_dependencies or args.audit or args.verify):
+            raise BuildError('Worker recovery/completion cannot be combined with another operation.')
         if args.prepare_dependencies:
             check_host()
             from tools.world_worker_packages import execute, CACHE, MANIFEST
@@ -759,7 +844,7 @@ def main():
             return 0
         if args.audit:return 0 if dependency_audit(args.msys,args.audit)['complete'] else 1
         if args.verify:installed_worker();print('WORLD NATIVE WORKER ARTIFACT VERIFIED');return 0
-        build(args.msys,args.cmake,args.game_data,args.preserve_previous,args.ninja_report);return 0
+        build(args.msys,args.cmake,args.game_data,args.preserve_previous,args.ninja_report,args.version_report);return 0
     except BuildError as error:
         print('ERROR: '+str(error),flush=True);return 1
     except (OSError,ValueError,KeyError):

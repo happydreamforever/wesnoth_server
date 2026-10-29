@@ -1,6 +1,7 @@
 """Builder boundaries for guarded World worker configuration."""
 from contextlib import contextmanager
 import io
+import json
 from contextlib import redirect_stdout
 from pathlib import Path
 import tempfile
@@ -21,6 +22,13 @@ class NinjaBuilderIntegrationTests(unittest.TestCase):
         self.graph = self.stage / 'engine/build.ninja'
         self.cache.write_text('CMAKE_SUPPRESS_REGENERATION:BOOL=ON\n')
         self.graph.write_text('build engine.obj: CXX_COMPILER source.cpp\n')
+        # Configured stages retain ownership even while a configure guard holds
+        # their Ninja metadata. This fixture represents an earlier build, not
+        # the reviewed linked stage that now requires version finalization.
+        (self.stage / 'owner.json').write_text(json.dumps({
+            'format': 1, 'purpose': 'wesnoth-full-native-world-worker', 'release': 1192624,
+            'inputs': {'wesnoth_server/tools/build_world_worker.py': 'd' * 64},
+        }) + '\n')
 
     def test_explicit_configure_has_no_automatic_regeneration(self):
         worker.verify_ninja_configuration(self.stage)

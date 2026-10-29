@@ -94,6 +94,41 @@ sys.exit(int(os.environ.get('RESUME_EXIT', '0')))
         self.assertIn('Full native World worker build stopped', result.stdout)
         self.assertEqual(result.stdout.count('CONTROLLED WORKER CHILD'), 1)
 
+    def test_version_report_path_is_one_literal_child_argument(self):
+        result = self.run_helper('-PreservePreviousBuild', '-VersionReportPath', str(self.report))
+        self.assertEqual(result.returncode, 0, result.stdout)
+        args = json.loads(self.call.read_text())
+        self.assertEqual(args[:2], ['-I', '-B'])
+        self.assertEqual(args[-3:], ['--preserve-previous', '--version-report', str(self.report)])
+        self.assertNotIn('--ninja-report', args)
+
+    def test_version_report_requires_explicit_preservation(self):
+        result = self.run_helper('-VersionReportPath', str(self.report))
+        self.assertEqual(result.returncode, 1)
+        self.assertFalse(self.call.exists())
+        self.assertIn('Version completion requires -PreservePreviousBuild', result.stdout)
+
+    def test_empty_version_report_is_not_silently_ignored(self):
+        result = self.run_helper('-PreservePreviousBuild', '-VersionReportPath', '')
+        self.assertEqual(result.returncode, 1)
+        self.assertFalse(self.call.exists())
+
+    def test_version_and_ninja_reports_cannot_be_combined(self):
+        result = self.run_helper('-PreservePreviousBuild', '-VersionReportPath', str(self.report),
+                                 '-NinjaReportPath', str(self.report))
+        self.assertEqual(result.returncode, 1)
+        self.assertFalse(self.call.exists())
+        self.assertIn('omit -NinjaReportPath', result.stdout)
+
+    def test_version_child_failure_is_returned_without_automatic_retry(self):
+        self.env['RESUME_EXIT'] = '9'
+        result = self.run_helper('-PreservePreviousBuild', '-VersionReportPath', str(self.report))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('Full native World worker build stopped', result.stdout)
+        self.assertEqual(result.stdout.count('CONTROLLED WORKER CHILD'), 1)
+        args = json.loads(self.call.read_text())
+        self.assertEqual(args[-2:], ['--version-report', str(self.report)])
+
 
 if __name__ == '__main__':
     unittest.main()
