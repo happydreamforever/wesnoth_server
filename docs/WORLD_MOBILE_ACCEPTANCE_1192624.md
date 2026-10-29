@@ -34,7 +34,7 @@ disabled action is not permission to bypass its condition.
 
 ## I — Startup and existing account
 
-**Current next checks (2026-10-29):** The installer verified version 1192624 and launched the startup activity. Visible loading/Login and current account/save values have not yet been confirmed. Complete I1–I3 only and return each result before J. I1 also supplies H’s outstanding visual confirmation. Keep all five services open and use the existing player account.
+**Accepted (2026-10-29):** The user reports I1, I2 and I3 PASS. This includes H's outstanding visible startup confirmation. Numerical account/hero values were not supplied and remain unrecorded; send the actual current values with the next report. Do not substitute historical examples. Keep the five services open and use the existing player account.
 
 1. Open the game. Confirm the existing Emerald loading, Login and home remain
    intact, with no profile import. Sign in to the existing player.
@@ -52,12 +52,41 @@ Record current hero/form/level/XP values rather than substituting historical
 examples. Leave enlistment, recruitment, world enrollment and battles for later
 steps.
 
+## Current batch after I: prerequisite order
+
+J2 requires soldiers, so run **K1–K2 → J1–J2 → K3** in this batch:
+
+1. **K1–K2:** Team → Company → Enlist company, only if not already initialized
+   and an earned hero is owned. Confirm the six-soldier grant, reopen/refresh and
+   verify it is not repeated. An existing Company keeps its actual roster.
+2. **J1–J2:** Visit World, Company, Battles and History using taps. In Company,
+   search **Spearman** (or another existing soldier), select its card, tap Refresh
+   and wait about ten seconds through a periodic update. Search, selection and
+   the open workspace must remain stable. Clear search afterward. Check tap
+   scrolling where content overflows; otherwise report that the list fits.
+3. **K3:** Inspect the selected soldier's statistics, then Recruit → Spearman →
+   Recruit once. Count the unfiltered roster: a fresh Company goes **6 → 7**, with
+   two Spearmen. For an existing Company, use its actual starting count plus one.
+   Existing soldiers' XP and the account's hero progress must remain unchanged.
+
+No earned hero: Campaign guidance is expected; enlistment/search/recruitment
+dependent on a roster are NOT RUN. At twelve soldiers, verify recruitment is
+unavailable and mark the K3 addition NOT RUN. Do not retire anyone to make space.
+K4 retirement and J3 World controls are deferred. Force selection, world
+enrollment and battles remain later checks.
+
+Return K1/K2/J1/J2/K3 PASS, FAIL or NOT RUN, the final soldier count and the actual
+account name, owned-character count, hero/form/level/current XP/total earned XP.
+Stop at the first unexpected result and retain the exact screen/error. No new
+build, installation or service restart is required. The existing WAN status
+continues to apply unless the user reports a change.
+
 ## J — Persistent touch workspace
 
 1. Visit all four tabs and return without changing data. Tap the list scrollbar's
    track or arrows; no keyboard shortcut, hover or drag operation is required.
-2. In Company, search for an existing soldier. Tap **Refresh** and wait through a
-   periodic update. The search and selected card remain; the window does not
+2. In Company, search for an existing soldier and tap its card. Tap **Refresh**
+   and wait about ten seconds through a periodic update. The search and selected card remain; the window does not
    repeatedly close and reopen. Clear the search.
 3. Once O has opened the world, revisit World: tap each Castle, **+**, **−**,
    **Centre**, **List**, and **Map**. Centre restores all six Castles. Routes and
