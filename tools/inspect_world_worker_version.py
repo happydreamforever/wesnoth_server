@@ -187,55 +187,76 @@ def collect(repo, *, binding_function=None, run_process=None, environ=None):
               'receipt_written': False, 'build_performed': False, 'result': {'outcome': 'not_run'},
               'preservation': {}}
     phase = 'ownership'
-    before = None
+    check = 'stage'
     try:
         recovery._path(stage, directory=True)
+        check = 'incomplete_stage'
         if (stage / 'receipt.json').exists():
             raise BuildError('This diagnostic requires the existing incomplete worker stage.')
         current_binding = binding_function or _default_binding
         # The completed build attempt already created this mutex; the diagnostic
         # may acquire it but does not create a new ownership/recovery file.
         lock = stage.with_name(stage.name + '.build.lock')
+        check = 'build_lock'
         recovery._ordinary(lock)
         with ninja.build_lock(stage):
+            check = 'owner'
             owner = recovery._read_json(stage / 'owner.json')
             recovery._binding(owner)
+            check = 'source_binding'
             if current_binding() != owner:
                 raise BuildError('Worker source binding differs; do not run or rebuild it.')
             phase = 'artifacts'
+            check = 'bin'
             binary = recovery._path(stage / 'bin', directory=True)
             before_bin = _bin(binary)
-            compiled = _file(stage / 'engine/src/world-worker.exe')
+            # The pinned engine sets EXECUTABLE_OUTPUT_PATH to CMAKE_BINARY_DIR,
+            # even though the target itself is declared in its src subdirectory.
+            linked_executable = stage / 'engine/world-worker.exe'
+            check = 'linked_executable'
+            compiled = _file(linked_executable)
+            check = 'copied_executable_match'
             if any(compiled[key] != before_bin['world-worker.exe'][key] for key in ('bytes', 'sha256')):
                 raise BuildError('The copied worker differs from its linked engine executable.')
             prefix_receipt = repo / 'build/world-worker-prefix/receipt.json'
+            check = 'prefix_receipt'
             prefix_row = _file(prefix_receipt)
+            check = 'dependency_receipt_binding'
             if owner['inputs'].get('wesnoth_server/build/world-worker-prefix/receipt.json') != prefix_row['sha256']:
                 raise BuildError('Worker dependency receipt differs from its source binding.')
+            check = 'dependency_receipt_schema'
             dependencies = recovery._read_json(prefix_receipt)
             if (dependencies.get('format') != 1 or dependencies.get('purpose') != 'wesnoth-world-worker-mingw64-prefix'
                     or not isinstance(dependencies.get('files'), dict)):
                 raise BuildError('Worker dependency receipt is invalid.')
+            check = 'local_dll_binding'
             for name, row in before_bin.items():
                 if name == 'world-worker.exe': continue
                 pinned = dependencies['files'].get('bin/' + name)
                 if pinned != {key: row[key] for key in ('bytes', 'sha256')}:
                     raise BuildError('A local worker DLL differs from its pinned dependency receipt.')
-            before = {'owner': _file(stage / 'owner.json'), 'bin': before_bin,
-                      'linked_executable': compiled, 'version_header': _header(stage),
+            check = 'owner'
+            before_owner = _file(stage / 'owner.json')
+            check = 'version_header'
+            before_header = _header(stage)
+            before = {'owner': before_owner, 'bin': before_bin,
+                      'linked_executable': compiled, 'version_header': before_header,
                       'prefix_receipt': prefix_row, 'binding_sha256': recovery._hash(owner)}
             report['artifacts'] = before
             report['binding_input_count'] = len(owner['inputs'])
             phase = 'scratch'
+            check = 'scratch_directory'
             scratch = stage.parent / ('world-worker-version-check-' + uuid4().hex)
             scratch.mkdir()
             report['retained_scratch'] = str(scratch)
+            check = 'isolated_environment'
             environment, folders = _environment(binary, scratch, os.environ if environ is None else environ)
             command = [binary / 'world-worker.exe', '--simple-version', '--no-log-to-file', '--wnoconsole',
                        '--userdata-dir', folders['userdata'], '--usercache-dir', folders['cache']]
             report['arguments'] = ['--simple-version', '--no-log-to-file', '--wnoconsole',
                                    '--userdata-dir', '<retained-scratch>/userdata', '--usercache-dir', '<retained-scratch>/cache']
             phase = 'version'
+            check = 'version_invocation'
             result = (run_process or run_bounded)(command, environment, scratch)
             stdout, stderr = result.pop('stdout'), result.pop('stderr')
             matched = (result['status'] == 'exited' and result['exit_code'] == 0
@@ -247,18 +268,23 @@ def collect(repo, *, binding_function=None, run_process=None, environ=None):
                 'stdout': _stream(stdout, limited=result.get('stdout_limited', result['output_limited'])),
                 'stderr': _stream(stderr, limited=result.get('stderr_limited', result['output_limited']))}
             phase = 'preservation'
-            report['preservation'] = {
-                'bin_unchanged': _bin(binary) == before_bin,
-                'owner_unchanged': _file(stage / 'owner.json') == before['owner'],
-                'linked_executable_unchanged': _file(stage / 'engine/src/world-worker.exe') == compiled,
-                'version_header_unchanged': _header(stage) == before['version_header'],
-                'dependency_receipt_unchanged': _file(prefix_receipt) == prefix_row,
-                'source_binding_unchanged': current_binding() == owner,
-                'no_receipt_created': not (stage / 'receipt.json').exists(),
-            }
+            check = 'bin'
+            report['preservation']['bin_unchanged'] = _bin(binary) == before_bin
+            check = 'owner'
+            report['preservation']['owner_unchanged'] = _file(stage / 'owner.json') == before['owner']
+            check = 'linked_executable'
+            report['preservation']['linked_executable_unchanged'] = _file(linked_executable) == compiled
+            check = 'version_header'
+            report['preservation']['version_header_unchanged'] = _header(stage) == before['version_header']
+            check = 'prefix_receipt'
+            report['preservation']['dependency_receipt_unchanged'] = _file(prefix_receipt) == prefix_row
+            check = 'source_binding'
+            report['preservation']['source_binding_unchanged'] = current_binding() == owner
+            check = 'incomplete_stage'
+            report['preservation']['no_receipt_created'] = not (stage / 'receipt.json').exists()
             report['collection']['complete'] = bool(result['capture_complete'] and all(report['preservation'].values()))
     except (OSError, BuildError, ValueError, KeyError, TypeError) as error:
-        report['failure'] = {'phase': phase, **_error(error)}
+        report['failure'] = {'phase': phase, 'check': check, **_error(error)}
     return report
 
 
@@ -289,6 +315,10 @@ def main():
         write_report(ROOT, destination, report)
         result = report['result']
         print('WORLD WORKER VERSION STATE ' + ('COLLECTED' if report['collection']['complete'] else 'COLLECTION INCOMPLETE'))
+        if failure := report.get('failure'):
+            print('failure_phase=' + failure['phase'] + '; check=' + failure['check']
+                  + '; error_type=' + failure['type'] + '; errno=' + str(failure['errno'])
+                  + '; winerror=' + str(failure['winerror']))
         print('outcome=' + result['outcome'] + '; exit_code=' + str(result.get('exit_code')))
         version = result.get('stdout', {}).get('version_text')
         if version: print('Captured version: ' + version)

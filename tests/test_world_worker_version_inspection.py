@@ -40,7 +40,8 @@ class VersionInspectionTests(unittest.TestCase):
         self.prefix.mkdir()
         self.executable = self.binary / 'world-worker.exe'
         self.executable.write_bytes(b'MZ synthetic existing native worker bytes')
-        (self.stage / 'engine/src/world-worker.exe').write_bytes(self.executable.read_bytes())
+        self.linked_executable = self.stage / 'engine/world-worker.exe'
+        self.linked_executable.write_bytes(self.executable.read_bytes())
         (self.binary / 'library.dll').write_bytes(b'MZ pinned private DLL fixture')
         (self.stage / 'source/src/wesconfig.h').write_text('#define VERSION "1.19.26"\n')
         dependencies = {'format': 1, 'purpose': 'wesnoth-world-worker-mingw64-prefix', 'packages': [],
@@ -89,6 +90,7 @@ class VersionInspectionTests(unittest.TestCase):
                                run_process=self.runner, environ=self.environment)
 
     def test_exact_version_one_run_with_isolated_paths_and_preserved_inputs(self):
+        self.assertFalse((self.stage / 'engine/src/world-worker.exe').exists())
         report = self.collect()
         self.assertTrue(report['collection']['complete'], report)
         self.assertEqual(report['result']['outcome'], 'version_match')
@@ -100,6 +102,25 @@ class VersionInspectionTests(unittest.TestCase):
         self.assertEqual(self.binding.call_count, 2)
         self.assertNotIn('PRIVATE', json.dumps(report))
         self.assertEqual(report['artifacts']['version_header']['declared_version'], '1.19.26')
+
+    def test_root_output_layout_matches_the_pinned_engine_cmake_setting(self):
+        engine = Path(__file__).resolve().parents[2] / 'wesnoth_client/engine/CMakeLists.txt'
+        self.assertRegex(engine.read_text(),
+                         r'(?m)^set\(EXECUTABLE_OUTPUT_PATH "\$\{CMAKE_BINARY_DIR\}" CACHE STRING ')
+
+    def test_old_nested_layout_cannot_replace_the_required_root_executable(self):
+        nested = self.stage / 'engine/src/world-worker.exe'
+        self.linked_executable.rename(nested)
+        before = recovery._inventory(self.stage)
+        report = self.collect()
+        self.assertFalse(report['collection']['complete'])
+        self.assertEqual(report['result']['outcome'], 'not_run')
+        self.assertEqual(report['failure']['phase'], 'artifacts')
+        self.assertEqual(report['failure']['check'], 'linked_executable')
+        self.assertEqual(report['failure']['type'], 'FileNotFoundError')
+        self.assertEqual(report['failure']['errno'], 2)
+        self.assertEqual(recovery._inventory(self.stage), before)
+        self.runner.assert_not_called()
 
     def test_wrong_empty_nonzero_timeout_output_limit_are_complete_observations(self):
         cases = [({'stdout': b'9.8.7\n'}, 'version_mismatch'), ({'stdout': b''}, 'empty_stdout'),
@@ -149,9 +170,50 @@ class VersionInspectionTests(unittest.TestCase):
         self.runner.assert_not_called()
 
     def test_executable_must_match_linked_output(self):
-        (self.stage / 'engine/src/world-worker.exe').write_bytes(b'different worker')
-        self.assertFalse(self.collect()['collection']['complete'])
+        self.linked_executable.write_bytes(b'different worker')
+        # A matching nested copy must not bypass the pinned root-output check.
+        (self.stage / 'engine/src/world-worker.exe').write_bytes(self.executable.read_bytes())
+        before = recovery._inventory(self.stage)
+        report = self.collect()
+        self.assertFalse(report['collection']['complete'])
+        self.assertEqual(report['failure']['check'], 'copied_executable_match')
+        self.assertEqual(recovery._inventory(self.stage), before)
         self.runner.assert_not_called()
+
+    def test_missing_artifact_labels_are_fixed_and_do_not_expose_paths(self):
+        for path, label in ((self.linked_executable, 'linked_executable'),
+                            (self.prefix / 'receipt.json', 'prefix_receipt'),
+                            (self.stage / 'source/src/wesconfig.h', 'version_header')):
+            with self.subTest(check=label):
+                retained = path.with_name('private-retained-artifact')
+                path.rename(retained)
+                before = recovery._inventory(self.stage)
+                try:
+                    report = self.collect()
+                    self.assertFalse(report['collection']['complete'])
+                    failure = report['failure']
+                    self.assertEqual(failure['phase'], 'artifacts')
+                    self.assertEqual(failure['check'], label)
+                    self.assertEqual(set(failure), {'phase', 'check', 'type', 'errno', 'winerror'})
+                    self.assertNotIn(str(self.repo), json.dumps(failure))
+                    self.assertNotIn('private-retained-artifact', json.dumps(failure))
+                    self.assertEqual(recovery._inventory(self.stage), before)
+                    self.runner.assert_not_called()
+                finally:
+                    retained.rename(path)
+
+    def test_linked_root_executable_is_rechecked_after_the_invocation(self):
+        def remove_linked(*args):
+            self.linked_executable.unlink()
+            return self.result()
+        self.runner.side_effect = remove_linked
+        report = self.collect()
+        self.assertFalse(report['collection']['complete'])
+        self.assertEqual(report['result']['outcome'], 'version_match')
+        self.assertEqual(report['failure']['phase'], 'preservation')
+        self.assertEqual(report['failure']['check'], 'linked_executable')
+        self.assertEqual(report['failure']['type'], 'FileNotFoundError')
+        self.assertFalse(self.linked_executable.exists())
 
     def test_existing_completed_receipt_is_not_modified_or_reused(self):
         (self.stage / 'receipt.json').write_bytes(b'original receipt')
@@ -219,6 +281,22 @@ class VersionInspectionTests(unittest.TestCase):
         self.assertIn('WORLD WORKER VERSION STATE COLLECTED', output.getvalue())
         self.assertIn('Captured version: 1.19.26', output.getvalue())
         self.assertNotIn('PRIVATE', output.getvalue())
+
+    def test_main_prints_fixed_failure_check_without_private_exception_details(self):
+        self.linked_executable.unlink()
+        report = self.collect()
+        destination = self.repo / 'diagnostics/incomplete.json'
+        output = io.StringIO()
+        with patch.object(version, 'ROOT', self.repo), patch.object(version.sys, 'platform', 'win32'), \
+                patch.object(version.sys, 'version_info', (3, 12, 10)), patch.object(version, 'collect', return_value=report), \
+                patch.object(version.sys, 'argv', ['diagnostic', '--report', str(destination)]), redirect_stdout(output):
+            self.assertEqual(version.main(), 1)
+        self.assertIn('WORLD WORKER VERSION STATE COLLECTION INCOMPLETE', output.getvalue())
+        self.assertIn('failure_phase=artifacts; check=linked_executable; error_type=FileNotFoundError; errno=2; winerror=None', output.getvalue())
+        self.assertNotIn(str(self.linked_executable), output.getvalue())
+        self.assertNotIn('No such file or directory', output.getvalue())
+        self.assertNotIn('PRIVATE', output.getvalue())
+        self.runner.assert_not_called()
 
 
 class BoundedProcessTests(unittest.TestCase):
