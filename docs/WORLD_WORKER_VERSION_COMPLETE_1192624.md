@@ -1,3 +1,5 @@
+**Current Windows step:** All F builds, including Android **1192624**, passed. Continue with [G: five-service startup](WORLD_ACCEPTANCE_1192624.md#g-start-five-services-and-verify-worker-availability). Return workflow output and the shared-battle window’s worker-ready message before installing. No pull or rebuild is needed. Earlier instructions below are historical.
+
 **Current Windows step:** Full native worker completion passed. Run only the **Android rebuild** in [the current F section](WORLD_ACCEPTANCE_1192624.md#current-f-android-only). Keep five services stopped and return its rebuild/build logs before G startup or H installation. No new pull or worker retry is needed. Earlier instructions below are historical.
 
 # Complete the verified Windows worker without recompiling

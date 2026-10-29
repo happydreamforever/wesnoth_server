@@ -1,3 +1,5 @@
+**Current Windows step:** All F builds, including Android **1192624**, passed. Continue with [G: five-service startup](WORLD_ACCEPTANCE_1192624.md#g-start-five-services-and-verify-worker-availability). Return workflow output and the shared-battle window’s worker-ready message before installing. No pull or rebuild is needed. Earlier instructions below are historical.
+
 **Current Windows step:** Full native worker completion passed. Run only the **Android rebuild** in [the current F section](WORLD_ACCEPTANCE_1192624.md#current-f-android-only). Keep five services stopped and return its rebuild/build logs before G startup or H installation. No new pull or worker retry is needed. Earlier instructions below are historical.
 
 **Current Windows step:** Both version reports have been reviewed: actual Windows version **1.19.26** and preservation checks pass. Follow [preserving worker completion](WORLD_WORKER_VERSION_COMPLETE_1192624.md) after a server-only update. Keep five services stopped; return the final build log before Android or service startup. Earlier instructions below are historical.
@@ -191,6 +193,8 @@ Expected markers: `ALLIANCE ACCOUNT BRIDGE REBUILD PASSED`, `UNIFIED MULTIPLAYER
 
 ## G. Start five services and verify worker availability
 
+**Current next action:** F is accepted from the returned Windows worker and Android build output. Use the existing files and runtime below with WAN disconnected and local Ethernet connected. Keep Python 3.14 installed until this G result is accepted. No new pull, build, backup or migration is required.
+
 ```powershell
 & {
     $ErrorActionPreference = 'Stop'
@@ -203,6 +207,8 @@ Expected markers: `ALLIANCE ACCOUNT BRIDGE REBUILD PASSED`, `UNIFIED MULTIPLAYER
 ```
 
 Expected W02 database, W03 backend, W04 bridge, W05 shared battles with one verified native worker available, W06 native Room server, then `W07 UNIFIED GAME SERVICES READY`. Keep all five service windows open. Workers start beneath shared battles when a committed engagement is queued; there is no sixth permanent service window. `WORLD NATIVE WORKER UNAVAILABLE` is not a passing G result.
+
+Return the complete workflow console and the shared-battle window output containing `WORLD NATIVE WORKER READY`, together with the saved workflow text/JSON. Stop at the first unexpected result and include the failing service transcript. Review this result before H installation, even though the Android builder printed a generic install suggestion.
 
 Use the default one worker for initial testing. Additional disjoint-worker acceptance later uses `-WorldWorkers 2` when starting the stack after a deliberate safe restart, not a second stack against the same runtime. Logs: `diagnostics\alliance-workflow-*.txt/.json` and W02–W06 service transcripts.
 
