@@ -1,3 +1,5 @@
+**Current Windows step:** Worker compilation and linking passed; final version capture stopped. Follow [the existing-executable version diagnostic](WORLD_WORKER_VERSION_1192624.md). Keep services stopped and return both reports before another build. Earlier instructions below are historical.
+
 # Continue the Windows worker after the profile-reader compile failure
 
 The supplied console confirms that the Ninja history recovery, guarded CMake configuration and Windows resource compilation passed. The build resumed with 14 remaining steps, then `alliance_native/account_client.cpp:634` failed because `lstat` is unavailable in the selected Windows compiler. The `NOMINMAX` redefinition is a nonfatal warning, not this failure.

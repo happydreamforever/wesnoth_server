@@ -1,3 +1,5 @@
+**Current Windows step:** Worker compilation and linking passed; final version capture stopped. Follow [the existing-executable version diagnostic](WORLD_WORKER_VERSION_1192624.md). Keep services stopped and return both reports before another build. Earlier instructions below are historical.
+
 **Current Windows checkpoint:** Ninja recovery/configuration passed. The remaining worker compilation stopped on Windows profile reading (`lstat` unavailable). Follow [the coordinated source correction and preserving worker retry](WORLD_WORKER_PROFILE_1192624.md). Android and G–Z remain pending; keep five services stopped. Earlier checkpoints and batch commands below are retained history.
 
 # Windows acceptance — Companies and Territorial Wars 1192624

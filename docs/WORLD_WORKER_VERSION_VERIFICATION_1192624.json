@@ -1,0 +1,289 @@
+{
+  "status": "passed_with_scoped_evidence",
+  "date": "2026-10-29",
+  "source_and_windows_observations": {
+    "windows_console": {
+      "provided": "inline console only",
+      "build_log": "diagnostics/world-worker-build-20261028-164511-292-3662c29aa7ee473ca6c674e3864b300b.txt",
+      "saved_log_opened": false,
+      "compiler_report": "build/world-worker-toolchain-check-ccaca723867245d5a776536d098902b9/report.json",
+      "resource_report": "build/world-worker-resource-check-5178ca251334488e95ea224756a1a05e/report.json",
+      "accepted": [
+        "compiler/resource checks",
+        "account source continuation",
+        "guarded CMake generation",
+        "remaining compilation and executable linking"
+      ],
+      "failure": "Full native engine version differs.",
+      "full_worker_verified": false,
+      "android_started_on_windows": false
+    },
+    "source_finding": {
+      "builder_capture": [
+        "--version"
+      ],
+      "discarded_capture": "stderr",
+      "failure_requires": "process exit0 and stdout lacking required substring1.19.26",
+      "windows_default": "file logging before version handling",
+      "explicit_capture_flags": [
+        "--simple-version",
+        "--no-log-to-file",
+        "--wnoconsole"
+      ],
+      "expected_version": "1.19.26",
+      "actual_user_version_observed": false
+    },
+    "sources": [
+      {
+        "path": "wesnoth_server/tools/build_world_worker.py",
+        "bytes": 45454,
+        "sha256": "03c1c609e7dbf78903f8bd4f7064bc5440d107b7c59d0d65ccdba3b7ba5e7867"
+      },
+      {
+        "path": "wesnoth_server/tools/build_alliance_bridge.py",
+        "bytes": 7798,
+        "sha256": "76d289f3b5411bff11fe732cdbd423fc6b90afcda7548d324ff83c6ae25b5baa"
+      },
+      {
+        "path": "wesnoth_client/engine/src/wesnoth.cpp",
+        "bytes": 34652,
+        "sha256": "7c9f7534b0293f500a598e164570cbeefb7a624e7aa908e3b9db81631bb440c6"
+      },
+      {
+        "path": "wesnoth_client/engine/src/commandline_options.cpp",
+        "bytes": 31002,
+        "sha256": "2655c524f623b8df78b404de192a19c2ff2f23cf09534be169f4b3b8d908e6f1"
+      },
+      {
+        "path": "wesnoth_client/engine/src/log.cpp",
+        "bytes": 14989,
+        "sha256": "67b4de26e77f5da2974f324e0d15b3e0f7c30c1d39faf3dddceb13fea5b2d922"
+      },
+      {
+        "path": "wesnoth_client/engine/src/log_windows.cpp",
+        "bytes": 3540,
+        "sha256": "998ea56c7e79ebc071ced249b85bccc7fecf33aa9acf10c88fd1f02a9e00812f"
+      },
+      {
+        "path": "wesnoth_client/engine/src/wesconfig.h",
+        "bytes": 1163,
+        "sha256": "759b7bf89f528b20677fa88330ac1a05bb21752a43cabb325fb74c3d1fdc56fd"
+      }
+    ]
+  },
+  "delivery": "Standalone diagnostic only; existing builder/recovery/client sources unchanged. Full worker acceptance remains pending.",
+  "focused_tests": {
+    "format": 1,
+    "purpose": "world-worker-version-focused-verification",
+    "interpreter": "3.12.10 (main, Oct 28 2026, 05:56:53) [GCC 16.2.0]",
+    "network": "disabled (--network none)",
+    "tests": 32,
+    "failures": 0,
+    "skips": 0,
+    "log": {
+      "path": "build/audit-world-worker-version-20261029/tests/final-32.log",
+      "bytes": 5942,
+      "sha256": "09fff5fa49a8c4e481eb8bb4e6d2771c9c1c72a3edfd8a6423564c6d137967b3"
+    },
+    "sources": [
+      {
+        "path": "tools/inspect_world_worker_version.py",
+        "bytes": 15467,
+        "sha256": "601bad62c165cc29527b9c17e79d4f332ca352e20bf12f46f7dd1b43d4b03269"
+      },
+      {
+        "path": "tools/Test-WindowsWorldWorkerVersion.ps1",
+        "bytes": 4815,
+        "sha256": "cb1cecae71fad451582568566ea1af7c0b072571def995920173476bda2751fc"
+      },
+      {
+        "path": "tests/test_world_worker_version_inspection.py",
+        "bytes": 14100,
+        "sha256": "926378ffe9c019945e59f8d04cf4632c9ccfa75564592b1b75d15cb7d0e132c2"
+      },
+      {
+        "path": "tests/test_windows_world_worker_version.py",
+        "bytes": 13968,
+        "sha256": "4207cb3efd59ec5b7406205a1b48280d352920cc896988023b90e152ef7d8b9a"
+      }
+    ],
+    "scope": [
+      "Linux Python3.12.10 filesystem and real subprocess capture/timeout/output-limit tests.",
+      "Collector owned-build binding and worker process are controlled fixtures where stated.",
+      "Pinned Linux PowerShell invokes controlled Windows-host and collector boundaries.",
+      "Actual Windows Python/PE subprocess verification is retained separately by the native probe agent.",
+      "No full worker build, build receipt, service startup or user Windows executable was verified on this VPS."
+    ]
+  },
+  "windows_routing": {
+    "status": "passed",
+    "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+    "compiler": [
+      "Z:\\verified prefix\\bin\\g++.exe",
+      "--sysroot=Z:/verified prefix",
+      "-std=c++17",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "Z:\\work\\capture-routing.cpp",
+      "-o",
+      "Z:\\work\\capture-routing.exe"
+    ],
+    "scope": "Reduced C++ fixture with actual pinned PE GCC16.2 and Windows CRT under unprivileged network-disabled Wine. It mirrors source default logging flags and freopen, but is not the full engine, parser or console-attachment implementation.",
+    "observations": [
+      {
+        "case": "default-version",
+        "args": [
+          "--version"
+        ],
+        "exit": 0,
+        "stdout": "",
+        "stderr": "",
+        "log_exists": true
+      },
+      {
+        "case": "explicit-capture",
+        "args": [
+          "--simple-version",
+          "--no-log-to-file",
+          "--wnoconsole"
+        ],
+        "exit": 0,
+        "stdout": "1.19.26\r\n",
+        "stderr": "",
+        "log_exists": false
+      }
+    ],
+    "sources": {
+      "engine\\src\\wesnoth.cpp": "7c9f7534b0293f500a598e164570cbeefb7a624e7aa908e3b9db81631bb440c6",
+      "engine\\src\\commandline_options.cpp": "2655c524f623b8df78b404de192a19c2ff2f23cf09534be169f4b3b8d908e6f1",
+      "engine\\src\\log.cpp": "67b4de26e77f5da2974f324e0d15b3e0f7c30c1d39faf3dddceb13fea5b2d922",
+      "engine\\src\\log_windows.cpp": "998ea56c7e79ebc071ced249b85bccc7fecf33aa9acf10c88fd1f02a9e00812f"
+    },
+    "engine_facts": [
+      "Windows no_log_to_file defaults false; version/simple-version do not modify it despite help text.",
+      "Default process_command_args logging exclusion list omits version/simple-version.",
+      "Windows set_log_to_file reopens stdout to a separate .out.log.",
+      "Worker CMake overlay sets WIN32_EXECUTABLE FALSE.",
+      "Explicit no-log-to-file and wnoconsole bypass both file and console redirection."
+    ],
+    "limits": [
+      "The actual user executable output remains unobserved.",
+      "The Windows capture exit0/substr failure alone does not establish an incorrect version.",
+      "No full engine build or execution was performed."
+    ]
+  },
+  "windows_collector": {
+    "bounded_test_configuration": "Two direct run_bounded tests use the production65,536-byte bound and a two-second deadline instead of30 seconds.",
+    "cases": {
+      "bounded-flood": {
+        "capture_complete": true,
+        "captured_stdout_bytes": 65536,
+        "elapsed_seconds": 0.092,
+        "exit_code": 0,
+        "output_limited": true,
+        "process_status": "output_limit",
+        "status": "passed",
+        "timed_out": false
+      },
+      "bounded-timeout": {
+        "capture_complete": true,
+        "captured_stdout_bytes": 0,
+        "elapsed_seconds": 2.001,
+        "exit_code": 1,
+        "output_limited": false,
+        "process_status": "timeout",
+        "status": "passed",
+        "timed_out": true
+      },
+      "collect-private": {
+        "all_stage_files_metadata_and_receipt_unchanged": true,
+        "outcome": "version_mismatch",
+        "report": "Z:\\work\\collector-cases\\private\\diagnostics\\report.json",
+        "status": "passed",
+        "unknown_output_omitted": true
+      },
+      "collect-version": {
+        "all_stage_files_metadata_and_receipt_unchanged": true,
+        "outcome": "version_match",
+        "report": "Z:\\work\\collector-cases\\version\\diagnostics\\report.json",
+        "status": "passed",
+        "unknown_output_omitted": false
+      }
+    },
+    "limits": [
+      "No actual user executable/version was observed.",
+      "This is Wine, not native Windows acceptance.",
+      "No full engine or gameplay execution."
+    ],
+    "module_sha256": "601bad62c165cc29527b9c17e79d4f332ca352e20bf12f46f7dd1b43d4b03269",
+    "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+    "scope": "Actual Windows Python3.12.10 collector and real PE subprocess execution under unprivileged network-disabled Wine. No filesystem, operating-system or subprocess API mocks.",
+    "status": "passed",
+    "substitution": "Only binding_function returns the controlled synthetic owner; a small synthetic dependency receipt binds one actual pinned DLL, and statically linked PE test executables replace the unavailable full Windows worker. All artifact and source trees are disposable."
+  },
+  "native_evidence_index": {
+    "path": "wesnoth_server/build/audit-world-worker-version-20261029/native-verification-index.json",
+    "bytes": 9671,
+    "sha256": "d4f5b554d3c2f86ce2efe21154fe9a44451eb9e3e6d68def01970b9ee8075187"
+  },
+  "native_evidence": [
+    {
+      "path": "wesnoth_server/build/audit-world-worker-version-20261029/native/routing-verification.json",
+      "bytes": 2219,
+      "sha256": "9b1e5714226b0371b9299f07da883ddfc8152ba7c335a8792cceb158ac6279cc"
+    },
+    {
+      "path": "wesnoth_server/build/audit-world-worker-version-20261029/native/collector-verification.json",
+      "bytes": 2150,
+      "sha256": "67c20783590d6bdaa9524ccd7216ec24df38fa098c6417b174bfb4b26067ab8f"
+    }
+  ],
+  "handoff": {
+    "status": "passed",
+    "exit": 0,
+    "network": "none",
+    "powershell": "7.4.6 Linux",
+    "checks": 3,
+    "scope": "Parser checks for exact two handoff blocks and actual wrapper; controlled execution of wrapper is covered separately in15 tests.",
+    "log": {
+      "path": "wesnoth_server/build/audit-world-worker-version-20261029/handoff-parse.log",
+      "bytes": 143,
+      "sha256": "4691e656f44f87f0883b2234aa161b9a235ed9d9ceb0af329544cb30ce589187"
+    },
+    "guide": {
+      "path": "wesnoth_server/docs/WORLD_WORKER_VERSION_1192624.md",
+      "bytes": 4844,
+      "sha256": "bb2493179612ed8ecf06e632359d49c4efea43a65490214dad313956318c4314"
+    }
+  },
+  "preservation": {
+    "status": "passed",
+    "tracked_non_document_files": 2366,
+    "changed": [],
+    "inventory": {
+      "path": "wesnoth_server/build/audit-world-worker-version-20261029/protected-before.json",
+      "bytes": 388332,
+      "sha256": "2c1a8925fef71d2230f0f2d31f6c31a3b0da8435ba72e3b50b410867cbb17f2a"
+    },
+    "README_files": "Both preexisting empty README edits preserved; unstaged."
+  },
+  "adjacent_followup": "Review --wnoconsole for worker/companion admission-pipe launches before G; runtime routing remains unchanged and unaccepted.",
+  "pending": [
+    "Actual user executable captured version",
+    "Preserving final build completion correction/receipt verification",
+    "Android rebuild/install",
+    "Five-service and native worker readiness",
+    "World gameplay acceptance"
+  ],
+  "not_repeated": [
+    "Previously accepted181 server tests",
+    "Unchanged POSIX/Android reader tests and NDK compilation",
+    "Full engine or Android compilation",
+    "Dependencies/migration/bridge/Room stages"
+  ],
+  "implementation_commit": {
+    "wesnoth_server": "931625eacaa2c66899e36e99222df39b9d4dee5e"
+  }
+}
