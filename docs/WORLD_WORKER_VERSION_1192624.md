@@ -1,5 +1,17 @@
 # Inspect the linked Windows worker's version
 
+## Current result: collection stopped before a version was recorded
+
+The returned console reports `outcome=not_run; exit_code=None` and incomplete collection. The saved JSON/text files were not supplied to the VPS. Its failure phase and error fields are needed before choosing a correction. Keep five services stopped and preserve every file. Do not repeat the diagnostic or build yet; no new pull is needed for this report-review step.
+
+Read the existing sanitized report and paste its full output:
+
+```powershell
+Get-Content -LiteralPath 'D:\Test\wesnoth-setup\wesnoth_server\diagnostics\world-worker-version-20261028-204353-453-06512b95db92479e86cff4c5655fa991.json' -Raw -Encoding UTF8 -ErrorAction Stop
+```
+
+If attaching files instead, send that JSON and its matching `.txt` file. No passwords or private runtime files are needed. The following diagnostic installation/run instructions are retained history until report review.
+
 The latest Windows console confirms compiler/resource checks, the account-source continuation, guarded CMake generation, both remaining C++ compilations and successful linking of `world-worker.exe`. It then stops at `Full native engine version differs.` Full worker verification and readiness are still pending.
 
 Saved build log: `diagnostics/world-worker-build-20261028-164511-292-3662c29aa7ee473ca6c674e3864b300b.txt`. Compiler report: `build/world-worker-toolchain-check-ccaca723867245d5a776536d098902b9/report.json`. Resource report: `build/world-worker-resource-check-5178ca251334488e95ea224756a1a05e/report.json`. Only the pasted console was supplied; these saved Windows files and the executable have not been opened on the VPS.

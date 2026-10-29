@@ -1,3 +1,5 @@
+**Current Windows step:** The version diagnostic returned `not_run` and incomplete collection. [Read and return the existing JSON report](WORLD_WORKER_VERSION_1192624.md) before any retry. No pull or build is currently requested. Earlier instructions below are historical.
+
 **Current Windows step:** Worker compilation and linking passed; final version capture stopped. Follow [the existing-executable version diagnostic](WORLD_WORKER_VERSION_1192624.md). Keep services stopped and return both reports before another build. Earlier instructions below are historical.
 
 # Continue the Windows worker after the profile-reader compile failure
