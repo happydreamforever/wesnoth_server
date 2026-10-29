@@ -25,7 +25,10 @@ class CompanionTests(unittest.TestCase):
             def start(command,**kwargs):
                 self.assertNotIn(password,str(command));self.assertNotIn(token,str(command))
                 self.assertNotIn(token,str(kwargs['env']))
-                self.assertEqual(command[0],'/owned/worker')
+                attempt = Path(kwargs['stdout'].name).parent
+                self.assertEqual(command, helper.native_engine_command('/owned/worker', '/owned/data', attempt / 'userdata'))
+                self.assertEqual(kwargs['stdin'], helper.subprocess.PIPE)
+                self.assertEqual(kwargs['stderr'], helper.subprocess.STDOUT)
                 return process
             def request(*values):calls.append(values);return {}
             with patch.object(helper,'ROOT',root),patch.object(helper,'installed_worker',return_value={'executable':'/owned/worker','game_data':'/owned/data'}),\

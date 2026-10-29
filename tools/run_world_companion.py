@@ -21,7 +21,7 @@ import warnings
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT.parent / 'wesnoth_client' / 'tools'))
-from alliance.world_worker import bounded, canonical, ordinary, write_json
+from alliance.world_worker import bounded, canonical, native_engine_command, ordinary, write_json
 from tools.build_world_worker import installed_worker
 import run_android_alliance_companion as account_transport
 
@@ -93,8 +93,7 @@ def run(args):
             WESNOTH_WORLD_COMPANION_PROFILE=str(public))
         if os.name == 'nt':
             environment['PATH'] = str(Path(worker['executable']).parent) + os.pathsep + str(Path(os.environ['SystemRoot']) / 'System32')
-        command = [str(worker['executable']), str(worker['game_data']), '--userdata-dir', str(userdata),
-            '--nogui', '--multiplayer', '--nosound', '--noaddons', '--no-log-to-file', '--log-none=audio']
+        command = native_engine_command(worker['executable'], worker['game_data'], userdata)
         with (directory / 'native.log').open('xb') as log:
             child = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, env=environment)
             child.stdin.write(canonical({'run_id': battle_id, 'account_id': account['id'], 'token': token}) + b'\n')

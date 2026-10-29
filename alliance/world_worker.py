@@ -20,6 +20,16 @@ TOKEN = re.compile(r"[A-Za-z0-9_-]{43}")
 MAX_EVIDENCE = 32 * 1024 * 1024
 
 
+def native_engine_command(executable, game_data, userdata):
+    command = [str(executable), str(game_data), "--userdata-dir", str(userdata),
+               "--nogui", "--multiplayer", "--nosound", "--noaddons", "--no-log-to-file", "--log-none=audio"]
+    if os.name == "nt":
+        # Keep the inherited admission pipe and log handles. The native console
+        # helper can otherwise reopen stdin/stdout/stderr as CONIN$/CONOUT$.
+        command.append("--wnoconsole")
+    return command
+
+
 def canonical(value):
     return json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode()
 
@@ -246,8 +256,7 @@ class WorldWorkerSupervisor:
         # MSYS/UCRT installations for a second dependency ABI.
         if os.name == "nt":
             environment["PATH"] = str(Path(self.executable).parent) + os.pathsep + str(Path(os.environ["SystemRoot"]) / "System32")
-        command = [str(self.executable), str(self.game_data), "--userdata-dir", str(attempt / "userdata"),
-                   "--nogui", "--multiplayer", "--nosound", "--noaddons", "--no-log-to-file", "--log-none=audio"]
+        command = native_engine_command(self.executable, self.game_data, attempt / "userdata")
         log = (attempt / "engine.log").open("xb")
         child, pulse = None, None
         async def heartbeat():

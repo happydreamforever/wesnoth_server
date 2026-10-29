@@ -8,9 +8,24 @@ import unittest
 from unittest.mock import AsyncMock, Mock, patch
 from types import SimpleNamespace
 from uuid import uuid4
-from alliance.world_worker import WorldWorkerSupervisor, canonical, sha, validate_evidence
+from alliance.world_worker import WorldWorkerSupervisor, canonical, native_engine_command, sha, validate_evidence
 from alliance.world_execution import WorldRoom, WorldPeer, download_world
 from alliance.battle_wire import Node, WireError
+
+
+class NativeEngineCommandTests(unittest.TestCase):
+    def command(self, platform):
+        with patch('alliance.world_worker.os', SimpleNamespace(name=platform)):
+            return native_engine_command('/owned/worker', '/owned/data', '/private/userdata')
+
+    def test_posix_command_is_unchanged(self):
+        self.assertEqual(self.command('posix'), [
+            '/owned/worker', '/owned/data', '--userdata-dir', '/private/userdata',
+            '--nogui', '--multiplayer', '--nosound', '--noaddons',
+            '--no-log-to-file', '--log-none=audio'])
+
+    def test_windows_preserves_inherited_streams_without_console_redirection(self):
+        self.assertEqual(self.command('nt'), self.command('posix') + ['--wnoconsole'])
 
 
 class WorkerAuthorityTests(unittest.TestCase):
@@ -36,6 +51,11 @@ class WorkerAuthorityTests(unittest.TestCase):
             self.daemon.domain.world_worker_pause=Mock()
             logs=[]
             async def spawn(*args,**kwargs):
+                attempt = Path(kwargs['stdout'].name).parent
+                self.assertEqual(list(args), native_engine_command(
+                    self.supervisor.executable, self.supervisor.game_data, attempt / 'userdata'))
+                self.assertEqual(kwargs['stdin'], asyncio.subprocess.PIPE)
+                self.assertEqual(kwargs['stderr'], asyncio.subprocess.STDOUT)
                 logs.append(kwargs['stdout']);raise OSError('test missing executable')
             with patch('alliance.world_worker.asyncio.create_subprocess_exec',spawn):
                 await self.supervisor.launch(self.descriptor,'machine-1234')
