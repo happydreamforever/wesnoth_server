@@ -1,0 +1,448 @@
+{
+  "release": 1192625,
+  "date": "2026-10-30",
+  "status": "VPS verified; Windows acceptance pending",
+  "implementation_commit": "6114fb8db4480c6af8806589b551a361e48cc5d8",
+  "protocol": 4,
+  "schema": 4,
+  "gameplay_release": 1192624,
+  "changes": [
+    "Help beside Quit opens native guide and refreshes authenticated profile on return",
+    "Compact200x60 home profile",
+    "Antique storybook Campaign icon",
+    "Transparent startup progress container; measured bar/percentage retained"
+  ],
+  "tests": {
+    "unique": 137,
+    "passed": 137,
+    "skipped": 0,
+    "builder": 78,
+    "windows_wrappers": 36,
+    "startup_and_public_bundle": 22,
+    "cairo_icons": 1
+  },
+  "android": {
+    "release": 1192625,
+    "status": "passed",
+    "python": "3.12.10",
+    "network": "Docker --network none",
+    "tests": {
+      "builder_and_preservation": 78,
+      "windows_wrappers_unique": 36,
+      "skipped": 0,
+      "initial_fixture_failure": "negative version case incorrectly classified current supported APK as forbidden; corrected to future1192626, affected case passed on rerun; production installer unchanged"
+    },
+    "android": {
+      "native_steps": 55,
+      "gradle_build": true,
+      "verify_receipt": true,
+      "prepare_update_repeat_preserved": true,
+      "package": "org.wesnoth.offline",
+      "apk": {
+        "path": "build/android-account-game/app/build/outputs/apk/debug/app-debug.apk",
+        "bytes": 47043244,
+        "sha256": "91b030d7b78a5e76724d0ffa638ad67f9e469bd51363a9fe79dceefcbd54fec8"
+      },
+      "original_signer_matches": true,
+      "original_signer_sha256": "7e346dc5ec05098674444abdb61508270da51de9e57421133340c07834343074",
+      "launch_activity": "org.wesnoth.offline.OfflineInitActivity"
+    },
+    "preservation": {
+      "prior_stages": {
+        "android-account-engine": {
+          "retained_at": "android-account-engine-before-menu-polish-20261030T172111Z-5c39dc401b0a48f087f21d2836d58e0b",
+          "unchanged": true,
+          "files": 164,
+          "directories": 17
+        },
+        "android-account-game": {
+          "retained_at": "android-account-game-before-menu-polish-20261030T172111Z-5c39dc401b0a48f087f21d2836d58e0b",
+          "unchanged": true,
+          "files": 273,
+          "directories": 285
+        }
+      },
+      "prior_update_journals": 23,
+      "public_profile_bytes_unchanged": true,
+      "gamedata_manifest_bytes_unchanged": true,
+      "exact_apk_asset_manifest_verified": true,
+      "artwork_and_fonts_unchanged": true,
+      "production_inputs_unchanged_during_build": true
+    },
+    "logs": {
+      "account-build-tests-01.log": {
+        "bytes": 16493,
+        "sha256": "0c6bf79792d2811aa975a31b45b1a6c9473b146d36b1583515797a2271a515fc"
+      },
+      "account-windows-tests-01.log": {
+        "bytes": 1546,
+        "sha256": "54470363a8608a81cc58f331aa708a239f251b73b0b65e89e9f0d7d385000811"
+      },
+      "account-windows-retarget-02.log": {
+        "bytes": 99,
+        "sha256": "da6964b1e6cb6dec4b1ea5f523e47bbd81d66741f6335f0eddf7921fb2ea9040"
+      },
+      "source-binding-before.log": {
+        "bytes": 42,
+        "sha256": "2ad043575fb21c940a60c8be5929daefdb9c3a739c07f8e0efabccbff43d0e8e"
+      },
+      "android-prepare.log": {
+        "bytes": 2003,
+        "sha256": "fcc97ccbba98decde34aaafedb7cbfb9a893b16daa7a942655d703af3ffc5660"
+      },
+      "android-build.log": {
+        "bytes": 15485,
+        "sha256": "17266a8ea6c8027bf6860725d406f779b303ced86c04c9846334e780d3af298e"
+      },
+      "android-verify.log": {
+        "bytes": 1487,
+        "sha256": "f2c4d8adfa14ec6ea6dd439c9c0378846bd5646963bebdbea402b5de8d575448"
+      },
+      "android-prepare-recheck.log": {
+        "bytes": 1794,
+        "sha256": "1b3d9f3937a4949892a31cc4920ab181d3837afa355fc1908fa086c10657776c"
+      },
+      "independent-apk-check.log": {
+        "bytes": 272,
+        "sha256": "b0883a17c59b87b2729090aa60bdaa08a30bb9c685d3d4f044f7cd295be4354e"
+      },
+      "source-binding-final.log": {
+        "bytes": 41,
+        "sha256": "33832bf61f03561d3d430fdaaf782b907c736c5a5f166aeb126dec94e8e8c52d"
+      }
+    },
+    "limits": [
+      "Android cross compilation and independent APK checks on VPS; not Windows execution or LDPlayer acceptance.",
+      "PowerShell executed under Linux with controlled Windows/ADB/tool fixtures.",
+      "Public trust uses retained disposable public fixture; user runtime, credentials, database and private Windows profile were not accessed.",
+      "Parent source baseline inventory records engine/worker/other tracked source preservation separately."
+    ]
+  },
+  "native_ui": {
+    "release": 1192625,
+    "status": "passed",
+    "production_inputs": {
+      "tools/android-presentation/mobile_home.hpp": "d1e1a9b040bf75bf3a085734bed88e9319c957d4afd5ecb45d3bbfe7e74db342",
+      "tools/android-presentation/presentation_icons.hpp": "db930a159b91becc77ab992b6c1f829f0c48a526e971ff0606a432ab3b1c4018",
+      "tests/generate_mobile_home_render.py": "f0c5d3027ffde34be9cffee094bfe47d508431747453cb3065baf562b553ec64",
+      "tests/mobile_home_render_cases.hpp": "513ada8979289cf0aa9e9f60f68977cf1ff61aa1f134dbc4872f575dc1276879",
+      "tests/test_mobile_home_icons.py": "f5018cfc274747ced4c59a6f3c5105e66f35844117be00c02ef7b41406bc2dd6"
+    },
+    "native_build_log": "build/audit-menu-polish-1192625/render-build/build-01.log",
+    "native_strengthened_probe_log": "build/audit-menu-polish-1192625/render-build-02/build.log",
+    "renderer_sha256": "5e5d463ca662cab0eec0f5cccd86e9de6f6627f79ab6f96c970012af989df40d",
+    "icon_sanitizer_test": {
+      "passed": 1,
+      "skips": 0,
+      "log": "build/audit-menu-polish-1192625/icons-01.log",
+      "checks": [
+        "new Cairo storybook and Help paths under ASan/UBSan",
+        "PNG alpha/dimensions and color variants",
+        "unchanged shared symbol rendering",
+        "bounded cache eviction and invalid size refusal"
+      ]
+    },
+    "runs": [
+      {
+        "resolution": "1280x720",
+        "count": 26,
+        "log": "build/audit-menu-polish-1192625/render-02-1280x720/combined.log",
+        "geometry": "build/audit-menu-polish-1192625/render-02-1280x720/geometry.txt",
+        "geometry_sha256": "99636776604d487adceebe597ca80ea686b349671e26f0d9b4bd28629f545109",
+        "captures": {
+          "help-browser-default.bmp": "602e658f5caceda3116d64cc26ecb4aa0704d1b71245a6e9961578bc8cf292a4",
+          "help-browser-modern.bmp": "0a7521b1581f74961584ddad64bc1847addcacf3c31a143019f1fa5e579c7330",
+          "help-return-default.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "help-return-modern.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-default-achievements.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-default-addons.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-default-campaign.bmp": "14057b8abb4afc3036a33c94000a2b9581cccf219e716c73aff98530bcc62ccb",
+          "home-default-community.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-default-editor.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-default-help.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-default-load.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-default-multiplayer.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-default-preferences.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-default-quit.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-modern-achievements.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-modern-addons.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-modern-campaign.bmp": "14057b8abb4afc3036a33c94000a2b9581cccf219e716c73aff98530bcc62ccb",
+          "home-modern-community.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-modern-editor.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-modern-help.bmp": "1093e7727d80d109d691cbe2c245a43d1012aa5f63c4e54909f314289db0efac",
+          "home-modern-load.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-modern-multiplayer.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-modern-preferences.bmp": "3d6ea913c75d4bcb9fc50b7d054dd020021c532fa0bd2f8ef5b04f288aa3c425",
+          "home-modern-quit.bmp": "1093e7727d80d109d691cbe2c245a43d1012aa5f63c4e54909f314289db0efac",
+          "input-default.bmp": "393e889aa50500e738e5f0a951afda0cf940f863e10409837545cdf301ca708d",
+          "input-modern.bmp": "393e889aa50500e738e5f0a951afda0cf940f863e10409837545cdf301ca708d"
+        }
+      },
+      {
+        "resolution": "1920x1080",
+        "count": 26,
+        "log": "build/audit-menu-polish-1192625/render-02-1920x1080/combined.log",
+        "geometry": "build/audit-menu-polish-1192625/render-02-1920x1080/geometry.txt",
+        "geometry_sha256": "71b757ac69a9042feb6e9135ee7e810bd46f6ca67870b3a96af312daaf40151f",
+        "captures": {
+          "help-browser-default.bmp": "937c82b8126eb710fab538d27ba7f32cb6c5ea0114331bd92e7d934650be8f0b",
+          "help-browser-modern.bmp": "551fcd18d9634b18696fbfd2bc058ce30992c33e4c1d02db096cf662a63e29d3",
+          "help-return-default.bmp": "fe79fa00d46bae21982f527897ff012833d6433e061571468bd63398fe01a25a",
+          "help-return-modern.bmp": "fe79fa00d46bae21982f527897ff012833d6433e061571468bd63398fe01a25a",
+          "home-default-achievements.bmp": "118f1fe7fc3514b09bc344e72b5bb7837494bc13bf610c518a867ff85937a037",
+          "home-default-addons.bmp": "118f1fe7fc3514b09bc344e72b5bb7837494bc13bf610c518a867ff85937a037",
+          "home-default-campaign.bmp": "bc12ba84a6fda718112fc225c36353b2b9feb9bafa82fdd0a64c008f7e2fc534",
+          "home-default-community.bmp": "118f1fe7fc3514b09bc344e72b5bb7837494bc13bf610c518a867ff85937a037",
+          "home-default-editor.bmp": "118f1fe7fc3514b09bc344e72b5bb7837494bc13bf610c518a867ff85937a037",
+          "home-default-help.bmp": "5016ae91ac06c314563c5564f67f0d20efef40d63a612d0327821d4dd94eea81",
+          "home-default-load.bmp": "118f1fe7fc3514b09bc344e72b5bb7837494bc13bf610c518a867ff85937a037",
+          "home-default-multiplayer.bmp": "118f1fe7fc3514b09bc344e72b5bb7837494bc13bf610c518a867ff85937a037",
+          "home-default-preferences.bmp": "118f1fe7fc3514b09bc344e72b5bb7837494bc13bf610c518a867ff85937a037",
+          "home-default-quit.bmp": "5016ae91ac06c314563c5564f67f0d20efef40d63a612d0327821d4dd94eea81",
+          "home-modern-achievements.bmp": "118f1fe7fc3514b09bc344e72b5bb7837494bc13bf610c518a867ff85937a037",
+          "home-modern-addons.bmp": "118f1fe7fc3514b09bc344e72b5bb7837494bc13bf610c518a867ff85937a037",
+          "home-modern-campaign.bmp": "bc12ba84a6fda718112fc225c36353b2b9feb9bafa82fdd0a64c008f7e2fc534",
+          "home-modern-community.bmp": "118f1fe7fc3514b09bc344e72b5bb7837494bc13bf610c518a867ff85937a037",
+          "home-modern-editor.bmp": "118f1fe7fc3514b09bc344e72b5bb7837494bc13bf610c518a867ff85937a037",
+          "home-modern-help.bmp": "67323844245e5916226cbe16b8852e67ed93ce20482030b8286b53e959df2dfc",
+          "home-modern-load.bmp": "118f1fe7fc3514b09bc344e72b5bb7837494bc13bf610c518a867ff85937a037",
+          "home-modern-multiplayer.bmp": "118f1fe7fc3514b09bc344e72b5bb7837494bc13bf610c518a867ff85937a037",
+          "home-modern-preferences.bmp": "118f1fe7fc3514b09bc344e72b5bb7837494bc13bf610c518a867ff85937a037",
+          "home-modern-quit.bmp": "67323844245e5916226cbe16b8852e67ed93ce20482030b8286b53e959df2dfc",
+          "input-default.bmp": "1ac7d97b16af027f04c7dc0187045325522b8cabbc8c29b319cb9a35ba72d2be",
+          "input-modern.bmp": "1ac7d97b16af027f04c7dc0187045325522b8cabbc8c29b319cb9a35ba72d2be"
+        }
+      }
+    ],
+    "scope": [
+      "actual GUI2/SDL software rendering at1280x720 and1920x1080, default and Celes",
+      "10 home actions dispatched through native short-press events in each theme",
+      "Help native browser Gameplay topic selected by touch event and actual48pxClose activated; returning home retains profile",
+      "200x60 reference profile, ellipsis/fulltooltipname and0/117 owned heroes;52pxHelp adjacentQuit",
+      "input cancellation,disabled actions,longhold suppression and keyboard accessibility"
+    ],
+    "limitations": [
+      "Synthetic pointer/GUI2 events and fixture accounts; not actualWindows/LDPlayer/touch hardware acceptance.",
+      "Some later captures contain a retained native hover tooltip from scripted pointer events; first home captures and layout geometry are clear.",
+      "No service/account/campaign/gameplay mutation orAndroidstartup rendering in this fixture.",
+      "Original full native engine objects reused read-only; five audit overlay units compiled, then strengthened probe recompiled and relinked."
+    ]
+  },
+  "independent_review": {
+    "purpose": "Independent menu polish source and startup regression review",
+    "release": 1192625,
+    "python": "3.12.10",
+    "network": "Docker --network none",
+    "regressions": {
+      "unique_tests": 22,
+      "passed": 22,
+      "skips": 0,
+      "initial_passed": 21,
+      "initial_failure": "Existing current-version test literal1192623 differed from current builder1192624; corrected to builder VERSION_CODE by delivery agent and isolated case passed.",
+      "logs": [
+        "startup-regressions.log",
+        "public-bundle-version-retest.log"
+      ],
+      "scope": "Actual production StartupFrame executed against recording Android Canvas; real Java progress and installer fixtures; real public X509 validation; actual extracted account controllers with scripted service/UI boundaries.",
+      "tests": [
+        {
+          "name": "tests.test_startup_chrome.StartupChromeTests.test_actual_meter_zero_partial_complete_and_bounds_at_multiple_densities",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.ApkBundleTests.test_historical1192620_keeps_original_single_asset_and_launcher",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.ApkBundleTests.test_historical1192621_keeps_its_original_public_assets",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.ApkBundleTests.test_historical1192622_accepts_bound_old_font_and_refuses_its_tampering",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.ApkBundleTests.test_new_apk_inspector_binds_every_public_asset",
+          "initial": "FAIL",
+          "final": "pass",
+          "retest_log": "public-bundle-version-retest.log"
+        },
+        {
+          "name": "tests.test_android_public_bundle.ApkBundleTests.test_tampered_missing_unexpected_and_native_assets_rejected",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.ProgressTests.test_actual_activity_progress_callback_shows_only_measured_percent",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.ProgressTests.test_real_installer_interruption_resume_and_tamper_never_report_early_completion",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.ProgressTests.test_real_java_progress_waits_for_commit_and_handles_large_totals",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.PublicBundleTests.test_actual_pinned_title_font_and_shared_background_manifest",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.PublicBundleTests.test_asset_manifest_rejects_path_traversal_and_tampering",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.PublicBundleTests.test_certificate_purpose_ca_expiry_and_ip_rejected",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.PublicBundleTests.test_duplicate_profile_keys_and_noncanonical_ip_rejected",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.PublicBundleTests.test_existing_public_identity_is_canonicalized_and_bound",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.PublicBundleTests.test_java_bundled_profile_is_authoritative_and_preserves_legacy_import",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.PublicBundleTests.test_linked_public_profile_is_rejected",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.PublicBundleTests.test_literal_path_no_expansion_execution_or_duplicate_public_key",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.PublicBundleTests.test_missing_oversized_and_linked_config_fail_closed",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.PublicBundleTests.test_openssl_failure_does_not_print_certificate_or_process_output",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.PublicBundleTests.test_pin_mismatch_and_private_fields_are_rejected",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_android_public_bundle.PublicBundleTests.test_unrelated_environment_assignments_never_enter_assets_or_receipts",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        },
+        {
+          "name": "tests.test_unified_startup_ui.UnifiedStartup.test_actual_gate_signup_session_and_generation",
+          "initial": "ok",
+          "final": "pass",
+          "retest_log": null
+        }
+      ]
+    },
+    "java_api_compile": {
+      "passed": true,
+      "android_api": 35,
+      "sources": "Current OfflineInitActivity plus prior verified generated production Java and pinned SDL sources",
+      "log": "java-api-compile-02.log",
+      "first_attempt": "Harness syntax error before Java invocation; corrected local untracked harness, retained first log."
+    },
+    "review": {
+      "firm_blockers": [],
+      "checks": [
+        "52-reference-pixel utility targets",
+        "200x60 profile with ellipsis and exact hero count",
+        "ten action entries and eleven gesture timers",
+        "distinct scoped Emerald style IDs",
+        "Cairo storybook and question-mark symbols with bounded cache",
+        "new headers explicitly bound and copied to owned Android stage",
+        "fail-closed exact title overlay anchors",
+        "native Help then profile/session refresh",
+        "original nine callbacks and Quit unchanged",
+        "1192624 stages preserved with distinct1192625 journal",
+        "mirrored client-only Windows handoff retains pending admin AD1-AD3"
+      ],
+      "unchanged_tracked_worker_source_diff": true
+    },
+    "limitations": [
+      "No actual Android/LDPlayer rendering or device acceptance by this reviewer.",
+      "Native GUI2 render/action verification and APK build are separate agent evidence.",
+      "Source review does not establish native worker or territorial gameplay acceptance."
+    ],
+    "log_sha256": {
+      "startup-regressions.log": "6cd9b0ae4d75173e6c35b10c69969287a7e4463c228244237e4203465b33d8cd",
+      "public-bundle-version-retest.log": "de47573abdb2e9777cd7404438d20b3ae1103d4e20350467204c14f8bda3576c",
+      "java-api-compile.log": "31e8bd2c04377661eebc6a8b18343159dd459873827690b19291bb8e86ff04ee",
+      "java-api-compile-02.log": "25e4798f8d1aaa08c18082025ea21bfadab5ed70fb420def81f120eccd600134"
+    },
+    "commands": [
+      "docker run --rm --network none --entrypoint sh -e PYTHONDONTWRITEBYTECODE=1 -v /home/uni/Documents/future:/workspace:ro -w /workspace/wesnoth_client wesnoth-android-sdl-verify:ndk26-java21 -c '/workspace/wesnoth_server/build/host-python-3.12.10/bin/python3.12 -B -m unittest -v tests.test_startup_chrome tests.test_android_public_bundle tests.test_unified_startup_ui'",
+      "docker run --rm --network none --entrypoint sh -e PYTHONDONTWRITEBYTECODE=1 -v /home/uni/Documents/future:/workspace:ro -w /workspace/wesnoth_client wesnoth-android-sdl-verify:ndk26-java21 -c '/workspace/wesnoth_server/build/host-python-3.12.10/bin/python3.12 -B -m unittest -v tests.test_android_public_bundle.ApkBundleTests.test_new_apk_inspector_binds_every_public_asset'",
+      "docker run --rm --network none --entrypoint sh -e PYTHONDONTWRITEBYTECODE=1 -v /home/uni/Documents/future:/workspace:ro -w /workspace/wesnoth_client wesnoth-android-sdl-verify:ndk26-java21 -c '/workspace/wesnoth_server/build/host-python-3.12.10/bin/python3.12 -B build/audit-menu-polish-1192625/review/java_api_compile.py'"
+    ]
+  },
+  "preservation": {
+    "worker_bound_files": 1707,
+    "worker_bound_unchanged": true,
+    "other_tracked_nondocument_counts": {
+      "wesnoth_client": 1989,
+      "wesnoth_server": 376
+    },
+    "both_unrelated_readme_edits_preserved": true,
+    "inventory": "build/audit-menu-polish-1192625/preservation-final.json",
+    "inventory_sha256": "f9e981134036d8fb4e2fc04766ecc585aa5c106e64370c1125d095dc9edb2e70"
+  },
+  "handoff": {
+    "file": "docs/MENU_POLISH_1192625.md",
+    "exact_powershell_blocks_parsed": 2,
+    "checklist": "UI1\u2013UI6",
+    "server_rebuild_required": false,
+    "windows_results_pending": true
+  },
+  "limits": [
+    "GUI2 renders use synthetic profile data and destination counters; native Help topic and Close run for real. These are not authenticated user gameplay acceptance.",
+    "A native hover tooltip remains in some synthetic pointer-driven captures; actual touch-only LDPlayer behavior still needs acceptance.",
+    "Startup Java API compilation and recording-Canvas/progress tests do not constitute an Android screen capture.",
+    "Actual Windows compilation/installation, LDPlayer screens and device input remain pending.",
+    "Administration AD1\u2013AD3, deferred Company/World checks and territorial worker gameplay remain pending; previously accepted tests are retained."
+  ]
+}
