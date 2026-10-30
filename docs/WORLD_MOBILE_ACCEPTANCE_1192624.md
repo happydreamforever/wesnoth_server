@@ -52,9 +52,14 @@ Record current hero/form/level/XP values rather than substituting historical
 examples. Leave enlistment, recruitment, world enrollment and battles for later
 steps.
 
-## Current batch after I: prerequisite order
+## Accepted Company/touch batch: prerequisite order
 
-J2 requires soldiers, so run **K1–K2 → J1–J2 → K3** in this batch:
+**Accepted (2026-10-30):** The user reports K1/K2/J1/J2/K3 PASS. No numeric
+hero baseline or final soldier count was supplied. Retain these passes; do not
+repeat this batch. J3 and K4 remain deferred. Local MongoDB access is the current
+request; L is the next gameplay check afterwards.
+
+The accepted batch used **K1–K2 → J1–J2 → K3**, since J2 requires soldiers:
 
 1. **K1–K2:** Team → Company → Enlist company, only if not already initialized
    and an earned hero is owned. Confirm the six-soldier grant, reopen/refresh and
