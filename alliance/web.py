@@ -219,6 +219,10 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
             abort(400)
         return value
 
+    from .admin_console import register_admin_console, action
+    console = register_admin_console(app, db, domain, admin_required)
+
+
     @app.route("/login", methods=["GET", "POST"])
     def login():
         if request.method == "POST":
@@ -243,20 +247,20 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     @app.get("/")
     @admin_required
     def dashboard():
-        counts = {name: db[name].count_documents({}) for name in ("accounts", "teams", "areas", "game_runs")}
-        runs = list(db.game_runs.find({}, {"_id": 1, "kind": 1, "state": 1, "created_at": 1}).sort("created_at", -1).limit(10))
-        return render_template("dashboard.html", counts=counts, runs=runs)
+        return console.dashboard()
 
     @app.get("/accounts")
     @admin_required
     def accounts():
-        records = [domain.get_account(row['_id']) for row in db.accounts.find({}, {'_id': 1}).sort('username', 1).limit(100)]
-        return render_template("accounts.html", records=records)
+        return console.accounts()
 
     @app.get("/accounts/<account_id>")
     @admin_required
     def account_detail(account_id):
-        return render_template("account.html", account=domain.get_account(account_id))
+        account = domain.get_account(account_id)
+        controls = [action('End account sessions', 'admin_revoke_sessions', {'account_id': account_id},
+            account['revision'], 'Ends current logins without changing the password, account status or earned progress.')]
+        return render_template("account.html", account=account, actions=controls)
 
     @app.route("/accounts/<account_id>/edit", methods=["GET", "POST"])
     @admin_required
@@ -336,8 +340,7 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     @app.get("/teams")
     @admin_required
     def teams():
-        records = list(db.teams.find({}, {"_id": 1, "name": 1, "area_id": 1, "captain_id": 1, "members": 1, "experience": 1, "rating": 1, "active_run_id": 1}).sort("name", 1).limit(100))
-        return render_template("teams.html", records=records, areas=domain.list_areas())
+        return console.teams()
 
     @app.post("/teams/<team_id>/area")
     @admin_required
@@ -379,14 +382,12 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     @app.get("/runs")
     @admin_required
     def runs():
-        return render_template("runs.html", records=domain.list_runs(limit=100))
+        return console.runs()
 
     @app.get("/runs/<run_id>")
     @admin_required
     def run_detail(run_id):
-        run = domain.get_run(run_id)
-        return render_template("run.html", run=run,
-            review=domain._shared_review(run) if run.get("shared_room") else None)
+        return console.run(run_id)
 
     @app.post("/runs/<run_id>/resolve")
     @admin_required
@@ -408,8 +409,7 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     @app.get("/audit")
     @admin_required
     def audit():
-        records = list(db.admin_audit.find({}, {"_id": 1, "actor_id": 1, "action": 1, "target_id": 1, "reason": 1, "created_at": 1}).sort("created_at", -1).limit(100))
-        return render_template("audit.html", records=records)
+        return console.audit()
 
     def world_payload():
         # The bridge also validates this envelope. Keep the service boundary
@@ -599,6 +599,14 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     def casual_hero():
         data = progression_payload('ticket', 'account_id', 'game_id', 'side')
         return jsonify(domain.casual_consume_hero(**data))
+
+    @internal_route('/casual/admin_rooms', player=False)
+    def casual_admin_rooms():
+        from .admin_rooms import AdminRooms
+        # This bound applies only after native-service authentication. A full
+        # bounded inventory can exceed the ordinary 256 KiB request ceiling.
+        request.max_content_length = 4 * 1024 * 1024
+        return jsonify(AdminRooms(domain).publish(request.get_json()))
 
     @internal_route('/casual/capabilities', player=False)
     def casual_capabilities():

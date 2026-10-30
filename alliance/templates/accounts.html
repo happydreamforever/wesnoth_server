@@ -1,5 +1,9 @@
 {% extends "base.html" %}
+{% from 'admin_components.html' import filters as search_filters, pagination as result_pages %}
+{% block title %}Players · Emerald Court{% endblock %}
 {% block content %}
-<p class="eyebrow">Account management</p><h1>Players</h1><p>Showing up to 100 accounts, ordered by username. Passwords and session tokens are never displayed.</p>
-<section class="panel">{% if records %}<div class="table-wrap"><table><thead><tr><th>Username</th><th>Role</th><th>Heroes</th><th>Status</th><th>Actions</th></tr></thead><tbody>{% for account in records %}<tr><td><a href="{{ url_for('account_detail', account_id=account._id) }}">{{ account.username }}</a></td><td>{{ account.role }}</td><td>{{ account.heroes | length }}</td><td><span class="badge">{{ account.status }}</span></td><td><a href="{{ url_for('account_edit', account_id=account._id) }}">Edit</a> · <a href="{{ url_for('account_password', account_id=account._id) }}">Reset password</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="empty">No accounts found.</p>{% endif %}</section>
+<div class="page-heading"><div><p class="eyebrow">Account management</p><h1>Players</h1><p class="intro">Manage account access, earned heroes and recovery. Credentials are never displayed.</p></div><a class="button" href="{{ url_for('admin_create_player') }}">Create player</a></div>
+{{ search_filters(filters, url_for('accounts')) }}
+<section class="panel records-panel">{% if records %}<div class="table-wrap" role="region" aria-label="Player accounts" tabindex="0"><table><thead><tr><th scope="col">Username</th><th scope="col">Role</th><th scope="col">Heroes</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead><tbody>{% for account in records %}<tr><td><a class="table-link" href="{{ url_for('account_detail', account_id=account._id) }}">{{ account.username }}</a></td><td>{{ account.role }}</td><td>{{ account.heroes | length }}</td><td><span class="badge">{{ account.status }}</span></td><td><a href="{{ url_for('account_edit', account_id=account._id) }}">Edit</a> · <a href="{{ url_for('account_password', account_id=account._id) }}">Reset password</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="empty">No accounts match these filters.</p>{% endif %}</section>
+{{ result_pages(pagination) }}
 {% endblock %}

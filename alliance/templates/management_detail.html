@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% from 'admin_components.html' import table, pagination, action_form %}
+{% block title %}{{ page.title }} · Emerald Court{% endblock %}
+{% block content %}
+{% if page.back_url %}<a class="back-link" href="{{ page.back_url }}">← {{ page.back_label | default('Back to list') }}</a>{% endif %}
+<div class="page-heading"><div><p class="eyebrow">{{ page.eyebrow | default('Game record') }}</p><h1>{{ page.title }}</h1>{% if page.subtitle %}<p class="intro">{{ page.subtitle }}</p>{% endif %}</div>{% if page.status %}<span class="badge prominent">{{ page.status }}</span>{% endif %}</div>
+{% if page.notices %}{% for message in page.notices %}<p class="notice">{{ message }}</p>{% endfor %}{% endif %}
+{% if page.summary %}<section class="panel"><h2>{{ page.summary_title | default('Overview') }}</h2><dl class="summary-grid">{% for item in page.summary %}<div><dt>{{ item.label }}</dt><dd>{% if item.url %}<a href="{{ item.url }}">{{ item.value if item.value is not none else '—' }}</a>{% else %}{{ item.value if item.value is not none else '—' }}{% endif %}</dd></div>{% endfor %}</dl></section>{% endif %}
+{% for section in page.sections %}<section class="panel"><div class="section-heading"><h2>{{ section.title }}</h2>{% if section.url %}<a class="button secondary" href="{{ section.url }}">{{ section.link_label | default('View all') }}</a>{% endif %}</div>{% if section.description %}<p class="muted">{{ section.description }}</p>{% endif %}{{ table(section.columns, section.rows, section.empty_message | default('No records yet.')) }}{{ pagination(section.pagination) }}</section>{% endfor %}
+{% if page.actions %}<div class="section-heading"><h2>Manage this record</h2><span class="muted">Changes are recorded in the audit log</span></div><div class="action-grid">{% for action in page.actions %}{{ action_form(action, loop.index) }}{% endfor %}</div>{% endif %}
+{% endblock %}

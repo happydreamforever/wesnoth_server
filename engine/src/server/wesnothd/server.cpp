@@ -29,6 +29,7 @@
 #include "serialization/preprocessor.hpp"
 #include "serialization/string_utils.hpp"
 #include "serialization/unicode.hpp"
+#include "serialization/unicode_cast.hpp"
 #include "utils/charconv.hpp"
 #include "utils/iterable_pair.hpp"
 #include "game_version.hpp"
@@ -675,6 +676,19 @@ utils::optional<server_base::login_ban_info> server::is_ip_banned(const std::str
 	return {};
 }
 
+namespace {
+// Native scenario labels can be longer than the bounded administration view.
+// Keep every Room in the inventory and normalize only its displayed labels;
+// never omit a Room or change its identity, rules or player ownership.
+std::string admin_room_label(const std::string& value, std::size_t limit)
+{
+    auto text=unicode_cast<std::u32string>(value);
+    if(text.size()>limit) text.resize(limit);
+    for(auto& character:text) if(character<32 || character==127) character=U' ';
+    return unicode_cast<std::string>(text);
+}
+}
+
 void server::start_network_lease_updates()
 {
     network_lease_timer_.expires_after(10s);
@@ -688,6 +702,43 @@ void server::start_network_lease_updates()
                 std::vector<int> expired;
                 for(const auto& game_ptr:games()) if(alliance_->get(game_ptr->id()).network_reserved) expired.push_back(game_ptr->id());
                 for(int id:expired) delete_game(id,"The network battle reservation was lost. Preserve your local save.");
+            }
+            try {
+                boost::json::array inventory;
+                for(const auto& game_ptr:games()) {
+                    auto& g=*game_ptr;
+                    const auto& room=alliance_->get(g.id());
+                    if(!room.individual || !g.level_init() || !g.description()) continue;
+                    individual_publish(g);
+                    const auto& desc=*g.description();
+                    boost::json::array seats;
+                    for(const auto* side:desc.children("room_side")) {
+                        const auto username=(*side)["player_id"].to_string();
+                        const auto account=alliance_accounts_.find(username);
+                        seats.push_back(boost::json::object{{"side",(*side)["side"].to_int()},
+                            {"account_id",account==alliance_accounts_.end()?"":account->second},
+                            {"username",admin_room_label(username,64)},{"ready",(*side)["ready"].to_bool()},
+                            {"unit_type",admin_room_label((*side)["unit_type"].to_string(),128)}});
+                    }
+                    auto name=admin_room_label(g.name(),256);
+                    if(name.empty()) name="Room";
+                    inventory.push_back(boost::json::object{{"id",room.id},{"native_id",g.id()},
+                        {"revision",room.revision},{"name",name},
+                        {"map_id",admin_room_label(desc["mp_scenario"].to_string(),128)},
+                        {"map_name",admin_room_label(desc["mp_scenario_name"].to_string(),256)},
+                        {"status",desc["room_status"].to_string()},
+                        {"capacity",desc["room_capacity"].to_int()},{"members",desc["room_members"].to_int()},
+                        {"ready",desc["room_ready"].to_int()},{"gold",desc["room_gold"].to_int()},
+                        {"base_income",desc["room_base_income"].to_int()},{"turns",desc["room_turns"].to_int()},
+                        {"fog",desc["mp_fog"].to_bool()},{"shroud",desc["mp_shroud"].to_bool()},
+                        {"observers",desc["observer"].to_bool()},{"seats",seats}});
+                }
+                for(int id:alliance_->admin_rooms(inventory))
+                    delete_game(id,"An administrator closed this Room. Your permanent progression is unchanged.");
+            } catch(const std::exception&) {
+                // Admin inventory must never bypass or alter the separate
+                // battle leases. A failed report expires visibly in the UI.
+                WRN_SERVER << "Native Room administration is temporarily unavailable.";
             }
         }
         start_network_lease_updates();

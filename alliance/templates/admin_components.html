@@ -1,0 +1,46 @@
+{% macro icon(name) -%}
+<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+{% if name in ['users', 'accounts', 'players'] %}<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87M16 3a4 4 0 0 1 0 8"/><circle cx="9" cy="7" r="4"/>
+{% elif name in ['swords', 'rooms', 'battles', 'plans'] %}<path d="m4 3 4 1 11 12-3 3L4 8 3 4Zm11 0 5 1-1 4-5 5m-5 2-5 5m-2-3 5 5m10-7 5 5m-5 2 5-5"/>
+{% elif name in ['flag', 'teams'] %}<path d="M5 21V3m0 1c5-4 9 4 15 0v11c-6 4-10-4-15 0"/>
+{% elif name in ['map', 'areas'] %}<path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2Zm6-2v16m6-14v16"/>
+{% elif name in ['castle', 'world'] %}<path d="M3 21V8h4V4h3v4h4V4h3v4h4v13ZM3 13h18m-11 8v-5h4v5"/>
+{% elif name in ['hero', 'company', 'companies'] %}<path d="M5 20v-9a7 7 0 0 1 14 0v9l-7-3Zm7-16v13m-7-5 5 2m9-2-5 2M9 3l3-2 3 2"/>
+{% elif name in ['history', 'audit'] %}<path d="M3 12a9 9 0 1 0 3-7M3 3v5h5m4-2v6l4 2"/>
+{% elif name in ['book', 'campaigns'] %}<path d="M12 5C8 2 5 2 2 3v16c4-1 7-1 10 2 3-3 6-3 10-2V3c-3-1-6-1-10 2Zm0 0v16"/>
+{% elif name in ['settings', 'operations'] %}<path d="m9 3 1-2h4l1 2 3 2 2 1 2 4-2 2v2l1 2-2 4-3 1-1 2h-4l-1-2-3-1-2-4 1-2v-2l-2-2 2-4 2-1Z"/><circle cx="12" cy="12" r="3"/>
+{% elif name == 'exit' %}<path d="M9 3H3v18h6m6-14 5 5-5 5m5-5H8"/>
+{% elif name == 'check' %}<path d="m5 12 4 4L19 6"/>
+{% elif name == 'search' %}<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>
+{% elif name == 'arrow' %}<path d="M4 12h16m-6-6 6 6-6 6"/>
+{% elif name == 'shield' %}<path d="m12 2 9 4v6c0 5-5 8-9 10-4-2-9-5-9-10V6Zm0 4v12m-5-9h10"/>
+{% else %}<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>{% endif %}
+</svg>
+{%- endmacro %}
+
+{% macro table(columns, rows, empty_message='No records match these filters.') -%}
+{% if rows %}<div class="table-wrap" role="region" aria-label="Records" tabindex="0"><table><thead><tr>{% for column in columns %}<th scope="col">{{ column.label }}</th>{% endfor %}</tr></thead><tbody>
+{% for row in rows %}<tr>{% for column in columns %}{% set value = row['values'][column.key] if 'values' in row else row[column.key] %}<td data-label="{{ column.label }}">{% if loop.first and row.detail_url %}<a class="table-link" href="{{ row.detail_url }}">{{ value if value is not none else '—' }}{{ icon('arrow') }}</a>{% elif column.key in ['state', 'status', 'result', 'availability'] %}<span class="badge">{{ value if value is not none else '—' }}</span>{% else %}{{ value if value is not none else '—' }}{% endif %}</td>{% endfor %}</tr>{% endfor %}
+</tbody></table></div>{% else %}<div class="empty-state">{{ icon('search') }}<p>{{ empty_message }}</p></div>{% endif %}
+{%- endmacro %}
+
+{% macro filters(items, reset_url, action='') -%}
+{% if items %}<form class="filters" method="get" action="{{ action }}" role="search">{% for item in items %}<div class="filter-field"><label for="filter-{{ item.name }}">{{ item.label }}</label>{% if item.options is defined %}<select id="filter-{{ item.name }}" name="{{ item.name }}">{% for option in item.options %}<option value="{{ option.value }}"{% if option.value == item.value %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select>{% else %}<input id="filter-{{ item.name }}" name="{{ item.name }}" type="search" value="{{ item.value | default('') }}" maxlength="{{ item.maxlength | default(100) }}" placeholder="{{ item.placeholder | default('') }}">{% endif %}</div>{% endfor %}<div class="filter-actions"><button type="submit">{{ icon('search') }}Apply filters</button>{% if reset_url %}<a class="button secondary" href="{{ reset_url }}">Clear</a>{% endif %}</div></form>{% endif %}
+{%- endmacro %}
+
+{% macro pagination(value) -%}
+{% if value %}<nav class="pagination" aria-label="Results pages">{% if value.previous_url %}<a class="button secondary" href="{{ value.previous_url }}" rel="prev">Previous</a>{% endif %}<span>{{ value.label | default('') }}</span>{% if value.next_url %}<a class="button secondary" href="{{ value.next_url }}" rel="next">Next</a>{% endif %}</nav>{% endif %}
+{%- endmacro %}
+
+{% macro action_form(action, index) -%}
+<section class="panel action-panel{% if action.danger %} action-danger{% endif %}"><h2>{{ action.title }}</h2>{% if action.description %}<p class="muted">{{ action.description }}</p>{% endif %}
+<form method="post" action="{{ action.url }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% for field in action.fields %}{% set input_id = 'action-' ~ index ~ '-' ~ loop.index %}
+{% if field.type == 'hidden' %}<input type="hidden" name="{{ field.name }}" value="{{ field.value }}">
+{% elif field.type == 'checkbox' %}<label class="check-field" for="{{ input_id }}"><input id="{{ input_id }}" type="checkbox" name="{{ field.name }}" value="{{ field.value | default('confirmed') }}"{% if field.required %} required{% endif %}><span>{{ field.label }}</span></label>
+{% else %}<label for="{{ input_id }}">{{ field.label }}</label>
+{% if field.type == 'textarea' %}<textarea id="{{ input_id }}" name="{{ field.name }}" maxlength="{{ field.maxlength | default(500) }}"{% if field.minlength is defined %} minlength="{{ field.minlength }}"{% endif %}{% if field.required %} required{% endif %}>{{ field.value | default('') }}</textarea>
+{% elif field.type == 'select' %}<select id="{{ input_id }}" name="{{ field.name }}"{% if field.required %} required{% endif %}>{% for option in field.options %}<option value="{{ option.value }}"{% if option.value == field.value %} selected{% endif %}>{{ option.label }}</option>{% endfor %}</select>
+{% else %}<input id="{{ input_id }}" name="{{ field.name }}" type="{{ field.type | default('text') }}" value="{{ field.value | default('') }}"{% if field.required %} required{% endif %}{% if field.min is defined %} min="{{ field.min }}"{% endif %}{% if field.max is defined %} max="{{ field.max }}"{% endif %} maxlength="{{ field.maxlength | default(500) }}">{% endif %}{% endif %}
+{% endfor %}<button type="submit"{% if action.danger %} class="danger"{% endif %}>{{ action.button }}</button></form></section>
+{%- endmacro %}

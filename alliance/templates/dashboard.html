@@ -1,8 +1,14 @@
 {% extends "base.html" %}
+{% from 'admin_components.html' import icon %}
+{% block title %}Overview · Emerald Court{% endblock %}
 {% block content %}
-<p class="eyebrow">Server overview</p><h1>Your Alliance world</h1>
-<p class="intro">Review players, organize areas and resolve interrupted game runs.</p>
-<div class="metrics">{% for key,label in [('accounts','Accounts'),('teams','Teams'),('areas','Areas'),('game_runs','Game runs')] %}<article class="metric"><span>{{ label }}</span><strong>{{ counts[key] }}</strong></article>{% endfor %}</div>
-<section class="panel"><h2>Integration status</h2><p>This release provides persistent accounts, game rules and administration. The installed Android game and native guest server do not yet call this service. Playing the existing guest game does not award account or team experience.</p></section>
-<section class="panel"><h2>Recent game runs</h2>{% if runs %}<div class="table-wrap"><table><thead><tr><th>Run</th><th>Type</th><th>Status</th><th>Created</th></tr></thead><tbody>{% for run in runs %}<tr><td><a href="{{ url_for('run_detail', run_id=run._id) }}">{{ run._id }}</a></td><td>{{ run.kind }}</td><td><span class="badge">{{ run.state }}</span></td><td>{{ run.created_at }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="empty">No game runs have been recorded.</p>{% endif %}</section>
+<div class="page-heading"><div><p class="eyebrow">Command centre</p><h1>Your world at a glance</h1><p class="intro">Manage players, oversee battles and keep your shared world moving.</p></div><span class="badge prominent">Local server</span></div>
+<div class="metrics">
+{% if metrics is defined %}{% for metric in metrics %}<a class="metric" href="{{ metric.url | default(url_for('dashboard'), true) }}"><span>{{ metric.label }}</span><strong>{{ metric.value }}</strong>{% if metric.note %}<small>{{ metric.note }}</small>{% endif %}</a>{% endfor %}
+{% else %}{% for key,label in [('accounts','Accounts'),('teams','Teams'),('areas','Areas'),('game_runs','Game runs')] %}<article class="metric"><span>{{ label }}</span><strong>{{ counts[key] }}</strong></article>{% endfor %}{% endif %}
+</div>
+{% if admin_nav is defined %}<div class="section-heading"><h2>Manage the game</h2><span class="muted">Choose a workspace</span></div><div class="feature-grid">{% for item in admin_nav if not item.active %}<a class="feature-link" href="{{ item.url }}">{{ icon(item.icon | default('grid')) }}<span><strong>{{ item.label }}</strong>{% if item.description %}<small>{{ item.description }}</small>{% endif %}</span></a>{% endfor %}</div>{% endif %}
+<section class="panel"><div class="section-heading"><h2>Recent game runs</h2><a class="button secondary" href="{{ url_for('runs') }}">View all runs</a></div>
+{% set activity = recent_runs if recent_runs is defined else runs %}
+{% if activity %}<div class="table-wrap" role="region" aria-label="Recent game runs" tabindex="0"><table><thead><tr><th scope="col">Game</th><th scope="col">Type</th><th scope="col">Status</th><th scope="col">Created</th></tr></thead><tbody>{% for run in activity %}<tr><td><a class="table-link" href="{{ run.detail_url if run.detail_url else url_for('run_detail', run_id=run._id) }}">{{ run.title if run.title else run.kind | replace('_', ' ') | title }}{{ icon('arrow') }}</a></td><td>{{ run.kind | replace('_', ' ') | title }}</td><td><span class="badge">{{ run.state }}</span></td><td>{{ run.created_at }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty-state">{{ icon('swords') }}<p>No game runs have been recorded yet.</p></div>{% endif %}</section>
 {% endblock %}

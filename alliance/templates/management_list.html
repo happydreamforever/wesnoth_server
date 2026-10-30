@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% from 'admin_components.html' import table, filters, pagination %}
+{% block title %}{{ page.title }} · Emerald Court{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">Game management</p><h1>{{ page.title }}</h1>{% if page.subtitle %}<p class="intro">{{ page.subtitle }}</p>{% endif %}</div>{% if page.primary_actions %}<div class="button-row">{% for action in page.primary_actions %}<a class="button" href="{{ action.url }}">{{ action.label }}</a>{% endfor %}</div>{% endif %}</div>
+{{ filters(page.filters, page.reset_url | default(request.path, true), page.action_url | default('')) }}
+<section class="panel records-panel">{{ table(page.columns, page.rows, page.empty_message | default('No records match these filters.')) }}</section>
+{{ pagination(page.pagination) }}
+{% endblock %}

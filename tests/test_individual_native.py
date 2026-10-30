@@ -54,19 +54,19 @@ class Individual(base.Native):
         rooms = descendants(value, 'game')
         return next((row for row in rooms if row.attrs.get('id') == str(native_id)), None)
 
-    def create_room(self, count=2, gold=100, turns=20):
+    def create_room(self, count=2, gold=100, turns=20, name='Global test room', map_name='Global fixture map'):
         api, token, actor = self.account()
         peer, _ = self.lobby(token, api, actor)
-        peer.send(base.wml('create_game', {'name': 'Global test room', 'individual_room': 'yes'}))
+        peer.send(base.wml('create_game', {'name': name, 'individual_room': 'yes'}))
         initial = parse(peer.until('alliance_game')).one('alliance_game')
         game = initial.attrs['id']
         level = Node()
         level.attrs['version'] = '1.19.26'
-        level.children.append(node('multiplayer', mp_scenario='individual_test', mp_scenario_name='Global fixture map',
+        level.children.append(node('multiplayer', mp_scenario='individual_test', mp_scenario_name=map_name,
             mp_era='era_default', shuffle_sides='no', observer='no', mp_fog='yes', mp_shroud='no',
             mp_countdown='no', mp_countdown_init_time=300, mp_countdown_reservoir_time=300,
             mp_countdown_turn_bonus=30, mp_countdown_action_bonus=0))
-        scenario = node('scenario', id='individual_test', individual_room='yes', name='Global fixture map',
+        scenario = node('scenario', id='individual_test', individual_room='yes', name=map_name,
             map_data='1 Gg,Gg,2 Gg\nGg,Gg,Gg\nGg,Gg,Gg', turns=turns)
         for index in range(1, count + 1):
             side = node('side', side=index, controller='human', player_id=actor['username'] if index == 1 else '',

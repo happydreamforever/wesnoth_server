@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}Create player · Emerald Court{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('accounts') }}">← Players</a>
+<p class="eyebrow">Account management</p><h1>Create player</h1><p class="intro">Create a player account with an empty hero collection. Story-campaign rewards are earned through gameplay.</p>
+<section class="panel"><h2>Player details</h2>{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form class="compact-form" method="post" action="{{ url_for('admin_create_player') }}" autocomplete="off">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<label for="username">Username</label><input id="username" name="username" type="text" value="{{ values.username }}" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" autocomplete="off" required aria-describedby="username-help"><p id="username-help" class="muted">3–24 ASCII letters, digits or underscores.</p>
+<label for="password">Password</label><input id="password" name="password" type="password" autocomplete="new-password" spellcheck="false" required aria-describedby="password-help"><p id="password-help" class="muted">12–128 characters. Spaces and letter case are preserved exactly.</p>
+<label for="password_confirmation">Repeat password</label><input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" spellcheck="false" required>
+<label for="reason">Reason for the audit log</label><textarea id="reason" name="reason" minlength="3" maxlength="500" required aria-describedby="reason-help">{{ values.reason }}</textarea><p id="reason-help" class="muted">Describe why this account is being created. Do not include passwords or other credentials.</p>
+<button type="submit">Create player account</button></form></section>
+{% endblock %}

@@ -66,6 +66,21 @@ std::vector<int> adapter::heartbeat(){
  require(seen.size()==requested.size());return expired;
 }
 
+std::vector<int> adapter::admin_rooms(const json::array& inventory){
+ require(inventory.size()<=256);
+ std::map<std::string,int> known;
+ for(const auto& value:inventory){const auto& item=value.as_object();known.emplace(str(item,"id"),static_cast<int>(number(item,"native_id")));}
+ const auto response=call("admin_rooms",{{"generation",network_generation_},{"register",!admin_registered_},{"rooms",inventory}});
+ wire::keys(response,{"generation","close"});require(str(response,"generation")==network_generation_);
+ std::set<std::string> seen;std::vector<int> closed;
+ for(const auto& value:wire::array(response,"close",256)){
+  require(value.is_string());const std::string id(value.as_string());
+  require(known.count(id)&&seen.insert(id).second);
+  closed.push_back(known.at(id));
+ }
+ admin_registered_=true;return closed;
+}
+
 void adapter::restore(int game,simple_wml::node&level){
  auto& state=get(game);auto* scenario=level.child("snapshot");if(!scenario)scenario=level.child("scenario");require(scenario);
  auto saved=level["alliance_casual_game_id"].to_string();if(saved.empty())saved=(*scenario)["alliance_casual_game_id"].to_string();

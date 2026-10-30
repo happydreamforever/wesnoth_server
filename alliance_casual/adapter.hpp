@@ -27,6 +27,7 @@ public:
  void ready(int game,int side,const std::string& account,bool value);
  void prepare(int game);
  std::vector<int> heartbeat();
+ std::vector<int> admin_rooms(const boost::json::array& inventory);
  void freeze(int game);
  void validate_leader(const simple_wml::node& side,const seat& selected,bool restored) const;
  void context(int game,simple_wml::document& output) const;
@@ -35,6 +36,7 @@ public:
 private:
  boost::json::object call(const std::string& op,const boost::json::object& body);
  std::string network_generation_;
+ bool admin_registered_=false;
  std::string secret_; unsigned short port_=18765;
  boost::json::object catalog_;
  std::map<int,room> rooms_;
