@@ -1,0 +1,161 @@
+{
+  "format": 1,
+  "purpose": "native-individual-room-admin-verification",
+  "release": 1192624,
+  "schema_version": 4,
+  "network_protocol_changed": false,
+  "verified_at_utc": "2026-10-30T16:31:53.574875+00:00",
+  "scope": "Real disposable MongoDB, HTTP service authorization and native TLS lobby/start/close execution; no production runtime access.",
+  "environment": {
+    "python": "3.12.10",
+    "mongodb": "8.0.32 replica set, disposable",
+    "docker_network": "none",
+    "uid": 1001,
+    "gid": 1001,
+    "native_build_image": {
+      "name": "wesnoth-alliance-native-verify:python3.14.3-gcc16.2",
+      "id": "sha256:8fe629201b28e971844de3359bfc5797aef1bc0eb24626b77c7a8d6c416c1e31",
+      "compiler": "GCC 16.2"
+    },
+    "test_image": {
+      "name": "wesnoth-account-integration-verify:20261020",
+      "id": "sha256:525eaaba0da8694078a7fd5929c84410a62a0fc9d403205623310500c6e5c406"
+    },
+    "python_override": "build/host-python-3.12.10/bin/python3.12"
+  },
+  "native_build": {
+    "fresh_steps": 45,
+    "label_hardening_incremental_steps": 2,
+    "result": "PASS",
+    "binary": {
+      "path": "build/audit-admin-console-20261030/native-build/bin/wesnothd",
+      "bytes": 5604328,
+      "sha256": "2cc64bfca7f75ea281352154d3573a041ed6918f0d51a92d2f9c76746ca00e1a"
+    }
+  },
+  "verification": {
+    "unique_tests": 24,
+    "skips": 0,
+    "result": "PASS",
+    "groups": [
+      {
+        "suite": "test_admin_rooms.py",
+        "tests": 9,
+        "scope": "Real MongoDB transaction/expiry/generation/revision/acknowledgement/idempotency and HTTP auth/CSRF/payload bounds."
+      },
+      {
+        "suite": "test_admin_rooms_native.py",
+        "tests": 1,
+        "scope": "Actual TLS native waiting and running room closure, normal reservation release, other room preservation, no rewards, bounded Unicode labels, and rules changed between close consent and next timer publication."
+      },
+      {
+        "suite": "test_individual_native.py",
+        "tests": 14,
+        "scope": "Existing actual native individual Room admissions, readiness, rules, leases, ownership and start regression."
+      }
+    ],
+    "final_execution": "The combined 24-test run passed after the final production label change; the expanded native test then passed again after adding only stale-close test assertions."
+  },
+  "security_and_state": {
+    "registry": "schema_metadata/admin-native-rooms-v1",
+    "max_rooms": 256,
+    "max_room_seats": 8,
+    "lease_seconds": 35,
+    "close_history_max": 100,
+    "request_bytes_max": 4194304,
+    "native_response_bytes_max": 262144,
+    "private_credentials_in_inventory": false,
+    "closure": "Administrator intent is pending until native inventory confirms removal through normal delete_game. Changed rules/lineup invalidate pending intent; old generation and stale forms cannot close another room."
+  },
+  "source_files": [
+    {
+      "path": "alliance/admin_rooms.py",
+      "bytes": 10736,
+      "sha256": "8a4d6e4f665fcc4d1012f5d66105478e5019ea46d6b2f37d042f1576d61ca549"
+    },
+    {
+      "path": "alliance_casual/adapter.cpp",
+      "bytes": 14866,
+      "sha256": "691dbf3c8a2062241d8bba426305b8954bfaa943dd9213c206df4bc90e12a8e2"
+    },
+    {
+      "path": "alliance_casual/adapter.hpp",
+      "bytes": 1662,
+      "sha256": "951992982397c49aa0a88b0e441820a2d2953d49935b055a3bb347b56ea31953"
+    },
+    {
+      "path": "engine/src/server/wesnothd/server.cpp",
+      "bytes": 140942,
+      "sha256": "63fe6ebde4c5f990667db554fcac27e2701e9ba6f4b18e2bb8f7d8399051e435"
+    },
+    {
+      "path": "tests/test_admin_rooms.py",
+      "bytes": 9544,
+      "sha256": "d4d886d6087556c72352dec1ba629fa37cb662b7ace6628f54fdce8f825fd449"
+    },
+    {
+      "path": "tests/test_admin_rooms_native.py",
+      "bytes": 5118,
+      "sha256": "63fa145aca9afc1d5984780adc1582f1993201d2d30f69e45963c7466299d22d"
+    },
+    {
+      "path": "tests/test_individual_native.py",
+      "bytes": 24061,
+      "sha256": "ff111cbd8bebe9fdab5df325abf2d5bee902384b31c1de613b35b80d9098b198"
+    }
+  ],
+  "logs": [
+    {
+      "path": "build/audit-admin-console-20261030/native-build.log",
+      "bytes": 4025,
+      "sha256": "fd388fa1199af0ed89388c061f34a13672690f62da30e09e7d7603b930c22a7b"
+    },
+    {
+      "path": "build/audit-admin-console-20261030/native-label-build.log",
+      "bytes": 132,
+      "sha256": "93c09b60559ac667cf0090343eee07cba2ef45c189486e7a14c0408912233045"
+    },
+    {
+      "path": "build/audit-admin-console-20261030/room-label-final-regressions.log",
+      "bytes": 4265,
+      "sha256": "62d78e29c40584e7cee707aaae6c986ad8ad740e4395345b6fcb2bfc3ab6c3ae"
+    },
+    {
+      "path": "build/audit-admin-console-20261030/room-native-stale-close.log",
+      "bytes": 298,
+      "sha256": "d879a6311b2541d608b49499ca6f0d813160c1fa763fa34b66efe745bf1cb948"
+    }
+  ],
+  "retained_initial_harness_failures": [
+    {
+      "path": "build/audit-admin-console-20261030/room-native-tests.log",
+      "cause": "Native compiler image lacked mongod; no native gameplay assertion completed."
+    },
+    {
+      "path": "build/audit-admin-console-20261030/room-native-tests-final.log",
+      "cause": "Default legacy bridge fixture did not speak current protocol; explicit existing 1192624 bridge used for final runs."
+    }
+  ],
+  "preservation": {
+    "production_runtime_opened": false,
+    "private_configuration_opened": false,
+    "database_migration_needed": false,
+    "android_rebuild_needed": false,
+    "world_worker_rebuild_needed": false
+  },
+  "windows_delivery": {
+    "helper": "tools/Build-WindowsMultiplayer.ps1",
+    "arguments": [
+      "-MsysRoot",
+      "D:\\Test\\wesnoth-setup\\msys64",
+      "-PreservePreviousBuild"
+    ],
+    "restart": "Fresh admin backend and rebuilt native multiplayer process are required."
+  },
+  "limits": [
+    "No Windows native rebuild or Windows admin acceptance was executed on the VPS.",
+    "Native peers are separately authenticated protocol clients, not multiple rendered human clients.",
+    "This verifies the lobby and start/closure lifecycle, not native combat, AI or reward-bearing territorial settlement.",
+    "Browser rendering of the broader admin console is recorded separately."
+  ]
+}

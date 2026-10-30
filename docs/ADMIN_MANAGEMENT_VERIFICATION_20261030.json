@@ -1,0 +1,333 @@
+{
+  "format": 1,
+  "purpose": "emerald-court-game-administration",
+  "verified_at_utc": "2026-10-30T16:40:58.143997+00:00",
+  "release": 1192624,
+  "protocol": 4,
+  "schema": 4,
+  "implementation_commits": [
+    "a7f8267",
+    "147118122340ca169eca44004e081eb5bd86fa19"
+  ],
+  "environment": {
+    "python": "3.12.10",
+    "mongodb": "8.0.32 disposable replica sets",
+    "network": "Docker network none during compilation and execution",
+    "browser": "Chromium via local Playwright against exported actual Flask responses"
+  },
+  "verification": {
+    "unique_tests": 232,
+    "skips": 0,
+    "result": "PASS",
+    "note": "Repeated tests across HTTP, affected-regression and native suites are counted once. Native stale-close case was expanded and rerun.",
+    "groups": [
+      {
+        "path": "build/audit-admin-management-20261030/domain-tests-final-26.log",
+        "bytes": 4388,
+        "sha256": "89aedfc308ae0a4f71820aa9c414e603433ec366ba60d0fc5c4fa39656d85c94",
+        "groups": [
+          26
+        ],
+        "result": "PASS",
+        "skips": 0
+      },
+      {
+        "path": "build/audit-admin-management-20261030/http-final.log",
+        "bytes": 13664,
+        "sha256": "eee8cbf26d983dfe464b18fb366525c3135ee22535bbbb26caf9c098ba8d5ca0",
+        "groups": [
+          10,
+          9,
+          23,
+          37,
+          3
+        ],
+        "result": "PASS",
+        "skips": 0
+      },
+      {
+        "path": "build/audit-admin-management-20261030/affected-regressions.log",
+        "bytes": 17979,
+        "sha256": "73b98d6fd4b181e8bb195f2a89b2ce5ad42529857cb5d015ebd8ab077f5add55",
+        "groups": [
+          10,
+          7,
+          21,
+          19,
+          11,
+          44
+        ],
+        "result": "PASS",
+        "skips": 0
+      },
+      {
+        "path": "build/audit-admin-management-20261030/console-record-slots-final.log",
+        "bytes": 1479,
+        "sha256": "20f4314b7d5a7ccf5e35b8316ac1760fde1b15f675110ef1467633b5fb8032fa",
+        "groups": [
+          7
+        ],
+        "result": "PASS",
+        "skips": 0
+      },
+      {
+        "path": "build/audit-admin-console-20261030/room-label-final-regressions.log",
+        "bytes": 4265,
+        "sha256": "62d78e29c40584e7cee707aaae6c986ad8ad740e4395345b6fcb2bfc3ab6c3ae",
+        "groups": [
+          9,
+          1,
+          14
+        ],
+        "result": "PASS",
+        "skips": 0
+      },
+      {
+        "path": "build/audit-admin-console-20261030/room-native-stale-close.log",
+        "bytes": 298,
+        "sha256": "d879a6311b2541d608b49499ca6f0d813160c1fa763fa34b66efe745bf1cb948",
+        "groups": [
+          1
+        ],
+        "result": "PASS",
+        "skips": 0
+      }
+    ],
+    "rendered_layout_reports": [
+      {
+        "path": "build/audit-admin-ui-20261030/layout-report.json",
+        "bytes": 26986,
+        "sha256": "904eb9fe95bc0f5658f09041de342e9b9d4ceb718d77920d09998ce9b45c80ab",
+        "layouts": 18,
+        "scope": "Actual Chromium rendering of synthetic public display fixtures; no database, credentials or production actions."
+      },
+      {
+        "path": "build/audit-admin-ui-20261030/actual/report.json",
+        "bytes": 398494,
+        "sha256": "b72a555b50f69161ffcff3394e23a05fc9750fc05bf985d8a6a17b70dee905ec",
+        "layouts": 99,
+        "scope": "Chromium rendering of real Flask responses from disposable MongoDB HTTP integration tests, with actual CSS/CSP. No private runtime, production records or browser POST actions."
+      },
+      {
+        "path": "build/audit-admin-ui-20261030/actual-final/report.json",
+        "bytes": 68106,
+        "sha256": "f323c7b186033c2220c11110c78e48a0275283eb2a3445e23cc70be265a2fdde",
+        "layouts": 16,
+        "scope": "Chromium rendering of real Flask responses from disposable MongoDB HTTP integration tests, with actual CSS/CSP. No private runtime, production records or browser POST actions."
+      },
+      {
+        "path": "build/audit-admin-ui-20261030/plan-final/report.json",
+        "bytes": 8588,
+        "sha256": "4b9c932cec3cd33b61625cf71532e8afbdffa6530ba8f997307f6ec3d0c66fd2",
+        "layouts": 2,
+        "scope": "Chromium rendering of real Flask responses from disposable MongoDB HTTP integration tests, with actual CSS/CSP. No private runtime, production records or browser POST actions."
+      }
+    ],
+    "powershell": {
+      "path": "build/audit-admin-management-20261030/handoff-parse.log",
+      "bytes": 659,
+      "sha256": "01476d3450417df8576cbc86004d680123f23ac0d3e4f3ef1d14e2edb10a5023"
+    },
+    "native_details": "docs/ADMIN_NATIVE_ROOMS_VERIFICATION_1192624.json"
+  },
+  "coverage": [
+    "Local active-admin, CSRF, exact forms, escaping, bounded search/pagination and explicit secret-free projections",
+    "Player creation, access changes, password reset and session revocation retain progress",
+    "Team governance and Area changes honor active deployments and stale versions",
+    "Scoped cancellation retains history and releases only the selected battle",
+    "Company ordinary Rest and pending/immediate standing-defense withdrawal honor existing recovery and control",
+    "Waiting/running native Room closure, live inventory, generation/revision fencing, rule-change race, reservation cleanup, unrelated Room preservation and no persistent awards",
+    "Existing concurrent Company/World/campaign rewards, strategic rules and membership regressions",
+    "Desktop/mobile populated forms, empty states, long text, navigation, labels, touch controls and CSRF fields"
+  ],
+  "source_files": [
+    {
+      "path": "alliance/admin_management.py",
+      "bytes": 15941,
+      "sha256": "1d705bd3fc70d4494ed3dc353018babbf755d63d8e50287931ffd3b53e5a3353"
+    },
+    {
+      "path": "alliance/domain.py",
+      "bytes": 108191,
+      "sha256": "158b8db1ed566fa733b35fd726a46023af8e31871b2667703fb2fba68e61b8de"
+    },
+    {
+      "path": "alliance/admin_rooms.py",
+      "bytes": 10736,
+      "sha256": "8a4d6e4f665fcc4d1012f5d66105478e5019ea46d6b2f37d042f1576d61ca549"
+    },
+    {
+      "path": "alliance/admin_console.py",
+      "bytes": 45216,
+      "sha256": "9bc261d07d6c67f56bc9842a92faa3297ef9819f148b4830f82ce7c6f3bc66a6"
+    },
+    {
+      "path": "alliance/web.py",
+      "bytes": 44332,
+      "sha256": "28ff8e214bdd65270bfda6655a4ec623d59f9812e023175b73f3ca670c74fc9e"
+    },
+    {
+      "path": "alliance/static/admin.css",
+      "bytes": 14893,
+      "sha256": "2e0fe7067ca3d725fb815c047b80ff1fac98432e05724b88401720ed424b783f"
+    },
+    {
+      "path": "alliance/templates/account.html",
+      "bytes": 2512,
+      "sha256": "56d5f24815a193c1c66e67ddba567b5da66629e0c136c38749a41476d5c63a55"
+    },
+    {
+      "path": "alliance/templates/accounts.html",
+      "bytes": 1454,
+      "sha256": "a5cb2387c83d7e5fce12253651df86d8b078af95b9b8c44db14cb5923614ef82"
+    },
+    {
+      "path": "alliance/templates/base.html",
+      "bytes": 2536,
+      "sha256": "abfb7a8a7aa4f1cbe40d68cc0b5ce9cc7f30080c2d615cc63f24eebb17052fba"
+    },
+    {
+      "path": "alliance/templates/dashboard.html",
+      "bytes": 2407,
+      "sha256": "775f1a5ea9df3509281889165ae2ab860bd4cc617343c8dd0ef444eaf626ebe8"
+    },
+    {
+      "path": "alliance/templates/world.html",
+      "bytes": 5836,
+      "sha256": "a35aa59ee759d36f1e634c282ca506faa0fdc9a0643cff83e984e817359cf8ce"
+    },
+    {
+      "path": "alliance/templates/account_create.html",
+      "bytes": 1864,
+      "sha256": "dc989388710ab8a4dd61e213df8507f3dd6341327cebbc621f6ab75475ada823"
+    },
+    {
+      "path": "alliance/templates/admin_components.html",
+      "bytes": 6317,
+      "sha256": "7f14dd4f2fecb3521690b43031754410fa3b12bd59532160f8ddde1249f82140"
+    },
+    {
+      "path": "alliance/templates/management_detail.html",
+      "bytes": 1916,
+      "sha256": "e2d70a0458de02fd649d54bdc2385659511a02dc13d6bb1fbf91f23136583fd2"
+    },
+    {
+      "path": "alliance/templates/management_list.html",
+      "bytes": 849,
+      "sha256": "c01ffbebe26cdb72f4565551dd3bacad8cd56af33579c662aa1053023d6cb603"
+    },
+    {
+      "path": "alliance_casual/adapter.cpp",
+      "bytes": 14866,
+      "sha256": "691dbf3c8a2062241d8bba426305b8954bfaa943dd9213c206df4bc90e12a8e2"
+    },
+    {
+      "path": "alliance_casual/adapter.hpp",
+      "bytes": 1662,
+      "sha256": "951992982397c49aa0a88b0e441820a2d2953d49935b055a3bb347b56ea31953"
+    },
+    {
+      "path": "engine/src/server/wesnothd/server.cpp",
+      "bytes": 140942,
+      "sha256": "63fe6ebde4c5f990667db554fcac27e2701e9ba6f4b18e2bb8f7d8399051e435"
+    },
+    {
+      "path": "tests/test_admin_management.py",
+      "bytes": 23211,
+      "sha256": "cf8c3da4372216c91552fc395394baa6ea6e6541af0ed9aa793df05e1ab58d5a"
+    },
+    {
+      "path": "tests/test_admin_console.py",
+      "bytes": 13889,
+      "sha256": "bc5efaad08769f9012fa872cb9b481e1e0de7e9ca14cb59805d2360a85c03cd5"
+    },
+    {
+      "path": "tests/test_admin_console_records.py",
+      "bytes": 13915,
+      "sha256": "8bc6beac9d1f30fc2fabc4857e4c53fa958898aac11ca66d59c3f5d8b8ef346f"
+    },
+    {
+      "path": "tests/test_admin_rooms.py",
+      "bytes": 9544,
+      "sha256": "d4d886d6087556c72352dec1ba629fa37cb662b7ace6628f54fdce8f825fd449"
+    },
+    {
+      "path": "tests/test_admin_rooms_native.py",
+      "bytes": 5118,
+      "sha256": "63fa145aca9afc1d5984780adc1582f1993201d2d30f69e45963c7466299d22d"
+    },
+    {
+      "path": "tests/test_alliance_web.py",
+      "bytes": 53389,
+      "sha256": "303d3257b3047c2e3c2c2d19c400cd5cee09ac3e8c2ac75d13a103e1bb2bd9ce"
+    },
+    {
+      "path": "tests/test_individual_native.py",
+      "bytes": 24061,
+      "sha256": "ff111cbd8bebe9fdab5df325abf2d5bee902384b31c1de613b35b80d9098b198"
+    }
+  ],
+  "preservation": {
+    "wesnoth_server": {
+      "base_commit": "56e8eca311b8c34a519e3ab5d758112b60f87217",
+      "unchanged_existing_tracked_nondocument_files": 351,
+      "changed_existing_nondocument_files": [
+        "alliance/domain.py",
+        "alliance/static/admin.css",
+        "alliance/templates/account.html",
+        "alliance/templates/accounts.html",
+        "alliance/templates/base.html",
+        "alliance/templates/dashboard.html",
+        "alliance/templates/world.html",
+        "alliance/web.py",
+        "alliance_casual/adapter.cpp",
+        "alliance_casual/adapter.hpp",
+        "engine/src/server/wesnothd/server.cpp",
+        "tests/test_alliance_web.py",
+        "tests/test_individual_native.py"
+      ],
+      "unrelated_readme_preserved": true,
+      "readme_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "wesnoth_client": {
+      "base_commit": "66b55a8538998d0c4d188bea7920cb2a9fe28f0c",
+      "unchanged_existing_tracked_nondocument_files": 1997,
+      "changed_existing_nondocument_files": [],
+      "unrelated_readme_preserved": true,
+      "readme_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "runtime_access": {
+    "production_database_opened": false,
+    "private_configuration_opened": false,
+    "credentials_opened": false,
+    "existing_build_stages_rewritten": false
+  },
+  "delivery": {
+    "server_only_pull": true,
+    "rebuild": "Build-WindowsMultiplayer.ps1 -PreservePreviousBuild",
+    "restart": [
+      "admin backend",
+      "native Room server"
+    ],
+    "android_rebuild": false,
+    "world_worker_rebuild": false,
+    "account_bridge_rebuild": false,
+    "migration": false
+  },
+  "retained_initial_failures": [
+    "Initial HTTP fixture ran while account-create template was still being added; final complete tree passes.",
+    "Old dashboard test asserted obsolete pre-integration text; updated to current rendered behavior.",
+    "Full bounded Unicode Room inventory exceeded normal request ceiling; authenticated endpoint now has isolated 4 MiB bound, normal endpoints unchanged.",
+    "Native harness lacked mongod, then selected legacy bridge; explicit existing current-protocol bridge and Mongo-capable image used for final runs.",
+    "Browser harness first tried replacing a root-owned fixture CSS file; switched to serving read-only current CSS without permission changes."
+  ],
+  "limitations": [
+    "No Windows build or LDPlayer/admin-browser acceptance for this update has been reported.",
+    "Native tests use separately authenticated protocol companions, not multiple human players.",
+    "Browser rendering and HTTP mutation tests are separate; browser screenshots do not establish user mouse/touch acceptance.",
+    "Recorded terminal receipts in populated rendering tests are controlled fixtures, not new native combat or World worker acceptance.",
+    "No Android compilation or worker gameplay needed/performed for this server-only update.",
+    "Old build and recovery artifacts were not rewritten; this turn does not claim a fresh full byte inventory of all historical build trees."
+  ]
+}

@@ -1,5 +1,10 @@
 # 1192624 mobile acceptance — I–Z
 
+> **Current administration update (2026-10-30):** First follow
+> [the server-only update and AD1–AD3 checks](ADMIN_MANAGEMENT_20261030.md).
+> Preserve accepted I1–I3 and K1/K2/J1/J2/K3, then resume **L** below.
+> This admin update does not require Android installation or schema migration.
+
 This is the Windows/LDPlayer acceptance checklist, not a claim that these checks
 have passed. Complete the [coordinated A–H update](WORLD_ACCEPTANCE_1192624.md) first. Exact targeted recovery commands are in [WORLD_RECOVERY_ACCEPTANCE_1192624.md](WORLD_RECOVERY_ACCEPTANCE_1192624.md). Keep the five service
 windows open and use the existing single LDPlayer instance. The battle service
