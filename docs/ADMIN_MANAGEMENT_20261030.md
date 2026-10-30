@@ -1,6 +1,22 @@
+**Current Windows step (2026-10-30): administrator-role checks.** Android1192625 UI1–UI6 are accepted by user report. The backend/native Room administration update has not yet been confirmed on Windows. Start with these existing-browser checks before deciding whether a server update is needed; keep existing services running. Do not repeat the Android update.
+
+| Check | Action | Expected result |
+|---|---|---|
+| AD1a | On the Windows host open `http://127.0.0.1:18765/`. Sign in with the existing website administrator account. | The operator name and **Administrator** badge appear. Login does not use a game-player or MongoDB account. |
+| AD1b | Inspect the navigation. | **Overview, Users, Rooms, Teams, Team battles, Companies, Campaigns, World, Engagements, Game runs, Operations, Areas, Audit log** appear. If the old menu appears, stop and report it before using the update instructions below. |
+| AD1c | In a fresh private/incognito window without an administrator session, open `http://127.0.0.1:18765/accounts`. Then attempt one login using a known game-player username and its correct player password. | The protected page first redirects to Login; the player attempt shows **Invalid username or password.** No administrative records are displayed. This is expected role denial, not evidence that the player's game password is wrong. |
+| AD1d | In the normal administrator window choose **Sign out**, then open `/accounts` again. | Login is required. Sign in again with the administrator to continue later checks. |
+
+Return AD1a–AD1d PASS/FAIL and WAN/Ethernet status once for this administration batch. Stop at the first unexpected result. Do not send passwords or connection strings. These checks affect browser sessions and the single failed admin-scope attempt counter, not player progression. Do not edit roles, reset passwords or create records for this batch.
+
+The new sidebar confirms only the backend UI. Before AD3, establish that the native Room update was built and started and that its live inventory is available. If update evidence is missing, review it or perform the server-only update below; do not repeat a confirmed build. AD2 and later management checks remain pending.
+
+---
+
 # Emerald Court administration — Windows update and acceptance
 
-This is a server-side administration update for installed Android 1192624,
+This is a server-side administration update compatible with Android 1192624 and
+the presentation-only Android1192625 update,
 protocol 4 and schema 4. The server update must contain implementation commit
 `147118122340ca169eca44004e081eb5bd86fa19` (and its parent `a7f8267`). Continue using the existing `runtime-v2`. No database
 migration, initialization, Python installation, Android update, account bridge

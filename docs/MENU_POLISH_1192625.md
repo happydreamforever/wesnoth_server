@@ -1,3 +1,5 @@
+**Accepted on Windows by user report (2026-10-30): UI1–UI6 PASS.** Do not repeat this update or its accepted interface checks. The user next requests administrator-role acceptance; follow the current section of `ADMIN_MANAGEMENT_20261030.md`. Saved build/install logs and explicit WAN status were not included in the confirmation. The delivery instructions below are retained as history.
+
 # Emerald Court menu polish — Android 1192625
 
 This is a client presentation update. It adds Help beside Quit, reduces the home
