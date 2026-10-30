@@ -1800,7 +1800,8 @@ from .flexible import FlexibleProduct, flexible
 
 
 from .world import WorldProduct
+from .admin_management import AdminManagement
 
 
-class AllianceService(WorldProduct, FlexibleProduct, UnifiedProduct, LegacyAllianceService):
+class AllianceService(AdminManagement, WorldProduct, FlexibleProduct, UnifiedProduct, LegacyAllianceService):
     pass
