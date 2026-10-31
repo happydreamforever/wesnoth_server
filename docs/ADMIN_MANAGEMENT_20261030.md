@@ -1,4 +1,27 @@
-**Current Windows step (2026-10-31): restart all five services.** The supplied native Room build passed all 47 steps and final artifact verification; the previous build was retained. Git checks and the build are accepted. No additional pull or rebuild is needed.
+**Current Windows step (2026-10-31): read existing W05 failure reports.** The supplied workflow passes W02 database, W03 backend and W04 bridge, then stops at `W05_startup_unconfirmed`. W06/W07 were not reached. W05 readiness was not established within its five-minute window; the cause is not shown in the console. Keep all currently open service windows open, including W05. Do not retry startup or run another build yet.
+
+Run this read-only command and return both sections:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $reportStem = 'D:\Test\wesnoth-setup\wesnoth_server\diagnostics\alliance-workflow-20261031-042622-727-095df455a11b43fca6a2797378eeb145'
+
+    Write-Host 'BATTLE SERVICE LOG (W05)'
+    Get-Content -LiteralPath ($reportStem + '-W05.txt') -Raw -Encoding UTF8
+
+    Write-Host 'WORKFLOW JSON'
+    Get-Content -LiteralPath ($reportStem + '.json') -Raw -Encoding UTF8
+}
+```
+
+This reads existing diagnostics only; it does not start, stop or change a service. If a file cannot be read, return the error and the current visible battle-service output. Do not recreate files or remove locks. Preserve the main workflow text log with the same stem too. Do not send private runtime configuration or credentials.
+
+After reviewing W05 output and JSON, reproduce/fix the identified failure and retest only that step and affected regressions. Keep the accepted Git/Room build and earlier UI/Company results. WAN-disconnected/local-Ethernet status remains recorded for this batch; no repeat confirmation is required. Administrator checks remain pending until service startup is resolved.
+
+---
+
+**Historical startup attempt (stopped at W05 on 2026-10-31):** The supplied native Room build passed all 47 steps and final artifact verification; the previous build was retained. Git checks and the build are accepted. No additional pull or rebuild is needed.
 
 With WAN disconnected and local Ethernet retained, run:
 
