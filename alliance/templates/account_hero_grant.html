@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% from 'admin_components.html' import icon %}
+{% block title %}Unlock {{ hero.name }} · Emerald Court{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('account_heroes', account_id=account._id) }}">← Hero ownership</a>
+<div class="page-heading"><div><p class="eyebrow">{{ account.username }}</p><h1>Unlock {{ hero.name }}</h1></div></div>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<section class="panel hero-grant-panel">
+{% if owned %}
+  <h2>Already owned</h2><p>{{ account.username }} can already use {{ hero.name }}. Existing forms and experience are unchanged.</p>
+{% else %}
+  <h2>{{ icon('hero') }} {{ hero.name }}</h2>
+  <dl class="summary-grid"><div><dt>Granted form</dt><dd>{{ granted_form.source_type }}</dd></div><div><dt>Native tier</dt><dd>{{ granted_form.native_level }}</dd></div><div><dt>Collection level</dt><dd>1</dd></div><div><dt>Experience</dt><dd>0</dd></div><div><dt>Total experience</dt><dd>0</dd></div><div><dt>Player</dt><dd>{{ account.username }}</dd></div></dl>
+  <p class="muted">This grants the hero's lowest-tier catalogue form. Campaign completion is not required. Campaign records, existing heroes and saved battles stay unchanged.</p>
+  {% if stale %}
+  <a class="button" href="{{ url_for('account_hero_grant', account_id=account._id, hero_id=hero.id) }}">Reload and review</a>
+  <label for="saved-reason">Your reason (not submitted)</label><textarea id="saved-reason" readonly>{{ values.reason }}</textarea>
+  {% else %}
+  <form method="post" action="{{ url_for('account_hero_grant', account_id=account._id, hero_id=hero.id) }}" class="compact-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="revision" value="{{ values.revision }}">
+    <label for="grant-reason">Reason</label><textarea id="grant-reason" name="reason" minlength="3" maxlength="500" required>{{ values.reason }}</textarea>
+    <label class="check-field"><input type="checkbox" name="confirmation" value="confirmed" required><span>Unlock {{ hero.name }} for {{ account.username }} with the form shown above.</span></label>
+    <div class="button-row"><button type="submit">{{ icon('hero') }}Confirm unlock</button><a class="button secondary" href="{{ url_for('account_heroes', account_id=account._id) }}">Cancel</a></div>
+  </form>
+  {% endif %}
+{% endif %}
+</section>
+{% endblock %}

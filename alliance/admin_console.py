@@ -11,7 +11,8 @@ from flask import abort, flash, g, redirect, render_template, request, session, 
 
 from .domain import DomainError
 from .product import owned_heroes
-from .heroes import catalog_hero, catalog_form
+from .heroes import catalog_hero, catalog_form, load_catalog
+from .admin_management import admin_hero_grant_form
 
 
 PAGE_SIZE = 25
@@ -70,7 +71,7 @@ SPECS = {
     'soldiers': ('company_soldiers', {}, ('_id', 'name', 'unit_type', 'owner_id'),
                  ('owner_id', 'name', 'unit_type', 'xp', 'total_earned', 'retired', 'revision', 'created_at'), 'Soldiers'),
     'heroes': ('account_heroes', {}, ('hero_id', 'account_id'),
-               ('account_id', 'hero_id', 'forms', 'total_experience', 'revision'), 'Earned heroes'),
+               ('account_id', 'hero_id', 'forms', 'total_experience', 'revision'), 'Owned heroes'),
     'history': ('world_settlements', {}, ('_id', 'kind', 'outcome'),
                 ('kind', 'round', 'outcome', 'winner_team_id', 'captured_castle_id', 'combat_verified', 'completed_rounds', 'created_at'), 'Company & territorial results'),
 }
@@ -133,7 +134,7 @@ class AdminConsole:
                        ('Companies', 'companies', {}, 'admin_companies'),
                        ('Team plans', 'game_runs', {'kind': 'alliance', 'state': 'draft'}, 'admin_plans'),
                        ('Active engagements', 'world_contracts', {'state': {'$nin': list(TERMINAL)}}, 'admin_contracts'),
-                       ('Earned heroes', 'account_heroes', {}, 'admin_records')]
+                       ('Owned heroes', 'account_heroes', {}, 'admin_records')]
         metrics = [{'label': label, 'value': self.db[col].count_documents(query),
                     'url': url_for(endpoint, **({'category': 'heroes'} if endpoint == 'admin_records' else {}))}
                    for label, col, query, endpoint in definitions]
@@ -208,7 +209,7 @@ class AdminConsole:
                 r['name']=catalog_hero(r['hero_id'])['name']
                 r['forms']=', '.join(catalog_form(r['hero_id'],f)[1]['source_type'] for f in r['forms'])
         headings=[('name','Record'),('state','Status'),('teams','Team'),('created_at','Created')]
-        if category=='heroes':headings=[('name','Hero'),('owner','Player'),('forms','Earned forms'),('total_experience','Lifetime XP')]
+        if category=='heroes':headings=[('name','Hero'),('owner','Player'),('forms','Available forms'),('total_experience','Lifetime XP')]
         elif category=='soldiers':headings=[('name','Soldier'),('owner','Player'),('unit_type','Form'),('xp','XP'),('state','Status')]
         elif category=='castles':headings=[('name','Castle'),('kind','Type'),('teams','Owner'),('roadworks','Roadworks')]
         elif category=='defenses':headings=[('name','Owner'),('teams','Team'),('state','Permission'),('bracket','Bracket')]
@@ -301,7 +302,7 @@ class AdminConsole:
         for hero in heroes:hero['forms']=', '.join(catalog_form(hero['hero_id'],form)[1]['source_type'] for form in hero['forms'])
         wounds=list(self.db.company_wounds.find({'owner_id':identity},{'asset_kind':1,'asset_id':1,'kind':1,'recover_at_round':1}).limit(129))
         locks=list(self.db.company_asset_locks.find({'owner_id':identity},{'run_id':1,'assignment_id':1}).limit(129))
-        sections=[section('Earned heroes',[('name','Hero'),('hero_level','Level'),('experience','XP'),('total_experience','Total XP'),('forms','Earned forms')],heroes),
+        sections=[section('Owned heroes',[('name','Hero'),('hero_level','Level'),('experience','XP'),('total_experience','Total XP'),('forms','Available forms')],heroes),
                   section('Permanent soldiers',[('name','Soldier'),('unit_type','Form'),('xp','XP'),('total_earned','Lifetime XP')],soldiers),
                   section('Wounds',[('asset_kind','Unit'),('asset_id','Record'),('kind','Recovery'),('recover_at_round','Recovery round')],wounds),
                   section('Commitments',[('run_id','Battle'),('assignment_id','Standing defense')],locks)]
@@ -496,6 +497,79 @@ def register_admin_console(app, db, domain, admin_required):
         if any(len(request.form[k])>128 for k in keys):abort(400)
         return revision
 
+    def hero_account(account_id):
+        account = domain.get_account(account_id)
+        if account['role'] != 'player':
+            abort(403)
+        return account
+
+    def account_heroes(account_id):
+        account = hero_account(account_id)
+        if set(request.args) - {'q', 'state', 'page'} or any(len(request.args.getlist(k)) != 1 for k in request.args):
+            abort(400)
+        q = request.args.get('q', '').strip()
+        state = request.args.get('state', '')
+        page = request.args.get('page', '1')
+        if len(q) > 80 or state not in ('', 'owned', 'locked') or not re.fullmatch(r'[1-9][0-9]{0,3}', page):
+            abort(400)
+        page = int(page)
+        catalog, _ = load_catalog()
+        owned = {hero['hero_id']: hero for hero in account['heroes']}
+        rows = []
+        for hero in sorted(catalog['heroes'], key=lambda hero: (hero['name'].casefold(), hero['id'])):
+            granted_form = admin_hero_grant_form(hero['id'])
+            current = owned.get(hero['id'])
+            source = granted_form['source_campaign'].replace('_', ' ')
+            if state == 'owned' and current is None or state == 'locked' and current is not None:
+                continue
+            if q.casefold() not in ' '.join((hero['name'], granted_form['source_type'], source)).casefold():
+                continue
+            rows.append({'hero_id': hero['id'], 'name': hero['name'], 'source': source,
+                         'granted_form': granted_form, 'owned': current,
+                         'forms': [catalog_form(hero['id'], form_id)[1]['source_type']
+                                   for form_id in current['forms']] if current else []})
+        size = 12
+        total = len(rows)
+        params = dict(account_id=account_id, q=q, state=state)
+        pagination = {
+            'previous_url': url_for('account_heroes', **params, page=page-1) if page > 1 else None,
+            'next_url': url_for('account_heroes', **params, page=page+1) if page*size < total else None,
+            'label': f'Page {page} · {total} matching heroes'}
+        filters = [{'name': 'q', 'label': 'Search heroes', 'value': q, 'maxlength': 80},
+                   {'name': 'state', 'label': 'Ownership', 'value': state, 'options': [
+                       {'value': '', 'label': 'All heroes'}, {'value': 'owned', 'label': 'Owned'},
+                       {'value': 'locked', 'label': 'Locked'}]}]
+        return render_template('account_heroes.html', account=account, heroes=rows[(page-1)*size:page*size],
+                               catalog_count=len(catalog['heroes']), filters=filters, pages=pagination)
+    register('/accounts/<account_id>/heroes', 'account_heroes', account_heroes)
+
+    def account_hero_grant(account_id, hero_id):
+        account = hero_account(account_id)
+        try:
+            hero = catalog_hero(hero_id)
+            granted_form = admin_hero_grant_form(hero_id)
+        except (ValueError, DomainError):
+            abort(404)
+        owned = next((row for row in account['heroes'] if row['hero_id'] == hero_id), None)
+        values = {'revision': account['revision'], 'reason': ''}
+        error, stale, status = None, False, 200
+        if request.method == 'POST':
+            revision = form(())
+            values = {'revision': revision, 'reason': request.form['reason']}
+            try:
+                domain.admin_grant_hero(g.admin['_id'], account_id, hero_id, values['reason'], revision)
+            except DomainError as exc:
+                error = exc.message
+                stale = exc.code in ('stale_account', 'stale_revision')
+                status = {'forbidden': 403, 'not_found': 404}.get(exc.code, 409)
+            else:
+                flash(f"{hero['name']} unlocked for {account['username']}. The grant and reason were recorded.")
+                return redirect(url_for('account_heroes', account_id=account_id))
+        return render_template('account_hero_grant.html', account=account, hero=hero,
+                               granted_form=granted_form, owned=owned, values=values,
+                               error=error, stale=stale), status
+    register('/accounts/<account_id>/heroes/<hero_id>/grant', 'account_hero_grant', account_hero_grant, ('GET', 'POST'))
+
     def team_action(team_id):
         revision=form(('operation','value'))
         domain.admin_manage_team(g.admin['_id'],team_id,request.form['operation'],request.form['value'],request.form['reason'],revision)
@@ -521,7 +595,7 @@ def register_admin_console(app, db, domain, admin_required):
                 account=domain.admin_create_player(g.admin['_id'],values['username'],request.form['password'],request.form['password_confirmation'],values['reason'])
             except DomainError as exc:
                 return render_template('account_create.html',values=values,error=exc.message),409
-            flash('Player created with an empty hero collection. Campaign progress must be earned in the game.')
+            flash('Player created with an empty hero collection. Manage heroes to grant ownership, or discover heroes through campaigns.')
             return redirect(url_for('account_detail',account_id=account['_id']))
         return render_template('account_create.html',values=values,error=error)
     register('/accounts/new','admin_create_player',create_player,('GET','POST'))

@@ -20,7 +20,63 @@ def admin_record_revision(record):
     return hashlib.sha256(json.dumps(fields, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 
+def admin_hero_grant_form(hero_id):
+    """Return the canonical lowest-tier form used for an administrative unlock.
+
+    Catalogue order is not a progression order. The deterministic tie-break is
+    shared by the confirmation page and transaction; it does not claim that
+    this form is the character's first appearance in an authored campaign.
+    """
+    from .domain import DomainError
+    from .heroes import load_catalog
+    if not isinstance(hero_id, str) or not re.fullmatch(r'[a-z0-9_-]{1,80}', hero_id):
+        raise DomainError('invalid_input', 'Choose a hero from the catalogue.')
+    catalog, _ = load_catalog()
+    if not any(hero['id'] == hero_id for hero in catalog['heroes']):
+        raise DomainError('invalid_input', 'Choose a hero from the catalogue.')
+    forms = [form for form in catalog['forms'] if form['hero_id'] == hero_id]
+    if not forms:
+        raise DomainError('invalid_input', 'This hero has no available catalogue form.')
+    return deepcopy(min(forms, key=lambda form: (form['native_level'], form['source_type'], form['id'])))
+
+
 class AdminManagement:
+    def admin_grant_hero(self, actor_id, account_id, hero_id, reason, expected_revision):
+        """Unlock one canonical hero without inventing a campaign checkpoint.
+
+        This only adds an absent hero. Existing forms, experience, frozen
+        selections, sessions and personal armies are left intact. Suspended
+        player accounts may be configured without reactivating their access.
+        """
+        from .domain import DomainError, _directory_id, _id, _now, _reason
+        from .product import account_profile
+        _directory_id(account_id, uuid=True)
+        reason = _reason(reason)
+        self._expected_account_revision(expected_revision)
+        form = admin_hero_grant_form(hero_id)
+
+        def write(session):
+            account = self._admin_account_revision(actor_id, account_id, expected_revision, session)
+            if account['role'] != 'player':
+                raise DomainError('forbidden', 'Only player accounts can own heroes.')
+            if self.db.account_heroes.find_one({'account_id': account_id, 'hero_id': hero_id}, session=session):
+                raise DomainError('hero_already_owned', 'This player already owns this hero. Existing progress was preserved.')
+            # Story rewards, tactical preparation and account editing write the
+            # same account. A race retries against its current revision instead
+            # of replacing earned hero data from a stale page.
+            self.db.accounts.update_one({'_id': account_id}, {'$inc': {'revision': 1}}, session=session)
+            self.db.account_heroes.insert_one({
+                '_id': _id(), 'account_id': account_id, 'hero_id': hero_id,
+                'forms': [form['id']], 'total_experience': 0, 'revision': 0,
+                'unlocked_at': _now(), 'unlock_source': 'administrator', 'granted_by': actor_id,
+            }, session=session)
+            self._audit(actor_id, 'grant_hero', account_id, reason,
+                        {'hero_id': hero_id, 'owned': False},
+                        {'hero_id': hero_id, 'owned': True, 'forms': [form['id']],
+                         'total_experience': 0, 'source': 'administrator'}, session)
+            return account_profile(self.db, self._account(account_id, session, active=False), session)
+        return self._tx(write)
+
     def admin_create_player(self, actor_id, username, password, confirmation, reason):
         """Create an ordinary player with zero heroes; never fabricate progress."""
         from .auth import hash_password

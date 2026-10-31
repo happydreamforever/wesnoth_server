@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% from 'admin_components.html' import icon, filters as filter_form, pagination %}
+{% block title %}Hero ownership · {{ account.username }} · Emerald Court{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('account_detail', account_id=account._id) }}">← {{ account.username }}</a>
+<div class="page-heading"><div><p class="eyebrow">{{ account.username }}</p><h1>Hero ownership</h1><p class="intro">Unlock a hero for this player without completing a campaign.</p></div><span class="badge prominent">{{ account.heroes | length }} / {{ catalog_count }} owned</span></div>
+{{ filter_form(filters, url_for('account_heroes', account_id=account._id), url_for('account_heroes', account_id=account._id)) }}
+<div class="hero-ownership-grid">
+{% for hero in heroes %}
+<article class="panel hero-ownership-card">
+  <div class="section-heading"><h2>{{ icon('hero') }}{{ hero.name }}</h2><span class="badge">{{ 'Owned' if hero.owned else 'Locked' }}</span></div>
+  <p class="muted">{{ hero.source }}</p>
+  {% if hero.owned %}
+  <dl class="hero-ownership-stats"><div><dt>Collection level</dt><dd>{{ hero.owned.hero_level }}</dd></div><div><dt>XP</dt><dd>{{ hero.owned.experience }}</dd></div><div><dt>Total XP</dt><dd>{{ hero.owned.total_experience }}</dd></div></dl>
+  <p class="muted">Forms: {{ hero.forms | join(', ') }}</p>
+  <span class="hero-owned-label">{{ icon('shield') }}Available to this player</span>
+  {% else %}
+  <p>Granted form: <strong>{{ hero.granted_form.source_type }}</strong><br><span class="muted">Native tier {{ hero.granted_form.native_level }} · Collection level 1 · 0 XP</span></p>
+  <a class="button" href="{{ url_for('account_hero_grant', account_id=account._id, hero_id=hero.hero_id) }}" aria-label="Unlock {{ hero.name }}">{{ icon('hero') }}Unlock hero</a>
+  {% endif %}
+</article>
+{% else %}<p class="empty">No matching heroes. Try another search or ownership filter.</p>{% endfor %}
+</div>
+{{ pagination(pages) }}
+{% endblock %}
