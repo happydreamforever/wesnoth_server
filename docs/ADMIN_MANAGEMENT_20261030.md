@@ -1,4 +1,29 @@
-**Current Windows step (2026-10-31): read-only Git integrity check.** The server pull reached `81b73583d04a23cd7fd53a284dbaf833ecc5172a`, but reported an unavailable pack index twice. The user stopped all five services with Ctrl+C. Keep them stopped; do not build or restart yet. No repeat pull or repair is needed for this diagnostic.
+**Current Windows step (2026-10-31): preserving native Room build.** Git review passed: server HEAD is `81b73583d04a23cd7fd53a284dbaf833ecc5172a`, full fsck exits zero without errors, only the existing README edit is unstaged, and no changes are staged. All five services are reported stopped. The checkout already contains the admin update; no further pull or Git repair is needed.
+
+Keep all five services stopped. Disconnect WAN while retaining local Ethernet, then run only:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Build-WindowsMultiplayer.ps1' `
+        -MsysRoot 'D:\Test\wesnoth-setup\msys64' `
+        -PreservePreviousBuild
+
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Room server build stopped. Preserve all files and send the saved build log.'
+    }
+}
+```
+
+Expect `UNIFIED MULTIPLAYER ARTIFACT VERIFIED` and `UNIFIED MULTIPLAYER BUILD PASSED`. Return the complete console and saved `wesnoth_server\diagnostics\unified-multiplayer-build-*.txt`, plus WAN/Ethernet status once for this administration batch. Stop at the first unexpected result and retain all files. No Android, bridge or full-worker rebuild, dependency setup, database migration or initialization is required.
+
+After the successful build is reviewed, restore all five services with `Start-WindowsAllianceStack.ps1 -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2') -MsysRoot 'D:\Test\wesnoth-setup\msys64' -IncludeBattles`. Startup and AD1a–AD1d follow; do not run those later checks yet. Earlier two-window restart instructions apply only when the other three services are still running.
+
+---
+
+**Historical prerequisite (accepted 2026-10-31): read-only Git integrity check.** The server pull reached `81b73583d04a23cd7fd53a284dbaf833ecc5172a`, but reported an unavailable pack index twice. The user stopped all five services with Ctrl+C. Keep them stopped; do not build or restart yet. No repeat pull or repair is needed for this diagnostic.
 
 Disconnect WAN while retaining Ethernet, then run:
 
@@ -32,7 +57,7 @@ After review, build only the updated native Room server with `Build-WindowsMulti
 
 ---
 
-**Current Windows step (2026-10-30): administrator-role checks.** Android1192625 UI1–UI6 are accepted by user report. The backend/native Room administration update has not yet been confirmed on Windows. Start with these existing-browser checks before deciding whether a server update is needed; keep existing services running. Do not repeat the Android update.
+**Administrator-role checks (pending build/startup review):** Android1192625 UI1–UI6 are accepted by user report. The backend/native Room administration update has not yet been confirmed on Windows. Start with these existing-browser checks before deciding whether a server update is needed; keep existing services running. Do not repeat the Android update.
 
 | Check | Action | Expected result |
 |---|---|---|
