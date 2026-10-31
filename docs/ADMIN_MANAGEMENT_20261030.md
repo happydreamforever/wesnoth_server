@@ -1,4 +1,21 @@
-**Current Windows step (2026-10-31): resume the workflow once with existing services open.** The returned W05 transcript now establishes worker artifact readiness and a listening battle service. The original JSON remains a failed health-check snapshot; untimestamped READY lines do not establish why the earlier timeout occurred. Successful workflow health is still pending.
+**Current Windows step (2026-10-31): AD1 administrator access.** Five-service startup passed: W02–W05 reused healthy services, W06 started the native Room server and W07 declared readiness. The original W05 timeout is retained as history; its cause is not established. Keep all five service windows and the existing LDPlayer open. No additional pull, rebuild or restart is needed.
+
+Perform these checks in order on the Windows host:
+
+| Check | Action | Expected result |
+|---|---|---|
+| AD1a | Open `http://127.0.0.1:18765/` and sign in with the existing website administrator account. | Emerald Court administration appears with the operator name and **Administrator** badge. Use the website administrator, not a MongoDB or game-player credential. |
+| AD1b | Inspect the sidebar. | **Overview, Users, Rooms, Teams, Team battles, Companies, Campaigns, World, Engagements, Game runs, Operations, Areas, Audit log** appear. |
+| AD1c | In a fresh private/incognito window, open `http://127.0.0.1:18765/accounts`. After the Login redirect, attempt one login with an ordinary game-player account and its correct player password. | The protected page requires Login. The player attempt receives **Invalid username or password.** This is expected administrator-role denial; no administrative records appear. |
+| AD1d | In the normal administrator window, choose **Sign out** and reopen `http://127.0.0.1:18765/accounts`. | Login is required again. Sign back in with the administrator after confirming this. |
+
+Return AD1a–AD1d PASS/FAIL/NOT RUN and stop at the first unexpected result. Do not send passwords. These checks create/revoke browser sessions and record one failed admin-scope attempt; they do not change player progression. Do not edit accounts, reset passwords, change roles or close Rooms yet. AD2 preservation and AD3 disposable waiting Room closure follow review.
+
+WAN is already confirmed disconnected with local Ethernet retained for this administration batch; no repeat confirmation is required unless it changes. Preserve accepted build/UI/Company results and existing campaign saves.
+
+---
+
+**Historical resume (accepted 2026-10-31): existing services reused and Room server started.** The returned W05 transcript now establishes worker artifact readiness and a listening battle service. The original JSON remains a failed health-check snapshot; untimestamped READY lines do not establish why the earlier timeout occurred. Successful workflow health is still pending.
 
 Keep existing service windows open and retain WAN-disconnected/local-Ethernet operation. Run once:
 
@@ -132,7 +149,7 @@ After review, build only the updated native Room server with `Build-WindowsMulti
 
 ---
 
-**Administrator-role checks (pending build/startup review):** Android1192625 UI1–UI6 are accepted by user report. The backend/native Room administration update has not yet been confirmed on Windows. Start with these existing-browser checks before deciding whether a server update is needed; keep existing services running. Do not repeat the Android update.
+**Historical administrator-role handoff (superseded by current AD1 above):** Android1192625 UI1–UI6 are accepted by user report. The backend/native Room administration update has not yet been confirmed on Windows. Start with these existing-browser checks before deciding whether a server update is needed; keep existing services running. Do not repeat the Android update.
 
 | Check | Action | Expected result |
 |---|---|---|
