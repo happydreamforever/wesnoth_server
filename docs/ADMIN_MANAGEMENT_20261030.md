@@ -1,4 +1,30 @@
-**Current Windows step (2026-10-31): read existing W05 failure reports.** The supplied workflow passes W02 database, W03 backend and W04 bridge, then stops at `W05_startup_unconfirmed`. W06/W07 were not reached. W05 readiness was not established within its five-minute window; the cause is not shown in the console. Keep all currently open service windows open, including W05. Do not retry startup or run another build yet.
+**Current Windows step (2026-10-31): resume the workflow once with existing services open.** The returned W05 transcript now establishes worker artifact readiness and a listening battle service. The original JSON remains a failed health-check snapshot; untimestamped READY lines do not establish why the earlier timeout occurred. Successful workflow health is still pending.
+
+Keep existing service windows open and retain WAN-disconnected/local-Ethernet operation. Run once:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Start-WindowsAllianceStack.ps1' `
+        -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2') `
+        -MsysRoot 'D:\Test\wesnoth-setup\msys64' `
+        -IncludeBattles
+
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Workflow resume stopped. Send the new workflow text/JSON and current W05 output.'
+    }
+}
+```
+
+Expect `W02 PASS existing database`, `W03 PASS existing backend`, `W04 PASS existing bridge`, `W05 PASS existing battles`, then W06 START/PASS multiplayer and `W07 UNIFIED GAME SERVICES READY`. The helper validates running services before reuse; an occupied unhealthy listener stops the workflow without starting a duplicate.
+
+Return the new complete console and `diagnostics/alliance-workflow-*.txt/.json`. If anything fails, stop and return the exact new error plus current W05 output; do not retry again or close healthy service windows. Preserve the original failed report. No pull, rebuild, timeout change, lock removal or initialization is needed. Administrator-role checks remain next after successful startup review. WAN status is already recorded once for this batch.
+
+---
+
+**Historical diagnostic (reviewed 2026-10-31): existing W05 reports.** The supplied workflow passes W02 database, W03 backend and W04 bridge, then stops at `W05_startup_unconfirmed`. W06/W07 were not reached. W05 readiness was not established within its five-minute window; the cause is not shown in the console. Keep all currently open service windows open, including W05. Do not retry startup or run another build yet.
 
 Run this read-only command and return both sections:
 
