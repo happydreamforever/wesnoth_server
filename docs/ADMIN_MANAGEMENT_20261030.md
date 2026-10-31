@@ -20,7 +20,7 @@ With WAN disconnected and local Ethernet retained, run:
 
 Expect W02–W06 PASS for the database, backend, account bridge, shared battle service and native Room server, followed by `W07 UNIFIED GAME SERVICES READY`. Keep all five service windows open. Return the complete console plus the saved `wesnoth_server\diagnostics\alliance-workflow-*.txt` and `.json`; if startup stops, include the failing service's W02–W06 transcript and leave unrelated running services open.
 
-Startup health does not establish admin authorization or Room closure. Review this result before AD1a–AD1d below; AD2/AD3 follow separately. WAN/Ethernet status was requested once for this administration batch and remains pending. Do not repeat accepted Android, Company or build checks, initialize a database, or change credentials.
+Startup health does not establish admin authorization or Room closure. Review this result before AD1a–AD1d below; AD2/AD3 follow separately. The user confirms WAN was disconnected and local Ethernet stayed connected during the accepted Room-server build. This once-per-batch status is now recorded; retain that condition, with no repeat confirmation needed unless it changes. Do not repeat accepted Android, Company or build checks, initialize a database, or change credentials.
 
 ---
 
