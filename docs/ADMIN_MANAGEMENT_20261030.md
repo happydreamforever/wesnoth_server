@@ -1,3 +1,37 @@
+**Current Windows step (2026-10-31): read-only Git integrity check.** The server pull reached `81b73583d04a23cd7fd53a284dbaf833ecc5172a`, but reported an unavailable pack index twice. The user stopped all five services with Ctrl+C. Keep them stopped; do not build or restart yet. No repeat pull or repair is needed for this diagnostic.
+
+Disconnect WAN while retaining Ethernet, then run:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $adminBash = 'D:\Test\wesnoth-setup\msys64\usr\bin\bash.exe'
+    $adminGit = 'PATH=/usr/bin:$PATH /usr/bin/git --no-pager --no-optional-locks --no-lazy-fetch -c core.fsmonitor=false -c diff.autoRefreshIndex=false -C /d/Test/wesnoth-setup/wesnoth_server '
+
+    foreach ($adminCheck in @(
+        'rev-parse --verify HEAD^{commit}'
+        'fsck --full --no-reflogs --no-dangling --no-progress'
+        'diff --no-ext-diff --no-textconv --name-status --'
+        'diff --cached --no-ext-diff --no-textconv --name-status HEAD --'
+    )) {
+        Write-Host "CHECK: $adminCheck"
+        & $adminBash --noprofile --norc -c ($adminGit + $adminCheck)
+        $adminGitExit = $LASTEXITCODE
+        Write-Host "EXIT: $adminGitExit"
+        if ($adminGitExit -ne 0) {
+            throw 'Git check failed. Preserve all files and send the complete output.'
+        }
+    }
+    Write-Host 'READ-ONLY GIT CHECKS COMPLETE. Send this output for review.'
+}
+```
+
+Send the complete console, including all exit statuses, and WAN/Ethernet status once for this administration batch. A healthy fsck can print nothing between its CHECK and EXIT lines. Expect the existing README edit; preserve and report any additional differences. A zero fsck exit alone does not establish native build or game readiness. Stop at the first nonzero exit; keep every Git pack/index, source file, build stage, runtime and recovery journal intact.
+
+After review, build only the updated native Room server with `Build-WindowsMultiplayer.ps1 -PreservePreviousBuild`. Once that passes, restore all five services with `Start-WindowsAllianceStack.ps1 -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2') -MsysRoot 'D:\Test\wesnoth-setup\msys64' -IncludeBattles`. The earlier two-window restart instructions below apply only when the other three services are still running. Review build/startup output before the administrator-role checks. Do not execute these later steps yet.
+
+---
+
 **Current Windows step (2026-10-30): administrator-role checks.** Android1192625 UI1–UI6 are accepted by user report. The backend/native Room administration update has not yet been confirmed on Windows. Start with these existing-browser checks before deciding whether a server update is needed; keep existing services running. Do not repeat the Android update.
 
 | Check | Action | Expected result |
