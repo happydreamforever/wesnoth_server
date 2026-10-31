@@ -1,0 +1,171 @@
+{
+  "format": 1,
+  "purpose": "administrator-canonical-hero-ownership",
+  "verified_at_utc": "2026-10-31T11:20:19.280763+00:00",
+  "implementation_commit": "519fdd864ed8431df8d4e3ce51d61050faee48f8",
+  "schema": 4,
+  "protocol": 4,
+  "client_version_unchanged": 1192625,
+  "gameplay_release_unchanged": 1192624,
+  "environment": {
+    "python": "3.12.10",
+    "mongodb": "8.0.32 disposable replica sets",
+    "network": "Docker network none",
+    "user": "1001:1001",
+    "nofile": 65536
+  },
+  "tests": {
+    "unique_passed": 127,
+    "skips": 0,
+    "groups": [
+      {
+        "path": "build/audit-admin-hero-grants-20261031/domain-final.log",
+        "bytes": 2572,
+        "sha256": "6b4afb67aa448956e25ce4e1414ca8a4aa337297a84b51ba20346b8958e20420",
+        "passed_cases": 13,
+        "reported_groups": [
+          13
+        ],
+        "skips": 0
+      },
+      {
+        "path": "build/audit-admin-hero-grants-20261031/web-final.log",
+        "bytes": 2598,
+        "sha256": "1e3add922a1cd6ccf98b7e6af413cb7212f977b4c9ad41fd2965c664386b4fc7",
+        "passed_cases": 14,
+        "reported_groups": [
+          14
+        ],
+        "skips": 0
+      },
+      {
+        "path": "build/audit-admin-hero-grants-20261031/regressions-first.log",
+        "bytes": 14794,
+        "sha256": "2e554ae16bbf2d08cb2e8cb7c2f9ec32aa33dfb78b29d2b12f9db8cea921e09f",
+        "passed_cases": 89,
+        "reported_groups": [
+          26,
+          10,
+          7,
+          23,
+          23,
+          0
+        ],
+        "skips": 0
+      },
+      {
+        "path": "build/audit-admin-hero-grants-20261031/company-regressions.log",
+        "bytes": 1545,
+        "sha256": "4657ad7649c86e43392f1756b1e4c6bb91dac3a65976fd71f3216f62f257dc48",
+        "passed_cases": 11,
+        "reported_groups": [
+          11
+        ],
+        "skips": 0
+      }
+    ],
+    "note": "The original regression invocation ended with exit5 only because an incorrect final Company pattern matched zero tests. Its 89 actual cases passed; the separately corrected Company pattern passes11. No skipped or zero-test group is counted."
+  },
+  "rendering": {
+    "path": "build/audit-admin-hero-grants-20261031/browser/report.json",
+    "bytes": 192235,
+    "sha256": "ae375c79d60dff20e04547c1a87b4cf7b5c32f2e1f9fc3f39089af120a0ab846",
+    "actual_flask_response_fixtures": 12,
+    "layouts": 36,
+    "viewports": [
+      "1280x720",
+      "1920x1080",
+      "390x844"
+    ],
+    "failures": 0,
+    "visually_inspected": [
+      "heroes-empty-1280.png",
+      "grant-review-390.png"
+    ],
+    "scope": "Actual Chromium rendering of real Flask HTTP responses using disposable fixture accounts; no Windows/LDPlayer or real-player data."
+  },
+  "source_files": [
+    {
+      "path": "alliance/admin_management.py",
+      "bytes": 19314,
+      "sha256": "df86b5467fcee79a5a1c1f89ddd3ce989ae080e8a27e8e5dc064172aa8767fce"
+    },
+    {
+      "path": "alliance/admin_console.py",
+      "bytes": 49571,
+      "sha256": "bef4ed03e337e18fbc0d413aa7824e8e7f9630037de7e7bcbe7c7013fb36434b"
+    },
+    {
+      "path": "alliance/static/admin.css",
+      "bytes": 15837,
+      "sha256": "e9325d71a117ab9b75614fdec74708365090f26b493dbedd83e646a9c020dda6"
+    },
+    {
+      "path": "alliance/templates/account.html",
+      "bytes": 2623,
+      "sha256": "eb259b27c384572cfddc82433a519b43b8d668456153c441180e0cdced73f281"
+    },
+    {
+      "path": "alliance/templates/account_heroes.html",
+      "bytes": 2000,
+      "sha256": "c7f5e8b28b2d5c749a2debced208ea37a7bb5940948b63fa0011f72b9d3d7449"
+    },
+    {
+      "path": "alliance/templates/account_hero_grant.html",
+      "bytes": 2426,
+      "sha256": "de52ae696892c81be513df6aa3e03e084ce7e9ca6fe92968232d85abe067d02b"
+    },
+    {
+      "path": "tests/test_admin_hero_grants.py",
+      "bytes": 13398,
+      "sha256": "3cbc778230f1c7d5b871ebfcdaf73d49cf8b78b849dccde76d0fb92ae84b7c96"
+    },
+    {
+      "path": "tests/test_admin_hero_ownership_web.py",
+      "bytes": 17046,
+      "sha256": "678d28fab0328c2fe965c0eb0896f6f39de17cb068df5c335e6500da84b78d74"
+    }
+  ],
+  "preservation": {
+    "wesnoth_server": {
+      "base_commit": "f177b9d460f24534136620c4aacdc0331bbdd169",
+      "unchanged_other_tracked_nondocument_files": 372,
+      "readme_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "wesnoth_client": {
+      "base_commit": "7a3c36e6faed787aad0f98e0d24ec0ca1fece1b0",
+      "unchanged_other_tracked_nondocument_files": 2002,
+      "readme_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "scope": {
+    "admin_grants_canonical_ownership": true,
+    "forges_story_completion": false,
+    "resets_existing_hero_progress": false,
+    "grants_soldiers": false,
+    "revokes_heroes": false,
+    "production_database_accessed": false,
+    "private_configuration_accessed": false,
+    "build_stages_rewritten": false
+  },
+  "delivery": {
+    "server_only_pull": true,
+    "restart": [
+      "admin backend"
+    ],
+    "rebuild": false,
+    "migration": false
+  },
+  "retained_initial_failures": [
+    "Host Python invocation lacked required container OpenSSL; exact Python runs correctly in existing verification image.",
+    "Initial unprivileged UID1000 could not export HTML into UID1001-owned audit folder; subsequent runner uses UID1001.",
+    "MongoDB reached inherited nofile1024 and logged WT_PANIC error24; retained scratch/logs identify it. Fresh uid1001/nofile65536 runs pass.",
+    "Company regression filename initially did not match; corrected test_company_product.py separately passes11.",
+    "Node was not on shell PATH; existing bundled Playwright node was used successfully."
+  ],
+  "limitations": [
+    "Windows backend update, browser ownership action and LDPlayer refresh require user acceptance.",
+    "Existing native gameplay/protocol behavior is unchanged; no new native engine build or combat execution was needed or claimed.",
+    "Rollback/ownership deletion is not added; existing heroes remain preserved."
+  ]
+}

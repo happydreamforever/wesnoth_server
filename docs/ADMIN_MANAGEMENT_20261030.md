@@ -1,4 +1,8 @@
-**Current Windows step (2026-10-31): AD1 administrator access.** Five-service startup passed: W02–W05 reused healthy services, W06 started the native Room server and W07 declared readiness. The original W05 timeout is retained as history; its cause is not established. Keep all five service windows and the existing LDPlayer open. No additional pull, rebuild or restart is needed.
+**Current addition (2026-10-31): administrator hero ownership.** The user requests granting canonical heroes without campaign completion. Follow [ADMIN_HERO_OWNERSHIP_20261031.md](ADMIN_HERO_OWNERSHIP_20261031.md) for the backend-only update and AH1–AH5. Keep the accepted Room build/startup and existing player progress. AD1 below remains pending and follows the new feature check; no previous AD1 result was supplied.
+
+---
+
+**Accepted startup; AD1 remains pending (2026-10-31).** Five-service startup passed: W02–W05 reused healthy services, W06 started the native Room server and W07 declared readiness. The original W05 timeout is retained as history; its cause is not established. Keep all five service windows and the existing LDPlayer open. No additional pull, rebuild or restart is needed.
 
 Perform these checks in order on the Windows host:
 
@@ -178,7 +182,7 @@ rebuild or full World worker rebuild is required.
 | Page | Available management |
 |---|---|
 | Overview | Current counts, recent games and navigation to each game system. |
-| Users | Search/pagination, create an ordinary player, rename, suspend/reactivate, password reset, hero XP correction and end sessions. Creation grants no heroes or soldiers. |
+| Users | Search/pagination, create an ordinary player, rename, suspend/reactivate, password reset, canonical hero ownership grants, hero XP correction and end sessions. Creation grants no heroes or soldiers. |
 | Rooms | Actual native waiting/full/ready/playing Rooms, maps, seats, readiness, economy and rules. Request closure of a selected Room; observe pending, changed or acknowledged closure. |
 | Teams | Roster and applications, rename, appoint a current active member as captain, remove a noncaptain, change administrative Area and inspect battles. |
 | Team battles / Game runs | Plans, Open/Reserved/Computer/Closed slots, participants, rules, readiness, captain approvals and recorded human results. Cancel an unresolved run; retain the existing evidence-gated ordinary Team result resolution. |
@@ -189,9 +193,7 @@ rebuild or full World worker rebuild is required.
 | Operations | Recorded engagement queue and player reservations. It does not pretend a stored record proves that a native worker is currently alive. |
 | Audit log | Searchable, paginated administrator, action, target, reason and timestamp records. |
 
-Administrative corrections use existing game lifecycles. The console does not
-grant invented campaign discoveries, rewrite a completed result, impersonate a
-captain's approval, change a frozen force or transfer Castles without combat.
+Administrative corrections use existing game lifecycles. The console can grant canonical hero ownership without campaign completion through the reviewed administrator action. It does not fabricate story checkpoints, rewrite a completed result, impersonate a captain's approval, change a frozen force or transfer Castles without combat.
 Replay evidence is inspectable here; playback remains in the game. Room creation
 and rule selection remain in the native Room interface.
 
