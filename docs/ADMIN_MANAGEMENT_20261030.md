@@ -1,4 +1,30 @@
-**Current Windows step (2026-10-31): preserving native Room build.** Git review passed: server HEAD is `81b73583d04a23cd7fd53a284dbaf833ecc5172a`, full fsck exits zero without errors, only the existing README edit is unstaged, and no changes are staged. All five services are reported stopped. The checkout already contains the admin update; no further pull or Git repair is needed.
+**Current Windows step (2026-10-31): restart all five services.** The supplied native Room build passed all 47 steps and final artifact verification; the previous build was retained. Git checks and the build are accepted. No additional pull or rebuild is needed.
+
+With WAN disconnected and local Ethernet retained, run:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass `
+        -File 'D:\Test\wesnoth-setup\wesnoth_server\tools\Start-WindowsAllianceStack.ps1' `
+        -RuntimeRoot (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2') `
+        -MsysRoot 'D:\Test\wesnoth-setup\msys64' `
+        -IncludeBattles
+
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Startup stopped. Send the workflow text/JSON and failing service log.'
+    }
+}
+```
+
+Expect W02–W06 PASS for the database, backend, account bridge, shared battle service and native Room server, followed by `W07 UNIFIED GAME SERVICES READY`. Keep all five service windows open. Return the complete console plus the saved `wesnoth_server\diagnostics\alliance-workflow-*.txt` and `.json`; if startup stops, include the failing service's W02–W06 transcript and leave unrelated running services open.
+
+Startup health does not establish admin authorization or Room closure. Review this result before AD1a–AD1d below; AD2/AD3 follow separately. WAN/Ethernet status was requested once for this administration batch and remains pending. Do not repeat accepted Android, Company or build checks, initialize a database, or change credentials.
+
+---
+
+**Historical prerequisite (accepted 2026-10-31): preserving native Room build.** Git review passed: server HEAD is `81b73583d04a23cd7fd53a284dbaf833ecc5172a`, full fsck exits zero without errors, only the existing README edit is unstaged, and no changes are staged. All five services are reported stopped. The checkout already contains the admin update; no further pull or Git repair is needed.
 
 Keep all five services stopped. Disconnect WAN while retaining local Ethernet, then run only:
 
