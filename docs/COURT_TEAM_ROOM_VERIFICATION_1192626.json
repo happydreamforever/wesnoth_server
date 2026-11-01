@@ -1,0 +1,124 @@
+{
+  "release": 1192626,
+  "scope": "Court Team and individual Room implementation; actual native protocol5 peers and C++ account client against disposable production Flask/MongoDB",
+  "status": "passed",
+  "environment": {
+    "python": "3.12.10",
+    "mongodb": "8.0.32",
+    "network": "Docker --network none; ephemeral localhost TLS",
+    "platform": "Linux x86_64; not Windows or LDPlayer"
+  },
+  "tests": {
+    "unique": 37,
+    "skipped": 0,
+    "suites": {
+      "tests/test_court_native.py": 9,
+      "tests/test_court_teams.py": 17,
+      "tests/test_court_rooms.py": 11
+    },
+    "log": "build/audit-court-native-1192626/root-final-01.txt",
+    "sha256": "743cbc2af1aeb9423c9ce45e6e3c52c6b62882762e04312ee8e7705579c2506d",
+    "status": "all_three_suites_passed"
+  },
+  "additional_native_checks": {
+    "account_protocol_check": {
+      "status": "passed",
+      "log": "build/audit-court-native-1192626/client-protocol-02.txt",
+      "sha256": "0148334fe2c4053b01a893707b71f27685c7db88d490fed42ea473b4522f948c",
+      "scope": "gzip/JSON, duplicate keys, depth and byte bounds, credential shape and invalid operations before connection"
+    },
+    "capacity_case": "65 actual waiting native Rooms plus one running Room renew all66 Room leases and retain the executing pair; all peers are separately authenticated scripted fixtures"
+  },
+  "artifacts": {
+    "bridge": {
+      "path": "wesnoth_server/build/audit-court-bridge-1192626/alliance-account-bridge",
+      "bytes": 1561568,
+      "sha256": "87e2c3ee8a7426710cb4c8bdabe3d2bcbb13a54a26bf48b7057a141a66f9f247"
+    },
+    "room_server": {
+      "path": "wesnoth_server/build/audit-court-room-1192626/bin/wesnothd",
+      "bytes": 5617608,
+      "sha256": "eee44fb6bf14406fde00ca7ca546b247e68615e07328513a3ab360074d20a3fa"
+    },
+    "cpp_client_probe": {
+      "path": "wesnoth_client/build/audit-court-codec-1192626/court_flow_probe",
+      "bytes": 1158856,
+      "sha256": "b6066cd49ef67904953a59d740eaa17d142273794eb78e75ed34e7ef87ca9b91"
+    }
+  },
+  "findings_fixed": [
+    "Room heartbeats chunk both Room and execution requests into independently validated batches of64; the65th Room cannot close unrelated running battles.",
+    "Membership departure/removal permanently withdraws previous defense consent; rejoining does not reactivate it.",
+    "All78 Court domain error codes have bounded public messages in mirrored bridge/client headers.",
+    "The historical account protocol test used obsolete8-depth/32KiB constants; it now verifies the current12-depth/256KiB JSON limits without weakening production parsing."
+  ],
+  "initial_attempts_retained": [
+    "native-01 had an incorrect test expectation for a forbidden outer protocol operation; strict close is the intended behavior.",
+    "native-02 contained two new membership-test payloads missing required revision; test fixtures corrected.",
+    "client-protocol.txt failed at obsolete test bounds; production parser was unchanged.",
+    "client-build initial C++probe compared incompatible Boost.JSON/string types; corrected fixture conversion."
+  ],
+  "sources": {
+    "alliance/court/base.py": "8f509a6be2d13dd822ddd4d765f117df0a97b67a4d66684f5fe0cac76e14a64a",
+    "alliance/court/geography.json": "7ca7b911e56a7c88ba0fc90c06f6d256ec89de888eabe7b5e50b2526085b19cd",
+    "alliance/court/geography.py": "523a670f61d9fb83e060aa4383658303621ca19e18fb9cd5fdb7882ab096cd4d",
+    "alliance/court/schema.py": "cc4425e163e54203527e8870ce1f4fa8dbf3264065ae0022b6de1abf6ece8c28",
+    "alliance/court/teams.py": "312c0afea0f7ce6bedb2fd8caa160cfc08943edadc7a8a7c99191ba078e1417c",
+    "alliance/court/queries.py": "5aa9a86eff5bb95d04c8d2ef54ada306f380fb84809930d03fa2e9c2b042919e",
+    "alliance/court/rooms.py": "cff6ded1461a14b9f6ced965563c2069b88de3467b31ee2f9108641ef986a3d3",
+    "alliance/court/service.py": "b775d173104aff47947125872b693cedba3b3b18ade3dfec0b779fc1ddbacf9b",
+    "alliance/service_factory.py": "797babf46574be522a2ee622a265ee2cd5e32537c09db3d469cf5de83c130435",
+    "alliance_bridge/main.cpp": "40f4cf4d89c0fb240bf58c31c25e902fed8b2471c06a549378f589f7de1ebcc7",
+    "alliance_bridge/court_protocol.hpp": "decba0e31546d14ce50d582a3020424e09a912c4d243dbff5342ce0e8174eb6a",
+    "alliance_casual/adapter.hpp": "54b4627da0365b82cee0d4edffb8b7fbb441568dd1b56d27456e8a2c26e4aeb7",
+    "alliance_casual/adapter.cpp": "691814586683bef30d1adf73c3b90c77bfa632b1344c170b27a3d6c6375bba9b",
+    "engine/src/server/wesnothd/server.cpp": "3767a6aafe421f4d19d020f512ed734eb6345787f54718b194226def90b52c19",
+    "tests/test_court_native.py": "56011cbaa3c277cf8eb6f02244f4bbec37e9b5212dec22aa723229355f35c50b",
+    "tests/test_court_rooms.py": "9948a0d1a19bde7845d8646958b9c77b1db4f0903787726a1acd76a0776508a4",
+    "tests/test_court_teams.py": "41fbd68e11c6a1894b8e058e8406d66c7a7458748b37d05f2ab53cb225fddca0",
+    "tests/test_unified_native.py": "b9e1a3c0e35c41ad87f67e7ba00335fdcd9b777e87865544278e9c42e2d3a4ea"
+  },
+  "limitations": [
+    "Actual native Room lobby/admission/readiness/fees are tested; these Room peers do not render gameplay.",
+    "Court full-engine AI/combat/item/replay evidence is recorded separately in COURT_BATTLE_VERIFICATION_1192626.json.",
+    "Synthetic native UI/render evidence and Android packaging are separate.",
+    "Windows/LDPlayer, physical WAN status and multiple-human usability are not claimed.",
+    "Primary run logs are retained with unique names; native subprocess teardown logs in the fixture directory are latest-run copies."
+  ],
+  "preservation": {
+    "production_runtime_opened": false,
+    "production_reset_performed": false,
+    "readme_edits": "Both unrelated empty README.md edits retained; no changes staged here."
+  },
+  "post_verification_whitespace_normalization": [
+    {
+      "path": "tests/test_court_rooms.py",
+      "tested_sha256": "ba1436b675c6bd6a03cfbd40f39beae2974290942940910fcfe0c21772c7692b",
+      "packaged_sha256": "9948a0d1a19bde7845d8646958b9c77b1db4f0903787726a1acd76a0776508a4",
+      "change": "Remove one extra blank line at EOF only; no executable statement changes."
+    },
+    {
+      "path": "tests/test_court_teams.py",
+      "tested_sha256": "6a2e82eb284f1579e3a9de58b0452d1c6b767b0d1fbbfca039a93498bf6e224c",
+      "packaged_sha256": "41fbd68e11c6a1894b8e058e8406d66c7a7458748b37d05f2ab53cb225fddca0",
+      "change": "Remove one extra blank line at EOF only; no executable statement changes."
+    }
+  ],
+  "presentation_followup": {
+    "scope": "Safe history/result descriptions and bounded projections; no Room accounting or native binary change.",
+    "previous_query_sha256": "5b8616ef6ed924f36d056ccb8d197502fd9932808956a9ae29ad5391f76af15d",
+    "packaged_query_sha256": "5aa9a86eff5bb95d04c8d2ef54ada306f380fb84809930d03fa2e9c2b042919e",
+    "root_regressions": {
+      "passed": 12,
+      "skipped": 0,
+      "already_counted_in_37": true,
+      "suites": {
+        "tests/test_court_rooms.py": 11,
+        "tests/test_court_native.py::test_actual_cpp_client_codec_snapshot_shop_and_command_receipt": 1
+      },
+      "log": "build/audit-court-native-1192626/projection-final-01.txt",
+      "sha256": "94d3a3bfac7767239cf4ee2194e363d0c8273a6e71d37f66a8d96a933eb54f2e"
+    },
+    "team_regressions": "17 Team tests rerun in COURT_BATTLE_VERIFICATION_1192626.json; counted once in this37."
+  }
+}

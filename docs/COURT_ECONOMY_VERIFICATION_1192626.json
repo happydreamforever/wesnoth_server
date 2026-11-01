@@ -1,0 +1,237 @@
+{
+  "purpose": "wesnoth-court-economy-admin-delivery-verification",
+  "release": 1192626,
+  "python": "3.12.10",
+  "mongo": "8.0.32",
+  "docker_network": "none",
+  "docker_uid": 1001,
+  "nofile": 65536,
+  "powershell": "7.4.6",
+  "powershell_container_globalization": "invariant; portable runtime uses no container ICU",
+  "files": {
+    "alliance/court/wallets.py": "6160f99ccd2b1ae763385251c90a4bde9483535de61b5cb41077bb7c3029c50b",
+    "alliance/court/wallet_schema.py": "af2c21ae8d42570030cb28abfa61bb46f42496eb294b5cf6943226540560823d",
+    "alliance/court/admin_web.py": "7fced4365cb7890376672ba0f981f856ebe3dc1ccb5d0d235206d9833b2c66a3",
+    "tests/test_court_economy.py": "9219709a71d4719e464d3a6db3cef9d45f79ebd69aad375f0c58bdd059227a98",
+    "tests/test_court_economy_web.py": "d734d6859af202bbc9372a7fc933712df67f26b90d6dd62ed275df611841b596",
+    "tests/test_court_fresh_start.py": "f1f3a654728cf378f7080480b8f668146e64e776b0f1e8cdcf854872c4598042",
+    "tests/test_alliance_workflow.py": "1fc71d6bd567e691ff14e0ece0ebea064d5234497743c303a981daedeaa24512",
+    "tests/test_alliance_bridge_build.py": "775af73a79a0f22a3a16b41a37dcd207a6e55435a1c9ede44c933e75177f8942",
+    "tests/test_alliance_bridge_rebuild.py": "398638288d8e646932145d2f54e0c934dbe514f06d33cde73d0ea2a8e314d4bd",
+    "tests/test_unified_multiplayer_delivery.py": "1031a896d8cca67a2b1ec309fc3f39046bc88010527e80c949ca0d267a149adf",
+    "alliance/templates/court_area.html": "46a1c7b5a225130fa0fa1215d85e26626af732b858f7d5ace37b7643de8ca0b6",
+    "alliance/templates/court_competition_new.html": "86c9356488f5af8fd1b9b68bbfa24cf884dfb51826e5b94ce4ee155375e90c62",
+    "alliance/templates/court_dashboard.html": "91f01545e9d011f65f6165f016a483871f9ea97a85b866c853d5467dc0ff0df5",
+    "alliance/templates/court_detail.html": "00586c075dbeb11484cf019f6dd44adf42eca0ed3e5b851fcfdf48e03b2122fd",
+    "alliance/templates/court_list.html": "c6e87a5e1890c040c3a10c5edffbe7bc50cf978c7a0b4c7d10dba8366d36e679",
+    "alliance/templates/court_settings.html": "0b49173927e48cefafccca60de2e96591646f3961491988c2e2401b260e1f992",
+    "alliance/templates/court_team.html": "44497f1f44a160173695b8bad13196effaab407e1bec32af769c9930a1d7bf64"
+  },
+  "suites": {
+    "economy": {
+      "tests": 40,
+      "log": "wallet-projections-01.txt",
+      "status": "passed",
+      "note": "Latest combined57 contains40 economy and17 HTTP; each counted once."
+    },
+    "http": {
+      "tests": 17,
+      "log": "wallet-projections-01.txt",
+      "status": "passed"
+    },
+    "fresh_and_existing_regressions": {
+      "unique_tests": 49,
+      "logs": [
+        "fresh-03.txt",
+        "fresh-guards-final-02.txt"
+      ],
+      "note": "47 suite includes7 older Court guards+2actual reset/restore+38 legacy/deployment/maintenance; latest9 guards adds2 unique."
+    },
+    "delivery": {
+      "unique_tests": 75,
+      "logs": [
+        "delivery-02.txt",
+        "delivery-retired-bridge.txt"
+      ]
+    }
+  },
+  "browser": {
+    "status": "passed",
+    "screens": 75,
+    "pages": 25,
+    "report": "renders-final/verified-layouts.json",
+    "logs": [
+      "render-cli-final.txt",
+      "render-mobile-final.txt",
+      "render-review-final.txt"
+    ],
+    "limits": "Actual Flask fixture response rendering; no browser authentication click-flow or actual Windows/mobile-device evidence. HTTP authorization and mutations tested separately. Initial blank CDP/premature CLI captures and500px cropped mobile attempts are excluded."
+  },
+  "preservation": "No production runtime/private configuration, completed build stage, signer, OBB, saves or README edits touched; fresh reset uses disposable scratch databases/files.",
+  "unique_tests": 181,
+  "skips": 0,
+  "failed_attempts_retained": {
+    "fresh-01.txt": "Wrong fixture Mongo executable path and stale legacy fixture patch; corrected without production-runtime access.",
+    "fresh-02.txt": "New replay fixture missing parent directory; fixed fixture.",
+    "fresh-guards-final.txt": "Two new test expectations mismatched existing manifest/error names; corrected.",
+    "delivery-01.txt": "Portable PowerShell container had no ICU; invariant globalization supplied, no dependencies modified.",
+    "web-retired-01.txt": "Caught real product allowlist prefix bug, fixed and reran15 plus later17HTTP tests.",
+    "web-01.txt": "Two canonical Castle fixture IDs differed from map role catalogue; fixture corrected.",
+    "render-01/02/03/04/05 and CDP/CLI probes": "Capture harness failures retained; only verified-layouts.json captures are accepted."
+  },
+  "format": 1,
+  "status": "passed",
+  "evidence_root": "build/audit-court-economy-20261101",
+  "worker_delivery_audit": "Separate follow-up evidence; not included in these counts.",
+  "evidence": {
+    "summary.json": {
+      "bytes": 4534,
+      "sha256": "336fb3034f4cded1b60efcb0e87c1355b51a82eebf4384a4cf405056bed31c6a"
+    },
+    "final-domain-web.txt": {
+      "bytes": 8147,
+      "sha256": "73b4af2566054b0951825c58befaaac4e51ab68c74be4eb40956557990b7521e"
+    },
+    "web-final-06.txt": {
+      "bytes": 2942,
+      "sha256": "993ed15c6075e590e0d5d03ef2918ca814a79125727f7fa96638d1ddbda08e19"
+    },
+    "fresh-03.txt": {
+      "bytes": 9671,
+      "sha256": "c66dafd2a2e696fca9785747b7f044f29ff6cf2919decaac42a37490eaa83abf"
+    },
+    "fresh-guards-final-02.txt": {
+      "bytes": 1719,
+      "sha256": "161ece349679b4b356dc07a5b4f16c8337c3310326dfd1e344465defad8b8bfe"
+    },
+    "delivery-02.txt": {
+      "bytes": 13144,
+      "sha256": "296cabb78f96fac266859eea218b46da33848ee1d1d801ea47e3c199c7887093"
+    },
+    "delivery-retired-bridge.txt": {
+      "bytes": 390,
+      "sha256": "3ff4e2c81f5f236e226f9eb169c8c21c84b69de61ea2cf791c0ae7ec78b5dd6a"
+    },
+    "renders-final/verified-layouts.json": {
+      "bytes": 41537,
+      "sha256": "e61bb1f4641647700749388453b80f9dcb764c28eed4cccf9833a3cb904d1822"
+    },
+    "wallet-projections-01.txt": {
+      "bytes": 9558,
+      "sha256": "e7802504ae4ebf2162e33d07b86b8e7c9ca1b1fbd67800a12267a1261e8b443d"
+    },
+    "run-wallet-projections.py": {
+      "bytes": 2128,
+      "sha256": "a03069bf521cb89d7179d2d9d87701ea530138fbbb184c5883b7b065b06676f6"
+    }
+  },
+  "source_hashes_current": {
+    "alliance/court/wallets.py": "6160f99ccd2b1ae763385251c90a4bde9483535de61b5cb41077bb7c3029c50b",
+    "alliance/court/wallet_schema.py": "af2c21ae8d42570030cb28abfa61bb46f42496eb294b5cf6943226540560823d",
+    "alliance/court/admin_web.py": "7fced4365cb7890376672ba0f981f856ebe3dc1ccb5d0d235206d9833b2c66a3",
+    "tests/test_court_economy.py": "9219709a71d4719e464d3a6db3cef9d45f79ebd69aad375f0c58bdd059227a98",
+    "tests/test_court_economy_web.py": "d734d6859af202bbc9372a7fc933712df67f26b90d6dd62ed275df611841b596",
+    "tests/test_court_fresh_start.py": "f1f3a654728cf378f7080480b8f668146e64e776b0f1e8cdcf854872c4598042",
+    "tests/test_alliance_workflow.py": "1fc71d6bd567e691ff14e0ece0ebea064d5234497743c303a981daedeaa24512",
+    "tests/test_alliance_bridge_build.py": "775af73a79a0f22a3a16b41a37dcd207a6e55435a1c9ede44c933e75177f8942",
+    "tests/test_alliance_bridge_rebuild.py": "398638288d8e646932145d2f54e0c934dbe514f06d33cde73d0ea2a8e314d4bd",
+    "tests/test_unified_multiplayer_delivery.py": "1031a896d8cca67a2b1ec309fc3f39046bc88010527e80c949ca0d267a149adf",
+    "alliance/templates/court_area.html": "46a1c7b5a225130fa0fa1215d85e26626af732b858f7d5ace37b7643de8ca0b6",
+    "alliance/templates/court_competition_new.html": "86c9356488f5af8fd1b9b68bbfa24cf884dfb51826e5b94ce4ee155375e90c62",
+    "alliance/templates/court_dashboard.html": "91f01545e9d011f65f6165f016a483871f9ea97a85b866c853d5467dc0ff0df5",
+    "alliance/templates/court_detail.html": "00586c075dbeb11484cf019f6dd44adf42eca0ed3e5b851fcfdf48e03b2122fd",
+    "alliance/templates/court_list.html": "c6e87a5e1890c040c3a10c5edffbe7bc50cf978c7a0b4c7d10dba8366d36e679",
+    "alliance/templates/court_settings.html": "0b49173927e48cefafccca60de2e96591646f3961491988c2e2401b260e1f992",
+    "alliance/templates/court_team.html": "44497f1f44a160173695b8bad13196effaab407e1bec32af769c9930a1d7bf64"
+  },
+  "limits": [
+    "Native Windows compiler execution and Android/LDPlayer acceptance are not established by these suites.",
+    "Delivery fixtures exercise real wrappers and guarded lifecycle with controlled native outputs.",
+    "Browser rendering uses real Flask fixture responses; mutations/authentication are separately tested through HTTP.",
+    "Fresh start and restore use isolated temporary databases and files; no existing runtime is accessed."
+  ],
+  "wallet_projection_followup": {
+    "status": "passed",
+    "tests": 57,
+    "new_unique_tests": 3,
+    "skips": 0,
+    "test_ids": [
+      "test_court_economy.CourtEconomy.test_amounts_reject_boolean_float_negative_and_limit_includes_held",
+      "test_court_economy.CourtEconomy.test_battle_rewards_daily_cap_duplicate_and_opponent_limit",
+      "test_court_economy.CourtEconomy.test_campaign_first_scenario_reward_once_across_duplicate_saves",
+      "test_court_economy.CourtEconomy.test_captain_only_team_packages_and_changed_captain_cannot_be_credited",
+      "test_court_economy.CourtEconomy.test_cash_packages_are_pending_and_admin_review_exactly_once",
+      "test_court_economy.CourtEconomy.test_cash_rejection_no_credit_and_review_guard",
+      "test_court_economy.CourtEconomy.test_cash_request_descriptions_distinguish_pending_approved_and_rejected",
+      "test_court_economy.CourtEconomy.test_changed_body_reusing_command_id_is_rejected",
+      "test_court_economy.CourtEconomy.test_competing_quota_reservations_never_exceed_daily_allowance",
+      "test_court_economy.CourtEconomy.test_concurrent_donations_cannot_lose_cash_or_overdraw",
+      "test_court_economy.CourtEconomy.test_credit_exact_binding_and_balanced_ledger",
+      "test_court_economy.CourtEconomy.test_dispatch_allowlists_reject_credit_and_admin_review_on_player_path",
+      "test_court_economy.CourtEconomy.test_empty_wallet_is_zero_without_writing_and_cannot_read_another_wallet",
+      "test_court_economy.CourtEconomy.test_extra_trials_captain_only_maximum_two_and_expire",
+      "test_court_economy.CourtEconomy.test_generation_mismatch_rejected_without_funds_or_inventory_change",
+      "test_court_economy.CourtEconomy.test_hero_purchase_does_not_replace_existing_xp_or_accept_unknown_form",
+      "test_court_economy.CourtEconomy.test_hero_purchase_uses_lowest_real_form_and_no_campaign_fabrication",
+      "test_court_economy.CourtEconomy.test_hold_capture_and_technical_refund_idempotency",
+      "test_court_economy.CourtEconomy.test_inventory_reserve_consume_and_refund_exactly_once",
+      "test_court_economy.CourtEconomy.test_item_selection_rejects_unknown_item_and_cross_actor_receipt",
+      "test_court_economy.CourtEconomy.test_member_donation_is_atomic_nonwithdrawable_and_no_issuance",
+      "test_court_economy.CourtEconomy.test_quota_reserves_consumes_and_restores_original_utc_day",
+      "test_court_economy.CourtEconomy.test_release_unused_hold_and_reject_rebinding_or_double_spend",
+      "test_court_economy.CourtEconomy.test_request_packages_are_fixed_and_pending_requests_bounded",
+      "test_court_economy.CourtEconomy.test_same_command_uuid_on_different_accounts_is_independent",
+      "test_court_economy.CourtEconomy.test_shop_pagination_filters_do_not_leak_other_players",
+      "test_court_economy.CourtEconomy.test_simultaneous_battle_cash_and_story_cash_preserve_cap_and_total",
+      "test_court_economy.CourtEconomy.test_simultaneous_holds_never_overdraw",
+      "test_court_economy.CourtEconomy.test_simultaneous_initial_credits_create_one_wallet_without_losing_funds",
+      "test_court_economy.CourtEconomy.test_simultaneous_same_hero_purchase_charges_only_one",
+      "test_court_economy.CourtEconomy.test_stale_price_and_unconfirmed_purchase_do_not_spend",
+      "test_court_economy.CourtEconomy.test_story_unlock_racing_shop_purchase_preserves_progress_and_no_duplicate",
+      "test_court_economy.CourtEconomy.test_strict_record_validation_rejects_negative_balance_or_unknown_fields",
+      "test_court_economy.CourtEconomy.test_suspended_admin_or_requester_cannot_approve",
+      "test_court_economy.CourtEconomy.test_transaction_abort_restores_money_and_metadata",
+      "test_court_economy.CourtEconomy.test_two_admins_cannot_approve_same_request_twice",
+      "test_court_economy.CourtEconomy.test_unused_item_release_allows_reselection_with_new_receipt",
+      "test_court_economy.CourtEconomy.test_wallet_descriptions_never_render_unrecognized_internal_reason_or_reference",
+      "test_court_economy.CourtEconomy.test_wallet_descriptions_show_signed_balances_purpose_and_contribution_direction",
+      "test_court_economy.CourtEconomy.test_wallet_history_pages_are_bounded_and_owner_scoped",
+      "test_court_economy_web.CourtEconomyWeb.test_admin_role_revoked_after_opening_form_cannot_spend",
+      "test_court_economy_web.CourtEconomyWeb.test_anonymous_player_and_nonlocal_access_denied",
+      "test_court_economy_web.CourtEconomyWeb.test_area_activation_review_and_owned_castle_guard",
+      "test_court_economy_web.CourtEconomyWeb.test_cash_approval_csrf_exact_fields_revision_and_command_replay",
+      "test_court_economy_web.CourtEconomyWeb.test_cash_rejection_changes_no_balance",
+      "test_court_economy_web.CourtEconomyWeb.test_competition_cancel_review_releases_location",
+      "test_court_economy_web.CourtEconomyWeb.test_competition_form_freezes_rules_and_does_not_expose_private_seed",
+      "test_court_economy_web.CourtEconomyWeb.test_competition_lock_start_and_bracket_controls_follow_lifecycle",
+      "test_court_economy_web.CourtEconomyWeb.test_competition_unknown_fields_or_invalid_boolean_rejected",
+      "test_court_economy_web.CourtEconomyWeb.test_hero_management_catalog_and_campaign_entry_remain_available",
+      "test_court_economy_web.CourtEconomyWeb.test_long_names_full_roster_and_empty_lists_render",
+      "test_court_economy_web.CourtEconomyWeb.test_pages_read_only_with_current_theme_and_no_credentials",
+      "test_court_economy_web.CourtEconomyWeb.test_prices_are_whole_numbers_and_stale_rule_form_cannot_overwrite",
+      "test_court_economy_web.CourtEconomyWeb.test_retired_admin_and_internal_routes_cannot_reach_old_mutations",
+      "test_court_economy_web.CourtEconomyWeb.test_search_pagination_and_malformed_query_guards",
+      "test_court_economy_web.CourtEconomyWeb.test_technical_battle_cancel_requires_current_review_and_preserves_other_plan",
+      "test_court_economy_web.CourtEconomyWeb.test_zero_allowances_disable_economy_without_disabling_population_safety"
+    ],
+    "new_test_ids": [
+      "test_court_economy.CourtEconomy.test_cash_request_descriptions_distinguish_pending_approved_and_rejected",
+      "test_court_economy.CourtEconomy.test_wallet_descriptions_never_render_unrecognized_internal_reason_or_reference",
+      "test_court_economy.CourtEconomy.test_wallet_descriptions_show_signed_balances_purpose_and_contribution_direction"
+    ],
+    "source_hashes": {
+      "alliance/court/wallets.py": "6160f99ccd2b1ae763385251c90a4bde9483535de61b5cb41077bb7c3029c50b",
+      "tests/test_court_economy.py": "9219709a71d4719e464d3a6db3cef9d45f79ebd69aad375f0c58bdd059227a98"
+    },
+    "log": "wallet-projections-01.txt",
+    "scope": "Backend description fields consumed by the existing frozen mobile wallet detail panel; no client, native worker, protocol, schema or accounting mutation changes.",
+    "verified": [
+      "Signed available and held amounts distinguish reservation, capture, release and refund.",
+      "Contribution direction differs between personal wallet and Team treasury.",
+      "Approved cash requests show credited amounts; pending and rejected requests explicitly say not credited.",
+      "Known purposes have concise labels; arbitrary reasons, hold references and account/Team IDs are not rendered in description.",
+      "Public projection queries leave database contents unchanged; prior transaction authorization, idempotency, concurrency and HTTP regressions pass."
+    ],
+    "render_scope": "Prior75 administration renders remain historical accepted evidence. This follow-up validates backend text projections and actual Flask responses; it does not claim a new Android rendering."
+  }
+}

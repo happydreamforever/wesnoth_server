@@ -1,0 +1,186 @@
+{
+  "format": 1,
+  "release": 1192626,
+  "purpose": "Windows handoff source and syntax review only",
+  "document": "docs/COURT_WINDOWS_ACCEPTANCE_1192626.md",
+  "document_sha256": "514326df163c41704df55392c9804c80649059bb5cadd1fdeae0b6fc7255a708",
+  "powershell": {
+    "version": "7.4.6",
+    "parser": "System.Management.Automation.Language.Parser.ParseFile",
+    "container": "wesnoth-account-integration-verify:20261020",
+    "network": "none",
+    "environment": {
+      "DOTNET_SYSTEM_GLOBALIZATION_INVARIANT": "1"
+    },
+    "command_exit": 0,
+    "blocks": [
+      {
+        "file": "build/court-handoff-final-69bf7304c51044bf98ef584092a53e41/block-01.ps1",
+        "sha256": "0153bf58f4ee4ac2eb768d60164dd45741115d2f6f74480eac3f42fedfc81cea",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-final-69bf7304c51044bf98ef584092a53e41/block-02.ps1",
+        "sha256": "afd300c905dd743e40e4c7284949bc85678099bc6732ffc952d3db758b35a12f",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-final-69bf7304c51044bf98ef584092a53e41/block-03.ps1",
+        "sha256": "8716afd6c06b98ed3a78b0e611d52626368608ff8b3798bb33104ea0329d0709",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-final-69bf7304c51044bf98ef584092a53e41/block-04.ps1",
+        "sha256": "c18e6407d493f2823a9052f5b79196eb5771119bbe379268b1b02931b7bdce0e",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-final-69bf7304c51044bf98ef584092a53e41/block-05.ps1",
+        "sha256": "ce1e8b5441cf65fc9c499cd66f627d391b8ab8a3c45d7826a2e5bbc91bf4e612",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-final-69bf7304c51044bf98ef584092a53e41/block-06.ps1",
+        "sha256": "b5a7ca6135a62507b4725a43426a7a26c5e0acd9e26bf5e2807e3deafd6128dd",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-final-69bf7304c51044bf98ef584092a53e41/block-07.ps1",
+        "sha256": "e3d03b431b0d5491d37135763f5859893a1bfd6b5df9b8f07d16a8a9bf0045a7",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-final-69bf7304c51044bf98ef584092a53e41/block-08.ps1",
+        "sha256": "04a78ed4d421379de97a0701dbd114e5a2521abd52bffbbe9a4d9b6fb1bfd8a6",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-final-69bf7304c51044bf98ef584092a53e41/block-09.ps1",
+        "sha256": "9e1282cca0faca6209027846a99944ad4cc709601f4faeae33b241e564ea3695",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-final-69bf7304c51044bf98ef584092a53e41/block-10.ps1",
+        "sha256": "ec54187c452b33092f265b96b5379811ad2aa5793786795f8870754aa3128cc1",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-final-69bf7304c51044bf98ef584092a53e41/block-11.ps1",
+        "sha256": "78a65b09ed9ff9235b349f82d8419555a987a1a34fbdb7482f432461195910e1",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-final-69bf7304c51044bf98ef584092a53e41/block-12.ps1",
+        "sha256": "c5076d83793c69252134e17d3291be8a0344957e4e282eb359132c3ecbcde137",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-final-69bf7304c51044bf98ef584092a53e41/block-13.ps1",
+        "sha256": "d45da70218aed292dc6a01f6aacc1de5661a70deeb3b421cff330cf6a69b58ae",
+        "parse_errors": 0
+      }
+    ],
+    "parser_report": "build/court-handoff-final-69bf7304c51044bf98ef584092a53e41/parser.json",
+    "parser_report_sha256": "bc798774e1b118e6da64f773b56f3d036f9a090e83939e969020a647ac5ba529",
+    "parser_report_format": "JSON array followed by the human-readable completion marker."
+  },
+  "reviewed_helpers": [
+    "Initialize-WindowsCourtGame.ps1",
+    "Invoke-WindowsAllianceMaintenance.ps1",
+    "Rebuild-WindowsAllianceBridge.ps1",
+    "Build-WindowsMultiplayer.ps1",
+    "Build-WindowsWorldWorker.ps1",
+    "Start-WindowsAllianceStack.ps1",
+    "Run-WindowsWorldCompanion.ps1",
+    "../wesnoth_client/tools/Rebuild-WindowsAndroidAccountGame.ps1",
+    "../wesnoth_client/tools/Install-AndroidAccountGame.ps1"
+  ],
+  "scope": {
+    "windows_commands_executed": false,
+    "windows_acceptance_claimed": false,
+    "release_commit_placeholders_resolved": true,
+    "fresh_runtime": "runtime-v3",
+    "prior_runtime_preserved": "runtime-v2",
+    "schema": 5,
+    "protocol": 5
+  },
+  "notes": [
+    "All shell command parsing is source validation, not Windows filesystem, toolchain, connectivity, game or preservation evidence.",
+    "Single LDPlayer and native Court companions are expressly distinguished from multiple-human mobile and full-human Room acceptance.",
+    "Final source review corrected pre-creation cancellation, owned-Castle attacker/defender account sequence, actual History controls and remaining Plan quota. All13 final blocks parse after exact implementation commit binding."
+  ],
+  "prior_syntax_run": {
+    "document_sha256": "cdbca0285f0d7aea97cc18706d6cbcb165065b38a76108d8506ce568e2e9dbe1",
+    "blocks": [
+      {
+        "file": "build/court-handoff-syntax-19416810c8544f818704f0e1fd5fa1c0/block-01.ps1",
+        "sha256": "0153bf58f4ee4ac2eb768d60164dd45741115d2f6f74480eac3f42fedfc81cea",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-syntax-19416810c8544f818704f0e1fd5fa1c0/block-02.ps1",
+        "sha256": "bd1ab395fafdef931ce14d0f235d5079a60240b368d5bf3507b6aab8edcb918d",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-syntax-19416810c8544f818704f0e1fd5fa1c0/block-03.ps1",
+        "sha256": "8716afd6c06b98ed3a78b0e611d52626368608ff8b3798bb33104ea0329d0709",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-syntax-19416810c8544f818704f0e1fd5fa1c0/block-04.ps1",
+        "sha256": "c18e6407d493f2823a9052f5b79196eb5771119bbe379268b1b02931b7bdce0e",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-syntax-19416810c8544f818704f0e1fd5fa1c0/block-05.ps1",
+        "sha256": "ce1e8b5441cf65fc9c499cd66f627d391b8ab8a3c45d7826a2e5bbc91bf4e612",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-syntax-19416810c8544f818704f0e1fd5fa1c0/block-06.ps1",
+        "sha256": "b5a7ca6135a62507b4725a43426a7a26c5e0acd9e26bf5e2807e3deafd6128dd",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-syntax-19416810c8544f818704f0e1fd5fa1c0/block-07.ps1",
+        "sha256": "e3d03b431b0d5491d37135763f5859893a1bfd6b5df9b8f07d16a8a9bf0045a7",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-syntax-19416810c8544f818704f0e1fd5fa1c0/block-08.ps1",
+        "sha256": "04a78ed4d421379de97a0701dbd114e5a2521abd52bffbbe9a4d9b6fb1bfd8a6",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-syntax-19416810c8544f818704f0e1fd5fa1c0/block-09.ps1",
+        "sha256": "9e1282cca0faca6209027846a99944ad4cc709601f4faeae33b241e564ea3695",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-syntax-19416810c8544f818704f0e1fd5fa1c0/block-10.ps1",
+        "sha256": "ec54187c452b33092f265b96b5379811ad2aa5793786795f8870754aa3128cc1",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-syntax-19416810c8544f818704f0e1fd5fa1c0/block-11.ps1",
+        "sha256": "78a65b09ed9ff9235b349f82d8419555a987a1a34fbdb7482f432461195910e1",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-syntax-19416810c8544f818704f0e1fd5fa1c0/block-12.ps1",
+        "sha256": "c5076d83793c69252134e17d3291be8a0344957e4e282eb359132c3ecbcde137",
+        "parse_errors": 0
+      },
+      {
+        "file": "build/court-handoff-syntax-19416810c8544f818704f0e1fd5fa1c0/block-13.ps1",
+        "sha256": "d45da70218aed292dc6a01f6aacc1de5661a70deeb3b421cff330cf6a69b58ae",
+        "parse_errors": 0
+      }
+    ]
+  },
+  "implementation_commits": {
+    "server": "ae3115ed533c178dd270a66d3e9d8b3ad60404ef",
+    "client": "939f5c6999848555066a0032b9b02f006f2866d8"
+  }
+}

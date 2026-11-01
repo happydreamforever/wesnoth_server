@@ -1,0 +1,255 @@
+{
+  "release": 1192626,
+  "scope": "Court battle subsystem verification only; broader release and Windows acceptance are separate",
+  "status": "passed",
+  "python": "3.12.10",
+  "mongodb": "8.0.32 disposable replica sets",
+  "network": "Docker --network none; pinned local TLS only",
+  "tests": {
+    "unique": 56,
+    "skipped": 0,
+    "suites": [
+      {
+        "path": "tests/test_court_battles.py",
+        "count": 29
+      },
+      {
+        "path": "tests/test_court_battles_worker.py",
+        "count": 4
+      },
+      {
+        "path": "tests/test_world_worker.py",
+        "count": 18
+      },
+      {
+        "path": "tests/test_world_companion.py",
+        "count": 5
+      }
+    ],
+    "log": "wesnoth_server/build/court-presentation-redaction-1192626.log",
+    "log_sha256": "38527cdd81b6cb87245a74b988cc87e99d4757130400067b595b9f344c39a9b3",
+    "regression_log": "wesnoth_server/build/court-presentation-regression-1192626.log",
+    "regression_log_sha256": "22d2039c90f14b4fff86f49527112c8190961b2ffc8ea6bdef1435340bbe282e",
+    "additional_overlap": {
+      "path": "tests/test_court_teams.py",
+      "count": 17,
+      "final_result": "passed",
+      "note": "Already counted in root Court Team/Room verification; do not add again to release unique totals."
+    },
+    "execution_note": "The first presentation run passed29+4+18+5 plus17 overlapping Team cases. After final raw-field redaction,29 battle and17 Team cases passed again; repeats are not new unique tests."
+  },
+  "native_encounters": [
+    {
+      "case": "neutral",
+      "result_path": "wesnoth_client/build/audit-court-native-1192626/court-native-neutral-e514607f1d374c45bb57a67264dd2499/result.json",
+      "sha256": "a926cba85aecdd808b28a459747d4933334bb25fc459290f596eeef9c979b401",
+      "command_count": 371,
+      "completed_rounds": 14,
+      "native_verified": true,
+      "captures": null,
+      "scope": "Actual native Court combat with separately authenticated AI companions; not multiple-human usability"
+    },
+    {
+      "case": "standing_template",
+      "result_path": "wesnoth_client/build/audit-court-native-1192626/court-native-standing-d868f1d0799a4964a2585371bf3af9ee/result.json",
+      "sha256": "3d7eaa6e4481e8302ee52b7a3edf29e9dc9d23028b97fb5031e7d16febe6a0f3",
+      "command_count": 299,
+      "completed_rounds": 11,
+      "native_verified": true,
+      "captures": null,
+      "scope": "Actual native Court combat with separately authenticated AI companions; not multiple-human usability"
+    },
+    {
+      "case": "human_reconnect",
+      "result_path": "wesnoth_client/build/audit-court-native-1192626/court-native-witness-6bcbfd1170894f989f5be519a97ee99e/result.json",
+      "sha256": "7c990b412425f98a7d96a5c4ea3933a45664ff909343238dd06b18f17c22308b",
+      "command_count": 331,
+      "completed_rounds": 14,
+      "native_verified": true,
+      "captures": null,
+      "scope": "Actual native Court combat with separately authenticated AI companions; not multiple-human usability"
+    },
+    {
+      "case": "native_item_fixture",
+      "result_path": "wesnoth_client/build/audit-court-native-1192626/court-native-items-960a2668c6734399a41ea06a97fe65cb/result.json",
+      "sha256": "7f0bb8e3c62601a2eb329242192951a683c31ee57d02ae9f561c4d37a5ae35b5",
+      "command_count": 131,
+      "completed_rounds": 6,
+      "native_verified": true,
+      "captures": null,
+      "scope": "Actual native Court combat with separately authenticated AI companions; not multiple-human usability"
+    },
+    {
+      "case": "worker_crash_recovery",
+      "result_path": "wesnoth_client/build/audit-court-native-1192626/court-native-neutral-5894763c3e154bdbb29912b79a6f256f/result.json",
+      "sha256": "d7f7d2871aa3273b6eda01ea9ac293c4ada7d3085a2cc7710a27191118ce5f1b",
+      "command_count": 519,
+      "completed_rounds": 21,
+      "native_verified": true,
+      "captures": "A001-C001",
+      "scope": "Actual native Court combat with separately authenticated AI companions; not multiple-human usability"
+    }
+  ],
+  "native_engine": {
+    "path": "wesnoth_client/build/audit-court-native-1192626/world-worker",
+    "sha256": "5a88933fe3ab0281cb014441e7c8208a75322989a37f5541c793b1721574f1df",
+    "compile_commands": "wesnoth_client/build/audit-court-native-1192626/commands.json",
+    "preservation": "Existing engine foundation and earlier1192624 worker read-only. New Court output only."
+  },
+  "item_fixture": {
+    "path": "wesnoth_client/build/audit-court-native-1192626/fixture-items",
+    "shipped": false,
+    "description": "Isolated scenario events invoke actual production native menu handlers and assert12HP/status preservation, Remedy cure, wrong-turn rejection and repeated-use no-op. Separate relay tests verify player menu command authority; physical touch menu activation remains Windows acceptance."
+  },
+  "findings_fixed": [
+    "First settlement response now reads durable BSON receipt to match exact duplicate retries despite sub-millisecond timestamps.",
+    "A disconnect between available.wait and lock acquisition retains the bounded queued packet instead of closing an unrelated controller.",
+    "Suspended or changed heroes invalidate readiness without aborting unrelated scheduler work.",
+    "Administrative scoped technical cancellation refunds only the selected match and creates a fresh manually scheduled competition replacement.",
+    "All new matches touch each participating Team revision to serialize with relocation/membership edits; historical Castle filters remain available after deactivation."
+  ],
+  "retained_initial_failures": [
+    "Native fixture missing /audit/prefix/lib mount produced exit127; fixed fixture environment, no game dependency mutation.",
+    "Fixed-clock unit expectation adjusted to BSON millisecond precision after actual native duplicate-response mismatch was fixed.",
+    "Pre-fix reconnect fixture retained and stopped after bounded acceptance failed; replacement fixture passes.",
+    "Direct hostPython SSL import lacked container OpenSSL; companion tests executed successfully inside pinned image."
+  ],
+  "source_hashes": [
+    {
+      "path": "wesnoth_server/alliance/court/battles.py",
+      "sha256": "5b4b7634bec7f54787a502c0c3dfb0e4f510d1eb6b5bf8d393e8ba6e97898b90"
+    },
+    {
+      "path": "wesnoth_server/alliance/court/battle_schema.py",
+      "sha256": "90bbede444ec5c375fc3918e1bdb453f4edc943b9bb83df98b09ce5700ddbc5f"
+    },
+    {
+      "path": "wesnoth_server/alliance/world_worker.py",
+      "sha256": "f2c128db7f8470f1a44013a275a441c986beea2c3db0ea85baed63e622b00622"
+    },
+    {
+      "path": "wesnoth_server/alliance/world_execution.py",
+      "sha256": "c62ab8560a29252bd6dc563a3f68ed52f2d8a0f816ba71525301379d1219f65b"
+    },
+    {
+      "path": "wesnoth_server/alliance/battle_daemon.py",
+      "sha256": "0292de043bf8a5e3d8c0f9edf701ec8e9ab6b04cd9b5376a14d47eb9bc650edd"
+    },
+    {
+      "path": "wesnoth_server/tools/run_world_companion.py",
+      "sha256": "bd9954b62bd61644b32ed7c4c0dfede68d4543c0031429fcee1878551b2211eb"
+    },
+    {
+      "path": "wesnoth_server/tests/test_court_battles.py",
+      "sha256": "bfe1d99d8449b93495abacef5393171d017198560f31a31592f3e502ad192688"
+    },
+    {
+      "path": "wesnoth_server/tests/test_court_battles_worker.py",
+      "sha256": "8b15ef729d472cf2e1d49050743c488e683e6629fcb26f7b998a19684c2d9b3e"
+    },
+    {
+      "path": "wesnoth_server/tests/test_world_companion.py",
+      "sha256": "ffd4e5bddbd4a4af2440c98883085788b1850dc7fe4ecfcebe4a821b94fb791d"
+    },
+    {
+      "path": "wesnoth_server/tests/run_court_native_engine.py",
+      "sha256": "b42b003dce8dafc646db93ff62d4600b0c587d34798ba164c3bfa31a322dba9c"
+    },
+    {
+      "path": "wesnoth_server/tests/build_court_items_engine.py",
+      "sha256": "22eeae8330cde15e5f52ff2ec1c1c5abac3fef49c2cbd31702892f8b5faf72bb"
+    },
+    {
+      "path": "wesnoth_client/alliance_game/world_scenario.cpp",
+      "sha256": "e5225aaec6f5c0d4202d6d03a06f8676e28a30bba4626f7751b7a7ba1cca47c1"
+    },
+    {
+      "path": "wesnoth_client/alliance_game/world_scenario.hpp",
+      "sha256": "ce3382fc8718e896fa6813898c19b1f385145f6936075af505a9c8633a4ea510"
+    },
+    {
+      "path": "wesnoth_client/alliance_game/world_result.cpp",
+      "sha256": "d8af6f5f74e8fb98a0cc49b56d1e09c7606e059872fd5ec6ad5c9b9809d70e65"
+    },
+    {
+      "path": "wesnoth_server/alliance/court/queries.py",
+      "sha256": "5aa9a86eff5bb95d04c8d2ef54ada306f380fb84809930d03fa2e9c2b042919e"
+    }
+  ],
+  "not_claimed": [
+    "Windows/LDPlayer acceptance",
+    "multiple-human usability",
+    "physical touch item-menu activation",
+    "complete public-client anti-cheat"
+  ],
+  "post_verification_whitespace_normalization": [
+    {
+      "path": "wesnoth_server/alliance/court/battles.py",
+      "tested_sha256": "3bd882150115eaf00ae32fddb6acd8d5caae4398fce3a1fbcb356a6b7c677cde",
+      "packaged_sha256": "53712339591de0cd9d091063dad5882dba258c8e6caf7882eb277803eba146b1",
+      "change": "Remove one extra blank line at EOF only; no executable statement changes.",
+      "scope": "Historical normalization before the later public-projection update; current hashes are in source_hashes."
+    },
+    {
+      "path": "wesnoth_server/alliance/court/battle_schema.py",
+      "tested_sha256": "69396998adc90eb03750ca21c0f07712df08ae309f40ad98cb485fb6ac0b0ab7",
+      "packaged_sha256": "90bbede444ec5c375fc3918e1bdb453f4edc943b9bb83df98b09ce5700ddbc5f",
+      "change": "Remove one extra blank line at EOF only; no executable statement changes.",
+      "scope": "Historical normalization before the later public-projection update; current hashes are in source_hashes."
+    },
+    {
+      "path": "wesnoth_server/tests/test_court_battles.py",
+      "tested_sha256": "ab4a50781a58e7eeaa8afeb2fc7f81409ce2a4b42b38ec4fa7339fa807c8db58",
+      "packaged_sha256": "e350fc89b3c5867aa9640dfd6885c46c7d1ff9c38215424ad6895754230b4ebe",
+      "change": "Remove one extra blank line at EOF only; no executable statement changes.",
+      "scope": "Historical normalization before the later public-projection update; current hashes are in source_hashes."
+    }
+  ],
+  "prior_baseline_tests": {
+    "unique": 53,
+    "skipped": 0,
+    "suites": [
+      {
+        "path": "tests/test_court_battles.py",
+        "count": 26
+      },
+      {
+        "path": "tests/test_court_battles_worker.py",
+        "count": 4
+      },
+      {
+        "path": "tests/test_world_worker.py",
+        "count": 18
+      },
+      {
+        "path": "tests/test_world_companion.py",
+        "count": 5
+      }
+    ],
+    "log": "wesnoth_server/build/court-battles-verification-63215675640c44d59c7fcef6bd3764a8.log",
+    "log_sha256": "6754cad91ef0a931752db2b476b787c9539b614e95b0353f53cc6b5867507dab"
+  },
+  "post_projection_update": {
+    "scope": "Server public descriptions and minimal mobile-record redaction only. Native contracts, settlement, controller authority, persisted receipts and gameplay binaries unchanged. Earlier actual native encounter evidence is retained; no native encounter rerun is claimed for the presentation-only follow-up.",
+    "changes": [
+      "Public match settings add map_name only on a copied projection; the exact frozen settings validator and descriptor are unchanged.",
+      "Outcome descriptions show win/draw, actual personal XP/Crowns, Team XP, ownership transfer or unchanged ownership, and safe cancellation status.",
+      "Raw history data and private match evidence/generation/replay hashes are omitted from mobile projections. History text resolves only known event names, prizes and changes; free-form admin reasons remain in audit.",
+      "Read-only snapshot/profile, Team, Area/Castle and competition projection audit retained existing bounded field lists and membership/captain gates."
+    ],
+    "focused_new_tests": 3,
+    "final_affected_tests": 46,
+    "unique_battle_subsystem_tests": 56,
+    "team_overlap_with_root": 17
+  },
+  "mobile_integration": {
+    "status": "implemented and separately verified",
+    "evidence": "wesnoth_client/docs/COURT_MOBILE_VERIFICATION_1192626.json",
+    "evidence_sha256": "091796421910719e8ea83b87242b2f50bf9eee4b5682194ec61c65a5ca6c6ddf",
+    "scope": "96 actual native GUI2 captures include visible touch Actions Court consumable and editable Plan Settings. Native item fixture remains programmatic effect verification; Windows/physical-touch gameplay acceptance is pending.",
+    "apk_version": 1192626,
+    "apk_bytes": 54036110,
+    "apk_sha256": "0a393ffa14906500a9398a54248e9bfda54cbeb5fd0a16b140b8a3688a1b30a3",
+    "apk_verification": "Offline build, original signer, exact assets and previous-stage preservation are covered by the separate client evidence, not rebuilt in this server-only follow-up."
+  }
+}

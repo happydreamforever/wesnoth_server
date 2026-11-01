@@ -1,0 +1,1558 @@
+{
+  "release": 1192626,
+  "protocol": 5,
+  "status": "passed",
+  "production_commit": "939f5c6999848555066a0032b9b02f006f2866d8",
+  "scope": "Native mobile Court UI, supplied map packaging, touch consumable access, current Help, offline Android compilation and preservation. Backend/native battle verification is recorded separately.",
+  "implemented": [
+    "World → Area → Castle native workspace with shared 64-Castle geometry and independent identifiers in all 128 Areas",
+    "Raw SDL two-finger zoom, pan, Centre, zoom buttons and List; small map targets zoom before selection",
+    "Live in-place updates with retained scroll, search and reviewed edits; actor/generation-bound uncertain command journal",
+    "Team creation, applications, captain controls, treasury, allowances, defense templates, attack approvals, plans and competition bracket",
+    "Inline Battle/Settings editor for opponent, delay, map, gold, income, turns, visibility, observers, hero cap and items",
+    "Shop requests, reviewed hero/item purchases, donations and wallet; asynchronous home Crowns balance",
+    "Native Actions exposes eligible Court consumables through existing synchronized WML execution; no long press required",
+    "Six current Court Help topics alongside retained native combat Help"
+  ],
+  "tests": {
+    "unique": 120,
+    "skipped": 0,
+    "python_builder_wrapper_and_binding": 118,
+    "native_camera_asan_ubsan_and_supplied_asset_manifest": 2,
+    "python_runtime_for_118": "3.12.10",
+    "network": "Docker --network none",
+    "duplicate_affected_reruns_not_counted": true
+  },
+  "renders": {
+    "actual_native_captures": 96,
+    "resolutions": [
+      "1280×720",
+      "1920×1080"
+    ],
+    "themes": [
+      "default",
+      "Celes"
+    ],
+    "fixtures": [
+      "World, Area, Castle and two-finger zoom",
+      "Teamless World and ten-member roster with scrolling and long usernames",
+      "Shop and reviewed purchase; profile with zero and 117 owned heroes",
+      "Plan form and scrollable Settings, exact submitted rule values",
+      "Native tactical map preview and knockout bracket",
+      "Current Help topics and touch item menu"
+    ],
+    "assertions": [
+      "Native window bounds",
+      "At least 48 reference-pixel primary actions",
+      "Court item row 301×92 reference pixels",
+      "No double tap after pinch",
+      "Exact reviewed purchase and plan-settings command payloads"
+    ],
+    "runs": [
+      {
+        "directory": "build/audit-court-ui-1192626/render-16-1280x720",
+        "captures": 42,
+        "resolution": "1280x720",
+        "geometry": {
+          "bytes": 6469,
+          "sha256": "b04e9fa0f6f915ce080595af59e27817aa2f7144e34a829c8a74f4efe299e29f"
+        },
+        "images": {
+          "default-area.png": {
+            "bytes": 786516,
+            "sha256": "5327832e6857b90dc6047f83b429fae1dbedbf6b48e423e32a29ac3c5c077fee"
+          },
+          "default-castle.png": {
+            "bytes": 35245,
+            "sha256": "c2f3a5ac66b2d502135a39e24910b736e0932ffe33ef2aa4408c8488d4ea58c0"
+          },
+          "default-competition.png": {
+            "bytes": 169944,
+            "sha256": "92913f48c15d024c941317169b6238b386cf40d63c21859c610df5b3c7bf56a7"
+          },
+          "default-form-cash.png": {
+            "bytes": 166933,
+            "sha256": "c84f87f2075158ee93c3947da81d9b7fccfa149d52f9bd7bc8bef7888416f20b"
+          },
+          "default-form-force.png": {
+            "bytes": 144631,
+            "sha256": "0da17c3fb4f0a4795f3c06f1bc63fb70bd2f52e35bd705aef94d442b070122b8"
+          },
+          "default-form-hero.png": {
+            "bytes": 165156,
+            "sha256": "242f82689e1b66b635e419656e9822190e523538d4b1cc33d09d727dc3d11101"
+          },
+          "default-form-plan.png": {
+            "bytes": 241383,
+            "sha256": "a9d9a5d9a1bca42c6d4044910e4bcedd93aa74cb7eccd650690fe0038c89861c"
+          },
+          "default-form-settings-bottom.png": {
+            "bytes": 326210,
+            "sha256": "0b089d4bd29fadd5d5cc9dbc968e918f5bb3858bfc9c4b9cc1f60a2770a0d4f2"
+          },
+          "default-form-settings.png": {
+            "bytes": 317915,
+            "sha256": "3c6ebc00020bfeb0a7c5fde8e72c8db73f11ba3944f8e4e8c4291907bdb15ecb"
+          },
+          "default-form-team.png": {
+            "bytes": 137385,
+            "sha256": "8eae8264365a3fbc89dc6d6c4fdbd30589237b77f61eff70ee21d9e764e84c99"
+          },
+          "default-help-items.png": {
+            "bytes": 91467,
+            "sha256": "a8117f37dddcc50d197988e935eaf31a2de41f7a60ad643eaaa3b9a6238921cb"
+          },
+          "default-help-world.png": {
+            "bytes": 84737,
+            "sha256": "3ecc1c7635cb2f5edf8032e387879ab1deece607c3d1793ed57f3a3434cf1d6d"
+          },
+          "default-home-empty.png": {
+            "bytes": 1767104,
+            "sha256": "e06de15424daff3f0837bb02d8ece884439f3ce62a3d556338b96e313e7c351e"
+          },
+          "default-home.png": {
+            "bytes": 1767949,
+            "sha256": "95c0ae7ec4a495c2d8c7b5b22ae4336ea111c524030dc53c0a79cc8f8b4d36e1"
+          },
+          "default-pinch.png": {
+            "bytes": 683858,
+            "sha256": "b09b793980ebdd972fd6a8af7b425a50184899b07b5b88f19f4276f54de99e31"
+          },
+          "default-plan-submit.png": {
+            "bytes": 129143,
+            "sha256": "e1ac9719b001c1c6c93fdecb2fb553ea4170c7d9fcc3f654f256db03c61ed1c5"
+          },
+          "default-purchase.png": {
+            "bytes": 163368,
+            "sha256": "96edbebeef81183b67e9e8084a46f7652d66ad68ea3c19f1e122478924caeb0c"
+          },
+          "default-shop.png": {
+            "bytes": 63137,
+            "sha256": "bee9a5c194559bb1686c74232c09cc0cc69904d124dd041d99e7d6adde4da715"
+          },
+          "default-team.png": {
+            "bytes": 51463,
+            "sha256": "ad61375f96a7b9a0f9d437ee42e89cbc5e557628dd0d4761e74e85239f409b77"
+          },
+          "default-touch-item.png": {
+            "bytes": 95103,
+            "sha256": "6de45c41e02f4aa9bfffbc988fcccee6aae5ed90064d9ae91624f94bb19015e8"
+          },
+          "default-world.png": {
+            "bytes": 683859,
+            "sha256": "63f3ded5a70c13aae4a737a3749fd61719108446a07ec156cac18506c4ff4a01"
+          },
+          "modern-area.png": {
+            "bytes": 789330,
+            "sha256": "d7630efb816027c422cfb9e32479beb8cbef889f922de0bbda0d28f616e561d8"
+          },
+          "modern-castle.png": {
+            "bytes": 38349,
+            "sha256": "cd22a3a280308547bb3818b642dad5c4cf3fdb5cd149e0fc95a44dd7fc0882f7"
+          },
+          "modern-competition.png": {
+            "bytes": 169944,
+            "sha256": "92913f48c15d024c941317169b6238b386cf40d63c21859c610df5b3c7bf56a7"
+          },
+          "modern-form-cash.png": {
+            "bytes": 166933,
+            "sha256": "c84f87f2075158ee93c3947da81d9b7fccfa149d52f9bd7bc8bef7888416f20b"
+          },
+          "modern-form-force.png": {
+            "bytes": 144631,
+            "sha256": "0da17c3fb4f0a4795f3c06f1bc63fb70bd2f52e35bd705aef94d442b070122b8"
+          },
+          "modern-form-hero.png": {
+            "bytes": 165156,
+            "sha256": "242f82689e1b66b635e419656e9822190e523538d4b1cc33d09d727dc3d11101"
+          },
+          "modern-form-plan.png": {
+            "bytes": 241383,
+            "sha256": "a9d9a5d9a1bca42c6d4044910e4bcedd93aa74cb7eccd650690fe0038c89861c"
+          },
+          "modern-form-settings-bottom.png": {
+            "bytes": 326210,
+            "sha256": "0b089d4bd29fadd5d5cc9dbc968e918f5bb3858bfc9c4b9cc1f60a2770a0d4f2"
+          },
+          "modern-form-settings.png": {
+            "bytes": 317915,
+            "sha256": "3c6ebc00020bfeb0a7c5fde8e72c8db73f11ba3944f8e4e8c4291907bdb15ecb"
+          },
+          "modern-form-team.png": {
+            "bytes": 137385,
+            "sha256": "8eae8264365a3fbc89dc6d6c4fdbd30589237b77f61eff70ee21d9e764e84c99"
+          },
+          "modern-help-items.png": {
+            "bytes": 91655,
+            "sha256": "fe97e2145cee47399b0dd3c14129a5a007cdf624de50caa69f82c8f0b75de3e7"
+          },
+          "modern-help-world.png": {
+            "bytes": 84828,
+            "sha256": "e97ce22a28ca907ad529e4d5caf5eee640e33d9e7517d8e10a763b4aac40e2c5"
+          },
+          "modern-home-empty.png": {
+            "bytes": 1767104,
+            "sha256": "e06de15424daff3f0837bb02d8ece884439f3ce62a3d556338b96e313e7c351e"
+          },
+          "modern-home.png": {
+            "bytes": 1767949,
+            "sha256": "95c0ae7ec4a495c2d8c7b5b22ae4336ea111c524030dc53c0a79cc8f8b4d36e1"
+          },
+          "modern-pinch.png": {
+            "bytes": 686920,
+            "sha256": "a5e09c9f47eb86a4b01ca5de29bb0180f610b80e1c7b46c8c91e0961b45d7a1c"
+          },
+          "modern-plan-submit.png": {
+            "bytes": 129143,
+            "sha256": "e1ac9719b001c1c6c93fdecb2fb553ea4170c7d9fcc3f654f256db03c61ed1c5"
+          },
+          "modern-purchase.png": {
+            "bytes": 163368,
+            "sha256": "96edbebeef81183b67e9e8084a46f7652d66ad68ea3c19f1e122478924caeb0c"
+          },
+          "modern-shop.png": {
+            "bytes": 66315,
+            "sha256": "dddd680534dbccd360c8e0b98686d48b763d74103550b1730f354243604bdf34"
+          },
+          "modern-team.png": {
+            "bytes": 54519,
+            "sha256": "e8ce97bb7b5ccd27ff054fa0499b9d5ad4ec574995c8b92468c29e4997d4d1a4"
+          },
+          "modern-touch-item.png": {
+            "bytes": 95306,
+            "sha256": "048219354a0b3aee0e88cd399d17206f5952956959b400b3aac5bec836c851d1"
+          },
+          "modern-world.png": {
+            "bytes": 686938,
+            "sha256": "a4ca01e93f76d41f2a81b768892d4f0b7c2ee2f765d1439062a7eb50281a57e8"
+          }
+        }
+      },
+      {
+        "directory": "build/audit-court-ui-1192626/render-16-1920x1080",
+        "captures": 42,
+        "resolution": "1920x1080",
+        "geometry": {
+          "bytes": 6665,
+          "sha256": "f0c1e4f3b4555aeec48241e614d360f48d6196bbb707e0991a92c8d26c073654"
+        },
+        "images": {
+          "default-area.png": {
+            "bytes": 1170239,
+            "sha256": "8b80e4e67e1ab97716fedc0d443a829826a6b5a9d87e6114dce10b0ad9ee0da0"
+          },
+          "default-castle.png": {
+            "bytes": 49025,
+            "sha256": "886af64594eea8da0b9d38b15d1517938b14503e29c1449897e0bef7ef87ead1"
+          },
+          "default-competition.png": {
+            "bytes": 1244748,
+            "sha256": "d122a2d7bdc1ecb6707213e15ee075ce6e8d05c94fc0184db96cf7fa30ce8529"
+          },
+          "default-form-cash.png": {
+            "bytes": 1226870,
+            "sha256": "a62067040257ac455605c70e1bcb95c8a98ad1ca15611cd6aabc36b238b880df"
+          },
+          "default-form-force.png": {
+            "bytes": 1201096,
+            "sha256": "0bca5e5e936b3a813c457feacabe301d61fedbe1a755451bd3327fd07c604d94"
+          },
+          "default-form-hero.png": {
+            "bytes": 1226002,
+            "sha256": "1112a2c4f92afbda1cb9a0f9a863404eff3ab2628559df353328bdfcbb6e05cd"
+          },
+          "default-form-plan.png": {
+            "bytes": 1695431,
+            "sha256": "afe37df77d058c72f3a0af601393234a3126b8bcbd7bb345a3837a1e56412a0c"
+          },
+          "default-form-settings-bottom.png": {
+            "bytes": 1698184,
+            "sha256": "81bc66155e77d7a09490cb38e9c508741bf4f98a275af9dbb367d5068c1d26e5"
+          },
+          "default-form-settings.png": {
+            "bytes": 1698196,
+            "sha256": "0e42b7115b8011347891d2faaa7e6a86b946777a3d161683a75241fa3f579013"
+          },
+          "default-form-team.png": {
+            "bytes": 1192927,
+            "sha256": "913fd75965a81f6e067a44ff6caa372186038d9a7bfb0c76fcb535a717348d7b"
+          },
+          "default-help-items.png": {
+            "bytes": 1267791,
+            "sha256": "72e48680cf52768a94d973579a04a402ce190144f6d3583e20281dfab1494d90"
+          },
+          "default-help-world.png": {
+            "bytes": 1260506,
+            "sha256": "3ec50620f612777c8c6353a95802002ff02bb83b0f54b199930e3ec700d35015"
+          },
+          "default-home-empty.png": {
+            "bytes": 3767840,
+            "sha256": "d732b09ea41aa83a2794820563d54185c36a3c7cc89e415b4eae7d4738237418"
+          },
+          "default-home.png": {
+            "bytes": 3769406,
+            "sha256": "3eb0e02ec3893cd78f315675c73fdfcd813b441e62761b7c5caae707e48a6e07"
+          },
+          "default-pinch.png": {
+            "bytes": 1399797,
+            "sha256": "0dc053f46505aa269444fc49b146eb6df9769476c23228da14fb010ea97a6db8"
+          },
+          "default-plan-submit.png": {
+            "bytes": 1184271,
+            "sha256": "711b44f4d194e96d088a75ff2979681851e9bca46daf23a98d370ce81eba3e65"
+          },
+          "default-purchase.png": {
+            "bytes": 1224179,
+            "sha256": "f7db7df395a2d95bc6d5f5d312137e330693526d487cd1e61e8338a78c9da3ac"
+          },
+          "default-shop.png": {
+            "bytes": 77971,
+            "sha256": "a39d12cc8cb730f1acb3b596f04adaac00a4bf6d817a09dfaa2e8d23b75bf064"
+          },
+          "default-team.png": {
+            "bytes": 65401,
+            "sha256": "026c295ff2f820f89017e024e102dc2baba178c012c26faa5a8057452a0a9150"
+          },
+          "default-touch-item.png": {
+            "bytes": 1267498,
+            "sha256": "3ad9911293b92daf7880d7a7932cd246d169167b26d45d821b9b5cd1de1310b0"
+          },
+          "default-world.png": {
+            "bytes": 1399807,
+            "sha256": "41d9097219761793c14cbe39be25415ebaf3f84a8ef49ab58a11b5f99a4a40e9"
+          },
+          "modern-area.png": {
+            "bytes": 2327846,
+            "sha256": "d7c5c0f4c22737099b8c0d43684160ce990ea32fc597f7ae574de408e0ce66a2"
+          },
+          "modern-castle.png": {
+            "bytes": 1190586,
+            "sha256": "a37bbad85ce513bc26263d5650000ec42e987b77bbd207bb44077e8fcd6f95a1"
+          },
+          "modern-competition.png": {
+            "bytes": 1244748,
+            "sha256": "d122a2d7bdc1ecb6707213e15ee075ce6e8d05c94fc0184db96cf7fa30ce8529"
+          },
+          "modern-form-cash.png": {
+            "bytes": 1226870,
+            "sha256": "a62067040257ac455605c70e1bcb95c8a98ad1ca15611cd6aabc36b238b880df"
+          },
+          "modern-form-force.png": {
+            "bytes": 1201096,
+            "sha256": "0bca5e5e936b3a813c457feacabe301d61fedbe1a755451bd3327fd07c604d94"
+          },
+          "modern-form-hero.png": {
+            "bytes": 1226002,
+            "sha256": "1112a2c4f92afbda1cb9a0f9a863404eff3ab2628559df353328bdfcbb6e05cd"
+          },
+          "modern-form-plan.png": {
+            "bytes": 1695431,
+            "sha256": "afe37df77d058c72f3a0af601393234a3126b8bcbd7bb345a3837a1e56412a0c"
+          },
+          "modern-form-settings-bottom.png": {
+            "bytes": 1698184,
+            "sha256": "81bc66155e77d7a09490cb38e9c508741bf4f98a275af9dbb367d5068c1d26e5"
+          },
+          "modern-form-settings.png": {
+            "bytes": 1698196,
+            "sha256": "0e42b7115b8011347891d2faaa7e6a86b946777a3d161683a75241fa3f579013"
+          },
+          "modern-form-team.png": {
+            "bytes": 1192927,
+            "sha256": "913fd75965a81f6e067a44ff6caa372186038d9a7bfb0c76fcb535a717348d7b"
+          },
+          "modern-help-items.png": {
+            "bytes": 1268355,
+            "sha256": "f080396c66bfc6c247626d2a66b4e4690196b03a2e7debf4e38ea928334d3986"
+          },
+          "modern-help-world.png": {
+            "bytes": 1261030,
+            "sha256": "60df1798b53c453c5e04874e58bfc4fe485c7bd2c8fb6d73c3949b2439723328"
+          },
+          "modern-home-empty.png": {
+            "bytes": 3767840,
+            "sha256": "d732b09ea41aa83a2794820563d54185c36a3c7cc89e415b4eae7d4738237418"
+          },
+          "modern-home.png": {
+            "bytes": 3769406,
+            "sha256": "3eb0e02ec3893cd78f315675c73fdfcd813b441e62761b7c5caae707e48a6e07"
+          },
+          "modern-pinch.png": {
+            "bytes": 2574784,
+            "sha256": "7a5e60cecd5aefbd3146f7fc68d893b817b791d9173ab558f0d0654d99e81165"
+          },
+          "modern-plan-submit.png": {
+            "bytes": 1184271,
+            "sha256": "711b44f4d194e96d088a75ff2979681851e9bca46daf23a98d370ce81eba3e65"
+          },
+          "modern-purchase.png": {
+            "bytes": 1224179,
+            "sha256": "f7db7df395a2d95bc6d5f5d312137e330693526d487cd1e61e8338a78c9da3ac"
+          },
+          "modern-shop.png": {
+            "bytes": 1222974,
+            "sha256": "0e8434a47ac0c1b49bb6ab0efdac26dbdcca3c955d8716b88e66f56b086ab5ff"
+          },
+          "modern-team.png": {
+            "bytes": 1208893,
+            "sha256": "309b7efce261c56f369cb237fe005b7ca87e7c8a01376e3101c61ffaac87279a"
+          },
+          "modern-touch-item.png": {
+            "bytes": 1267997,
+            "sha256": "c223e916ecef433a1d88fc95de718739cee1fa9d69a030c08326f109b4d664ca"
+          },
+          "modern-world.png": {
+            "bytes": 2574786,
+            "sha256": "518f2d1a982d696d23d10d8af84d2fcf02c464fe06543376b98045584021eb4c"
+          }
+        }
+      },
+      {
+        "directory": "build/audit-court-ui-1192626/render-17-1280x720",
+        "captures": 6,
+        "resolution": "1280x720",
+        "geometry": {
+          "bytes": 1159,
+          "sha256": "5225cec81f8a4c2d3ebeccab30d5c49c1295a0d903b5d1a435990126755e36bc"
+        },
+        "images": {
+          "default-team-large-bottom.png": {
+            "bytes": 81232,
+            "sha256": "25e1909389a3006404f614992d99f7eac3af994ca4cb6ce3a3dfcea1d3d6cd2e"
+          },
+          "default-team-large.png": {
+            "bytes": 78929,
+            "sha256": "371dbafa021a0863072462903753f805aa90ffa37d06a9292c09822b418673df"
+          },
+          "default-world-teamless.png": {
+            "bytes": 684114,
+            "sha256": "b3bb56e236b92f8b1e2d3a9909571b6a0b4de95b7be1eccb8b56e7a2d914cb15"
+          },
+          "modern-team-large-bottom.png": {
+            "bytes": 81232,
+            "sha256": "12a927dafd54e00a9be98a1ba51bf7c7614e41a441892b9fbc6b659faed6e575"
+          },
+          "modern-team-large.png": {
+            "bytes": 78928,
+            "sha256": "03cdc1fce3627e9ec29d1905e5d960ba789ee309f60bff1ac71be32ff5e6c0f6"
+          },
+          "modern-world-teamless.png": {
+            "bytes": 684112,
+            "sha256": "3f2ee04202faff6a3493cf1dd77e72e1de5d95a9b3da464f6c56af6efe30274b"
+          }
+        }
+      },
+      {
+        "directory": "build/audit-court-ui-1192626/render-17-1920x1080",
+        "captures": 6,
+        "resolution": "1920x1080",
+        "geometry": {
+          "bytes": 1195,
+          "sha256": "d0821bc9e4d24b7873b337a7ae32655733187e41d4f5476055c21834c91466cb"
+        },
+        "images": {
+          "default-team-large-bottom.png": {
+            "bytes": 134386,
+            "sha256": "e63d9fff9581b4791f19e351a3739ba9469a3f170c73f525503b9e76a9d4b8f3"
+          },
+          "default-team-large.png": {
+            "bytes": 133207,
+            "sha256": "9e17be65ae7e5e9450d8bdf8275f74a3f5fb0726703bd97708f6c981b90555ab"
+          },
+          "default-world-teamless.png": {
+            "bytes": 1399905,
+            "sha256": "e807c127a0d1ea2303382e514a8e0059ba97a1f7a9ce8ab984398b77cec6b550"
+          },
+          "modern-team-large-bottom.png": {
+            "bytes": 134387,
+            "sha256": "c3607e609c1777a066ab52a225796d4533db59099997f36d931512f7a1e9bd9b"
+          },
+          "modern-team-large.png": {
+            "bytes": 133207,
+            "sha256": "7fe64fbad420ad1e5f9a592e613825b80d7e82e5ac0618aa30e2b8de75f8276f"
+          },
+          "modern-world-teamless.png": {
+            "bytes": 1399906,
+            "sha256": "c7cfa6bc8454923a7796c0f95076b9be60d0510b647e6609687b389cbf6c9f07"
+          }
+        }
+      }
+    ]
+  },
+  "android": {
+    "python": "3.12.10",
+    "network": "disabled",
+    "native_steps": 56,
+    "gradle_tasks_executed": 33,
+    "package": "org.wesnoth.offline",
+    "version_code": 1192626,
+    "launcher": "org.wesnoth.offline.OfflineInitActivity",
+    "apk": {
+      "path": "build/android-account-game/app/build/outputs/apk/debug/app-debug.apk",
+      "bytes": 54036110,
+      "sha256": "0a393ffa14906500a9398a54248e9bfda54cbeb5fd0a16b140b8a3688a1b30a3"
+    },
+    "original_signer_sha256": "7e346dc5ec05098674444abdb61508270da51de9e57421133340c07834343074",
+    "original_and_previous_signer_equal": true,
+    "receipt_verified": true,
+    "independent_aapt2_apksigner_zip_validation": true,
+    "exact_asset_manifest": true
+  },
+  "preservation": {
+    "all_prior_account_stages": {
+      "android-account-engine": {
+        "retained_at": "android-account-engine-before-menu-polish-20261101T103633Z-60561106e936417ba2684869eed23e46",
+        "files": 166,
+        "unchanged": true
+      },
+      "android-account-engine-before-battle-ui-20261024T053143Z-9ee9b272aa714bcd8171866ddefb2e18": {
+        "retained_at": "android-account-engine-before-battle-ui-20261024T053143Z-9ee9b272aa714bcd8171866ddefb2e18",
+        "files": 135,
+        "unchanged": true
+      },
+      "android-account-engine-before-citadel-ui-20261027T065016Z-a59f3065838c4b26aeccd5cd6431e363": {
+        "retained_at": "android-account-engine-before-citadel-ui-20261027T065016Z-a59f3065838c4b26aeccd5cd6431e363",
+        "files": 142,
+        "unchanged": true
+      },
+      "android-account-engine-before-emerald-ui-20261027T124619Z-4744bb011e3d45348e680333f4ffeaa0": {
+        "retained_at": "android-account-engine-before-emerald-ui-20261027T124619Z-4744bb011e3d45348e680333f4ffeaa0",
+        "files": 151,
+        "unchanged": true
+      },
+      "android-account-engine-before-individual-rooms-20261023T235144Z-c8234277ad6e43a2bff35947d3dc2b9a": {
+        "retained_at": "android-account-engine-before-individual-rooms-20261023T235144Z-c8234277ad6e43a2bff35947d3dc2b9a",
+        "files": 131,
+        "unchanged": true
+      },
+      "android-account-engine-before-menu-polish-20261030T172111Z-5c39dc401b0a48f087f21d2836d58e0b": {
+        "retained_at": "android-account-engine-before-menu-polish-20261030T172111Z-5c39dc401b0a48f087f21d2836d58e0b",
+        "files": 164,
+        "unchanged": true
+      },
+      "android-account-engine-before-product-ui-20261026T064410Z-e3e7c194b9144126afae1a8e68a7f068": {
+        "retained_at": "android-account-engine-before-product-ui-20261026T064410Z-e3e7c194b9144126afae1a8e68a7f068",
+        "files": 139,
+        "unchanged": true
+      },
+      "android-account-engine-before-world-companies-20261028T041924Z-339f278ca0b5488393ab2e3a1578fbf8": {
+        "retained_at": "android-account-engine-before-world-companies-20261028T041924Z-339f278ca0b5488393ab2e3a1578fbf8",
+        "files": 151,
+        "unchanged": true
+      },
+      "android-account-game": {
+        "retained_at": "android-account-game-before-menu-polish-20261101T103633Z-60561106e936417ba2684869eed23e46",
+        "files": 273,
+        "unchanged": true
+      },
+      "android-account-game-before-battle-ui-20261024T053143Z-9ee9b272aa714bcd8171866ddefb2e18": {
+        "retained_at": "android-account-game-before-battle-ui-20261024T053143Z-9ee9b272aa714bcd8171866ddefb2e18",
+        "files": 243,
+        "unchanged": true
+      },
+      "android-account-game-before-citadel-ui-20261027T065016Z-a59f3065838c4b26aeccd5cd6431e363": {
+        "retained_at": "android-account-game-before-citadel-ui-20261027T065016Z-a59f3065838c4b26aeccd5cd6431e363",
+        "files": 264,
+        "unchanged": true
+      },
+      "android-account-game-before-emerald-ui-20261027T124619Z-4744bb011e3d45348e680333f4ffeaa0": {
+        "retained_at": "android-account-game-before-emerald-ui-20261027T124619Z-4744bb011e3d45348e680333f4ffeaa0",
+        "files": 270,
+        "unchanged": true
+      },
+      "android-account-game-before-individual-rooms-20261023T235144Z-c8234277ad6e43a2bff35947d3dc2b9a": {
+        "retained_at": "android-account-game-before-individual-rooms-20261023T235144Z-c8234277ad6e43a2bff35947d3dc2b9a",
+        "files": 243,
+        "unchanged": true
+      },
+      "android-account-game-before-menu-polish-20261030T172111Z-5c39dc401b0a48f087f21d2836d58e0b": {
+        "retained_at": "android-account-game-before-menu-polish-20261030T172111Z-5c39dc401b0a48f087f21d2836d58e0b",
+        "files": 273,
+        "unchanged": true
+      },
+      "android-account-game-before-product-ui-20261026T064410Z-e3e7c194b9144126afae1a8e68a7f068": {
+        "retained_at": "android-account-game-before-product-ui-20261026T064410Z-e3e7c194b9144126afae1a8e68a7f068",
+        "files": 243,
+        "unchanged": true
+      },
+      "android-account-game-before-world-companies-20261028T041924Z-339f278ca0b5488393ab2e3a1578fbf8": {
+        "retained_at": "android-account-game-before-world-companies-20261028T041924Z-339f278ca0b5488393ab2e3a1578fbf8",
+        "files": 273,
+        "unchanged": true
+      }
+    },
+    "prior_stage_files": 3261,
+    "prior_update_journals": 24,
+    "client_readme_unchanged": true,
+    "original_apk_unchanged": true,
+    "public_fixture_bundle_unchanged": true,
+    "obb_data_manifest_unchanged": true,
+    "prior_artwork_fonts_unchanged": true,
+    "production_input_files_stable_during_build": 212
+  },
+  "supplied_maps": {
+    "source_files_verified": 27,
+    "explicit_manifest_alias": "Area_A001_64_Castles → Area_64_Castles",
+    "areas": 128,
+    "castles_per_area": 64,
+    "independent_castle_ids": 8192,
+    "assets": {
+      "alliance-ui/court/area.png": {
+        "bytes": 3702885,
+        "sha256": "5d30464217f1230c9decba4873f9ec6a83f7338279fc6109fc4e40f37d5d69e1"
+      },
+      "alliance-ui/court/geometry.json": {
+        "bytes": 114903,
+        "sha256": "ed32a8577ddc086c4eaeb9d1d1cc508afda8ef7ee1d1ed385094946e9ddc60c0"
+      },
+      "alliance-ui/court/world.png": {
+        "bytes": 3361958,
+        "sha256": "63a36826ac5452e8d1fd7612c97b20c5c8a5d565267eb0723b0d09c0da18c9a8"
+      }
+    },
+    "verification": {
+      "bytes": 5550,
+      "sha256": "775d56b1f43ec8f34bafb97ada98d78fe5a9dde85436772b6a9135ccb54dffe9"
+    }
+  },
+  "source_hashes": {
+    "tools/build_android_media.py": {
+      "bytes": 25161,
+      "sha256": "6b7281a35a4d73b49d49d49eb69ee1f71a5b3f1f845bbcfefe3ecd8a980e701f"
+    },
+    "tools/build_android_bootstrap.py": {
+      "bytes": 23374,
+      "sha256": "86b1904b38162d68da23b14ed58236e600ecff7322906b800ed6984e6d546fa5"
+    },
+    "tools/android-build-profile.json": {
+      "bytes": 385,
+      "sha256": "a0d85ae578f9904751e03886b8877b05364757082f2c62b256fa376e9dd106a8"
+    },
+    "tools/android-native-archives.json": {
+      "bytes": 6587,
+      "sha256": "a6fa42db957a1c2187fd4a08570bd7a1cf69f200c39493b9e3c80a9655cd985d"
+    },
+    "tools/native-media/build-plan.json": {
+      "bytes": 3764,
+      "sha256": "02b8bf939baf9102fc25937099e45a67fd97d60ecbb2ad61c2cdd6157f765be9"
+    },
+    "tools/native-media/CMakeLists.txt": {
+      "bytes": 1387,
+      "sha256": "e857936831a539ec1774b8f256477df764b2ac05913c7a77a857523e38c0c76d"
+    },
+    "tools/native-media/probe.cpp": {
+      "bytes": 13281,
+      "sha256": "5ec1f20ba83de495fac09b860c42ab830ceb2820fabe0bfba1bd0eb1a5477756"
+    },
+    "tools/build_android_fonts.py": {
+      "bytes": 14649,
+      "sha256": "f2218011b801fc1a60038cd475110fe4b6369ecf0a358e64a0a988484a184bc3"
+    },
+    "tools/native-fonts/build-plan.json": {
+      "bytes": 1319,
+      "sha256": "024d9ca1cf399a1435a54b18c6dec205cc8aa8e71e55ac23e492cca9aaada1b8"
+    },
+    "tools/native-fonts/CMakeLists.txt": {
+      "bytes": 1167,
+      "sha256": "74cc14159af3440cd6eb1e556dfd397b8c8aeb61e68141c33e9c839108e43197"
+    },
+    "tools/native-fonts/probe.cpp": {
+      "bytes": 10110,
+      "sha256": "fdcac23801256c489589e8c4de0f31339881ac656b8e2bb9848222918e121397"
+    },
+    "tools/native-fonts/assets.json": {
+      "bytes": 500,
+      "sha256": "aa4ad44ba118a8cf06fd4667346942b22ed24ec104b073af4822e157f1d84ee3"
+    },
+    "tools/build_android_icu.py": {
+      "bytes": 21467,
+      "sha256": "8b5736849cb6fa1f5dcd67a040080395a704ebf3744ed1255414a62ad00258e2"
+    },
+    "tools/native-icu/build-plan.json": {
+      "bytes": 1466,
+      "sha256": "18592e6b0efc508548c6a607f668a27d1c1db38d441a3b413252a42cdb62ad61"
+    },
+    "tools/native-icu/sources.json": {
+      "bytes": 720,
+      "sha256": "bbae8ddf37f2bdd058a22475f46a6bfbb91c6437f38b255674dbf802074da6cf"
+    },
+    "tools/native-icu/CMakeLists.txt": {
+      "bytes": 2647,
+      "sha256": "0d8e90c5f297e6805da0115b11b0f1d6c36d9fcfa462d3bba8260ea54ad1276a"
+    },
+    "tools/native-icu/probe.cpp": {
+      "bytes": 9033,
+      "sha256": "06604e7a8a5370c1db19c2e5e1de93e94ce2ab4c24bbe2249272fcd785c5b16b"
+    },
+    "tools/build_android_boost.py": {
+      "bytes": 17867,
+      "sha256": "825cfab0c67fca24dc3a9b885d764cb1ca660659a0936932abc767d6d7ec41c6"
+    },
+    "tools/native-boost/build-plan.json": {
+      "bytes": 4156,
+      "sha256": "ad6fdeb2d206eaa542580c7495cc2743507557a4ee7ae845aca8d16450974c09"
+    },
+    "tools/native-boost/CMakeLists.txt": {
+      "bytes": 6695,
+      "sha256": "834915bc528c4e8b1484b53e6dc87489da0ee5f1bd6dcb5bedaa87a2f2a62454"
+    },
+    "tools/native-boost/probe.cpp": {
+      "bytes": 14044,
+      "sha256": "724b0734f0b11867bb7fc91100629e3c070d0dcab0d40c36a591bd1241386719"
+    },
+    "tools/build_android_text_base.py": {
+      "bytes": 24567,
+      "sha256": "6cb8529a8d765dc1ba93a8e1a8a25d86d53f1c716d081c47b63cd6a24b96c89b"
+    },
+    "tools/native-text-base/build-plan.json": {
+      "bytes": 866,
+      "sha256": "af3f914c244e9043453bfeca7be13be1bb90de4f1279a666ce2e7b2d720cc40e"
+    },
+    "tools/native-text-base/probe.c": {
+      "bytes": 5896,
+      "sha256": "2e8d9857c86080735361e06b69775c0b82b3d4b3c46381b358452f4cb92470a4"
+    },
+    "tools/build_android_text_render.py": {
+      "bytes": 30208,
+      "sha256": "03b7bbbc91295e321e3bf0cf719ccfe16f4606f37191b74c065ea93ad8786366"
+    },
+    "tools/native-text-render/build-plan.json": {
+      "bytes": 2997,
+      "sha256": "5539ea64a9567d9b0c28a692b681339c6d40cef8cb3eb8440c75fa1b33f663ae"
+    },
+    "tools/native-text-render/probe.c": {
+      "bytes": 12688,
+      "sha256": "ce7203725a944139b26fc350b6c2f0c2fb912147a8cf53af1f4933923ec0ec3f"
+    },
+    "tools/build_android_glib_deps.py": {
+      "bytes": 23025,
+      "sha256": "9315eb86d1eb87946d675e3baec80389b90428d5c82330a6f27d17a293ff4675"
+    },
+    "tools/native-glib-deps/build-plan.json": {
+      "bytes": 4318,
+      "sha256": "294a70747e2d50cde97427eb6621363bce0c161e35359e4761937fea8bd60438"
+    },
+    "tools/native-glib-deps/probe.c": {
+      "bytes": 7161,
+      "sha256": "645d8c2fe6cd314e2c6aa7f2efd389d6da59d615d18c0e4943be1f5b3458969c"
+    },
+    "tools/native-glib-deps/fixtures/catalog.po": {
+      "bytes": 327,
+      "sha256": "d4ac69bf1b942260a06dd108deb7665460f26b3a8a0feebe3287b6a06cda8517"
+    },
+    "tools/native-glib-deps/fixtures/locale/fr/LC_MESSAGES/wesnoth-glib-deps.mo": {
+      "bytes": 228,
+      "sha256": "323d9dbea222f590ceeba53e3196f39b0dfbc9a116814f82f6285ad13b65257e"
+    },
+    "tools/build_android_glib.py": {
+      "bytes": 22771,
+      "sha256": "2b2461e38a54e27ed2fdbdb8188cfd8449ca49efe6533aac2017c221149d51f3"
+    },
+    "tools/native-glib/build-plan.json": {
+      "bytes": 1173,
+      "sha256": "47c8e8ce1ad0888003696dad58f60c4f6e4d826fee0687caef424bd30ac678f1"
+    },
+    "tools/native-glib/probe.c": {
+      "bytes": 11023,
+      "sha256": "e0c8b2b6fc043c2afc46aef716887133fb182b38c00feb7d687eb659b1122168"
+    },
+    "tools/build_android_text_layout.py": {
+      "bytes": 26384,
+      "sha256": "c4ca404a2e7fc54bd20dd8699079693fa68c06c3b054433fc2f06840567a0a95"
+    },
+    "tools/native-text-layout/build-plan.json": {
+      "bytes": 3882,
+      "sha256": "82ffeb9fc99ad6e3c0782e3825c3868f5dba468bbad2cede964eaa8b54676392"
+    },
+    "tools/native-text-layout/sources.json": {
+      "bytes": 682,
+      "sha256": "239a36cbd91cb88ff2b56ffeda385d0a3801898de605af7460e9559183370dc3"
+    },
+    "tools/native-text-layout/probe.c": {
+      "bytes": 13658,
+      "sha256": "9c6e5b8d5db4ceea90959d9304220fc869ba6ddc635b1acfe4ce02fbe5ac5829"
+    },
+    "tools/build_android_network.py": {
+      "bytes": 41233,
+      "sha256": "df5a89aa1c80c45db4323f501db83ddd63ee00880347bcc1277127400db28e01"
+    },
+    "tools/native-network/build-plan.json": {
+      "bytes": 46894,
+      "sha256": "41a696c75c2f6d80a0adcd4ba6fda57e896d982eca4edfd9c8622d29d3966535"
+    },
+    "tools/native-network/CMakeLists.txt": {
+      "bytes": 5369,
+      "sha256": "061a8f67b693fb7aa3e2ce3ac29d355cf8fb9572b4b6b7356c2c00edc01ea011"
+    },
+    "tools/native-network/configure-openssl.sh": {
+      "bytes": 1293,
+      "sha256": "5a2fcc7c335877de68533ef35f2f00dff7a1fe8a7499d655cfe13ae332d3f2ab"
+    },
+    "tools/native-network/export-openssl.pl": {
+      "bytes": 1025,
+      "sha256": "1701ed742b7ddaa4cd13d7b1e008923034710ee1bda84c257cbd1f32fbce09f9"
+    },
+    "tools/native-network/probe.cpp": {
+      "bytes": 25254,
+      "sha256": "2263989572b6f0aa908320409b8009c6367c7aaa73abc0de95d0b49ab3c19b67"
+    },
+    "tools/build_android_engine.py": {
+      "bytes": 15377,
+      "sha256": "2a0162b64a8e980893921a57cb1e35efdd20fcf64acdf0b36532efe222d65700"
+    },
+    "tools/android_engine_artifacts.py": {
+      "bytes": 15887,
+      "sha256": "6a196318679b93a351813da5a93e03f311eb0473611d59684c5d9610c40a9313"
+    },
+    "tools/prepare_android_source.py": {
+      "bytes": 13699,
+      "sha256": "789cc5b5f6c819a70cde1f55e3b1e459987af50e5aac80583f6ffb800a691c65"
+    },
+    "tools/native-engine/CMakeLists.txt": {
+      "bytes": 7380,
+      "sha256": "101d9589ce430faf4112c1c41d9c8d3494cbb36a3499afcd1d3f5c8e2c0b3266"
+    },
+    "tools/native-engine/config.h.in": {
+      "bytes": 64,
+      "sha256": "1ea5166a7b4b8fde6edeb1f55704be332a3370a72570dd312b79fcab3f5080d9"
+    },
+    "tools/native-engine/runner.cpp": {
+      "bytes": 268,
+      "sha256": "0c11ca9b86e574cee153d3719a069c81f5d42181ccd2611b027933b29ee39ab8"
+    },
+    "tools/native-engine/build-plan.json": {
+      "bytes": 3281,
+      "sha256": "8f059e4de9e2fefda6256856e4a9af2c1b0ecd94645cfd95d7bf16413e2b4ab3"
+    },
+    "tools/build_android_sdl_check.py": {
+      "bytes": 21741,
+      "sha256": "4cec9c0aef77ef6345a525c9d2e1bd4a5e4625e8f668e9a277379c314b21ecff"
+    },
+    "tools/sdl-check/settings.gradle": {
+      "bytes": 334,
+      "sha256": "98682cb3f611283c7bd78bf124bf175b31c24c0f4c004dc35d63fce02066593c"
+    },
+    "tools/sdl-check/build.gradle": {
+      "bytes": 81,
+      "sha256": "d72ae03b9a8aeeca72f647dc3a0d69d9aa1ccbee17b0367f3e281b9f22d3939f"
+    },
+    "tools/sdl-check/app.build.gradle": {
+      "bytes": 760,
+      "sha256": "b90aff46e9fb8c5d8e5524c4d01d8006ea52dd0bc3b6c843257078dcd8add1c5"
+    },
+    "tools/sdl-check/gradle.properties": {
+      "bytes": 111,
+      "sha256": "da4ee0bc3675f7bcec6e57d41b2e7210bdbb3f9fab5f3380360367da1929b010"
+    },
+    "tools/sdl-check/AndroidManifest.xml": {
+      "bytes": 910,
+      "sha256": "1c125a92b4cd1a395246f0570e9676cbe4bcf0b50f1daed0f0c943168b073e45"
+    },
+    "tools/sdl-check/CheckActivity.java": {
+      "bytes": 543,
+      "sha256": "6a01e00303e3651efd1ea8e00056282c6a323d63edbf8ac609298816a3f970c5"
+    },
+    "tools/sdl-check/native/CMakeLists.txt": {
+      "bytes": 1675,
+      "sha256": "b51511ac79eed0225d31888fcef22a26532f5c9102001e1844658a3ad6fc8045"
+    },
+    "tools/sdl-check/native/main.cpp": {
+      "bytes": 7704,
+      "sha256": "0ac1f198f1dd3b6b8fb49e5bcda0c09d5f38816b2fb46241977932c88d58fe65"
+    },
+    "tools/prepare_android_game_data.py": {
+      "bytes": 12850,
+      "sha256": "49a0babb4fcd1e8a4cfe0b323aec772a01b7f6948770253ad6aad0c4d71db586"
+    },
+    "tools/verify_game_data.py": {
+      "bytes": 8334,
+      "sha256": "dd8ab9175feb8a0e91d43bd15c03768e3d1d689bc5c5b41be6d6c79ea8fcdb3e"
+    },
+    "tools/gamedata-1.19.26.reference.json": {
+      "bytes": 218507,
+      "sha256": "4c04343bb599d1f6c3239395a683e977b40a90656b20969f30f3927981ae5773"
+    },
+    "tools/build_android_game.py": {
+      "bytes": 25142,
+      "sha256": "77dd54a321810b396b1c444698fd32c13c52ef783e1627d05aacf535906ff305"
+    },
+    "tools/native-game/build-plan.json": {
+      "bytes": 930,
+      "sha256": "86df0b38407d1a72e255a4a16dd10998c38a752ad96f1f9ec7315d3a8e5a1d1b"
+    },
+    "tools/native-game/settings.gradle": {
+      "bytes": 287,
+      "sha256": "355bc4729f63493dbd93b055593663112d6609c7621501b5c02c003ca1cf1371"
+    },
+    "tools/native-game/build.gradle": {
+      "bytes": 81,
+      "sha256": "d72ae03b9a8aeeca72f647dc3a0d69d9aa1ccbee17b0367f3e281b9f22d3939f"
+    },
+    "tools/native-game/app.build.gradle": {
+      "bytes": 795,
+      "sha256": "01bf3d0c2c686fcc70b364e40c2ede5918dcff618924ae28a6aac845edcbe31b"
+    },
+    "tools/native-game/gradle.properties": {
+      "bytes": 111,
+      "sha256": "da4ee0bc3675f7bcec6e57d41b2e7210bdbb3f9fab5f3380360367da1929b010"
+    },
+    "tools/native-game/AndroidManifest.xml": {
+      "bytes": 1518,
+      "sha256": "207037b3d3839d6109f7fc7d1e5da15218f1448a1e972a76eb8765c00cbd50c8"
+    },
+    "tools/native-game/OfflineInitActivity.java": {
+      "bytes": 7452,
+      "sha256": "adce683796811c26d67eb5eccfc1ec55e10eab8da415089a350847d0a44b85d7"
+    },
+    "tools/native-game/OfflineGameActivity.java": {
+      "bytes": 9256,
+      "sha256": "8ee9cd4da904e64f1b5cdf1d78f474c3e9a59677ad10dc8eaf4cad05e25d62a3"
+    },
+    "tools/native-game/OfflineDataInstaller.java": {
+      "bytes": 25440,
+      "sha256": "70ffe107931b553729ea197c6f563580d81a483f793ea05eb5f1d36c5bd50be6"
+    },
+    "tools/android-presentation/mobile_home.hpp": {
+      "bytes": 23675,
+      "sha256": "93bf3dd71b4db96f743821bcd2c4c15aa3f68f4b766e9ed19eae157fa6b7d00c"
+    },
+    "tools/android-presentation/presentation_icons.hpp": {
+      "bytes": 4821,
+      "sha256": "592fe2f5ff64503c1efb00a8b5c6308392a739b83d8a6a5b0054395b03e27047"
+    },
+    "tools/android-presentation/court_touch_actions.hpp": {
+      "bytes": 1231,
+      "sha256": "d9311f091cb888c7d3db3f4d5985740360c9339ae9c0891c96d0490d469e0da0"
+    },
+    "tools/android-presentation/court_help.hpp": {
+      "bytes": 3831,
+      "sha256": "dbf808838c65dc57abb7dd9e4f33acad416dd9c2ffebce325ebf68413ccd58ca"
+    },
+    "tools/build_android_account_game.py": {
+      "bytes": 54169,
+      "sha256": "b95c721b257b7826183e79e695b2faa5630be2837f67081caf85c7ccb05ce4c7"
+    },
+    "tools/android_public_bundle.py": {
+      "bytes": 8869,
+      "sha256": "5e783eb4c5909512d64f0ce7832f6bb48b5e7f605478a83b57ec3f0bf5cd6ce3"
+    },
+    "tools/generate_product_theme.py": {
+      "bytes": 4928,
+      "sha256": "d740459753c7411e055cc8996651a7228e5e19df6eecc0aa1841144c350f0801"
+    },
+    "tools/native-account-game/ui-theme.json": {
+      "bytes": 773,
+      "sha256": "c3c3f4c53f7871a47b2dd4c70f30b065343885f04cad1bf35f0b2ad97ed6ee4b"
+    },
+    "alliance_game/product_theme.hpp": {
+      "bytes": 1727,
+      "sha256": "facf0fd5d6b940ad4fc51b17f29a0ac0ab3a71dcde5d00e07e59b95ecd0a9825"
+    },
+    "alliance_game/home_ui.hpp": {
+      "bytes": 20902,
+      "sha256": "da091660934958850db02bf60ba3af3eb0ef5b432749b1bb93d14aec34d12409"
+    },
+    "alliance_game/menu_icons.hpp": {
+      "bytes": 8401,
+      "sha256": "2b6047c2cd6caacda142c556fb3291211cc44fb4ba072cdde6df8e20566b2d5d"
+    },
+    "alliance_game/emerald_chrome.hpp": {
+      "bytes": 14474,
+      "sha256": "a934a6d561ad2d6757535a3cef8b56b1dcce5df77c7eb4949e3eee6f69d6e22a"
+    },
+    "alliance_game/native_menu_theme.hpp": {
+      "bytes": 18594,
+      "sha256": "9473cb1051a52ebc3ee2223e6911f78ded046f79859d854901857e37cbccf41c"
+    },
+    "alliance_game/menu_theme_overlay.py": {
+      "bytes": 2690,
+      "sha256": "68078a219ee66d5420e89f763d130a37ed1524a18d13875b298aa9d1e957017d"
+    },
+    "tools/validate_android_account_profile.py": {
+      "bytes": 3766,
+      "sha256": "be57cf388f7c370f1bec475db9f04ae5923881752b3bb600025935459ad2bb61"
+    },
+    "tools/native-account-game/ui-assets.json": {
+      "bytes": 966,
+      "sha256": "805a05149a5ec85240f4481ef6cd80d0ae62c1c3af055d075ec8789ccffb4330"
+    },
+    "tools/native-account-game/CMakeLists.txt": {
+      "bytes": 8978,
+      "sha256": "fd4a5ab1c28f501a7c0b378b9ac5aa093e33b29ab75e313e1dba30eef46dc9ad"
+    },
+    "alliance_game/account_ui.cpp": {
+      "bytes": 121847,
+      "sha256": "a2be9cb9acc20a143cecf3d740898d4f526430195f8780d4e6fcbfff4426bec9"
+    },
+    "alliance_game/account_ui.hpp": {
+      "bytes": 1466,
+      "sha256": "5e2790f287d7a78aa090cf10f3779335f53a20c76d98a0fac69a3d0f84af43aa"
+    },
+    "alliance_game/product_ui_layout.hpp": {
+      "bytes": 13186,
+      "sha256": "410c87c6f8942b4740f57989039dbd2f6b5aa60e7e738d97c09b0d4a8e927ff2"
+    },
+    "alliance_game/native_touch_layout.hpp": {
+      "bytes": 8073,
+      "sha256": "2166ad81b899ad0d747da6e600ee9460fc5ae625f332083d3ba3943ea3d67c26"
+    },
+    "alliance_game/team_workspace.inc": {
+      "bytes": 19366,
+      "sha256": "d8ebe6ca7eec0c7df8e5146f04ba0220f8e12f2853fdc91a1678586b24bcca20"
+    },
+    "alliance_game/individual_creation.inc": {
+      "bytes": 9568,
+      "sha256": "c4fbefd86bd5df1c0826e5c383f3667b1557fe52521d41371357347cbbd3a23d"
+    },
+    "alliance_game/hero_presentation.hpp": {
+      "bytes": 692,
+      "sha256": "0d625ca0d27aa7b9e3a99751668e53f55e1bc72d36cbcb1fc0a2bfc2a962c7a3"
+    },
+    "alliance_game/hero_presentation_data.inc": {
+      "bytes": 25851,
+      "sha256": "b96e6e72ff26ae1404ee8d3b1ff09dddbc7f1d801a81c3a868f4a6053def380d"
+    },
+    "alliance_game/hero_presentation.json": {
+      "bytes": 102468,
+      "sha256": "54d4db07970a537d68a44744b084e839a4cf09efe3ed21f5a1b833361cc2e3bf"
+    },
+    "alliance_game/hero_gallery.inc": {
+      "bytes": 8819,
+      "sha256": "66ddb2a046fd254550fc5fd85fd1edeec409409b5d2808481c0ae85b88dd9825"
+    },
+    "alliance_game/campaign_rewards.hpp": {
+      "bytes": 2762,
+      "sha256": "47c64aa9d64fdce093ae6daecd08cfb909d6b1d20dcf56bec089130698a07dbb"
+    },
+    "alliance_game/campaign_selection_overlay.py": {
+      "bytes": 1109,
+      "sha256": "fd3b258355ba523d69794db2f3f436056f7ae39fd4a5bd2220a12110ac271acd"
+    },
+    "alliance_native/world_protocol.hpp": {
+      "bytes": 9426,
+      "sha256": "602b15306fe0a987098a39209337192a2e58fe279cce71b47f93cca3a10317bc"
+    },
+    "alliance_game/world_ui.hpp": {
+      "bytes": 90601,
+      "sha256": "c2de3709fe1a551b5c04907ed5d9b6a2629b9676849b7bfb0b236b060e79f35e"
+    },
+    "alliance_game/world_command_record.hpp": {
+      "bytes": 6339,
+      "sha256": "9fe894720116313bfd21a6cad1e39f7402f66a95c643a813f25da1903cb838d8"
+    },
+    "alliance_native/court_protocol.hpp": {
+      "bytes": 8598,
+      "sha256": "decba0e31546d14ce50d582a3020424e09a912c4d243dbff5342ce0e8174eb6a"
+    },
+    "alliance_game/court_ui.hpp": {
+      "bytes": 64539,
+      "sha256": "aeb9a9d638b9fdb8f8961e54d706cf452385fd46237d410eb13f52ca667804d8"
+    },
+    "alliance_game/court_common.hpp": {
+      "bytes": 4750,
+      "sha256": "dd34646cfca1bf12767dfa5d008dfb98002a9bddd66f2ec3ca8e83c8f75b6b13"
+    },
+    "alliance_game/court_bracket.hpp": {
+      "bytes": 3331,
+      "sha256": "b7e38eda78529eb74735c4d6a5f7b6e7265e64e0ea3a87be1749788f294aa9e1"
+    },
+    "alliance_game/court_command_record.hpp": {
+      "bytes": 6368,
+      "sha256": "850e2614d56ffe7082202859f572316069deb1b7549b9306309f91d0629507c9"
+    },
+    "alliance_game/court_map.hpp": {
+      "bytes": 3276,
+      "sha256": "20d5bbeb62c1615457f32c6450546c52ea0efdab945c267d172cc43b9b238f9a"
+    },
+    "alliance_game/court_geometry.hpp": {
+      "bytes": 42692,
+      "sha256": "42cd6139e32ea8f8d829d68e3136e6482468c4db173a1617677966ca879283a3"
+    },
+    "tools/prepare_court_assets.py": {
+      "bytes": 4577,
+      "sha256": "bf6ae891c57579815c3868f085c4eeea195c17bc4de17b682c1cc8353fc855ba"
+    },
+    "alliance_game/court_assets/source-verification.json": {
+      "bytes": 5550,
+      "sha256": "775d56b1f43ec8f34bafb97ada98d78fe5a9dde85436772b6a9135ccb54dffe9"
+    },
+    "alliance_game/world_launch.hpp": {
+      "bytes": 479,
+      "sha256": "299e241f6f6c6905727c163b566d04ad080b2f7be18b323401c6f7bce9a8f6ff"
+    },
+    "alliance_game/world_launch.cpp": {
+      "bytes": 10716,
+      "sha256": "f7f26caae6abed1327d6899837c93e9e748a201086957fda70bf0f8b8b7848b7"
+    },
+    "alliance_game/world_scenario.hpp": {
+      "bytes": 898,
+      "sha256": "ce3382fc8718e896fa6813898c19b1f385145f6936075af505a9c8633a4ea510"
+    },
+    "alliance_game/world_scenario.cpp": {
+      "bytes": 13904,
+      "sha256": "e5225aaec6f5c0d4202d6d03a06f8676e28a30bba4626f7751b7a7ba1cca47c1"
+    },
+    "alliance_game/world_result.hpp": {
+      "bytes": 752,
+      "sha256": "689266a68157f5e9fac4415011374ee6fa542b24419c4697130eca0076c206cb"
+    },
+    "alliance_game/world_result.cpp": {
+      "bytes": 10360,
+      "sha256": "d8af6f5f74e8fb98a0cc49b56d1e09c7606e059872fd5ec6ad5c9b9809d70e65"
+    },
+    "alliance_game/world_storage.hpp": {
+      "bytes": 445,
+      "sha256": "915903079f7341582caedbcb01432ca6f108729d9bb189d4829a96f6d9a089c3"
+    },
+    "alliance_game/world_storage.cpp": {
+      "bytes": 4459,
+      "sha256": "60270c22f0cdd66aa72430c6743e9038af62328a72301edd878afcc79fec5da4"
+    },
+    "alliance_game/world_worker.hpp": {
+      "bytes": 156,
+      "sha256": "d752b043e25ff22a934c2a8c7491ba108f517ccac63c7b5336b2b0ce95358b01"
+    },
+    "alliance_game/world_worker.cpp": {
+      "bytes": 1773,
+      "sha256": "51411cdad4ff390bb797c6d0a83d9b84b45525ea03b5509796d453b592eab9bb"
+    },
+    "alliance_native/flexible_protocol.hpp": {
+      "bytes": 7555,
+      "sha256": "fe39920fc4a077110a3ac011b1c23537ab64dac0875509e9e06aae85ac60340b"
+    },
+    "alliance_game/title_overlay.py": {
+      "bytes": 4509,
+      "sha256": "9bc7c3d13c5c2ed5a991c080d2e60c0ab3464a3ef25218ec81d92726792bda56"
+    },
+    "alliance_game/engine_overlay.py": {
+      "bytes": 14629,
+      "sha256": "a9127538bce3c2febfd03958dcd10dc47ac59879f16c2e2e3123f4d0f4b049c7"
+    },
+    "alliance_game/court_touch_overlay.py": {
+      "bytes": 1229,
+      "sha256": "cad7c46e5159cee0c54a95aff9b213d6e43d16524a41e6bead8209b27af16fc1"
+    },
+    "alliance_game/session_watch.cpp": {
+      "bytes": 6722,
+      "sha256": "7fdd32593e4e746ab5f8b2c3584c1eb13662d2a82c414fab8b564299e92b69da"
+    },
+    "alliance_game/session_watch.hpp": {
+      "bytes": 1647,
+      "sha256": "d89da3957c27a75ee4f92d939a9fbcb4a1b2d543cbd5f004f3424e7cace20948"
+    },
+    "alliance_game/android_lifecycle.cpp": {
+      "bytes": 1276,
+      "sha256": "f8be2a2437db63cc5d92abd7211cb341b3cba71ccc9d93a2931a9c220ee8ae44"
+    },
+    "alliance_game/android_lifecycle.hpp": {
+      "bytes": 331,
+      "sha256": "b1afb8864e45fef46b6be79b00dad8feab995f6eeb256132d0191b2a03d3a674"
+    },
+    "alliance_game/battle_launch.cpp": {
+      "bytes": 3327,
+      "sha256": "a18de8bef7615f443e58cbf76e58c312310001f169939fb97e4dc288aa349133"
+    },
+    "alliance_game/battle_launch.hpp": {
+      "bytes": 543,
+      "sha256": "46e87a40b091642808ddb8d097ff791fd9f53a8b7e343cc180d3ae8a709f3dfb"
+    },
+    "alliance_game/practice_plan.cpp": {
+      "bytes": 10624,
+      "sha256": "b775fe0c23e83f3d22dc8ed76a508be61aecab15c1ea67a9e8822dd2dd6f0e7c"
+    },
+    "alliance_game/practice_plan.hpp": {
+      "bytes": 2783,
+      "sha256": "144a28ddff45503dd2e000b5b1e832bc9fbac1c5a9bf479d41858a127b13e29e"
+    },
+    "alliance_game/practice_scenario.cpp": {
+      "bytes": 7658,
+      "sha256": "3a383ca96709f7c8d396eea35106216c8a80a43f5c187c56f03dd650eb3d1fef"
+    },
+    "alliance_game/practice_scenario.hpp": {
+      "bytes": 412,
+      "sha256": "25eccc11faac043dddbef5cc0780519e14628e584066abbd4acfefa919f0cff1"
+    },
+    "alliance_native/transport.cpp": {
+      "bytes": 16936,
+      "sha256": "54674ee14a6b0f5059d6c2979e0b02668f73516d14ff59810ed8d31eebe9440d"
+    },
+    "alliance_native/transport.hpp": {
+      "bytes": 3172,
+      "sha256": "e362c74b450884f785133cda27b325d72a0e2b2c1ef3a58280245a19f1760594"
+    },
+    "alliance_native/progression_protocol.hpp": {
+      "bytes": 13882,
+      "sha256": "2b49996a288230cdb5c0d61c574d87a0643084ee398a883a1ce65a0ff6d829e1"
+    },
+    "alliance_game/progression_ui.inc": {
+      "bytes": 9202,
+      "sha256": "4bcdea576a2fc27e5e420f24a7dedc0e665d71aba41243ea9ea1e9ec27e98a20"
+    },
+    "alliance_game/team_extension_ui.inc": {
+      "bytes": 9157,
+      "sha256": "eb73f2dabcb7df596095f1bc5d33c4ac01c4e6b5d715fd1aa50427a0269589fc"
+    },
+    "alliance_game/progression_plan.hpp": {
+      "bytes": 1257,
+      "sha256": "4016762948c8ff903ce161ba50ed95e63b3f470f80d59d6350df423fc6f6ad2f"
+    },
+    "alliance_game/progression_plan.cpp": {
+      "bytes": 3051,
+      "sha256": "e842f78ce9e122e470ae5aaf962f621eb866b1d56c3ce7668f05f538f667264d"
+    },
+    "alliance_game/progression_scenario.hpp": {
+      "bytes": 327,
+      "sha256": "7240ba1ea115bd9bc9dfda97331c70c936ddbcd52a0d8d886d7beaadaeebd4f2"
+    },
+    "alliance_game/progression_scenario.cpp": {
+      "bytes": 7358,
+      "sha256": "8fccc27a3c95a4c8415c44ee2c39bbdd1579e3e923874e68e6226939aae24573"
+    },
+    "alliance_game/progression_result.hpp": {
+      "bytes": 2059,
+      "sha256": "33b5c7885429ae6db745e3cf9017067c5f73eb4a8a60e350f15288562801a161"
+    },
+    "alliance_game/progression_result.cpp": {
+      "bytes": 14429,
+      "sha256": "5b07e11a033faec15f9162daa2470efc78d159cbf96ad362e8a0390be8c3f1da"
+    },
+    "alliance_game/progression_launch.cpp": {
+      "bytes": 2662,
+      "sha256": "38c03efaba58b845553f24bcc767169c09a388c99c44879bb9e5dba68e086df6"
+    },
+    "alliance_game/shared_launch.hpp": {
+      "bytes": 839,
+      "sha256": "81e4b6d982291715dc2228a7429466f84db924547b7f7409936ba4908c71d4a9"
+    },
+    "alliance_game/shared_launch.cpp": {
+      "bytes": 18497,
+      "sha256": "998ea598864f3bbcde11dd7678f87eef1a9d1b9b592e52a1e7be528a77b964c0"
+    },
+    "alliance_game/shared_scenario.hpp": {
+      "bytes": 604,
+      "sha256": "df5693f9f3ad45990235d5298dea73e4b81b59f4629a29fbfe724d9f02edffe8"
+    },
+    "alliance_game/shared_scenario.cpp": {
+      "bytes": 13114,
+      "sha256": "33d5637c8dda8f64dc9350a6e4445c688c15ccfb1c907db7f06423693363d783"
+    },
+    "alliance_game/shared_result.hpp": {
+      "bytes": 1229,
+      "sha256": "60ead0864b11cbf8ec9075518fe5bea1ca92f02add4373b68d817eaefbc356da"
+    },
+    "alliance_game/shared_result.cpp": {
+      "bytes": 14909,
+      "sha256": "361abcf07454cdff9d12bb3af7153b7409a9d59e372a4b063bbcc5125981f0c0"
+    },
+    "alliance_game/shared_connection_overlay.py": {
+      "bytes": 12567,
+      "sha256": "e27ffe3caa558bc090b3bede6fdcd2a0a3e44263ac8c862c3ebdba9f8ccdd486"
+    },
+    "alliance_game/shared_connection_state.hpp": {
+      "bytes": 3983,
+      "sha256": "93fc56a185db2219362186e8f1b402eca9eabc9f3c605b52f72c56cb79c01089"
+    },
+    "alliance_game/replay_launch.hpp": {
+      "bytes": 497,
+      "sha256": "de9407fc76a8bbe46ebb06e52bb3e2892372f4d39e44dc6ffa457a1a8ebd5e26"
+    },
+    "alliance_game/replay_launch.cpp": {
+      "bytes": 1034,
+      "sha256": "49e7f0ab440cc5cd512998912d9459642da408c2db10240e9c8fd1b0afed64a4"
+    },
+    "alliance_game/companion.hpp": {
+      "bytes": 153,
+      "sha256": "d7e912078eba09494ae14f3fe062039eebeba0bf032a374271adb922e46104fd"
+    },
+    "alliance_game/companion.cpp": {
+      "bytes": 4341,
+      "sha256": "977e251764245ca6bcf4d09c3ebb0a4d2d2dda2ed8015984158f28b5214dfda6"
+    },
+    "alliance_game/shared_controls.hpp": {
+      "bytes": 214,
+      "sha256": "ed55a8fb4f4428c0902317dd4041a14a568088d9874d485217c211e58719af68"
+    },
+    "alliance_game/shared_controls.cpp": {
+      "bytes": 5255,
+      "sha256": "8fe3e3aa8036456997015b9f3babd94881f4b837c631d4bab0a2b952afd38929"
+    },
+    "alliance_native/account_protocol.cpp": {
+      "bytes": 5205,
+      "sha256": "35336b8bf181ada87be283e9355ec2a2750c123d8916e9f0a7ae66387b565344"
+    },
+    "alliance_native/account_protocol.hpp": {
+      "bytes": 688,
+      "sha256": "451bf7e8f5ef6f36b8ef30eb3102286cdd8daf481a9c63f7067424eaaa312084"
+    },
+    "alliance_native/unified_protocol.hpp": {
+      "bytes": 5992,
+      "sha256": "e2f7d1ad64e9002b28d559beaf5e1d27b4b0e0109f9f10fdae2ee3e5bc232d7d"
+    },
+    "alliance_native/account_client.cpp": {
+      "bytes": 61748,
+      "sha256": "349169ff35f11ed39addca38086a11ad08257861e17506e9f26d53f81490b319"
+    },
+    "alliance_native/account_client.hpp": {
+      "bytes": 5097,
+      "sha256": "35fd758bd4370a0e680b1452760d51909d5de861aaa41d5add329204c6c76a57"
+    },
+    "alliance_game/hero_catalog.hpp": {
+      "bytes": 1373,
+      "sha256": "4506d8f186380c0086611559b4425b5ed58d2552d950b21ec8271be85ff1b4c5"
+    },
+    "alliance_game/hero_catalog.cpp": {
+      "bytes": 3803,
+      "sha256": "9c0dc0dc67704630e497f9fc511c9d00c901d8fc02135c0990ddf0748e1521c2"
+    },
+    "alliance_game/story_progression.hpp": {
+      "bytes": 618,
+      "sha256": "df0f4290f8f0507aa093b03c32fcebf6da788f4417f4ae5b52457fb4272309dc"
+    },
+    "alliance_game/story_progression.cpp": {
+      "bytes": 17879,
+      "sha256": "e70560d5fb2246a89ad8991e2184b65403178bf01c5bf9a221f34ae870e01225"
+    },
+    "alliance_game/casual_session.hpp": {
+      "bytes": 738,
+      "sha256": "828076b1b02ae253783faabbc4b9c2bd35a4dea29085e88b5990b4959d626eb6"
+    },
+    "alliance_game/casual_session.cpp": {
+      "bytes": 1640,
+      "sha256": "0d9a833fb77810f4bae068bafdd1f884e12072a207c7ac0afaee7c5578f9faba"
+    },
+    "alliance_game/casual_sides.hpp": {
+      "bytes": 561,
+      "sha256": "3b33c45bb8ac312376598b2abbd880e0657ed7f3ebe0ec5aca8d67c111c15d12"
+    },
+    "alliance_game/casual_sides.cpp": {
+      "bytes": 10566,
+      "sha256": "6659319a6977e8e6adc0d8d073721d18c468119a860d8a99c8a3143b650a80f3"
+    },
+    "alliance_game/individual_rooms.hpp": {
+      "bytes": 1918,
+      "sha256": "1cd05f715905f284c38bf91fcde66d857aff870bd479f57203538bbdef8f39fd"
+    },
+    "alliance_game/individual_rooms.cpp": {
+      "bytes": 17906,
+      "sha256": "d914da91b87df1bc2f79f5a2cd06b3821e204f96dd5bdc1dc43aa2c193d14cef"
+    },
+    "alliance_game/individual_companion.hpp": {
+      "bytes": 329,
+      "sha256": "e33a388b90e7cb7c3eaf128e536c2c0d3bca157890e74e0642d41dd3ba276bd2"
+    },
+    "alliance_game/individual_companion.cpp": {
+      "bytes": 15339,
+      "sha256": "0683e020380e233c291779c472917498cbc8f87d13d61baac9c69c8bef4f1fe3"
+    },
+    "alliance_game/battle_ui.hpp": {
+      "bytes": 1670,
+      "sha256": "df10a53830ce49f186bf563a51154940f76f16eef891c072543e8b31c7217077"
+    },
+    "alliance_game/battle_ui.cpp": {
+      "bytes": 15340,
+      "sha256": "8fdbb1cfa65cdf79336fba67a8f75e682bfc71dbf26a5f7fa0c3c9f687197657"
+    },
+    "alliance_game/team_views.hpp": {
+      "bytes": 1725,
+      "sha256": "92ebddb5a596bc3f79b9f4318f68cbcb57b10b5012174c596168bf8d67ea3bc9"
+    },
+    "alliance_game/team_views.cpp": {
+      "bytes": 6473,
+      "sha256": "269020dac4745847ad1e5c30ac6357a541f4d7e72810d02f280843696225512e"
+    },
+    "alliance_game/hero_catalog.json": {
+      "bytes": 336543,
+      "sha256": "716cc8e34cfb9c68e735c8cccdc74af6ae233f3487b2b87e575e209cc0c5041c"
+    },
+    "alliance_game/hero_catalog_data.inc": {
+      "bytes": 336723,
+      "sha256": "470a9472145c4e2da57cc06dc823e8c8e0139a0b0703325f5c271ff1349db584"
+    },
+    "alliance_game/story_adapters.inc": {
+      "bytes": 15652,
+      "sha256": "a72add4dc59697c17b28a32976459555cd78732d1eef342ef940fcf81a446072"
+    },
+    "alliance_game/story_script_patches.hpp": {
+      "bytes": 1384,
+      "sha256": "f26bf581fd7b601c6f973c42234a87432aefd9f46947031692f6745598cd3755"
+    },
+    "alliance_game/hero_unit_config.cpp": {
+      "bytes": 2305,
+      "sha256": "f77472be1718791bfbf15f82a3e1109a84df3bd9147db7e32d26dc6cd98f4ab4"
+    },
+    "alliance_game/hero_unit_data.inc": {
+      "bytes": 2219353,
+      "sha256": "a02ec08991c9a62aa3d6cd35683e33735697cfb46b8d63a103bd29b05a234bdb"
+    },
+    "alliance_game/hero_units.cfg": {
+      "bytes": 2219285,
+      "sha256": "8000a7450b796148f254d0563438c8b00e1ce096c6a81d95cb190511dc91e6f8"
+    },
+    "alliance_game/hero_roster_source.json": {
+      "bytes": 10841,
+      "sha256": "92b1fad2487cf0abc1d38b34d01463cd53cfd2c64e76f4d13388e494f1522208"
+    },
+    "alliance_game/ordinary_mp_auth_overlay.py": {
+      "bytes": 12428,
+      "sha256": "3bab46c6580938b13d8c815e82e82ea401de7410b1c681816219f056193784d3"
+    },
+    "alliance_game/ordinary_mp_sides_overlay.py": {
+      "bytes": 19373,
+      "sha256": "ac9aae9135e5a62490da496ec45e303eb04f8086c362f6da0476e5654f9e7965"
+    },
+    "tools/native-account-game/settings.gradle": {
+      "bytes": 287,
+      "sha256": "355bc4729f63493dbd93b055593663112d6609c7621501b5c02c003ca1cf1371"
+    },
+    "tools/native-account-game/build.gradle": {
+      "bytes": 81,
+      "sha256": "d72ae03b9a8aeeca72f647dc3a0d69d9aa1ccbee17b0367f3e281b9f22d3939f"
+    },
+    "tools/native-account-game/app.build.gradle": {
+      "bytes": 795,
+      "sha256": "7ba8ca84b5e6c3f8fedc448fe0dec03f87da126ba91c517c6078ff16ddd9da82"
+    },
+    "tools/native-account-game/gradle.properties": {
+      "bytes": 111,
+      "sha256": "da4ee0bc3675f7bcec6e57d41b2e7210bdbb3f9fab5f3380360367da1929b010"
+    },
+    "tools/native-account-game/AndroidManifest.xml": {
+      "bytes": 1512,
+      "sha256": "868c6c738250295376ff251e47b0c246c05706c9031863572642edbb90631d01"
+    },
+    "tools/native-account-game/OfflineInitActivity.java": {
+      "bytes": 13272,
+      "sha256": "ff650564bad20e749a8fb68fa8cbda16f62ed2cf3cfa6cb45aba8cba4b2b6f86"
+    },
+    "tools/native-account-game/OfflineGameActivity.java": {
+      "bytes": 10442,
+      "sha256": "aa38ee5cb7c0bf420d980c75d070d41bc4b314f529dac6ec7c3d843fe5d175db"
+    },
+    "tools/native-account-game/OfflineDataInstaller.java": {
+      "bytes": 25440,
+      "sha256": "70ffe107931b553729ea197c6f563580d81a483f793ea05eb5f1d36c5bd50be6"
+    },
+    "tools/native-account-game/AlliancePublicProfile.java": {
+      "bytes": 8751,
+      "sha256": "636b695993012aff459b3c67346153416e13dfdf8d453ea54c890784a328050d"
+    },
+    "tools/native-account-game/BundledStartup.java": {
+      "bytes": 5620,
+      "sha256": "99a67d055356cf3213e5da956eb4e7d2de9182fa58f1d623b90b5e44fca310d3"
+    },
+    "tools/native-account-game/StartupProgress.java": {
+      "bytes": 441,
+      "sha256": "e70a93e8ca190454184b1029815f2b1a578ffc2ca5d036e3e3dc0eb568553f3b"
+    },
+    "tools/native-account-game/WesnothGameTask.java": {
+      "bytes": 2247,
+      "sha256": "5e098ae5956ee72de95a8be4dc14284e3ff9540acb8a3d97c10ff32554bbb6f6"
+    },
+    "tools/native-account-game/ProductTheme.java": {
+      "bytes": 1059,
+      "sha256": "7a738359e6d96873d3cf582d291f0dbb8d71120653bd091501a24ac4c9c0c67c"
+    },
+    "tools/native-account-game/StartupFrame.java": {
+      "bytes": 6508,
+      "sha256": "00ba8b496e16de734b82ecd6b165fae638363ee964fa24c46051dc149debbc97"
+    },
+    "tools/native-account-game/WesnothKeyboard.java": {
+      "bytes": 3549,
+      "sha256": "7f5c24f55a89f22826362348c42a5bd5788a7b0d25c9151fe3f65c62db06cabf"
+    },
+    "tools/native-account-game/WesnothKeyboardState.java": {
+      "bytes": 3581,
+      "sha256": "3d149f969061d365c2245817f139b70446b248326dcd4d8127fefce6279eea53"
+    }
+  },
+  "render_fixture": {
+    "bytes": 15832,
+    "sha256": "4c0e6e971287d491f56a61f7652d5675398becf61a6cb7390183eb1ecfd5ea5a"
+  },
+  "logs": {
+    "build/audit-court-ui-1192626/android-tools-tests-03.log": {
+      "bytes": 37867,
+      "sha256": "36a971d8c60a1aabb8b5b5bd4de0886aa00f620a6b29aa3051e1e6d485841f83"
+    },
+    "build/audit-court-ui-1192626/touch-binding-tests-04.log": {
+      "bytes": 444,
+      "sha256": "eab41f70918a515a7d968ea971c9a2edd8b01846c71de3e6e4b9cdcbffea0a77"
+    },
+    "build/audit-court-ui-1192626/map-tests-02.log": {
+      "bytes": 351,
+      "sha256": "0a9a6df15d2a728898c3f679728191d5ae128e1b343426abde1be0f38d4c195e"
+    },
+    "build/audit-court-ui-1192626/account-compile-04.log": {
+      "bytes": 1014,
+      "sha256": "1c4a34a0ca1b3b1e80109ab82295aee31d50949aed75c53c11080c392a89349d"
+    },
+    "build/audit-court-ui-1192626/touch-compile-02.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "build/audit-court-ui-1192626/render-build-20.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "build/audit-court-ui-1192626/render-build-21.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "build/audit-court-ui-1192626/android-prepare.log": {
+      "bytes": 2003,
+      "sha256": "536c17582f2d9dda701f5d19d2e3a3c1016c6a275a5c62dbc39e650bf3902406"
+    },
+    "build/audit-court-ui-1192626/android-build.log": {
+      "bytes": 15593,
+      "sha256": "7e68f9640ff4d64f3e26461a4e7beae58bfd840eded0c1684d5ba82ee6767f44"
+    },
+    "build/audit-court-ui-1192626/android-verify.log": {
+      "bytes": 1487,
+      "sha256": "f2c4d8adfa14ec6ea6dd439c9c0378846bd5646963bebdbea402b5de8d575448"
+    },
+    "build/audit-court-ui-1192626/android-prepare-recheck.log": {
+      "bytes": 1794,
+      "sha256": "1b3d9f3937a4949892a31cc4920ab181d3837afa355fc1908fa086c10657776c"
+    },
+    "build/audit-court-ui-1192626/independent-apk-check.log": {
+      "bytes": 272,
+      "sha256": "89db87f9131d3420d9be08e72a2b2856c067eac3ec5037a8a494c5676f28d1ba"
+    },
+    "build/audit-court-ui-1192626/source-binding-before.log": {
+      "bytes": 42,
+      "sha256": "2e6c118675cc01967ae6bd9ff966dd7792f0037ec4f86986e2079fb75d7248f4"
+    },
+    "build/audit-court-ui-1192626/source-binding-final.log": {
+      "bytes": 41,
+      "sha256": "399d689c6dc5209c14c92832747275b12a74ee3b247e41eb6515dd7c73442dc8"
+    },
+    "build/audit-court-ui-1192626/preservation-before.log": {
+      "bytes": 50,
+      "sha256": "57b8ab8eeca2a4f869248ff04faee8a9c0a2f1182344b5fa4d9ddf7b26b650d1"
+    },
+    "build/audit-court-ui-1192626/preservation-final.log": {
+      "bytes": 49,
+      "sha256": "b8fd82bafa0943d32699d05ff51599f1d6348058a274386cfb2c4819d20205ec"
+    },
+    "build/audit-court-ui-1192626/journals-before.log": {
+      "bytes": 31,
+      "sha256": "b5f2c7d1caa4810c01b8ab511baae87e27914a9ff7b09cd80108b84ccd5fd319"
+    },
+    "build/audit-court-ui-1192626/journals-final.log": {
+      "bytes": 30,
+      "sha256": "d98a0e69e15afda8da7c5d8c0a17fa5be67a05525fe19a083170fc222cde4772"
+    }
+  },
+  "retained_initial_failures": [
+    "Initial native render harness integration attempts are retained and excluded from accepted captures.",
+    "Six-field Settings initially exceeded the 720p workspace; the native scrollable form fixed it and final renders passed.",
+    "The earlier future-version negative test still named the newly supported version; its fixture was updated to the actual future version, and all 118 current checks pass."
+  ],
+  "limits": [
+    "Native rendering uses real GUI2/Cairo/SDL with controlled account and transport fixtures, not Android/LDPlayer screenshots or multiple-human usability evidence.",
+    "The native item-menu fixture tests placement, eligibility filtering and touch size; synchronized item effects and network command evidence are verified separately by the Court battle suite.",
+    "The native camera sanitizer harness uses the existing Linux C++ verification container; Python application/build checks use exact Python 3.12.10.",
+    "VPS APK trust uses the retained public-only disposable build fixture. Windows builds validate and embed the user’s existing public configuration; no private Windows runtime or credential file was read.",
+    "Existing production saves/runtime were not opened. The original OBB manifest, signer, public fixture, prior build stages and recovery journals are preserved. Windows acceptance remains pending."
+  ]
+}
