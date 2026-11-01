@@ -204,7 +204,7 @@ F4 — Android application:
 }
 ```
 
-Expect `ANDROID ACCOUNT GAME ARTIFACTS VERIFIED` and `ANDROID ACCOUNT GAME REBUILD COMPLETE`. Logs: client `diagnostics\android-account-rebuild-*.txt` and `android-account-build-*.txt`. The exact package, 1192626 version, original signer, public profile and asset manifests are verified by the build/install helpers. A build completion does not claim successful gameplay.
+Expect `ANDROID ACCOUNT GAME BUILD PASS`, `ANDROID ACCOUNT GAME BUILD COMPLETE` and `ANDROID ACCOUNT GAME REBUILD COMPLETE`. A fresh build performs APK, original-signer and input checks before writing its receipt; `ANDROID ACCOUNT GAME ARTIFACTS VERIFIED` is printed by the separate verification/reuse path and need not appear in this fresh-build log. Logs: client `diagnostics\android-account-rebuild-*.txt` and `android-account-build-*.txt`. The exact package, 1192626 version, original signer, public profile and asset manifests are verified by the build/install helpers. A build completion does not claim successful gameplay.
 
 ## G — Start the five services against `runtime-v3`
 

@@ -3,7 +3,7 @@
   "release": 1192626,
   "purpose": "Windows handoff source and syntax review only",
   "document": "docs/COURT_WINDOWS_ACCEPTANCE_1192626.md",
-  "document_sha256": "514326df163c41704df55392c9804c80649059bb5cadd1fdeae0b6fc7255a708",
+  "document_sha256": "c2e473a38e2e0ed35f90324167d310edeaefea784041e0d8a2a5db07c11eea1b",
   "powershell": {
     "version": "7.4.6",
     "parser": "System.Management.Automation.Language.Parser.ParseFile",
@@ -182,5 +182,13 @@
   "implementation_commits": {
     "server": "ae3115ed533c178dd270a66d3e9d8b3ad60404ef",
     "client": "939f5c6999848555066a0032b9b02f006f2866d8"
+  },
+  "prose_revision_20261101": {
+    "previous_document_sha256": "514326df163c41704df55392c9804c80649059bb5cadd1fdeae0b6fc7255a708",
+    "reason": "Correct F4 fresh-build completion markers after Windows log and builder source review.",
+    "powershell_blocks_changed": false,
+    "all_13_block_hashes_match_recorded_parser_inputs": true,
+    "parser_rerun": false,
+    "windows_commands_executed_by_reviewer": false
   }
 }
