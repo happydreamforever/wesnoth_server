@@ -72,6 +72,8 @@ def _report(raw):
 def _legacy(owner, expected):
     recovery._binding(owner)
     recovery._binding(expected)
+    if owner['release'] != 1192624 or expected['release'] != 1192624:
+        raise BuildError('Reviewed recovery applies only to the original 1192624 worker.')
     prior, current = owner['inputs'], expected['inputs']
     if (recovery._hash(owner) != REVIEWED_BINDING_SHA256 or len(prior) != 1707
             or prior.get(recovery.BUILDER_INPUT) not in LEGACY_BUILDERS

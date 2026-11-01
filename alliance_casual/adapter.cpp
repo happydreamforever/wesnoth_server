@@ -30,7 +30,7 @@ adapter::adapter(const config&cfg){
  catalog_=json::parse(read_file(cfg["alliance_catalog"].str(),4194304)).as_object();
  require(str(catalog_,"version")=="unified-heroes-v1");
  const auto capabilities=call("capabilities",{});wire::keys(capabilities,{"protocol","implementation_release","schema_version"});
- require(number(capabilities,"protocol")==4&&number(capabilities,"implementation_release")==1192624&&number(capabilities,"schema_version")==4);
+ require(number(capabilities,"protocol")==5&&number(capabilities,"implementation_release")==1192626&&number(capabilities,"schema_version")==5);
 }
 json::object adapter::call(const std::string& op,const json::object& body){
  asio::io_context io;asio::ip::tcp::socket socket(io);boost::beast::flat_buffer buffer;
@@ -50,20 +50,57 @@ json::object adapter::call(const std::string& op,const json::object& body){
 json::object adapter::admit(const std::string&ticket,const std::string&username){auto value=call("admit",{{"ticket",ticket},{"username",username}});require(str(value,"username")==username);str(value,"account_id");str(value,"database_generation");return value;}
 room& adapter::create(int game){require(rooms_.find(game)==rooms_.end());room value;value.id=boost::uuids::to_string(boost::uuids::random_generator()());return rooms_.emplace(game,std::move(value)).first->second;}
 room& adapter::get(int game){return rooms_.at(game);}
-void adapter::remove(int game){auto found=rooms_.find(game);if(found!=rooms_.end()&&found->second.network_reserved){try{call("network_release",{{"game_id",found->second.id},{"generation",network_generation_}});}catch(const std::exception&){} }rooms_.erase(game);}
+void adapter::admit_room(int game,const std::string& account,const std::string& username,const std::string& ticket,bool create){
+ auto&state=get(game);require(state.individual&&!state.restored);
+ const auto reply=call("room_admit",{{"ticket",ticket},{"account_id",account},{"game_id",state.id},{"generation",network_generation_},{"kind",create?"create":"join"}});
+ require(str(reply,"game_id")==state.id&&str(reply,"account_id")==account&&reply.at("admitted").as_bool());
+ if(create)state.creator_account=account;
+ state.admitted[username]=account;
+}
+void adapter::leave_room(int game,const std::string& username){
+ auto&state=get(game);auto found=state.admitted.find(username);if(found==state.admitted.end())return;
+ if(found->second==state.creator_account&&!state.restored)state.close_requested=true;
+ try{call("room_leave",{{"account_id",found->second},{"game_id",state.id},{"generation",network_generation_}});}catch(const std::exception&){}
+ state.admitted.erase(found);
+}
+void adapter::remove(int game){auto found=rooms_.find(game);if(found!=rooms_.end()){
+ try{call("room_close",{{"game_id",found->second.id},{"generation",network_generation_},{"technical",found->second.technical_closure}});}catch(const std::exception&){}
+ if(found->second.network_reserved){try{call("network_release",{{"game_id",found->second.id},{"generation",network_generation_}});}catch(const std::exception&){} }
+ }rooms_.erase(game);}
 void adapter::prepare(int game){auto&state=get(game);if(!state.individual||state.network_reserved)return;json::array ids;for(const auto&[_,s]:state.seats){require(s.ready);ids.emplace_back(s.account_id);}require(ids.size()>=2&&ids.size()<=8);call("network_prepare",{{"game_id",state.id},{"generation",network_generation_},{"account_ids",ids}});state.network_reserved=true;}
 std::vector<int> adapter::heartbeat(){
- json::array ids;std::map<std::string,int> requested;
- for(const auto&[game,r]:rooms_)if(r.network_reserved){ids.emplace_back(r.id);requested.emplace(r.id,game);}
- if(ids.empty())return {};
- const auto response=call("network_heartbeat",{{"generation",network_generation_},{"game_ids",ids}});
- wire::keys(response,{"generation","renewed","expired"});require(str(response,"generation")==network_generation_);
- std::set<std::string> seen;std::vector<int> expired;
- for(const auto* key:{"renewed","expired"})for(const auto& item:wire::array(response,key,64)){
-  require(item.is_string());const std::string id(item.as_string());require(requested.count(id)&&seen.insert(id).second);
-  if(std::string(key)=="expired")expired.push_back(requested.at(id));
+ std::vector<int> closed;
+ // Each endpoint is bounded to 64 identifiers. Keep batches independently
+ // validated; an unrelated 65th Room must not terminate running battles.
+ const auto renew=[&](const char* operation,const std::map<std::string,int>& requested){
+  auto next=requested.begin();
+  while(next!=requested.end()){
+   json::array ids;std::map<std::string,int> batch;
+   for(std::size_t n=0;n<64&&next!=requested.end();++n,++next){
+    ids.emplace_back(next->first);batch.insert(*next);
+   }
+   const auto response=call(operation,{{"generation",network_generation_},{"game_ids",ids}});
+   wire::keys(response,{"generation","renewed","expired"});require(str(response,"generation")==network_generation_);
+   std::set<std::string> seen;
+   for(const auto*key:{"renewed","expired"})for(const auto&item:wire::array(response,key,64)){
+    require(item.is_string());const std::string id(item.as_string());
+    require(batch.count(id)&&seen.insert(id).second);
+    if(std::string(key)=="expired")closed.push_back(batch.at(id));
+   }
+   require(seen.size()==batch.size());
+  }
+ };
+ std::map<std::string,int> all_requested;
+ for(const auto&[game,r]:rooms_)if(r.individual&&!r.admitted.empty()){
+  if(r.close_requested){closed.push_back(game);continue;}
+  all_requested.emplace(r.id,game);
  }
- require(seen.size()==requested.size());return expired;
+ renew("rooms_heartbeat",all_requested);
+ std::map<std::string,int> execution_requested;
+ for(const auto&[game,r]:rooms_)if(r.network_reserved&&std::find(closed.begin(),closed.end(),game)==closed.end())
+  execution_requested.emplace(r.id,game);
+ renew("network_heartbeat",execution_requested);
+ return closed;
 }
 
 std::vector<int> adapter::admin_rooms(const json::array& inventory){

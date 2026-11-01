@@ -186,7 +186,7 @@ def _binding(value):
     if (not isinstance(value, dict) or set(value) != {'format', 'purpose', 'release', 'inputs'}
             or type(value['format']) is not int or value['format'] != 1
             or value['purpose'] != 'wesnoth-full-native-world-worker'
-            or type(value['release']) is not int or value['release'] != 1192624
+            or type(value['release']) is not int or value['release'] not in (1192624, 1192626)
             or not isinstance(value['inputs'], dict) or not 0 < len(value['inputs']) <= 100000):
         return False
     for name, digest in value['inputs'].items():

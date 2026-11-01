@@ -66,7 +66,8 @@ try {
     if ($item.Length -eq 0 -or $item.Length -gt 1048576) { throw 'Diagnostic report has an unexpected size.' }
     $report = Get-Content -LiteralPath $reportPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($report.format -ne 1 -or $report.purpose -cne 'wesnoth-world-worker-version-diagnostic' -or
-        $report.release -ne 1192624 -or $report.scope -cne 'existing-worker-version-only' -or
+        ($report.release -isnot [int] -and $report.release -isnot [long]) -or
+        $report.release -notin @(1192624, 1192626) -or $report.scope -cne 'existing-worker-version-only' -or
         $report.collection.complete -isnot [bool] -or -not $report.collection.complete -or
         $report.receipt_written -isnot [bool] -or $report.receipt_written -ne $false -or
         $report.build_performed -isnot [bool] -or $report.build_performed -ne $false) {

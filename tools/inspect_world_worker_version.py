@@ -181,7 +181,7 @@ def _stream(raw, *, limited):
 def collect(repo, *, binding_function=None, run_process=None, environ=None):
     repo = recovery._path(repo, directory=True)
     stage = repo / 'build/windows-world-worker'
-    report = {'format': 1, 'purpose': PURPOSE, 'release': 1192624,
+    report = {'format': 1, 'purpose': PURPOSE, 'release': None,
               'collected_at_utc': datetime.now(timezone.utc).isoformat(),
               'collection': {'complete': False}, 'scope': 'existing-worker-version-only',
               'receipt_written': False, 'build_performed': False, 'result': {'outcome': 'not_run'},
@@ -203,6 +203,7 @@ def collect(repo, *, binding_function=None, run_process=None, environ=None):
             check = 'owner'
             owner = recovery._read_json(stage / 'owner.json')
             recovery._binding(owner)
+            report['release'] = owner['release']
             check = 'source_binding'
             if current_binding() != owner:
                 raise BuildError('Worker source binding differs; do not run or rebuild it.')

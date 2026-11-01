@@ -108,6 +108,19 @@ class VersionInspectionTests(unittest.TestCase):
         self.assertRegex(engine.read_text(),
                          r'(?m)^set\(EXECUTABLE_OUTPUT_PATH "\$\{CMAKE_BINARY_DIR\}" CACHE STRING ')
 
+    def test_current_release_probe_reports_its_actual_binding_and_preserves_stage(self):
+        self.owner['release'] = 1192626
+        write_json(self.stage / 'owner.json', self.owner)
+        self.binding.return_value = deepcopy(self.owner)
+        before = recovery._inventory(self.stage)
+        report = self.collect()
+        self.assertTrue(report['collection']['complete'], report)
+        self.assertEqual(report['release'], 1192626)
+        self.assertEqual(report['result']['outcome'], 'version_match')
+        self.assertEqual(recovery._inventory(self.stage), before)
+        self.assertFalse((self.stage / 'receipt.json').exists())
+        self.assertEqual(self.runner.call_count, 1)
+
     def test_old_nested_layout_cannot_replace_the_required_root_executable(self):
         nested = self.stage / 'engine/src/world-worker.exe'
         self.linked_executable.rename(nested)

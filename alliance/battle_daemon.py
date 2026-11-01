@@ -1,8 +1,8 @@
-"""Authenticated fixed-seat Alliance relay for trusted offline players.
+"""Authenticated native battle relay and supervised Court execution service.
 
-This process validates seat/turn ownership and records the actual shared wire
-history. It does not independently simulate combat. Result agreement and fixed
-rewards are enforced transactionally by AllianceService, never by local practice.
+Schema 5 requires a full native witness for Court command evidence and settlement.
+Schema 4 retains the legacy relay and captain-confirmation recovery interfaces.
+No player connection can submit a Court result or claim permanent rewards.
 """
 from __future__ import annotations
 import argparse
@@ -19,6 +19,7 @@ import secrets
 import ssl
 import stat
 import sys
+import time
 from uuid import uuid4
 
 from pymongo import MongoClient
@@ -540,7 +541,15 @@ class Room:
 class BattleDaemon:
     def __init__(self, db, storage, context):
         self.db, self.storage, self.context = db, safe_path(storage), context
-        self.auth, self.domain = AuthService(db), AllianceService(db)
+        metadata = db.schema_metadata.find_one({'_id': 'alliance'}) or {}
+        self.court = metadata.get('version') == 5
+        if self.court:
+            from .court.service import CourtService
+            domain = CourtService(db)
+        else:
+            domain = AllianceService(db)
+        self.auth, self.domain = AuthService(db), domain
+        self.next_court_income = 0.0
         self.rooms = {}
         self.room_lock = asyncio.Lock()
         self.connections = 0
@@ -724,6 +733,15 @@ class BattleDaemon:
     async def settle_ready(self):
         while True:
             await asyncio.sleep(2)
+            if self.court:
+                try:
+                    await asyncio.to_thread(self.domain.court_tick)
+                    if time.monotonic() >= self.next_court_income:
+                        await asyncio.to_thread(self.domain.court_castle_income)
+                        self.next_court_income = time.monotonic() + 60
+                except Exception as error:
+                    print('COURT SCHEDULER PENDING: ' + type(error).__name__, flush=True)
+                continue
             try:
                 await asyncio.to_thread(self.domain.expire_preparations)
                 await self.recover_running()
@@ -813,9 +831,11 @@ class BattleDaemon:
                 return
             if node.name=='alliance_health' and not node.attrs and not node.children:
                 await asyncio.to_thread(self.db.command,'ping')
-                await send(writer,message('alliance_health',service='alliance-battles',api=1,implementation_release=1192624,
+                await send(writer,message('alliance_health',service='alliance-battles',api=1,implementation_release=1192626 if self.court else 1192624,
                     native_workers=self.world.limit if self.world and self.world.executable else 0))
                 return
+            if self.court:
+                raise WireError('The retired Team battle interface is unavailable in Court.')
             if node.name!='alliance_join' or set(node.attrs)!={'run_id','token','intent'} or node.children or node.attrs['intent'] not in ('play','result_retry','replay_download','observe'):
                 raise WireError('Invalid join request.')
             token=node.attrs.pop('token')

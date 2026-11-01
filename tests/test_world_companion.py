@@ -30,7 +30,13 @@ class CompanionTests(unittest.TestCase):
                 self.assertEqual(kwargs['stdin'], helper.subprocess.PIPE)
                 self.assertEqual(kwargs['stderr'], helper.subprocess.STDOUT)
                 return process
-            def request(*values):calls.append(values);return {}
+            def request(*values):
+                calls.append(values)
+                if values[1] == 'court_query':
+                    return {'version': 1, 'actor_id': account, 'data': {'match': {
+                        'id': args.battle_id, 'state': 'preparing', 'can_enter': True,
+                        'seats': [{'account_id': account, 'controller': 'human'}]}}}
+                return {}
             with patch.object(helper,'ROOT',root),patch.object(helper,'installed_worker',return_value={'executable':'/owned/worker','game_data':'/owned/data'}),\
                  patch.object(helper.account_transport,'public_profile',return_value={'pinned':True}),\
                  patch.object(helper.sys.stdin,'isatty',return_value=True),patch.object(helper.getpass,'getpass',return_value=password),\
@@ -39,7 +45,8 @@ class CompanionTests(unittest.TestCase):
                 self.assertEqual(helper.run(args),0)
             self.assertEqual(json.loads(process.stdin.saved),{'run_id':args.battle_id,'account_id':account,'token':token})
             login.assert_called_once_with({'pinned':True},args.username,password)
-            self.assertEqual(calls,[({'pinned':True},'logout',{},token)])
+            self.assertEqual(calls,[({'pinned':True},'court_query',{'version':1,'query':'plan',
+                'payload':{'match_id':args.battle_id}},token), ({'pinned':True},'logout',{},token)])
             report=next((root/'diagnostics').glob('*/report.json')).read_text()
             self.assertNotIn(password,report);self.assertNotIn(token,report)
             self.assertEqual(json.loads(report)['session_logout'],'confirmed')
@@ -49,16 +56,25 @@ class CompanionTests(unittest.TestCase):
             with self.assertRaises(ValueError):helper.run(SimpleNamespace(battle_id='../runtime',username='ValidName'))
             worker.assert_not_called();prompt.assert_not_called()
 
-    def test_selection_omits_delegated_and_draft_armies(self):
+    def test_selection_omits_delegated_and_unprepared_seats(self):
         actor=str(uuid4()); chosen=str(uuid4())
-        rows=[{'id':chosen,'state':'preparing','mission_id':'company_border_patrol',
-               'armies':[{'account_id':actor,'controller':'human'}]},
-              {'id':str(uuid4()),'state':'running','armies':[{'account_id':actor,'controller':'worker'}]},
-              {'id':str(uuid4()),'state':'draft','armies':[{'account_id':actor,'controller':'human'}]}]
+        rows=[{'id':chosen,'state':'preparing','can_enter':True,'settings':{'map_id':'weldyn-channel'},
+               'seats':[{'account_id':actor,'controller':'human'}]},
+              {'id':str(uuid4()),'state':'running','can_enter':False,'seats':[{'account_id':actor,'controller':'worker'}]},
+              {'id':str(uuid4()),'state':'scheduled','can_enter':False,'seats':[{'account_id':actor,'controller':'human'}]}]
         with patch.object(helper.account_transport,'account_request',return_value={'version':1,'actor_id':actor,'data':{'items':rows}}) as request,\
              patch('builtins.input',return_value='1'):
             self.assertEqual(helper.select_battle({},'t'*43,actor),chosen)
-        self.assertEqual(request.call_args.args[1:3],('world_query',{'operation':'battles','payload':{}}))
+        self.assertEqual(request.call_args.args[1:3],('court_query',{'version':1,'query':'plans','payload':{'state':'active'}}))
+
+    def test_explicit_id_requires_own_human_seat(self):
+        actor, match = str(uuid4()), str(uuid4())
+        row = {'id':match,'state':'running','can_enter':True,
+               'seats':[{'account_id':str(uuid4()),'controller':'human'}]}
+        with patch.object(helper.account_transport,'account_request',return_value={
+                'version':1,'actor_id':actor,'data':{'match':row}}):
+            with self.assertRaises(ValueError):
+                helper.validate_battle({},'t'*43,actor,match)
 
     def test_cancel_after_login_revokes_session_without_starting_engine(self):
         with tempfile.TemporaryDirectory() as temp:

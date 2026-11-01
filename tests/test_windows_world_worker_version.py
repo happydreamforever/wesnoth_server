@@ -46,6 +46,9 @@ if mode in ('version_mismatch', 'empty_stdout', 'nonzero_exit', 'timeout', 'laun
 if mode == 'purpose': value['purpose'] = 'unrelated-report'
 if mode == 'format': value['format'] = 2
 if mode == 'release': value['release'] = 1192623
+if mode == 'current_release': value['release'] = 1192626
+if mode == 'string_release': value['release'] = '1192626'
+if mode == 'boolean_release': value['release'] = True
 if mode == 'scope': value['scope'] = 'completed-build'
 if mode in ('receipt_written', 'build_performed'): value[mode] = True
 if mode == 'nonboolean_receipt': value['receipt_written'] = 'false'
@@ -221,8 +224,12 @@ class WorkerVersionWrapperTests(unittest.TestCase):
             with self.subTest(mode=mode): self.invoke(mode=mode, success=False)
 
     def test_wrong_report_identity_or_scope_is_rejected(self):
-        for mode in ('purpose', 'format', 'release', 'scope'):
+        for mode in ('purpose', 'format', 'release', 'string_release', 'boolean_release', 'scope'):
             with self.subTest(mode=mode): self.invoke(mode=mode, success=False)
+
+    def test_current_release_diagnostic_is_accepted_without_build_claim(self):
+        result, _ = self.invoke(mode='current_release')
+        self.assertIn('WORLD WORKER VERSION DIAGNOSTIC COMPLETE', result.stdout)
 
     def test_receipt_or_build_claim_is_rejected(self):
         for mode in ('receipt_written', 'build_performed', 'nonboolean_receipt', 'nonboolean_build'):

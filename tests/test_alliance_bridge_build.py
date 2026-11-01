@@ -112,7 +112,7 @@ class BuildInvocationTests(unittest.TestCase):
         if tool == "openssl.exe": return "OpenSSL 3.6.3 9 Jun 2026"
         if tool == "g++.exe": return "x86_64-w64-mingw32" if option == "-dumpmachine" else "16.2.0"
         if tool == "alliance-account-bridge.exe":
-            return "WESNOTH_ALLIANCE_ACCOUNT_BRIDGE protocol=4 max_connections=32 timeout_seconds=10"
+            return "WESNOTH_ALLIANCE_ACCOUNT_BRIDGE protocol=5 max_connections=32 timeout_seconds=10"
         self.fail("Unexpected tool")
 
     def native(self, command, _environment):
@@ -144,6 +144,18 @@ class BuildInvocationTests(unittest.TestCase):
             with self.assertRaises(BUILD.BuildError):
                 BUILD.build(self.msys, self.cmake)
         self.assertFalse(BUILD.STAGE.exists())
+
+    def test_retired_protocol4_binary_cannot_publish_current_receipt(self):
+        def retired(command, environment):
+            value = self.capture(command, environment)
+            return value.replace('protocol=5', 'protocol=4') if Path(command[0]).name == 'alliance-account-bridge.exe' else value
+        with patch.object(BUILD, 'check_host'), patch.object(BUILD, 'capture', retired), \
+                patch.object(BUILD, 'native', self.native):
+            with self.assertRaisesRegex(BUILD.BuildError, 'version did not match'):
+                BUILD.build(self.msys, self.cmake)
+        self.assertTrue((BUILD.STAGE / 'alliance-account-bridge.exe').is_file())
+        self.assertTrue((BUILD.STAGE / 'owner.json').is_file())
+        self.assertFalse((BUILD.STAGE / 'receipt.json').exists())
 
 
 if __name__ == "__main__":

@@ -121,7 +121,7 @@ def _binding(value):
     if (not isinstance(value, dict) or set(value) != {'format', 'purpose', 'release', 'inputs'}
             or type(value['format']) is not int or value['format'] != 1
             or value['purpose'] != BINDING_PURPOSE
-            or type(value['release']) is not int or value['release'] != 1192624
+            or type(value['release']) is not int or value['release'] not in (1192624, 1192626)
             or not isinstance(value['inputs'], dict) or not value['inputs']
             or len(value['inputs']) > MAX_FILES):
         raise BuildError('Worker recovery ownership is invalid.')
@@ -137,6 +137,8 @@ def _binding(value):
 def _legacy(owner, expected):
     _binding(owner)
     _binding(expected)
+    if owner['release'] != 1192624 or expected['release'] != 1192624:
+        raise BuildError('Reviewed sysroot recovery applies only to the original 1192624 worker.')
     if (RECOVERY_INPUT not in expected['inputs'] or BUILDER_INPUT not in expected['inputs']
             or RECOVERY_INPUT in owner['inputs']
             or set(owner['inputs']) != set(expected['inputs']) - {RECOVERY_INPUT, RESOURCE_RECOVERY_INPUT}

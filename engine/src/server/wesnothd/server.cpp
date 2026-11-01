@@ -695,13 +695,19 @@ void server::start_network_lease_updates()
     network_lease_timer_.async_wait([this](const boost::system::error_code& error) {
         if(error) return;
         if(alliance_) {
-            try { for(int id:alliance_->heartbeat()) delete_game(id,"The network battle reservation expired. Preserve your local save."); }
+            try { for(int id:alliance_->heartbeat()) {
+                auto& state=alliance_->get(id);state.technical_closure=!state.close_requested;
+                delete_game(id,"The network battle reservation expired. Preserve your local save.");
+            } }
             catch(const std::exception&) {
                 // A lost backend lease is fail-closed: no continued commands
                 // can race another network battle's account reservation.
                 std::vector<int> expired;
                 for(const auto& game_ptr:games()) if(alliance_->get(game_ptr->id()).network_reserved) expired.push_back(game_ptr->id());
-                for(int id:expired) delete_game(id,"The network battle reservation was lost. Preserve your local save.");
+                for(int id:expired) {
+                    alliance_->get(id).technical_closure=true;
+                    delete_game(id,"The network battle reservation was lost. Preserve your local save.");
+                }
             }
             try {
                 boost::json::array inventory;
@@ -733,8 +739,10 @@ void server::start_network_lease_updates()
                         {"fog",desc["mp_fog"].to_bool()},{"shroud",desc["mp_shroud"].to_bool()},
                         {"observers",desc["observer"].to_bool()},{"seats",seats}});
                 }
-                for(int id:alliance_->admin_rooms(inventory))
+                for(int id:alliance_->admin_rooms(inventory)) {
+                    alliance_->get(id).technical_closure=true;
                     delete_game(id,"An administrator closed this Room. Your permanent progression is unchanged.");
+                }
             } catch(const std::exception&) {
                 // Admin inventory must never bypass or alter the separate
                 // battle leases. A failed report expires visibly in the UI.
@@ -847,7 +855,7 @@ void server::login_client(boost::asio::yield_context yield, SocketPtr socket)
 {
 	if(alliance_) {
 		simple_wml::document greeting; auto& version = greeting.root().add_child("version");
-		version.set_attr("alliance_protocol", "4").set_attr("implementation_release", "1192624").set_attr("individual_rooms", "1");
+		version.set_attr("alliance_protocol", "5").set_attr("implementation_release", "1192626").set_attr("individual_rooms", "1");
 		coro_send_doc(socket, greeting, yield);
 	} else coro_send_doc(socket, version_query_response_, yield);
 
@@ -1630,6 +1638,13 @@ void server::handle_create_game(player_iterator player, simple_wml::node& create
 	if(alliance_) {
         alliance_->create(g.id()).individual=create_game["individual_room"].to_bool();
         g.set_individual_room(alliance_->get(g.id()).individual);
+        try {
+            alliance_->admit_room(g.id(),alliance_accounts_.at(player->name()),player->name(),create_game["court_fee_ticket"].to_string(),true);
+        } catch(const std::exception&) {
+            send_server_message(player,"Room admission could not be confirmed. Check Crowns and review the current creation fee.","error");
+            delete_game(g.id());return;
+        }
+        create_game.set_attr("court_fee_ticket","");
         alliance_updates(g);
     }
 
@@ -1689,7 +1704,10 @@ void server::cleanup_game(game* game_ptr)
 
 	if(destructed) game_ptr->emergency_cleanup();
 
-	if(alliance_) alliance_->remove(game_ptr->id());
+	if(alliance_) {
+        if(destructed) alliance_->get(game_ptr->id()).technical_closure=true;
+        alliance_->remove(game_ptr->id());
+    }
 	delete game_ptr;
 }
 
@@ -1751,9 +1769,14 @@ void server::handle_join_game(player_iterator player, simple_wml::node& join)
             return;
         }
     }
+    if(alliance_ && alliance_->get(g->id()).individual && !observer) {
+        try{alliance_->admit_room(g->id(),alliance_accounts_.at(player->name()),player->name(),join["court_fee_ticket"].to_string(),false);}
+        catch(const std::exception&){send_to_player(player,leave_game_doc);send_server_message(player,"Room admission could not be confirmed. Check Crowns and review the current joining fee.","error");send_to_player(player,games_and_users_list_);return;}
+    }
 	if(alliance_) { simple_wml::document context; alliance_->context(g->id(), context); individual_context(*g,context); alliance_->selections(g->id(), context); send_to_player(player, context); }
 	bool joined = g->add_player(player, observer);
 	if(!joined) {
+        if(alliance_&&!observer)alliance_->leave_room(g->id(),player->name());
 		WRN_SERVER << player->client_ip() << "\t" << player->info().name()
 				   << "\tattempted to observe game:\t\"" << g->name() << "\" (" << game_id
 				   << ") which doesn't allow observers.";
@@ -1957,6 +1980,7 @@ void server::individual_publish(game& g)
     int ready=0;
     for(const auto& [_,seat]:room.seats) if(seat.ready) ++ready;
     desc.set_attr("individual_room","yes");
+    desc.set_attr_dup("court_game_id",room.id.c_str());
     desc.set_attr_dup("room_revision",std::to_string(room.revision).c_str());
     desc.set_attr_int("room_members",static_cast<int>(g.nplayers()));
     desc.set_attr_int("room_capacity",static_cast<int>(sides.size()));
@@ -2040,6 +2064,7 @@ void server::individual_departure(game& g,const std::string& username)
         side->set_attr("player_id",""); side->set_attr("current_player","");
     }
     if(!participant) return;
+    alliance_->leave_room(g.id(),username);
     simple_wml::document cleared;
     for(auto it=room.seats.begin();it!=room.seats.end();) {
         if(it->second.username==username) {
@@ -2534,7 +2559,7 @@ void server::handle_player_in_game(player_iterator p, simple_wml::document& data
 		return;
 	} else if(data.child("leave_game")) {
 		individual_departure(g,p->name());
-		if(g.remove_player(p)) {
+		if(g.remove_player(p) || (alliance_ && alliance_->get(g.id()).close_requested)) {
 			delete_game(g.id());
 		} else {
 			bool has_diff = false;
@@ -2765,6 +2790,7 @@ void server::remove_player(player_iterator iter)
             if(!alliance_->get(g->id()).individual) alliance_updates(*g);
         }
 		game_ended = g->remove_player(iter, true, false);
+        if(alliance_ && alliance_->get(g->id()).close_requested)game_ended=true;
 	}
 
 	const simple_wml::node::child_list& users = games_and_users_list_.root().children("user");
@@ -3913,7 +3939,7 @@ int main(int argc, char** argv)
 					  << "  -w, --dump-wml             Print all WML sent to clients to stdout.\n";
 			return 0;
 		} else if(val == "--unified-version") {
-            std::cout << "WESNOTH_UNIFIED_MULTIPLAYER release=1192624 protocol=4\n";
+            std::cout << "WESNOTH_UNIFIED_MULTIPLAYER release=1192626 protocol=5\n";
             return 0;
 		} else if(val == "--version" || val == "-V") {
 			std::cout << "Battle for Wesnoth server " << game_config::wesnoth_version.str() << "\n";

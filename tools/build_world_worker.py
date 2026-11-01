@@ -114,7 +114,7 @@ def binding():
     paths += [CLIENT/'tools'/name for name in ('prepare_android_source.py','verify_game_data.py','gamedata-1.19.26.reference.json')]
     paths += [path for directory in ('engine', 'alliance_game', 'alliance_native')
               for path in sorted((CLIENT / directory).rglob('*')) if path.is_file() and path.suffix not in ('.pyc',)]
-    return {'format': 1, 'purpose': 'wesnoth-full-native-world-worker', 'release': 1192624,
+    return {'format': 1, 'purpose': 'wesnoth-full-native-world-worker', 'release': 1192626,
             'inputs': {str(path.relative_to(ROOT.parent)).replace('\\','/'): digest(safe_path(path)) for path in paths}}
 
 
@@ -481,10 +481,13 @@ def installed_worker(required=True, expected_binding=None):
         return None
     row = metadata(receipt_path)
     expected_binding = binding() if expected_binding is None else expected_binding
+    from tools.world_worker_recovery import _binding
+    _binding(expected_binding)
+    if metadata(STAGE / 'owner.json') != expected_binding:
+        raise BuildError('World worker ownership differs from its verified receipt.')
     if set(row)!={'binding','executable','dlls','version','game_data','game_data_files','build_tools'} or row['binding'] != expected_binding:
         raise BuildError('World worker sources differ from the verified build.')
-    if ('wesnoth_server/tools/world_worker_version_completion.py' in expected_binding.get('inputs', {})
-            and row['version'] != '1.19.26'):
+    if row['version'] != '1.19.26':
         raise BuildError('World worker receipt has an unexpected native engine version.')
     if set(row['build_tools'])!={'cmake','ninja'}:raise BuildError('World worker build-tool receipt is incomplete.')
     for tool in row['build_tools'].values():
@@ -781,7 +784,9 @@ def build_locked(msys, cmake, game_data, preserve, ninja_report=None):
                 print('Incomplete worker build preserved: ' + str(retained), flush=True)
             else:
                 installed_worker(expected_binding=owner)
-                STAGE.rename(STAGE.with_name(STAGE.name+'-before-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid4().hex))
+                retained = STAGE.with_name(STAGE.name+'-before-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid4().hex)
+                STAGE.rename(retained)
+                print('Completed worker build verified and preserved: ' + str(retained), flush=True)
         elif (STAGE/'receipt.json').exists():
             installed_worker(); print('WORLD NATIVE WORKER ARTIFACT VERIFIED'); return
     if not STAGE.exists(): STAGE.mkdir();write_new(STAGE/'owner.json',expected)

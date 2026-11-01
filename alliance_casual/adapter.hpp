@@ -11,7 +11,9 @@ namespace alliance_casual {
 struct seat {std::string account_id, username; boost::json::object selection; bool ready=false;};
 struct room {
  std::string id, layout, settings;
- bool restored=false, individual=false, network_reserved=false;
+ bool restored=false, individual=false, network_reserved=false, close_requested=false, technical_closure=false;
+ std::string creator_account;
+ std::map<std::string,std::string> admitted;
  std::int64_t revision=1, launch_revision=0;
  std::map<int,seat> seats;
 };
@@ -21,6 +23,8 @@ public:
  boost::json::object admit(const std::string& ticket,const std::string& username);
  room& create(int game);
  room& get(int game);
+ void admit_room(int game,const std::string& account,const std::string& username,const std::string& ticket,bool create);
+ void leave_room(int game,const std::string& username);
  void remove(int game);
  void restore(int game,simple_wml::node& level);
  void choose(int game,int side,const std::string& account,const std::string& username,const std::string& ticket);

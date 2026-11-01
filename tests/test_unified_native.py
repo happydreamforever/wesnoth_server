@@ -76,8 +76,9 @@ class Native(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.client=MongoClient(os.environ['ALLIANCE_TEST_MONGO_URI'],tz_aware=True)
-        cls.name='alliance_test_'+uuid4().hex;cls.db=cls.client[cls.name];bootstrap_schema(cls.db);bootstrap_auth_schema(cls.db)
-        cls.domain=AllianceService(cls.db);cls.catalog,cls.digest=load_catalog();cls.campaign=next(c for c in cls.catalog['campaigns'] if c['aliases']);cls.alias=cls.campaign['aliases'][0];cls.hero=cls.alias['hero_id'];cls.form=next(f for f in cls.catalog['forms'] if f['id']==cls.alias['forms'][0]['form_id'])
+        cls.name='alliance_test_'+uuid4().hex;cls.db=cls.client[cls.name]
+        getattr(cls, 'schema_bootstrap', bootstrap_schema)(cls.db);bootstrap_auth_schema(cls.db)
+        cls.domain=getattr(cls, 'service_class', AllianceService)(cls.db);cls.catalog,cls.digest=load_catalog();cls.campaign=next(c for c in cls.catalog['campaigns'] if c['aliases']);cls.alias=cls.campaign['aliases'][0];cls.hero=cls.alias['hero_id'];cls.form=next(f for f in cls.catalog['forms'] if f['id']==cls.alias['forms'][0]['form_id'])
         cls.tmp=tempfile.TemporaryDirectory(prefix='unified-native-');cls.root=Path(cls.tmp.name);cls.runtime=cls.root/'runtime';cls.runtime.mkdir()
         cls.secret=secrets.token_urlsafe(32)
         settings=SimpleNamespace(host='127.0.0.1',port=18765,bridge_secret=cls.secret,secret_key=secrets.token_urlsafe(32))
@@ -101,7 +102,7 @@ class Native(unittest.TestCase):
         config.write_text('\n'.join(k+'='+json.dumps(str(v)) for k,v in {
             'alliance_auth':'yes','tls_enabled':'yes','alliance_runtime':cls.runtime,'alliance_catalog':ROOT/'alliance/hero_catalog.json',
             'tls_fullchain':cls.identity/'server-cert.pem','tls_private_key':cls.identity/'server-key.pem',
-            'versions_accepted':'1.19.26','connections_allowed':30,'save_replays':'no'}.items()))
+            'versions_accepted':'1.19.26','connections_allowed':getattr(cls, 'connections_allowed', 30),'save_replays':'no'}.items()))
         start(Path(os.environ.get('ALLIANCE_TEST_SERVER_BINARY', ROOT/'build/unified-server-vps/bin/wesnothd')),['--config',str(config),'--port','15000','--log-info=server'],'opened fifo')
         cls.counter=0
     @classmethod

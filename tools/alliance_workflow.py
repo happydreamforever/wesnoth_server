@@ -21,7 +21,7 @@ import zlib
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from alliance.deployment import MONGO_VERSION, _client, _credentials, _uri
 from alliance.runtime_lock import _acquire, _file_identity, _release
-from alliance.schema import SCHEMA_VERSION
+from alliance.court import SCHEMA as SCHEMA_VERSION
 from tools.alliance_maintenance import local_path, validate_runtime
 from tools.alliance_transport import read_json, tls_client_context, validate_profile
 from tools.check_alliance_backend import collect
@@ -32,7 +32,7 @@ STEPS = (("W02", "database", 27018, "Run-WindowsAllianceDatabase.ps1"),
          ("W04", "bridge", 15001, "Run-WindowsAllianceBridge.ps1"))
 BATTLE_STEP = ("W05", "battles", 15002, "Run-WindowsAllianceBattles.ps1")
 MULTIPLAYER_STEP = ("W06", "multiplayer", 15000, "Run-WindowsMultiplayer.ps1")
-EXPECTED_IMPLEMENTATION_RELEASE = 1192624
+EXPECTED_IMPLEMENTATION_RELEASE = 1192626
 BACKEND_RELEASE_ERROR = "W03_backend_release_mismatch"
 
 
@@ -131,7 +131,7 @@ def valid_service_health(raw, *, battles=False, world_workers=None):
         if workers not in ("1", "2", "3", "4"): return False
         if world_workers is not None and workers!=str(world_workers):return False
     return fields == {"service": "alliance-battles" if battles else "alliance-accounts",
-                      "api": "1" if battles else "4",
+                      "api": "1" if battles else "5",
                       "implementation_release": str(EXPECTED_IMPLEMENTATION_RELEASE)}
 
 
@@ -148,7 +148,7 @@ def valid_multiplayer_health(raw):
         match = re.fullmatch(r'(alliance_protocol|implementation_release|individual_rooms)\s*=\s*"([0-9]+)"', line)
         if not match or match[1] in fields: return False
         fields[match[1]] = match[2]
-    return fields == {"alliance_protocol": "4", "implementation_release": str(EXPECTED_IMPLEMENTATION_RELEASE),
+    return fields == {"alliance_protocol": "5", "implementation_release": str(EXPECTED_IMPLEMENTATION_RELEASE),
                       "individual_rooms": "1"}
 
 

@@ -34,6 +34,7 @@ class WorldRoom:
         self.active = [s["side"] for s in descriptor["sides"] if s["controller"] != "closed"]
         self.current_side, self.turn, self.chain, self.count = min(self.active), 1, "0" * 64, 0
         self.choices, self.history = {}, []
+        self.item_commands = set()
         self.history_bytes = 0
         marker = directory / "room.json"
         if marker.exists():
@@ -104,6 +105,8 @@ class WorldRoom:
                         self.current_side = following
                     elif action.name == "random_seed":
                         self.choices[int(action.attrs["request_id"])] = action.attrs["new_seed"]
+                    elif action.name == 'fire_event' and action.attrs.get('raise', '').startswith('menu item court_item_'):
+                        self.item_commands.add(int(action.attrs['raise'].rsplit('_', 1)[1]))
 
     def append(self, root):
         text = serialize(root)
@@ -165,14 +168,21 @@ class WorldRoom:
         # current bounded packet in this peer's receive loop until that account
         # has loaded the retained history again. Do not hold the room lock here.
         node = root.children[0]
-        if self.started and node.name in ("turn", "request_choice"):
-            if self.paused or self.completed: raise WireError("World battle is paused.")
-            await asyncio.wait_for(self.available.wait(), 600)
-        async with self.lock:
+        needs_controllers = self.started and node.name in ("turn", "request_choice")
+        while True:
+            if needs_controllers:
+                if self.paused or self.completed: raise WireError("World battle is paused.")
+                await asyncio.wait_for(self.available.wait(), 600)
+            await self.lock.acquire()
+            # Controller availability can change between wait() and acquire().
+            # Retain this bounded packet while the same account reconnects.
+            if needs_controllers and not self.available.is_set():
+                self.lock.release()
+                continue
+            break
+        try:
             await self.authorize(peer)
             node = root.children[0]
-            if self.started and node.name in ("turn", "request_choice") and not self.available.is_set():
-                raise WireError("A required human controller disconnected.")
             if node.name == "world_loaded":
                 if set(node.attrs) != {"scenario_sha256"} or node.children or peer.loaded:
                     raise WireError("World load binding differs.")
@@ -231,16 +241,32 @@ class WorldRoom:
             if node.name == "turn":
                 if node.attrs or not 1 <= len(node.children) <= 512: raise WireError("Invalid World turn.")
                 simulated = self.current_side
+                item_commands = set(self.item_commands)
                 for command in node.children:
                     if command.name != "command" or not command.children: raise WireError("Invalid World command.")
                     side = int(command.attrs.get("from_side", str(simulated)))
                     if side not in peer.sides: raise WireError("World command exceeds assigned authority.")
                     names = [action.name for action in command.children]
-                    if any(name in ("change_controller", "change_controller_wml", "add_side", "random_seed", "custom_command", "fire_event") or name.startswith("debug_") for name in names):
+                    if any(name in ("change_controller", "change_controller_wml", "add_side", "random_seed", "custom_command") or name.startswith("debug_") for name in names):
                         raise WireError("World command may not rewrite controller or terminal state.")
                     dependent = command.attrs.get("dependent") == "yes" and command.attrs.get("from_side") == str(side) and len(names) == 1 and names[0] not in ("end_turn", "init_side")
                     if side != simulated and not dependent: raise WireError("World turn ownership differs.")
                     for action in command.children:
+                        if action.name == 'fire_event':
+                            selected = next((s for s in self.descriptor['sides'] if s['side'] == side), None)
+                            if (self.descriptor.get('mode') != 'court' or peer.worker or side != simulated
+                                    or side in item_commands or not selected or selected.get('controller') != 'human'
+                                    or selected.get('account_id') != peer.actor
+                                    or selected.get('item_id') not in ('healing_draught', 'remedy')
+                                    or action.attrs != {'raise': 'menu item court_item_' + str(side)}
+                                    or len(action.children) > 1):
+                                raise WireError('Court item action exceeds its frozen authority.')
+                            for source in action.children:
+                                if (source.name != 'source' or source.children or set(source.attrs) != {'x', 'y'}
+                                        or any(not value.isdecimal() or not 1 <= int(value) <= 1000
+                                               for value in source.attrs.values())):
+                                    raise WireError('Court item source is invalid.')
+                            item_commands.add(side)
                         if action.name == "end_turn":
                             requested = int(action.attrs.get("next_player_number", "0"))
                             # The pinned Company/World scenarios never change
@@ -268,6 +294,8 @@ class WorldRoom:
                     await self.broadcast_notice('Synchronization failed. The battle is paused; no result was settled.')
                 return  # Native advisory is never terminal evidence.
             raise WireError("Unsupported World command.")
+        finally:
+            self.lock.release()
 
 
 async def handle_world(supervisor, reader, writer, node):

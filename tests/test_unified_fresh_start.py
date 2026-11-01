@@ -26,7 +26,6 @@ class FreshStartTests(unittest.TestCase):
         maintenance.backup(self.old, self.archive)
         self.before = maintenance.inventory(self.old)
         self.addCleanup(patch.stopall)
-        patch.object(fresh, "SCHEMA_VERSION", 2).start()
         self.initialize = patch.object(fresh, "initialize", side_effect=self.initialize_fixture).start()
 
     def initialize_fixture(self, runtime, mongod):

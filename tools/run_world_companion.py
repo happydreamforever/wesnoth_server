@@ -1,7 +1,7 @@
 """Run an explicitly selected player's side through the verified native engine.
 
 This is acceptance tooling for one LDPlayer. It does not impersonate another
-player, choose readiness, or submit results: the independent World witness owns
+player, choose readiness, or submit results: the independent Court witness owns
 settlement. The player's password and session travel only over pinned TLS and a
 private child stdin pipe, never in arguments or diagnostic files.
 """
@@ -25,36 +25,72 @@ from alliance.world_worker import bounded, canonical, native_engine_command, ord
 from tools.build_world_worker import installed_worker
 import run_android_alliance_companion as account_transport
 
-# The coordinated shared helper supplies protocol 4 pinned-IP TLS framing.
-if account_transport.WIRE_VERSION != 4:
+# The coordinated shared helper supplies protocol 5 pinned-IP TLS framing.
+if account_transport.WIRE_VERSION != 5:
     raise RuntimeError('The coordinated client companion helper is required.')
 UUID = re.compile(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}')
 
 
-def select_battle(profile, token, actor):
-    envelope = account_transport.account_request(profile, 'world_query',
-        {'operation': 'battles', 'payload': {}}, token)
-    if envelope.get('version') != 1 or envelope.get('actor_id') != actor:
+def court_query(profile, token, actor, query, payload):
+    envelope = account_transport.account_request(profile, 'court_query',
+        {'version': 1, 'query': query, 'payload': payload}, token)
+    if envelope.get('version') != 1 or envelope.get('actor_id') != actor or not isinstance(envelope.get('data'), dict):
         raise ValueError('battle_list_identity')
-    rows = envelope['data']['items']
-    if not isinstance(rows, list) or len(rows) > 30: raise ValueError('battle_list_bounds')
-    eligible = [row for row in rows if row.get('state') in ('preparing', 'running', 'paused') and
-        any(army.get('account_id') == actor and army.get('controller') == 'human' for army in row.get('armies', []))]
-    if not eligible:
-        print('No prepared battle is assigned to this player. Ready the army in the game first.', flush=True)
+    return envelope['data']
+
+
+def eligible(row, actor):
+    if not isinstance(row, dict) or not UUID.fullmatch(row.get('id', '')):
+        raise ValueError('battle_identity')
+    seats = row.get('seats')
+    if not isinstance(seats, list) or len(seats) > 8:
+        raise ValueError('battle_seat_bounds')
+    return (row.get('state') in ('preparing', 'running', 'paused') and row.get('can_enter') is True
+        and any(seat.get('account_id') == actor and seat.get('controller') == 'human' for seat in seats))
+
+
+def validate_battle(profile, token, actor, battle_id):
+    row = court_query(profile, token, actor, 'plan', {'match_id': battle_id}).get('match')
+    if not eligible(row, actor) or row['id'] != battle_id:
+        raise ValueError('battle_not_assigned')
+    return battle_id
+
+
+def select_battle(profile, token, actor):
+    choices, after, seen = [], '', set()
+    for page in range(50):
+        payload = {'state': 'active', **({'after': after} if after else {})}
+        data = court_query(profile, token, actor, 'plans', payload)
+        rows = data.get('items')
+        if not isinstance(rows, list) or len(rows) > 20:
+            raise ValueError('battle_list_bounds')
+        for row in rows:
+            if row.get('id') in seen:
+                raise ValueError('battle_list_duplicate')
+            seen.add(row.get('id'))
+            if eligible(row, actor):
+                choices.append(row)
+        after = data.get('next', '')
+        if not after:
+            break
+        if not UUID.fullmatch(after):
+            raise ValueError('battle_cursor')
+    else:
+        raise ValueError('battle_list_bounds')
+    if not choices:
+        print('No prepared Court battle is assigned to this player. Join a seat, choose a hero and Ready in the game first.', flush=True)
         return None
-    names = {'company_border_patrol': 'Border Patrol', 'company_river_crossing': 'The River Crossing',
-        'company_old_fortress': 'The Old Fortress', 'isars-cross': "Isar's Cross", 'hexcake': 'Hexcake',
-        'mokena-prairie': 'Mokena Prairie'}
-    for number, row in enumerate(eligible, 1):
-        if not UUID.fullmatch(row.get('id', '')): raise ValueError('battle_identity')
-        place = names.get(row.get('mission_id')) or names.get(row.get('map_id'), 'Team battle')
+    names = {'weldyn-channel': 'Weldyn Channel', 'isars-cross': "Isar's Cross",
+        'hexcake': 'Hexcake', 'mokena-prairie': 'Mokena Prairie'}
+    for number, row in enumerate(choices, 1):
+        place = names.get(row.get('settings', {}).get('map_id'), 'Court battle')
         print(f"{number}. {place} — {row['state']}", flush=True)
     choice = input('Battle number, or Enter to cancel: ').strip()
-    if not choice: return None
-    if not choice.isascii() or not choice.isdigit() or not 1 <= int(choice) <= len(eligible):
+    if not choice:
+        return None
+    if not choice.isascii() or not choice.isdigit() or not 1 <= int(choice) <= len(choices):
         raise ValueError('invalid_battle_choice')
-    return eligible[int(choice) - 1]['id']
+    return choices[int(choice) - 1]['id']
 
 
 def run(args):
@@ -84,8 +120,9 @@ def run(args):
         report['battle_id'] = battle_id
         if battle_id is None:
             report['selection_cancelled'] = True
-            print('WORLD COMPANION CANCELLED. No battle or readiness was changed.', flush=True)
+            print('COURT COMPANION CANCELLED. No battle or readiness was changed.', flush=True)
             return 0
+        validate_battle(profile, token, account['id'], battle_id)
         environment = os.environ.copy()
         environment.pop('WESNOTH_WORLD_WORKER_PROFILE', None)
         environment.pop('WESNOTH_WORLD_WORKER_OUTPUT', None)
@@ -98,10 +135,10 @@ def run(args):
             child = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=log, stderr=subprocess.STDOUT, env=environment)
             child.stdin.write(canonical({'run_id': battle_id, 'account_id': account['id'], 'token': token}) + b'\n')
             child.stdin.close()
-            print('WORLD COMPANION RUNNING. Keep this window open. Ctrl+C stops only this companion.', flush=True)
+            print('COURT COMPANION RUNNING. Keep this window open. Ctrl+C stops only this companion.', flush=True)
             report['engine_exit'] = child.wait()
         if report['engine_exit'] != 0: raise ValueError('native_companion_interrupted')
-        print('WORLD COMPANION FINISHED. Check the battle result in the game; this helper does not award rewards.', flush=True)
+        print('COURT COMPANION FINISHED. Check the battle result in the game; this helper does not award rewards.', flush=True)
     finally:
         if child and child.poll() is None:
             child.terminate()
@@ -128,10 +165,10 @@ def main(argv=None):
     try:
         return run(args)
     except KeyboardInterrupt:
-        print('WORLD COMPANION STOPPED. Reconnect the same player to continue the retained battle.', flush=True)
+        print('COURT COMPANION STOPPED. Reconnect the same player to continue the retained battle.', flush=True)
         return 2
     except Exception as error:
-        print('WORLD COMPANION STOPPED: ' + type(error).__name__ + '. Check the selected player, battle and saved report.', flush=True)
+        print('COURT COMPANION STOPPED: ' + type(error).__name__ + '. Check the selected player, battle and saved report.', flush=True)
         return 1
 
 

@@ -82,10 +82,12 @@ class DependencyPrefix(unittest.TestCase):
         executable=binary/'world-worker.exe';executable.write_bytes(b'fixture executable')
         library=binary/'runtime.dll';library.write_bytes(b'fixture private library')
         data=self.root/'game data';(data/'data').mkdir(parents=True);(data/'data/_main.cfg').write_text('fixture')
-        expected={'purpose':'fixture binding'}
+        expected={'format':1,'purpose':'wesnoth-full-native-world-worker','release':1192626,
+            'inputs':{'wesnoth_server/tools/build_world_worker.py':'a'*64}}
+        (stage/'owner.json').write_text(json.dumps(expected))
         receipt={'binding':expected,'executable':{'bytes':executable.stat().st_size,'sha256':deps.digest(executable)},
             'dlls':{'private':{'runtime.dll':{'filename':'runtime.dll','bytes':library.stat().st_size,'sha256':deps.digest(library)}},'windows_system':['kernel32.dll']},
-            'version':'fixture 1.19.26','game_data':str(data),'game_data_files':build.data_inventory(data),
+            'version':'1.19.26','game_data':str(data),'game_data_files':build.data_inventory(data),
             'build_tools':{name:{'path':str(executable),'sha256':deps.digest(executable),'version':'fixture'} for name in ('cmake','ninja')}}
         (stage/'receipt.json').write_text(json.dumps(receipt))
         with patch.object(build,'STAGE',stage):

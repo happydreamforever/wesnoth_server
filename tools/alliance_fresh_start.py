@@ -51,7 +51,7 @@ def checked_backup(archive):
     manifest = json.loads(maintenance.read_small(archive / "manifest.json", 8 * 1024**2))
     if (manifest.get("purpose") != maintenance.PURPOSE or manifest.get("format") != 1
             or manifest.get("mongodb_version") != maintenance.MONGO_VERSION
-            or manifest.get("producer_schema_version") not in (1, 2, SCHEMA_VERSION)):
+            or manifest.get("producer_schema_version") not in (1, 2, 3, SCHEMA_VERSION, 5)):
         raise maintenance.MaintenanceError("unsupported_backup_version")
     files = manifest.get("files")
     if not isinstance(files, dict) or set(maintenance.CONTROLS) - files.keys():
@@ -61,7 +61,10 @@ def checked_backup(archive):
     return archive, files, maintenance.digest(archive / "manifest.json")
 
 
-def fresh_start(previous, archive, destination, mongod):
+def fresh_start(previous, archive, destination, mongod, *, product='legacy'):
+    if product not in ('legacy', 'court'):
+        raise maintenance.MaintenanceError('unknown_fresh_product')
+    target_schema = 5 if product == 'court' else SCHEMA_VERSION
     if SCHEMA_VERSION < 2:
         raise maintenance.MaintenanceError("unified_schema_not_installed")
     source = maintenance.validate_runtime(previous)
@@ -70,7 +73,7 @@ def fresh_start(previous, archive, destination, mongod):
     for excluded in (source, archive):
         if target == excluded or target in excluded.parents or excluded in target.parents:
             raise maintenance.MaintenanceError("overlapping_destination")
-    identity = {"purpose": PURPOSE, "format": 1, "schema_version": SCHEMA_VERSION,
+    identity = {"purpose": PURPOSE, "format": 1, "schema_version": target_schema,
                 "previous_runtime": str(source), "backup": str(archive),
                 "backup_manifest": manifest_digest}
     with ExitStack() as stack:
@@ -94,18 +97,21 @@ def fresh_start(previous, archive, destination, mongod):
                 raise maintenance.MaintenanceError("fresh_start_completion_changed")
             maintenance.validate_runtime(target)
             return {"reused": True, "previous_runtime_preserved": True,
-                    "database_stopped": True, "schema_version": SCHEMA_VERSION}
+                    "database_stopped": True, "schema_version": target_schema}
         ports[27018].close()
         # initialize itself locks the new runtime, creates fresh random DB and
         # web/session credentials, verifies the schema, and stops its child.
         # It resumes incomplete initialization; it never removes player data.
-        initialize(target, mongod)
+        if product == 'court':
+            initialize(target, mongod, product='court')
+        else:
+            initialize(target, mongod)
         maintenance.validate_runtime(target)
         if maintenance.inventory(source) != archived or maintenance.inventory(archive / "runtime") != archived:
             raise maintenance.MaintenanceError("protected_source_changed")
         _write_new(target / COMPLETE, json.dumps(identity, sort_keys=True) + "\n")
     return {"reused": False, "previous_runtime_preserved": True,
-            "database_stopped": True, "schema_version": SCHEMA_VERSION}
+            "database_stopped": True, "schema_version": target_schema}
 
 
 def main(argv=None):

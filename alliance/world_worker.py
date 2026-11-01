@@ -156,11 +156,50 @@ def validate_evidence(directory, descriptor, cursor, native_scenario):
         raise ValueError("Only a noncontrolling native witness may report observer completion.")
     winner = proof["winner_team_id"] or None
     first_team = next(side["team_id"] for side in descriptor["sides"] if side["controller"] != "closed")
-    outcome = "draw" if winner is None else "win" if winner == first_team else "loss"
-    return {**{key: proof[key] for key in ("scenario_sha256", "replay_sha256", "ledger_sha256", "event_count",
+    outcome = "draw" if winner is None else "win" if descriptor.get("mode") == "court" or winner == first_team else "loss"
+    result = {**{key: proof[key] for key in ("scenario_sha256", "replay_sha256", "ledger_sha256", "event_count",
             "command_chain_sha256", "units", "sync_valid", "combat_verified", "completed_rounds")},
             "terminal": ("draw" if winner is None else "victory") if proof["native_end"] == "observer_end" else proof["native_end"],
             "outcome": outcome, "winner_team_id": winner}
+    if descriptor.get("mode") == "court":
+        scores = proof.get("scores")
+        if not isinstance(scores, list) or len(scores) != 2 or {s.get("team_id") for s in scores} != teams:
+            raise ValueError("Native Court objective scores are incomplete.")
+        for score in scores:
+            if set(score) != {"team_id", "leaders", "villages", "unit_value_hp", "gold"} or any(
+                    type(score[k]) is not int or not 0 <= score[k] <= 2**53 - 1
+                    for k in ("leaders", "villages", "unit_value_hp", "gold")):
+                raise ValueError("Native Court objective score differs.")
+        result["scores"] = scores
+    return result
+
+
+def validate_item_checkpoints(directory, descriptor, native_scenario):
+    """Read only generation-bound output of the supervised native witness."""
+    if descriptor.get('mode') != 'court':
+        return []
+    result = []
+    fields = {'format', 'run_id', 'generation', 'scenario_sha256', 'side', 'turn',
+              'account_id', 'unit_id', 'item_id', 'applied'}
+    for side in descriptor['sides']:
+        if not side.get('item_id'):
+            continue
+        path = ordinary(Path(directory) / ('item-' + str(side['side']) + '.json'))
+        if not path.exists():
+            continue
+        raw = bounded(path, 16384)
+        proof = json_record(raw)
+        if (set(proof) != fields or type(proof['format']) is not int or proof['format'] != 1
+                or proof['run_id'] != descriptor['run_id'] or proof['generation'] != descriptor['generation']
+                or proof['scenario_sha256'] != native_scenario or proof['side'] != side['side']
+                or side['controller'] != 'human' or proof['account_id'] != side['account_id']
+                or proof['unit_id'] != (side.get('hero') or {}).get('instance_id')
+                or proof['item_id'] != side['item_id'] or proof['applied'] is not True
+                or type(proof['turn']) is not int or not 1 <= proof['turn'] <= descriptor['settings']['turns']):
+            raise ValueError('Native Court item checkpoint differs.')
+        result.append(dict(account_id=proof['account_id'], side=side['side'], turn_side=side['side'],
+            item_id=side['item_id'], command_sha256=sha(canonical(proof)), applied=True))
+    return result
 
 
 class WorldWorkerSupervisor:
@@ -173,6 +212,7 @@ class WorldWorkerSupervisor:
             raise ValueError("World worker limit must be between one and four.")
         self.limit = workers
         self.children, self.tickets, self.rooms = {}, {}, {}
+        self.capacity_workers = [str(uuid4()) for _ in range(workers)]
         self.stopping = False
 
     def capability(self, run_id, generation, worker_id):
@@ -206,7 +246,14 @@ class WorldWorkerSupervisor:
                 raise
             self.rooms[run_id] = room
         elif room.generation != generation:
-            raise ValueError("World worker generation differs from retained room.")
+            if descriptor.get('mode') != 'court' or room.started or run_id in self.children:
+                raise ValueError("World worker generation differs from retained room.")
+            # Pre-play human-to-AI fallback is a newly frozen contract. Keep the
+            # previous directory intact and close only its superseded peers.
+            for peer in list(room.peers.values()):
+                peer.writer.close()
+            room = WorldRoom(self, descriptor, directory)
+            self.rooms[run_id] = room
         if room.pause_reason in ("native_sync_error", "native_evidence_conflict"):
             await asyncio.to_thread(self.daemon.domain.world_worker_pause,
                 run_id, worker_id, generation, room.pause_reason)
@@ -226,6 +273,9 @@ class WorldWorkerSupervisor:
                         run_id, worker_id, generation, room.scenario)
                     if loaded.get("state") not in ("preparing", "running", "paused"):
                         raise ValueError("The retained native scenario was rejected.")
+                    for item in validate_item_checkpoints(previous, descriptor, room.scenario):
+                        await asyncio.to_thread(self.daemon.domain.court_worker_item,
+                            run_id, worker_id, generation, item)
                     settled = await asyncio.to_thread(self.daemon.domain.world_worker_finish,
                         run_id, worker_id, generation, evidence)
                     if settled.get("state") not in (None, "completed", "awaiting_confirmation"):
@@ -259,12 +309,18 @@ class WorldWorkerSupervisor:
         command = native_engine_command(self.executable, self.game_data, attempt / "userdata")
         log = (attempt / "engine.log").open("xb")
         child, pulse = None, None
+        async def collect_items():
+            for evidence in validate_item_checkpoints(attempt, descriptor, room.scenario):
+                await asyncio.to_thread(self.daemon.domain.court_worker_item,
+                    run_id, worker_id, generation, evidence)
         async def heartbeat():
             try:
                 while child.returncode is None:
                     lease = await asyncio.to_thread(self.daemon.domain.world_worker_lease, run_id, worker_id, generation)
                     if lease.get("state") not in ("preparing", "running", "paused"):
                         raise ValueError("The native execution lease is no longer active.")
+                    if lease.get('state') == 'running':
+                        await collect_items()
                     await asyncio.sleep(25)
             except Exception:
                 if child.returncode is None: child.terminate()
@@ -283,6 +339,7 @@ class WorldWorkerSupervisor:
                 raise ValueError("Native worker paused before a verified terminal.")
             try:
                 evidence = validate_evidence(attempt, descriptor, room.terminal_cursor, room.scenario)
+                await collect_items()
             except (ValueError, KeyError, TypeError):
                 room.pause_reason = "native_evidence_conflict"
                 raise
@@ -316,22 +373,29 @@ class WorldWorkerSupervisor:
 
     async def serve(self):
         tasks = set()
+        active_workers = set()
         while not self.stopping:
             try:
                 for run_id, room in list(self.rooms.items()):
                     if room.completed and run_id not in self.children and not room.peers:
                         self.rooms.pop(run_id, None)  # History/replay reloads from the durable journal.
                 if self.executable is not None and len(tasks) < self.limit:
-                    worker_id = str(uuid4())
-                    descriptor = await asyncio.to_thread(self.daemon.domain.world_worker_acquire, worker_id)
-                    if descriptor:
-                        task = asyncio.create_task(self.launch(descriptor, worker_id))
-                        tasks.add(task)
-                        def finished(task):
-                            tasks.discard(task)
-                            if not task.cancelled() and task.exception():
-                                print("WORLD WORKER LAUNCH PAUSED: " + type(task.exception()).__name__, flush=True)
-                        task.add_done_callback(finished)
+                    workers = ([worker for worker in self.capacity_workers if worker not in active_workers]
+                               if getattr(self.daemon, 'court', False) else [str(uuid4())])
+                    for worker_id in workers:
+                        if getattr(self.daemon, 'court', False):
+                            await asyncio.to_thread(self.daemon.domain.court_capacity_available, worker_id)
+                        descriptor = await asyncio.to_thread(self.daemon.domain.world_worker_acquire, worker_id)
+                        if descriptor:
+                            task = asyncio.create_task(self.launch(descriptor, worker_id))
+                            tasks.add(task)
+                            active_workers.add(worker_id)
+                            def finished(task, worker=worker_id):
+                                tasks.discard(task)
+                                active_workers.discard(worker)
+                                if not task.cancelled() and task.exception():
+                                    print("WORLD WORKER LAUNCH PAUSED: " + type(task.exception()).__name__, flush=True)
+                            task.add_done_callback(finished)
             except Exception as error:
                 print("WORLD WORKER QUEUE PAUSED: " + type(error).__name__, flush=True)
             await asyncio.sleep(2)

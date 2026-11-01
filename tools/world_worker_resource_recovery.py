@@ -36,6 +36,8 @@ def _paths(stage):
 def _legacy(owner, expected):
     recovery._binding(owner)
     recovery._binding(expected)
+    if owner['release'] != 1192624 or expected['release'] != 1192624:
+        raise BuildError('Reviewed recovery applies only to the original 1192624 worker.')
     prior = owner['inputs']
     current = expected['inputs']
     changed = {recovery.BUILDER_INPUT, recovery.RECOVERY_INPUT}
