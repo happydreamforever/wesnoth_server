@@ -18,6 +18,7 @@ from werkzeug.exceptions import HTTPException
 
 from .auth import AuthError, AuthService, hash_password
 from .domain import AllianceService, DomainError
+from .service_factory import service_for
 from .rules import CAMPAIGN_CONTENT_READY
 
 
@@ -42,7 +43,8 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
         DEBUG=False,
     )
     auth = AuthService(db)
-    domain = AllianceService(db)
+    domain = service_for(db)
+    court_enabled = hasattr(domain, 'court_query')
     app.extensions["alliance_auth"] = auth
     app.extensions["alliance_domain"] = domain
 
@@ -222,6 +224,65 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     from .admin_console import register_admin_console, action
     console = register_admin_console(app, db, domain, admin_required)
 
+    if court_enabled:
+        from .court.admin_web import register_court_admin
+        register_court_admin(app, db, domain, admin_required)
+
+        @app.before_request
+        def court_retired_routes():
+            # The fresh product cannot expose legacy Team mutations, Company
+            # grants or client-result settlement through a forgotten URL.
+            path = request.path
+            if path.startswith('/internal/v1/'):
+                suffix = path[len('/internal/v1/'):]
+                allowed = suffix in {'health', 'register', 'login', 'logout', 'me'} or suffix.startswith(('court/', 'product/', 'casual/'))
+                if not allowed:
+                    raise DomainError('unsupported_ruleset', 'This Team system has been replaced. Update the game.')
+                if suffix.startswith('product/') and suffix[len('product/'):] not in {
+                    'hero_catalog', 'story_begin', 'story_status', 'story_checkpoint',
+                    'casual_ticket', 'casual_select', 'casual_admit', 'casual_hero',
+                    'casual_admin_rooms', 'casual_capabilities', 'casual_network_prepare',
+                    'casual_network_heartbeat', 'casual_network_release', 'casual_freeze', 'casual_restore'}:
+                    raise DomainError('unsupported_ruleset', 'This action belongs to the previous Team game.')
+            elif path.startswith(('/teams', '/areas', '/world', '/companies', '/engagements',
+                                  '/team-battles', '/plans', '/manage', '/operations', '/runs')):
+                # Generic administration URLs also dispatch legacy domain
+                # methods (cancel, defense withdrawal and Company recovery).
+                # Their hidden forms must not bypass the retired Team gate.
+                if request.method == 'GET':
+                    return redirect(url_for('court_admin_dashboard'))
+                abort(409)
+
+        @app.context_processor
+        def court_navigation():
+            entries = [('court_admin_dashboard', 'Overview', 'grid'), ('accounts', 'Users', 'users'),
+                ('court_admin_cash', 'Cash requests', 'shield'), ('admin_rooms', 'Rooms', 'swords'),
+                ('court_admin_teams', 'Teams', 'flag'), ('court_admin_areas', 'Areas & Castles', 'map'),
+                ('court_admin_battles', 'Battles', 'swords'), ('court_admin_competitions', 'Competitions', 'castle'),
+                ('court_admin_history', 'History', 'history'), ('court_admin_settings', 'Rules & prices', 'settings'),
+                ('audit', 'Audit log', 'history')]
+            return {'court_enabled': True, 'admin_nav': [dict(label=label, url=url_for(endpoint),
+                active=request.endpoint == endpoint, icon=icon) for endpoint, label, icon in entries]}
+
+    @internal_route('/court/query')
+    def court_query():
+        if not court_enabled:
+            raise DomainError('unsupported_ruleset', 'The new Court game has not been initialized.')
+        result = domain.court_query(g.player['_id'], request.get_json())
+        # Presence is not a command or a source of rewards. Avoid writes on
+        # every screen poll while keeping the Team roster useful.
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        db.accounts.update_one({'_id': g.player['_id'], '$or': [{'court_seen_at': {'$lt': now - timedelta(seconds=30)}},
+            {'court_seen_at': {'$exists': False}}]}, {'$set': {'court_seen_at': now}})
+        return jsonify(result)
+
+    @internal_route('/court/command')
+    def court_command():
+        if not court_enabled:
+            raise DomainError('unsupported_ruleset', 'The new Court game has not been initialized.')
+        return jsonify(domain.court_command(g.player['_id'], request.get_json()))
+
 
     @app.route("/login", methods=["GET", "POST"])
     def login():
@@ -247,6 +308,8 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     @app.get("/")
     @admin_required
     def dashboard():
+        if court_enabled:
+            return redirect(url_for('court_admin_dashboard'))
         return console.dashboard()
 
     @app.get("/accounts")
@@ -518,8 +581,9 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
         # Capability metadata is not a live native-client or game-daemon probe.
         return jsonify(status="ok", service="alliance", api_version=1,
                        game_bridge_integrated=True, campaign_content_ready=CAMPAIGN_CONTENT_READY,
-                       health_scope="backend_only", native_runtime_checked=False, implementation_release=1192624,
-                       product_schema_version=4, flexible_teams=True)
+                       health_scope="backend_only", native_runtime_checked=False,
+                       implementation_release=1192626 if court_enabled else 1192624,
+                       product_schema_version=5 if court_enabled else 4, flexible_teams=not court_enabled)
 
     @internal_route("/register", player=False)
     def register():
@@ -600,6 +664,26 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
         data = progression_payload('ticket', 'account_id', 'game_id', 'side')
         return jsonify(domain.casual_consume_hero(**data))
 
+    @internal_route('/casual/room_admit', player=False)
+    def court_room_admit():
+        if not court_enabled: abort(409)
+        return jsonify(domain.court_room_admit(**progression_payload('ticket', 'account_id', 'game_id', 'generation', 'kind')))
+
+    @internal_route('/casual/room_leave', player=False)
+    def court_room_leave():
+        if not court_enabled: abort(409)
+        return jsonify(domain.court_room_leave(**progression_payload('account_id', 'game_id', 'generation')))
+
+    @internal_route('/casual/room_close', player=False)
+    def court_room_close():
+        if not court_enabled: abort(409)
+        return jsonify(domain.court_room_close(**progression_payload('game_id', 'generation', 'technical')))
+
+    @internal_route('/casual/rooms_heartbeat', player=False)
+    def court_rooms_heartbeat():
+        if not court_enabled: abort(409)
+        return jsonify(domain.court_rooms_heartbeat(**progression_payload('generation', 'game_ids')))
+
     @internal_route('/casual/admin_rooms', player=False)
     def casual_admin_rooms():
         from .admin_rooms import AdminRooms
@@ -612,7 +696,9 @@ def create_app(settings, db, *, login_observer=None, login_username=None):
     def casual_capabilities():
         progression_payload()
         domain._generation()
-        return jsonify(protocol=4, implementation_release=1192624, schema_version=4)
+        return jsonify(protocol=5 if court_enabled else 4,
+            implementation_release=1192626 if court_enabled else 1192624,
+            schema_version=5 if court_enabled else 4)
 
     @internal_route('/casual/network_prepare', player=False)
     def casual_network_prepare():

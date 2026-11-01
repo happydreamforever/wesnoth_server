@@ -559,6 +559,12 @@ class UnifiedProduct:
             result = {'run_id': run['_id'], 'checkpoint_id': data['checkpoint_id'],
                       'next_checkpoint': data['sequence'] + 1, 'outcome': data['outcome'], 'rewards': earned,
                       'heroes': owned_heroes(self.db, actor_id, session)}
+            # Court binds the first-victory grant to the character, campaign
+            # and scenario, inside this same durable checkpoint transaction.
+            # Historical schema-4 services retain their original receipts.
+            if data['outcome'] == 'win' and hasattr(self, '_campaign_cash'):
+                result['cash_reward'] = self._campaign_cash(actor_id,
+                    run['campaign_id'], data['scenario_id'], session)
             self.db.story_checkpoints.insert_one({'_id': data['checkpoint_id'], 'run_id': run['_id'],
                 'account_id': actor_id, 'sequence': data['sequence'], 'digest': digest,
                 'result': result, 'created_at': _now()}, session=session)

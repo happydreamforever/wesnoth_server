@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Organize competition · Emerald Court{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('court_admin_competitions') }}">← Competitions</a>
+<div class="page-heading"><div><p class="eyebrow">Single-elimination competition</p><h1>Organize competition</h1><p class="intro">One reviewed ruleset applies to every bracket match.</p></div></div>
+{% if not selected %}
+<section class="panel compact-form"><h2>Choose a Castle</h2>{% if castles %}<form method="get" action="{{ url_for('court_admin_competition_new') }}"><label for="competition-castle">Active Competition Castle</label><select id="competition-castle" name="castle" required>{% for castle in castles %}<option value="{{ castle._id }}">{{ castle.area_id }} · {{ castle.name }}</option>{% endfor %}</select><button type="submit">Continue</button></form>{% else %}<p>No active Competition Castle is available.</p><a class="button secondary" href="{{ url_for('court_admin_areas') }}">Manage Areas &amp; Castles</a>{% endif %}</section>
+{% else %}
+<form method="post" action="{{ url_for('court_admin_competition_new') }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="command_id" value="{{ command_id }}"><input type="hidden" name="castle_id" value="{{ selected._id }}"><input type="hidden" name="expected_revision" value="{{ selected.revision }}">
+<section class="panel"><h2>{{ selected.area_id }} · {{ selected.name }}</h2><div class="columns">
+<div><label for="competition-name">Competition name</label><input id="competition-name" name="name" minlength="1" maxlength="64" required></div>
+<div><label for="competition-entry">Entry fee · Team Crowns</label><input id="competition-entry" name="entry_fee" type="number" min="0" max="1000000" value="10" required></div>
+<div><label for="competition-map">Map &amp; players per Team</label><select id="competition-map" name="map_id" required>{% for id, name, size in maps %}<option value="{{ id }}">{{ name }}</option>{% endfor %}</select></div>
+<div><label for="competition-gold">Starting tactical gold</label><select id="competition-gold" name="gold" required>{% for value in [100,150,200,250,300] %}<option value="{{ value }}">{{ value }}</option>{% endfor %}</select></div>
+<div><label for="competition-income">Effective base income</label><input id="competition-income" name="base_income" type="number" min="0" max="20" value="2" required></div>
+<div><label for="competition-turns">Turn limit</label><input id="competition-turns" name="turns" type="number" min="1" max="1000" value="30" required></div>
+<div><label for="competition-cap">Effective hero-level cap</label><select id="competition-cap" name="hero_cap" required>{% for value in [5,15,30] %}<option value="{{ value }}"{% if value == 30 %} selected{% endif %}>{{ value }}</option>{% endfor %}</select></div>
+{% for key, label in [('fog','Fog'),('shroud','Shroud'),('observers','Observers'),('items','Consumables')] %}<div><label for="competition-{{ key }}">{{ label }}</label><select id="competition-{{ key }}" name="{{ key }}" required><option value="false"{% if key != 'fog' %} selected{% endif %}>Disabled</option><option value="true"{% if key == 'fog' %} selected{% endif %}>Enabled</option></select></div>{% endfor %}
+</div></section>
+<section class="panel compact-form"><h2>Review registration</h2><p class="muted">Entry fees are held at registration and captured when you lock the bracket. The host opens each round. Prize funds come from the entry pool.</p><label for="competition-reason">Reason</label><textarea id="competition-reason" name="reason" minlength="3" maxlength="500" required></textarea><label class="check-field" for="competition-confirm"><input id="competition-confirm" name="confirmation" type="checkbox" value="confirmed" required><span>I have reviewed this competition and its rules.</span></label><button type="submit">Open registration</button></section>
+</form>
+{% endif %}
+{% endblock %}

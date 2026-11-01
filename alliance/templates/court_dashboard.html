@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% from 'admin_components.html' import icon %}
+{% block title %}Court overview · Emerald Court{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">Host command centre</p><h1>Emerald Court</h1><p class="intro">World population, Team battles and the virtual Crown economy.</p></div></div>
+<div class="metrics">{% for metric in metrics %}<a class="metric" href="{{ metric.url }}"><span>{{ metric.label }}</span><strong>{{ metric.value }}</strong><small>View records {{ icon('arrow') }}</small></a>{% endfor %}</div>
+<section class="panel"><h2>Host controls</h2><div class="feature-grid">
+<a class="feature-link" href="{{ url_for('court_admin_settings') }}">{{ icon('settings') }}<span><strong>Rules &amp; prices</strong><br><small>Review fees, daily limits and rewards.</small></span></a>
+<a class="feature-link" href="{{ url_for('court_admin_competitions') }}">{{ icon('castle') }}<span><strong>Competitions</strong><br><small>Registration, brackets and round timing.</small></span></a>
+<a class="feature-link" href="{{ url_for('audit') }}">{{ icon('history') }}<span><strong>Audit log</strong><br><small>Reviewed administration changes.</small></span></a>
+</div></section>
+<p class="muted">Crowns are virtual test currency. Requests require host approval; this console processes no payments or cash-outs.</p>
+{% endblock %}

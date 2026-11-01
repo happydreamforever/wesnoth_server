@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% from 'admin_components.html' import table, filters as show_filters, pagination as show_pagination, action_form %}
+{% block title %}{{ area.name }} · Emerald Court{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('court_admin_areas') }}">← Areas</a>
+<div class="page-heading"><div><p class="eyebrow">{{ area.realm_name }}</p><h1>{{ area.name }}</h1><p class="intro">{{ area.team_count }} Teams · {{ 'Active' if area.enabled else 'Inactive' }} · {{ area.mode | title }} control</p></div></div>
+{{ show_filters(filters, request.path) }}
+<section class="panel records-panel">{{ table(headings, castles) }}</section>
+{{ show_pagination(pagination) }}
+{{ action_form(control, 1) }}
+{% endblock %}

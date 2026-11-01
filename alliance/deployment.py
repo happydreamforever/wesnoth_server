@@ -299,7 +299,7 @@ def _admin_credentials(admin_username, admin_password):
     return username, password
 
 
-def initialize(runtime, mongod, *, admin_username=None, admin_password=None):
+def initialize(runtime, mongod, *, admin_username=None, admin_password=None, product='legacy'):
     """Create only the explicit owned runtime; safe to resume with unchanged files."""
     current_stage = "runtime"
 
@@ -310,17 +310,22 @@ def initialize(runtime, mongod, *, admin_username=None, admin_password=None):
 
     try:
         return _initialize(runtime, mongod, admin_username=admin_username,
-                           admin_password=admin_password, stage=stage)
+                           admin_password=admin_password, stage=stage, product=product)
     except InitializationError:
         raise
     except (Exception, KeyboardInterrupt) as error:
         raise InitializationError(current_stage, _initialization_reason(error)) from None
 
 
-def _initialize(runtime, mongod, *, admin_username, admin_password, stage):
+def _initialize(runtime, mongod, *, admin_username, admin_password, stage, product='legacy'):
     from .auth import bootstrap_auth_schema, hash_password
     from .domain import AllianceService, DomainError
     from .schema import bootstrap_schema
+    if product not in ('legacy', 'court'):
+        raise ConfigurationError('Unknown game initialization product.')
+    if product == 'court':
+        from .court.schema import bootstrap_court_schema as bootstrap_schema
+        from .court.service import CourtService as AllianceService
     path = owned_runtime(runtime, create=True)
     with runtime_lock(path):
         stage("runtime-configuration")
@@ -442,11 +447,18 @@ def check_database(runtime):
             raise ConfigurationError("The local replica set is not writable and ready.")
         db = client.wesnoth_game
         from .schema import SCHEMA_VERSION
-        if db.schema_metadata.find_one({"_id": "alliance", "version": SCHEMA_VERSION}) is None:
+        metadata = db.schema_metadata.find_one({"_id": "alliance"})
+        court = metadata and metadata.get('version') == 5 and metadata.get('court_initialized') is True
+        if not court and (metadata is None or metadata.get('version') != SCHEMA_VERSION):
             raise ConfigurationError("Unsupported or incomplete Alliance schema; explicit initialization/migration required.")
         required = {"accounts", "teams", "areas", "game_runs", "settlements", "schema_metadata",
                     "admin_audit", "auth_sessions", "auth_attempts", "account_heroes",
                     "story_checkpoints", "casual_tickets", "casual_games", "network_battle_reservations"}
+        if court:
+            from .court.schema import SCHEMAS as court_schemas
+            from .court.wallet_schema import SCHEMAS as wallet_schemas
+            from .court.battle_schema import SCHEMAS as battle_schemas
+            required = set(court_schemas) | set(wallet_schemas) | set(battle_schemas) | {'auth_sessions', 'auth_attempts'}
         if not required.issubset(db.list_collection_names()):
             raise ConfigurationError("Alliance schema is incomplete; resume initialization.")
         if not db.accounts.find_one({"role": "admin", "status": "active"}, {"_id": 1}):

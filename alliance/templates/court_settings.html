@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}Rules &amp; prices · Emerald Court{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">Reviewed host configuration</p><h1>Rules &amp; prices</h1><p class="intro">All amounts are whole virtual Crowns. Existing holds keep their reviewed amount.</p></div></div>
+<form method="post" action="{{ url_for('court_admin_settings') }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="command_id" value="{{ command_id }}"><input type="hidden" name="revision" value="{{ settings.revision }}">
+<section class="panel"><h2>Prices</h2><div class="columns">{% for key, label in prices.items() %}<div><label for="price-{{ key }}">{{ label }}</label><input id="price-{{ key }}" name="price_{{ key }}" type="number" min="0" max="1000000" step="1" value="{{ settings.prices[key] }}" required></div>{% endfor %}</div></section>
+<section class="panel"><h2>Daily allowances &amp; population</h2><div class="columns">{% for key, label in limits.items() %}<div><label for="limit-{{ key }}">{{ label }}</label><input id="limit-{{ key }}" name="limit_{{ key }}" type="number" min="{{ 0 if key in zero_limits else 1 }}" max="{{ 60 if key == 'minimum_normal_castles' else 1000000 }}" step="1" value="{{ settings.limits[key] }}" required></div>{% endfor %}</div></section>
+<section class="panel compact-form"><h2>Confirm update</h2><p class="muted">Prices apply to new commitments. Current balance holds, battle contracts and ownership are preserved.</p><label for="rules-reason">Reason</label><textarea id="rules-reason" name="reason" minlength="3" maxlength="500" required></textarea><label class="check-field" for="rules-confirm"><input id="rules-confirm" name="confirmation" type="checkbox" value="confirmed" required><span>I have reviewed these prices and limits.</span></label><button type="submit">Save rules &amp; prices</button></section>
+</form>
+{% endblock %}

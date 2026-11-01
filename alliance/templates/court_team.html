@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% from 'admin_components.html' import table, filters as show_filters, pagination as show_pagination %}
+{% block title %}{{ team.name }} · Emerald Court{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('court_admin_teams') }}">← Teams</a>
+<div class="page-heading"><div><p class="eyebrow">Team treasury</p><h1>{{ team.name }}</h1><p class="intro">{{ area }} · Captain {{ captain }} · {{ team.status | title }}</p></div></div>
+<section class="panel"><dl class="summary-grid"><div><dt>Available Crowns</dt><dd>{{ wallet.available }}</dd></div><div><dt>Held Crowns</dt><dd>{{ wallet.held }}</dd></div><div><dt>Team level</dt><dd>{{ team.level }}</dd></div><div><dt>Team experience</dt><dd>{{ team.experience }}</dd></div><div><dt>Members</dt><dd>{{ members | length }}/10</dd></div></dl></section>
+<section class="panel"><h2>Roster</h2>{{ table([{'key':'name','label':'Player'},{'key':'role','label':'Role'},{'key':'joined','label':'Joined'}], members) }}</section>
+<h2>Treasury history</h2>{{ show_filters(filters, request.path) }}
+<section class="panel records-panel">{{ table([{'key':'operation','label':'Operation'},{'key':'amount','label':'Crowns'},{'key':'created','label':'Recorded'}], ledger) }}</section>
+{{ show_pagination(pagination) }}
+<p class="muted">Contributions belong to the Team. Held funds remain unavailable until their existing battle or membership action settles.</p>
+{% endblock %}
