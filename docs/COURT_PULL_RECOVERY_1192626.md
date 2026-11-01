@@ -1,3 +1,18 @@
+# Court 1192626 — coordinated pulls completed
+
+The retry succeeded for both repositories without reported transfer errors:
+server `2c77ec14c44d75f3fdda73c33a3d96d0a930e745`, client
+`fe0ffeeb3f51b353ba529f61c793c08bf155d341`. Required implementation-ancestor
+checks passed; existing README edits and untracked upstream files remain.
+
+No further pull, Git check or repair is needed. A–C are accepted. Continue with
+[D, the existing-tools check](COURT_WINDOWS_ACCEPTANCE_1192626.md#d--retain-the-existing-public-build-configuration-and-offline-tools),
+keeping all five services stopped. The user confirms WAN is disconnected and
+local Ethernet remains connected; this is recorded once for D–Z.
+The exact B backup remains the input for E. Do not delete or clean existing files.
+
+## Historical recovery — completed
+
 # Court 1192626 — server integrity passed; retry C once
 
 The returned HEAD is `0249da21a3e2fbb2dd0f5392deab7087f57398c2`. All four
