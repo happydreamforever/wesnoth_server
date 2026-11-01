@@ -245,6 +245,77 @@ class CourtBattles(unittest.TestCase):
         self.assertEqual(self.domain._court_history_matches(self.b)['matches'], [])
         self.assertFalse(self.domain._court_match_public(self.match(desc['run_id']), self.b)['replay_available'])
 
+    def test_public_match_description_uses_actual_receipt_without_changing_contract(self):
+        run = self.attack()
+        active = self.domain._court_match_public(self.match(run), self.a)
+        self.assertEqual(active['settings']['map_name'], 'Weldyn Channel')
+        self.assertNotIn('map_name', self.match(run)['settings'])
+        self.assertIn('Waiting for', active['description'])
+        desc = self.load(run)
+        self.assertNotIn('map_name', desc['settings'])
+        self.finish(desc)
+        completed = self.domain._court_match_public(self.match(run), self.a)
+        for private_field in ('generation', 'evidence_digest', 'replay_sha256', 'scores'):
+            self.assertNotIn(private_field, completed['result'])
+        self.assertIn('replay_sha256', self.match(run)['result'])
+        self.assertIn('First won.', completed['description'])
+        self.assertIn('Your hero: +20 XP · +10 Crowns.', completed['description'])
+        self.assertIn('First: +100 Team XP.', completed['description'])
+        self.assertIn('normal captured by First.', completed['description'])
+        for private in (run, self.a, self.ta, self.generation, 'b' * 64):
+            self.assertNotIn(private, completed['description'])
+        outsider = self.domain._court_match_public(self.match(run), self.b)
+        self.assertNotIn('Your hero:', outsider['description'])
+        self.assertFalse(outsider['replay_available'])
+        history = self.domain.court_query(self.a, {'version': 1, 'query': 'history'})['data']
+        self.assertEqual(history['items'][0]['description'], completed['description'])
+        self.assertNotIn('data', history['items'][0])
+
+    def test_public_draw_and_technical_cancellation_are_distinct(self):
+        desc = self.load(self.attack())
+        self.finish(desc, {**self.evidence(desc), 'terminal': 'draw', 'outcome': 'draw', 'winner_team_id': None})
+        draw = self.domain._court_match_public(self.match(desc['run_id']), self.a)
+        self.assertIn('Draw.', draw['description'])
+        self.assertIn('Your hero: +10 XP · +5 Crowns.', draw['description'])
+        self.assertIn('Castle ownership unchanged.', draw['description'])
+        run = self.attack('A001-C002')
+        result = self.command(self.admin, 'admin_cancel_match', match_id=run,
+                              reason='Private operator diagnosis must remain in audit only')
+        description = result['match']['description']
+        self.assertIn('Technical cancellation.', description)
+        self.assertIn('No rewards or Castle ownership change.', description)
+        self.assertNotIn('Private operator', description)
+        self.assertNotIn(run, description)
+        self.assertNotIn('Your hero:', description)
+
+    def test_history_descriptions_resolve_changes_and_prizes_without_private_data(self):
+        event = {'team_created': {'area_id': 'A001'},
+                 'renamed': {'previous_name': 'Old name', 'name': 'New name'},
+                 'member_joined': {'account_id': self.a},
+                 'castle_abandoned': {'castle_id': 'A001-C001'},
+                 'relocated': {'from_area': 'A001', 'area_id': 'A001'},
+                 'competition': {'competition_id': str(uuid4()), 'winner_team_id': self.ta,
+                                 'prizes': [{'team_id': self.ta, 'amount': 14}, {'team_id': self.tb, 'amount': 6}]}}
+        for kind, data in event.items():
+            self.domain._tx(lambda s, k=kind, d=data: self.domain._history(self.ta, k, 'Recorded change',
+                {**d, 'private_note': 'never display this private diagnostic'}, s))
+        rows = self.domain.court_query(self.a, {'version': 1, 'query': 'history'})['data']['items']
+        for row in rows:
+            self.assertNotIn('data', row)
+            self.assertEqual(set(row), {'id', 'kind', 'title', 'description', 'created_at'})
+        descriptions = {row['kind']: row['description'] for row in rows}
+        self.assertEqual(descriptions['team_created'], 'Team created in Area.')
+        self.assertEqual(descriptions['renamed'], 'Team renamed from Old name to New name.')
+        self.assertIn('joined the Team.', descriptions['member_joined'])
+        self.assertEqual(descriptions['castle_abandoned'], 'normal returned to neutral ownership.')
+        self.assertEqual(descriptions['relocated'], 'Home moved from Area to Area.')
+        self.assertEqual(descriptions['competition'], 'Competition: First won. Your Team prize: 14 Crowns from the entry pool.')
+        for description in descriptions.values():
+            for private in (self.a, self.ta, 'A001', 'never display this private diagnostic'):
+                self.assertNotIn(private, description)
+        self.code('forbidden', lambda: self.domain.court_query(self.b,
+            {'version': 1, 'query': 'history', 'payload': {'team_id': self.ta}}))
+
     def test_concurrent_castle_claim_only_one_payment_and_claim(self):
         def attack(_):
             try: return self.attack()

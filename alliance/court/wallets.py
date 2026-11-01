@@ -27,6 +27,20 @@ ITEMS = {
                'description': 'Remove poison and slowed from your hero.', 'cures': ['poisoned', 'slowed']},
 }
 PACKAGES = (100, 500, 1000)
+PAYMENT_LABELS = {
+    'create_team': 'Team creation', 'join_team': 'Team membership',
+    'relocate': 'Team relocation', 'create_room': 'Room creation', 'join_room': 'Room entry',
+    'castle_attack': 'Castle attack', 'planned_battle': 'Planned battle',
+    'competition_entry': 'Competition entry', 'Hero purchase': 'Hero purchase',
+    'Item purchase': 'Item purchase', 'Extra daily attack trial': 'Extra attack trial',
+    'Extra daily plan trial': 'Extra plan trial',
+}
+CREDIT_LABELS = {
+    'Approved virtual Crown package': 'Crown package',
+    'First verified scenario victory': 'Campaign reward',
+    'Verified Team battle reward': 'Team battle reward',
+    'competition_prize': 'Competition prize', 'castle_income': 'Castle income',
+}
 
 
 def key(value):
@@ -249,8 +263,16 @@ class EconomyMixin:
 
     @staticmethod
     def _cash_request_public(row):
+        destination = 'Team treasury' if row['kind'] == 'team' else 'Personal wallet'
+        amount = row['package']
+        description = {
+            'pending': f'{amount} Crowns requested · {destination} · Pending approval; not credited',
+            'approved': f'+{amount} Crowns · {destination} · Approved and credited',
+            'rejected': f'{amount} Crowns requested · {destination} · Rejected; not credited',
+        }[row['state']]
         return {'id': row['_id'], **{k: row[k] for k in
                 ('account_id', 'kind', 'owner_id', 'package', 'state', 'created_at', 'revision')},
+                'description': description,
                 **{k: row[k] for k in ('reviewed_at', 'reason') if k in row}}
 
     def _review_cash(self, actor, payload, session, approve):
@@ -526,6 +548,34 @@ class EconomyMixin:
         value = json.dumps([row['created_at'].isoformat(), row['_id']], separators=(',', ':')).encode()
         return base64.urlsafe_b64encode(value).decode().rstrip('=')
 
+    @staticmethod
+    def _wallet_transaction_public(row, kind, hold=None):
+        """Describe an immutable ledger event from this wallet's perspective.
+
+        Holds move available funds into held funds; capture spends only the
+        held balance. Never render raw references, reasons or arbitrary purpose
+        text as product copy. Existing machine-readable details remain intact.
+        """
+        operation, details = row['operation'], row['binding']
+        amount = details['amount']
+        purpose = PAYMENT_LABELS.get(details.get('purpose', (hold or {}).get('purpose')), 'Purchase')
+        if operation == 'contribution':
+            description = (f'-{amount} Crowns available · Team contribution · Sent' if kind == 'personal' else
+                           f'+{amount} Crowns available · Member contribution · Received')
+        elif operation == 'credit':
+            purpose = CREDIT_LABELS.get(details.get('reason'), 'Wallet credit')
+            description = f'+{amount} Crowns available · {purpose} · Credited'
+        elif operation == 'hold':
+            description = f'-{amount} Crowns available; +{amount} held · {purpose} · Reserved'
+        elif operation == 'capture':
+            description = f'-{amount} Crowns held · {purpose} · Paid'
+        elif operation == 'release':
+            description = f'+{amount} Crowns available; -{amount} held · {purpose} · Released'
+        else:  # The strict ledger schema permits only refund here.
+            description = f'+{amount} Crowns available · {purpose} · Refunded'
+        return {'id': row['_id'], 'operation': operation, 'details': details,
+                'created_at': row['created_at'], 'description': description}
+
     def _wallet_view(self, kind, owner_id, session=None, after=''):
         query = {'wallet_ids': wallet_id(kind, owner_id)}
         if after:
@@ -540,9 +590,12 @@ class EconomyMixin:
                 fail('invalid_input', 'The wallet page is invalid.')
             query['$or'] = [{'created_at': {'$lt': stamp}}, {'created_at': stamp, '_id': {'$gt': row_id}}]
         rows = list(self.db.court_ledger.find(query, session=session).sort([('created_at', -1), ('_id', 1)]).limit(26))
+        hold_ids = {r['binding']['hold_id'] for r in rows[:25] if 'hold_id' in r['binding']}
+        holds = {r['_id']: r for r in self.db.court_holds.find(
+            {'_id': {'$in': sorted(hold_ids)}, 'kind': kind, 'owner_id': owner_id}, session=session)} if hold_ids else {}
         return {'wallet': self._wallet_public(kind, owner_id, session),
-                'transactions': [{'id': r['_id'], 'operation': r['operation'],
-                    'details': r['binding'], 'created_at': r['created_at']} for r in rows[:25]],
+                'transactions': [self._wallet_transaction_public(r, kind, holds.get(r['binding'].get('hold_id')))
+                                 for r in rows[:25]],
                 'next': self._history_cursor(rows[24]) if len(rows) > 25 else ''}
 
     def _court_wallet(self, actor, payload, session=None):

@@ -187,7 +187,7 @@ class BattleMixin:
         result = {key: deepcopy(match[key]) for key in (
             'kind', 'state', 'revision', 'castle_id', 'area_id', 'team_ids', 'settings',
             'created_at', 'scheduled_at', 'response_until', 'attendance_until',
-            'prepare_until', 'result', 'competition_id', 'round', 'cancel_reason',
+            'prepare_until', 'competition_id', 'round', 'cancel_reason',
             'proposed_by', 'initiator_team_id', 'approved_by', 'start_delay_minutes',
             'expires_at', 'agreed_fee', 'price_revision', 'attack_cost') if key in match}
         result.update(id=match['_id'], team_names=names,
@@ -199,16 +199,80 @@ class BattleMixin:
                 'item_id': row.get('item_id', ''),
             } for row in match['seats']])
         receipt = match.get('result') or {}
+        if receipt:
+            # Consumers need the outcome and awards, not worker generation,
+            # evidence hashes, replay storage identity or raw scoring ledgers.
+            result['result'] = {key: deepcopy(receipt[key]) for key in (
+                'winner_team_id', 'draw', 'reason', 'native_verified', 'genuine_combat',
+                'created_at', 'hero_rewards', 'team_rewards', 'captured_castle_id') if key in receipt}
         team = self._team_for(actor, session, required=False) if actor else None
         authorized = bool(actor and (actor in match.get('historical_accounts', []) or
                                     (team and team['_id'] in match['team_ids'])))
         result['replay_available'] = bool(authorized and receipt.get('native_verified') and receipt.get('replay_sha256'))
+        # Presentation names are added only to this copy. The native contract,
+        # approved rules and their exact settings validator remain unchanged.
+        result['settings']['map_name'] = BATTLE_MAPS[match['settings']['map_id']]['name']
+        result['description'] = self._court_match_description(match, actor, names, session)
         result['run_id'] = match['_id']
         if match.get('descriptor') and actor in match['descriptor']['required_humans']:
             result['can_enter'] = match['state'] in ('preparing', 'running', 'paused')
         else:
             result['can_enter'] = False
         return result
+
+    def _court_match_description(self, match, actor, names, session=None):
+        """Human-readable receipt summary; never dump evidence or private reasons."""
+        state = match['state']
+        if state == 'cancelled':
+            causes = {
+                'administrator_technical_cancellation': 'Technical cancellation.',
+                'participant_cancelled': 'Cancelled by a participant.',
+                'proposal_expired': 'The proposal expired before approval.',
+                'worker_capacity_timeout': 'No worker became available in time.',
+                'preparation_timeout': 'Players could not finish loading in time.',
+                'attendance_timeout': 'The required players were not ready in time.',
+                'both_teams_disconnected': 'Both Teams disconnected.',
+            }
+            lines = [causes.get(match.get('cancel_reason'), 'Battle cancelled.'),
+                     'No rewards or Castle ownership change. Battle fees released or refunded.']
+            if match.get('cancel_reason') == 'administrator_technical_cancellation' and match['kind'] == 'competition':
+                lines.append('A replacement needs new seats, readiness and host scheduling; the entry pool is retained.')
+            return '\n'.join(lines)
+        if state != 'completed':
+            return {
+                'proposed': 'Awaiting the opposing captain’s approval.',
+                'response': 'A Team member may answer the Castle challenge before computer defense begins.',
+                'scheduled': 'Scheduled. Join a seat, choose your hero and Ready.',
+                'queued': 'Waiting for ready players and an available native worker.',
+                'preparing': 'Preparing. Every human player must load before play starts.',
+                'running': 'Battle in progress.',
+                'paused': 'Battle paused. Resume with the same account when the connection is available.',
+                'disputed': 'Battle under review. No result has been awarded.',
+            }.get(state, 'Battle status is updating.')
+        receipt = match.get('result') or {}
+        winner = names.get(receipt.get('winner_team_id'), 'The winning Team')
+        lines = ['Draw.' if receipt.get('draw') else winner + ' won.']
+        if receipt.get('draw') and receipt.get('winner_team_id') and match['kind'] == 'competition':
+            lines.append(winner + ' advances by the published tie-break.')
+        if receipt.get('reason') in ('attendance_forfeit', 'disconnect_forfeit', 'both_teams_absent'):
+            lines.append({'attendance_forfeit': 'Decided by attendance.',
+                          'disconnect_forfeit': 'Decided after the reconnect period.',
+                          'both_teams_absent': 'Neither Team attended.'}[receipt['reason']])
+        if receipt.get('genuine_combat'):
+            personal = next((row for row in receipt.get('hero_rewards', [])
+                             if row.get('account_id') == actor), None)
+            if personal:
+                lines.append(f"Your hero: +{personal['experience']} XP · +{personal['cash']} Crowns.")
+            for reward in receipt.get('team_rewards', []):
+                lines.append(f"{names.get(reward['team_id'], 'Team')}: +{reward['experience']} Team XP.")
+        else:
+            lines.append('No combat XP or reward Crowns.')
+        if receipt.get('captured_castle_id'):
+            castle = self.db.court_castles.find_one({'_id': receipt['captured_castle_id']}, {'name': 1}, session=session)
+            lines.append(f"{castle['name'] if castle else 'Castle'} captured by {winner}.")
+        elif match['kind'] == 'attack':
+            lines.append('Castle ownership unchanged.')
+        return '\n'.join(lines)
 
     def _court_matches_query(self, actor, payload, session=None):
         exact(payload, (), ('castle_id', 'area_id', 'team_id', 'after', 'state'))

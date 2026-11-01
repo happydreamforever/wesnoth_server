@@ -121,6 +121,73 @@ class CourtEconomy(unittest.TestCase):
         self.error('invalid_input', lambda: self.service._court_wallet(self.actor, {'owner_id': self.outsider}))
         self.error('team_required', lambda: self.service._court_wallet(self.outsider, {'kind': 'team'}))
 
+    def test_wallet_descriptions_show_signed_balances_purpose_and_contribution_direction(self):
+        self.credit(500)
+        self.tx('_wallet_hold', 'personal', self.actor, 20, 'display:castle', 'castle_attack')
+        self.tx('_wallet_capture', 'display:castle')
+        self.tx('_wallet_refund', 'display:castle', 'Verified technical cancellation')
+        self.tx('_wallet_hold', 'personal', self.actor, 5, 'display:room', 'join_room')
+        self.tx('_wallet_release', 'display:room')
+        self.buy('donate', team_id=self.team, amount=7)
+        before = self.snapshot()
+        personal = self.service._court_wallet(self.actor, {})
+        team = self.service._court_wallet(self.member, {'kind': 'team'})
+        lines = {(r['operation'], r['details']['amount']): r['description'] for r in personal['transactions']}
+        self.assertEqual(lines, {
+            ('credit', 500): '+500 Crowns available · Wallet credit · Credited',
+            ('hold', 20): '-20 Crowns available; +20 held · Castle attack · Reserved',
+            ('capture', 20): '-20 Crowns held · Castle attack · Paid',
+            ('refund', 20): '+20 Crowns available · Castle attack · Refunded',
+            ('hold', 5): '-5 Crowns available; +5 held · Room entry · Reserved',
+            ('release', 5): '+5 Crowns available; -5 held · Room entry · Released',
+            ('contribution', 7): '-7 Crowns available · Team contribution · Sent',
+        })
+        self.assertEqual(team['transactions'][0]['description'],
+                         '+7 Crowns available · Member contribution · Received')
+        self.assertEqual((personal['wallet']['available'], personal['wallet']['held']), (493, 0))
+        self.assertEqual(team['wallet']['available'], 7)
+        self.assertEqual(self.snapshot(), before)
+        for line in [*lines.values(), team['transactions'][0]['description']]:
+            for private in (self.actor, self.member, self.team, 'display:castle', 'display:room'):
+                self.assertNotIn(private, line)
+
+    def test_wallet_descriptions_never_render_unrecognized_internal_reason_or_reference(self):
+        private = 'PRIVATE-reference-' + str(uuid4())
+        self.tx('_wallet_credit', 'personal', self.actor, 25, private, private)
+        self.tx('_wallet_hold', 'personal', self.actor, 10, 'hold:' + private, private)
+        self.tx('_wallet_capture', 'hold:' + private)
+        self.tx('_wallet_refund', 'hold:' + private, private)
+        self.tx('_wallet_credit', 'personal', self.actor, 25, 'campaign:' + private,
+                'First verified scenario victory')
+        rows = self.service._court_wallet(self.actor, {})['transactions']
+        self.assertEqual(len(rows), 5)
+        self.assertTrue(any('Campaign reward' in r['description'] for r in rows))
+        for row in rows:
+            self.assertNotIn(private, row['description'])
+            self.assertNotIn(self.actor, row['description'])
+            self.assertNotIn(row['id'], row['description'])
+            if row['operation'] != 'credit': self.assertIn('Purchase', row['description'])
+
+    def test_cash_request_descriptions_distinguish_pending_approved_and_rejected(self):
+        pending = self.command('request_cash', kind='personal', package=100)['request']
+        self.assertEqual(pending['description'],
+                         '100 Crowns requested · Personal wallet · Pending approval; not credited')
+        approved = self.review(pending)['request']
+        self.assertEqual(approved['description'], '+100 Crowns · Personal wallet · Approved and credited')
+        other = self.command('request_cash', kind='team', team_id=self.team, package=500)['request']
+        self.assertEqual(other['description'],
+                         '500 Crowns requested · Team treasury · Pending approval; not credited')
+        rejected = self.review(other, approve=False, reason='Private reviewed details')['request']
+        self.assertEqual(rejected['description'],
+                         '500 Crowns requested · Team treasury · Rejected; not credited')
+        self.assertEqual(self.wallet()['available'], 100)
+        self.assertEqual(self.wallet(self.team, kind='team')['available'], 0)
+        for kind, expected in (('personal', approved), ('team', rejected)):
+            request = self.service._court_wallet(self.actor, {'kind': kind})['requests'][0]
+            self.assertEqual(request['description'], expected['description'])
+            for private in (self.actor, self.team, request['id'], 'Private reviewed details'):
+                self.assertNotIn(private, request['description'])
+
     def test_credit_exact_binding_and_balanced_ledger(self):
         self.credit(100, reference='credit:same')
         self.credit(100, reference='credit:same')

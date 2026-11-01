@@ -178,9 +178,49 @@ class QueryMixin:
             query['$or'] = [{'created_at': {'$lt': anchor['created_at']}},
                 {'created_at': anchor['created_at'], '_id': {'$lt': anchor['_id']}}]
         rows = list(self.db.court_history.find(query, session=session).sort([('created_at', -1), ('_id', -1)]).limit(21))
-        return {'items': [dict(id=row['_id'], **{key: row[key] for key in ('kind', 'title', 'data', 'created_at')}) for row in rows[:20]],
+        return {'items': [dict(id=row['_id'], description=self._court_history_description(row, actor, session),
+                              **{key: row[key] for key in ('kind', 'title', 'created_at')}) for row in rows[:20]],
             'next': rows[19]['_id'] if len(rows) > 20 else '',
             'matches': matches['matches'], 'match_next': matches['next']}
+
+    def _court_history_description(self, row, actor, session):
+        """Summarize known history fields, never stringify private data/IDs."""
+        data, kind = row['data'], row['kind']
+
+        def name(collection, key, fallback, field='name'):
+            item = self.db[collection].find_one({'_id': key}, {field: 1}, session=session) if key else None
+            return item.get(field, fallback) if item else fallback
+
+        if kind == 'battle':
+            match = self.db.court_matches.find_one({'_id': data.get('match_id')}, session=session)
+            if match and row['team_id'] in match['team_ids']:
+                return self._court_match_public(match, actor, session)['description']
+            return 'Battle history is retained. Open the battle record for its result.'
+        if kind in ('member_joined', 'member_left', 'member_removed'):
+            who = name('accounts', data.get('account_id'), 'A member', 'username')
+            action = {'member_joined': 'joined the Team.', 'member_left': 'left the Team.',
+                      'member_removed': 'was removed from the Team.'}[kind]
+            return who + ' ' + action
+        if kind == 'team_created':
+            return 'Team created in ' + name('court_areas', data.get('area_id'), 'its home Area') + '.'
+        if kind == 'renamed':
+            return f"Team renamed from {data.get('previous_name', 'its previous name')} to {data.get('name', 'its new name')}."
+        if kind == 'relocated':
+            return ('Home moved from ' + name('court_areas', data.get('from_area'), 'the previous Area') +
+                    ' to ' + name('court_areas', data.get('area_id'), 'the new Area') + '.')
+        if kind == 'castle_abandoned':
+            return name('court_castles', data.get('castle_id'), 'The Castle') + ' returned to neutral ownership.'
+        if kind == 'defense':
+            return 'A saved hero template was approved for future computer defense.'
+        if kind == 'competition':
+            competition = self.db.court_competitions.find_one({'_id': data.get('competition_id')}, {'name': 1}, session=session)
+            title = competition['name'] if competition else 'Competition'
+            if data.get('winner_team_id'):
+                winner = name('court_teams', data['winner_team_id'], 'The winning Team')
+                prize = next((p['amount'] for p in data.get('prizes', []) if p['team_id'] == row['team_id']), 0)
+                return f"{title}: {winner} won. Your Team prize: {prize} Crowns from the entry pool."
+            return title + ' cancelled. Entry fees released or refunded.'
+        return 'Team activity recorded.'
 
     def _query_command_status(self, actor, payload, session):
         exact(payload, ('command_id',))
