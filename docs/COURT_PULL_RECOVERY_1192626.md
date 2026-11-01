@@ -1,4 +1,18 @@
-# Court 1192626 — interrupted server pull
+# Court 1192626 — server integrity passed; retry C once
+
+The returned HEAD is `0249da21a3e2fbb2dd0f5392deab7087f57398c2`. All four
+read-only checks exit zero; fsck reports no errors, only the existing README
+edit is unstaged, and the index has no staged changes. No repair is needed.
+
+Run the original [coordinated step C](COURT_WINDOWS_ACCEPTANCE_1192626.md#c--pull-both-coordinated-repositories)
+once with WAN available and all five services stopped. Review both pulls,
+implementation ancestry, HEADs and working-tree differences before D. Stop on a
+new failure and return its output; do not retry repeatedly or change Git settings.
+After successful transfer, disconnect WAN while retaining Ethernet and record
+that once for the offline batch. A/B and the exact private backup below remain
+accepted. No fresh setup, build or service startup is requested yet.
+
+## Historical diagnostic — completed; do not repeat
 
 Windows step C stopped during the server fetch with curl56, a receive abort,
 unexpected disconnect, early EOF and invalid index-pack output. The release
