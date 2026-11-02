@@ -298,7 +298,7 @@
     "w06": "started/passed",
     "w07": "ready",
     "saved_reports_directly_read": false,
-    "wan_status": "awaiting user reply, requested once",
+    "wan_status": "User confirms WAN disconnected and local Ethernet retained during successful restart; carry condition forward to pending installation, recorded once for this batch.",
     "earlier_timeout_cause": "not established by this successful run",
     "next_step": "Install already-built Android1192629 in place; no rebuild or service restart"
   }
