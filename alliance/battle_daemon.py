@@ -28,6 +28,7 @@ from .config import Settings
 from .domain import AllianceService, DomainError
 from .deployment import owned_runtime
 from .battle_wire import Node, WireError, message, receive, send, serialize, parse
+from .startup_progress import StartupProgress
 from tools.alliance_transport import verify_identity
 
 MAX_HISTORY = 128 * 1024 * 1024
@@ -885,7 +886,9 @@ def tls_context(identity):
     return context,profile['server_address']
 
 
-async def run(runtime, identity, workers=1):
+async def run(runtime, identity, workers=1, *, progress=None):
+    progress = progress if progress is not None else StartupProgress()
+    progress.phase('runtime')
     runtime=owned_runtime(safe_path(runtime))
     settings=Settings.load(runtime)
     context,address=tls_context(identity)
@@ -896,25 +899,32 @@ async def run(runtime, identity, workers=1):
         daemon=BattleDaemon(db,Path(runtime)/'battles',context)
         from .world_worker import WorldWorkerSupervisor
         from tools.build_world_worker import installed_worker
-        worker = installed_worker(required=False)
-        daemon.world = WorldWorkerSupervisor(daemon, identity,
-            executable=worker['executable'] if worker else None,
-            game_data=worker['game_data'] if worker else None, workers=workers)
         with process_lock(Path(runtime)/'battles'/'daemon.lock'):
+            # Exclude another launch before the complete source/DLL/game-data
+            # scan. The listener remains closed until every existing check
+            # succeeds; progress is diagnostic, never service readiness.
+            progress.phase('worker_verification')
+            worker = installed_worker(required=False)
+            daemon.world = WorldWorkerSupervisor(daemon, identity,
+                executable=worker['executable'] if worker else None,
+                game_data=worker['game_data'] if worker else None, workers=workers)
+            progress.phase('listener')
             server=await asyncio.start_server(daemon.handle,address,15002,limit=131072)
-            print('WORLD NATIVE WORKER READY' if daemon.world.executable else 'WORLD NATIVE WORKER UNAVAILABLE: build and verify the isolated native worker before Company or World battles.',flush=True)
-            print(f'ALLIANCE SHARED BATTLE SERVICE READY {address}:15002',flush=True)
-            print('Keep this window open. Existing accounts and fixed side ownership are required.',flush=True)
-            settlement=asyncio.create_task(daemon.settle_ready())
-            world_task=asyncio.create_task(daemon.world.serve())
+            tasks = []
             try:
                 async with server:
+                    progress.phase('serving')
+                    print('WORLD NATIVE WORKER READY' if daemon.world.executable else 'WORLD NATIVE WORKER UNAVAILABLE: build and verify the isolated native worker before Company or World battles.',flush=True)
+                    print(f'ALLIANCE SHARED BATTLE SERVICE READY {address}:15002',flush=True)
+                    print('Keep this window open. Existing accounts and fixed side ownership are required.',flush=True)
+                    tasks.append(asyncio.create_task(daemon.settle_ready()))
+                    tasks.append(asyncio.create_task(daemon.world.serve()))
                     await server.serve_forever()
             finally:
-                settlement.cancel()
-                world_task.cancel()
+                for task in tasks:
+                    task.cancel()
                 await daemon.world.close()
-                await asyncio.gather(settlement,world_task,return_exceptions=True)
+                await asyncio.gather(*tasks,return_exceptions=True)
 
 
 def main(argv=None):
@@ -922,15 +932,20 @@ def main(argv=None):
     parser.add_argument('--runtime',type=Path,required=True)
     parser.add_argument('--identity',type=Path,required=True)
     parser.add_argument('--workers',type=int,choices=range(1,5),default=1)
+    parser.add_argument('--startup-progress',type=Path)
+    parser.add_argument('--startup-launch-id')
     args=parser.parse_args(argv)
+    progress = None
     try:
-        asyncio.run(run(args.runtime,args.identity,args.workers))
+        progress = StartupProgress(args.startup_progress, args.startup_launch_id)
+        asyncio.run(run(args.runtime,args.identity,args.workers,progress=progress))
         return 0
     except KeyboardInterrupt:
         print('Battle service stopped. Retained rooms can reconnect after restart.',flush=True)
         return 0
     except Exception as error:
-        print('BATTLE SERVICE FAILED: '+type(error).__name__+'. Preserve runtime files and send the saved log.',file=sys.stderr)
+        phase = progress.current_phase if progress is not None else 'preflight'
+        print('BATTLE SERVICE FAILED: '+type(error).__name__+'; phase='+phase+'. Preserve runtime files and send the saved log.',file=sys.stderr)
         return 1
 
 

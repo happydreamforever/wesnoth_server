@@ -82,7 +82,7 @@ class WorkflowTests(unittest.TestCase):
             patch.object(workflow, "public_profile", return_value={"server_address": "127.0.0.1"}),
             patch.object(workflow, "database_check", return_value=True),
             patch.object(workflow, "backend_check", return_value=True),
-            patch.object(workflow, "bridge_check", return_value=True)]
+            patch.object(workflow, "bridge_probe", return_value={"passed": True, "outcome": "healthy"})]
         for item in self.patches: item.start()
 
     def tearDown(self):
@@ -99,7 +99,7 @@ class WorkflowTests(unittest.TestCase):
         launch.assert_not_called()
         self.assertEqual([row["id"] for row in self.report["steps"]], ["W01", "W02", "W03", "W04", "W05", "W06", "W07"])
         self.assertEqual([row["action"] for row in self.report["steps"][1:-1]], ["reused"] * 5)
-        workflow.bridge_check.assert_any_call({"server_address": "127.0.0.1"}, battles=True,world_workers=1)
+        workflow.bridge_probe.assert_any_call({"server_address": "127.0.0.1"}, battles=True,world_workers=1,deadline=None)
         self.assertEqual(self.report['steps'][4]['verified_native_workers'],1)
         self.assertEqual(self.report["status"], "passed")
 
@@ -117,11 +117,26 @@ class WorkflowTests(unittest.TestCase):
                 self.run_helper()
         launch.assert_not_called()
 
+    def test_occupied_wrong_worker_capacity_is_not_replaced(self):
+        workflow.bridge_probe.side_effect=[{"passed":True,"outcome":"healthy"},
+                                           {"passed":False,"outcome":"worker_count_mismatch"}]
+        with patch.object(workflow,"open_port",return_value=True),patch.object(workflow,"launch") as launch:
+            with self.assertRaisesRegex(workflow.WorkflowError,"W05_existing_health_or_worker_count_differs"):
+                self.run_helper(battles=True)
+        launch.assert_not_called()
+        self.assertEqual(self.report["steps"][-1]["last_health_outcome"],"worker_count_mismatch")
+        self.assertEqual(list(self.root.glob('*startup.jsonl')),[])
+
     def test_starts_in_order_and_waits_for_real_health(self):
         calls = []
         child = Mock(pid=1234); child.poll.return_value = None
-        def launch(wrapper, runtime, msys, log, world_workers=1):
+        def launch(wrapper, runtime, msys, log, world_workers=1, **startup):
             self.assertTrue(log.is_file())
+            if wrapper==workflow.BATTLE_STEP[3]:
+                self.assertEqual(set(startup),{"startup_progress","startup_launch_id"})
+                self.assertEqual(workflow.read_progress(startup["startup_progress"],startup["startup_launch_id"])["records"],[])
+            else:
+                self.assertEqual(startup,{})
             calls.append(wrapper)
             return child
         with patch.object(workflow, "open_port", side_effect=[False, True] * 5), patch.object(workflow, "launch", side_effect=launch):
@@ -156,7 +171,7 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(self.report["steps"][-1]["id"], "W03")
         self.assertEqual(self.report["steps"][-1]["status"], "failed")
         self.assertEqual(self.report["steps"][-1]["action"], "started")
-        workflow.bridge_check.assert_not_called()
+        workflow.bridge_probe.assert_not_called()
 
     def test_optional_battles_missing_helper_refuses_before_start(self):
         (self.root / "tools/Run-WindowsAllianceBattles.ps1").unlink()
@@ -201,7 +216,7 @@ class RealTlsHealthTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls): cls.temp.cleanup()
 
-    def check(self, *, battles=False, multiplayer=False, reply=None, preamble=b"\0\0\0\0", profile=None):
+    def check(self, *, battles=False, multiplayer=False, reply=None, preamble=b"\0\0\0\0", profile=None, detailed=False):
         requests = []
         errors = []
         port = 15000 if multiplayer else 15002 if battles else 15001
@@ -225,7 +240,8 @@ class RealTlsHealthTests(unittest.TestCase):
                                 peer.sendall(len(payload).to_bytes(4, "big") + payload)
                 except Exception as error: errors.append(type(error).__name__)
             thread = threading.Thread(target=serve); thread.start()
-            result = workflow.bridge_check(profile or self.profile, battles=battles, multiplayer=multiplayer)
+            probe = workflow.bridge_probe if detailed else workflow.bridge_check
+            result = probe(profile or self.profile, battles=battles, multiplayer=multiplayer)
             thread.join(12)
             self.assertFalse(thread.is_alive())
         return result, requests, errors
@@ -285,6 +301,28 @@ class RealTlsHealthTests(unittest.TestCase):
                       b'[alliance_health]\napi="1"\napi="1"\n[/alliance_health]', b"x" * 16385):
             with self.subTest(size=len(reply)):
                 self.assertFalse(self.check(battles=True, reply=reply)[0])
+
+    def test_real_tls_detailed_outcomes_are_fixed_and_do_not_expose_reply(self):
+        reply = b'[alliance_health]\nservice="alliance-battles"\napi="1"\nimplementation_release="1192626"\nnative_workers="1"\n[/alliance_health]\n'
+        for raw, outcome in ((reply,"healthy"),
+                             (reply.replace(b'1192626',b'1192615'),"release_mismatch"),
+                             (reply.replace(b'api="1"',b'api="5"'),"protocol_mismatch"),
+                             (reply.replace(b'native_workers="1"',b'native_workers="0"'),"worker_unavailable"),
+                             (b'PRIVATE_PASSWORD',"invalid_health")):
+            with self.subTest(outcome=outcome):
+                result,_,_=self.check(battles=True,reply=raw,detailed=True)
+                self.assertEqual(result,{"passed":outcome=="healthy","outcome":outcome})
+        result,_,_=self.check(battles=True,reply=reply,profile={**self.profile,"certificate_sha256":"0"*64},detailed=True)
+        self.assertEqual(result,{"passed":False,"outcome":"profile_invalid"})
+        context=workflow.tls_client_context(self.profile)
+        with patch.object(workflow,"tls_client_context",return_value=context):
+            result,_,_=self.check(battles=True,reply=reply,profile={**self.profile,"certificate_sha256":"0"*64},detailed=True)
+        self.assertEqual(result,{"passed":False,"outcome":"certificate_pin_mismatch"})
+
+    def test_detailed_refused_connection_does_not_expose_exception(self):
+        with patch.object(workflow.socket,"create_connection",side_effect=ConnectionRefusedError("PRIVATE_PASSWORD")):
+            self.assertEqual(workflow.bridge_probe(self.profile,battles=True),
+                             {"passed":False,"outcome":"connection_refused"})
 
 
 if __name__ == "__main__": unittest.main()

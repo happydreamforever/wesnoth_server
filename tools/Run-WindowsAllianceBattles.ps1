@@ -3,7 +3,9 @@
 param(
     [AllowEmptyString()][string]$RuntimeRoot,
     [string]$IdentityRoot = (Join-Path (Split-Path $PSScriptRoot -Parent) 'runtime\alliance-transport'),
-    [ValidateRange(1,4)][int]$Workers = 1
+    [ValidateRange(1,4)][int]$Workers = 1,
+    [string]$StartupProgressPath,
+    [string]$StartupLaunchId
 )
 . (Join-Path $PSScriptRoot 'Alliance-Common.ps1')
 $ErrorActionPreference = 'Stop'
@@ -12,6 +14,13 @@ $started = $false
 $result = 1
 try {
     if ($env:OS -ne 'Windows_NT') { throw 'This helper requires Windows.' }
+    $hasStartupPath = $PSBoundParameters.ContainsKey('StartupProgressPath')
+    $hasStartupId = $PSBoundParameters.ContainsKey('StartupLaunchId')
+    if ($hasStartupPath -ne $hasStartupId -or ($hasStartupPath -and (
+        [string]::IsNullOrWhiteSpace($StartupProgressPath) -or
+        [string]::IsNullOrWhiteSpace($StartupLaunchId)))) {
+        throw 'Startup progress path and launch identifier must be supplied together.'
+    }
     if (-not $PSBoundParameters.ContainsKey('RuntimeRoot')) {
         if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) { throw 'LOCALAPPDATA is missing.' }
         $RuntimeRoot = Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2'
@@ -27,7 +36,12 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'The installed Python 3.12.10 runtime is required.' }
     & $python -I -B (Join-Path $PSScriptRoot 'alliance_dependencies.py') check-installed | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Pinned Alliance installation verification failed.' }
-    & $python -I -B (Join-Path $PSScriptRoot 'run_alliance_battles.py') --runtime $RuntimeRoot --identity $IdentityRoot --workers $Workers | Out-Host
+    $arguments = @('-I', '-B', (Join-Path $PSScriptRoot 'run_alliance_battles.py'),
+        '--runtime', $RuntimeRoot, '--identity', $IdentityRoot, '--workers', [string]$Workers)
+    if ($hasStartupPath) {
+        $arguments += @('--startup-progress', $StartupProgressPath, '--startup-launch-id', $StartupLaunchId)
+    }
+    & $python @arguments | Out-Host
     $result = $LASTEXITCODE
     if ($result -ne 0) { throw 'Shared battle service stopped. Send this saved log.' }
 } catch {

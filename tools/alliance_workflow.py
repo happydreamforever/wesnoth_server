@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import re
 import socket
+import ssl
 import stat
 import subprocess
 import sys
@@ -21,6 +22,7 @@ import zlib
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from alliance.deployment import MONGO_VERSION, _client, _credentials, _uri
 from alliance.runtime_lock import _acquire, _file_identity, _release
+from alliance.startup_progress import ProgressError, create_progress, read_progress, utc_now
 from alliance.court import SCHEMA as SCHEMA_VERSION
 from tools.alliance_maintenance import local_path, validate_runtime
 from tools.alliance_transport import read_json, tls_client_context, validate_profile
@@ -34,6 +36,7 @@ BATTLE_STEP = ("W05", "battles", 15002, "Run-WindowsAllianceBattles.ps1")
 MULTIPLAYER_STEP = ("W06", "multiplayer", 15000, "Run-WindowsMultiplayer.ps1")
 EXPECTED_IMPLEMENTATION_RELEASE = 1192626
 BACKEND_RELEASE_ERROR = "W03_backend_release_mismatch"
+BATTLE_STARTUP_LIMITS = {"preflight": 300, "worker_verification": 900, "listener": 75, "total": 1275}
 
 
 class WorkflowError(Exception): pass
@@ -63,9 +66,10 @@ def workflow_lock(runtime):
         os.close(fd)
 
 
-def open_port(address, port):
+def open_port(address, port, timeout=1):
     try:
-        with socket.create_connection((address, port), timeout=1): return True
+        if timeout <= 0: return False
+        with socket.create_connection((address, port), timeout=min(1, timeout)): return True
     except OSError: return False
 
 
@@ -116,23 +120,30 @@ def receive_exact(peer, length, deadline):
     return bytes(data)
 
 
-def valid_service_health(raw, *, battles=False, world_workers=None):
+def service_health_outcome(raw, *, battles=False, world_workers=None):
     # Accept only this fixed, credential-free protocol response. No generic WML
     # evaluation, nested tags or arbitrary response content enters the report.
-    lines = [line.strip() for line in raw.decode("utf-8").splitlines() if line.strip()]
-    if len(lines) != (6 if battles else 5) or lines[0] != "[alliance_health]" or lines[-1] != "[/alliance_health]": return False
+    try: lines = [line.strip() for line in raw.decode("utf-8").splitlines() if line.strip()]
+    except UnicodeError: return "invalid_health"
+    if len(lines) != (6 if battles else 5) or lines[0] != "[alliance_health]" or lines[-1] != "[/alliance_health]": return "invalid_health"
     fields = {}
     for line in lines[1:-1]:
         match = re.fullmatch(r'(service|api|implementation_release|native_workers)\s*=\s*"([^"\\]*)"', line)
-        if not match or match[1] in fields: return False
+        if not match or match[1] in fields: return "invalid_health"
         fields[match[1]] = match[2]
     if battles:
         workers=fields.pop("native_workers", "")
-        if workers not in ("1", "2", "3", "4"): return False
-        if world_workers is not None and workers!=str(world_workers):return False
-    return fields == {"service": "alliance-battles" if battles else "alliance-accounts",
-                      "api": "1" if battles else "5",
-                      "implementation_release": str(EXPECTED_IMPLEMENTATION_RELEASE)}
+        if workers not in ("1", "2", "3", "4"): return "worker_unavailable"
+        if world_workers is not None and workers!=str(world_workers):return "worker_count_mismatch"
+    if set(fields) != {"service", "api", "implementation_release"}: return "invalid_health"
+    if fields["service"] != ("alliance-battles" if battles else "alliance-accounts"): return "service_mismatch"
+    if fields["api"] != ("1" if battles else "5"): return "protocol_mismatch"
+    if fields["implementation_release"] != str(EXPECTED_IMPLEMENTATION_RELEASE): return "release_mismatch"
+    return "healthy"
+
+
+def valid_service_health(raw, *, battles=False, world_workers=None):
+    return service_health_outcome(raw, battles=battles, world_workers=world_workers) == "healthy"
 
 
 def valid_multiplayer_health(raw):
@@ -152,35 +163,57 @@ def valid_multiplayer_health(raw):
                       "individual_rooms": "1"}
 
 
-def bridge_check(profile, *, battles=False, multiplayer=False, world_workers=None):
+def bridge_probe(profile, *, battles=False, multiplayer=False, world_workers=None, deadline=None):
+    def result(outcome): return {"passed": outcome == "healthy", "outcome": outcome}
+    phase = "profile"
     try:
         context = tls_client_context(profile)
-        deadline = time.monotonic() + 6
+        deadline = min(time.monotonic() + 6, deadline) if deadline is not None else time.monotonic() + 6
         port = 15000 if multiplayer else (15002 if battles else 15001)
-        with socket.create_connection((profile["server_address"], port), timeout=3) as raw:
+        phase = "connection"
+        remaining = deadline-time.monotonic()
+        if remaining <= 0: return result("probe_timeout")
+        with socket.create_connection((profile["server_address"], port), timeout=min(3, remaining)) as raw:
+            raw.settimeout(max(.001, deadline-time.monotonic()))
             raw.sendall(b"\0\0\0\1")
-            if receive_exact(raw, 4, deadline) != b"\0\0\0\0": return False
+            if receive_exact(raw, 4, deadline) != b"\0\0\0\0": return result("preamble_mismatch")
             raw.settimeout(max(.001, deadline - time.monotonic()))
+            phase = "tls"
             with context.wrap_socket(raw, server_hostname=profile["server_address"]) as peer:
-                if hashlib.sha256(peer.getpeercert(binary_form=True)).hexdigest() != profile["certificate_sha256"]: return False
+                if hashlib.sha256(peer.getpeercert(binary_form=True)).hexdigest() != profile["certificate_sha256"]: return result("certificate_pin_mismatch")
+                phase = "health"
                 if not multiplayer:
                     request = gzip.compress(b"[alliance_health]\n[/alliance_health]\n", mtime=0)
+                    peer.settimeout(max(.001, deadline-time.monotonic()))
                     peer.sendall(len(request).to_bytes(4, "big") + request)
                 size = int.from_bytes(receive_exact(peer, 4, deadline), "big")
-                if not 1 <= size <= 8192: return False
+                if not 1 <= size <= 8192: return result("invalid_frame_size")
                 compressed = receive_exact(peer, size, deadline)
                 decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
                 message = decoder.decompress(compressed, 16385)
-                if len(message) > 16384 or not decoder.eof or decoder.unused_data or decoder.unconsumed_tail: return False
-                return valid_multiplayer_health(message) if multiplayer else valid_service_health(message, battles=battles,world_workers=world_workers)
-    except Exception: return False
+                if len(message) > 16384 or not decoder.eof or decoder.unused_data or decoder.unconsumed_tail: return result("invalid_compression")
+                return result(("healthy" if valid_multiplayer_health(message) else "greeting_mismatch") if multiplayer else
+                              service_health_outcome(message, battles=battles,world_workers=world_workers))
+    except ConnectionRefusedError: return result("connection_refused")
+    except (TimeoutError, socket.timeout): return result("probe_timeout")
+    except ssl.SSLError: return result("tls_failed")
+    except zlib.error: return result("invalid_compression")
+    except WorkflowError as error:
+        return result(str(error) if str(error) in ("health_timeout", "health_incomplete") else "probe_failed")
+    except OSError: return result("profile_unavailable" if phase == "profile" else "connection_error")
+    except Exception: return result("profile_invalid" if phase == "profile" else "probe_failed")
+
+
+def bridge_check(profile, *, battles=False, multiplayer=False, world_workers=None):
+    """Boolean compatibility interface for existing diagnostic/test companions."""
+    return bridge_probe(profile, battles=battles, multiplayer=multiplayer, world_workers=world_workers)["passed"]
 
 
 def quoted(value):
     return "'" + str(value).replace("'", "''") + "'"
 
 
-def launcher_script(wrapper, runtime, msys, log, powershell, world_workers=1):
+def launcher_script(wrapper, runtime, msys, log, powershell, world_workers=1, *, startup_progress=None, startup_launch_id=None):
     if type(world_workers) is not int or not 1 <= world_workers <= 4: raise WorkflowError("invalid_worker_count")
     if wrapper not in {row[3] for row in (*STEPS, BATTLE_STEP, MULTIPLAYER_STEP)}:
         raise WorkflowError("unsupported_service_wrapper")
@@ -190,20 +223,125 @@ def launcher_script(wrapper, runtime, msys, log, powershell, world_workers=1):
     command = "& " + quoted(powershell) + " -NoProfile -ExecutionPolicy Bypass -File " + quoted(ROOT / "tools" / wrapper) + " -RuntimeRoot " + quoted(runtime)
     if wrapper in ("Run-WindowsAllianceBridge.ps1", "Run-WindowsMultiplayer.ps1"): command += " -MsysRoot " + quoted(msys)
     if wrapper == "Run-WindowsAllianceBattles.ps1": command += " -IdentityRoot " + quoted(ROOT / "runtime/alliance-transport") + " -Workers " + str(world_workers)
+    if (startup_progress is None) != (startup_launch_id is None): raise WorkflowError("startup_progress_pair_required")
+    if startup_progress is not None:
+        if wrapper != BATTLE_STEP[3]: raise WorkflowError("unexpected_startup_progress")
+        command += " -StartupProgressPath " + quoted(startup_progress) + " -StartupLaunchId " + quoted(startup_launch_id)
     # Arguments are PowerShell single-quoted literals, not command interpolation.
     # Only these noninteractive service wrappers are transcribed here.
     return "$ErrorActionPreference='Continue'; " + command + " 2>&1 | ForEach-Object { " + \
-        "$line=$_.ToString(); [IO.File]::AppendAllText(" + quoted(log) + \
+        "$line='['+[DateTime]::UtcNow.ToString('o')+'] '+$_.ToString(); [IO.File]::AppendAllText(" + quoted(log) + \
         ", $line + [Environment]::NewLine); Write-Host $line }; exit $LASTEXITCODE"
 
 
-def launch(wrapper, runtime, msys, log, world_workers=1):
+def launch(wrapper, runtime, msys, log, world_workers=1, *, startup_progress=None, startup_launch_id=None):
     if os.name != "nt": raise WorkflowError("start_requires_windows")
     powershell = Path(os.environ["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
-    script = launcher_script(wrapper, runtime, msys, log, powershell, world_workers)
+    script = launcher_script(wrapper, runtime, msys, log, powershell, world_workers,
+                             startup_progress=startup_progress, startup_launch_id=startup_launch_id)
     encoded = base64.b64encode(script.encode("utf-16le")).decode("ascii")
     return subprocess.Popen([str(powershell), "-NoProfile", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded],
         cwd=ROOT, creationflags=subprocess.CREATE_NEW_CONSOLE)
+
+
+class StartupWatch:
+    """Diagnostics can select a bounded phase budget, never establish health."""
+    def __init__(self, path, launch_id, started):
+        self.path, self.launch_id, self.started = path, launch_id, started
+        self.limits = dict(BATTLE_STARTUP_LIMITS)
+        self.hard_deadline = started + self.limits["total"]
+        self.deadline = min(started + self.limits["preflight"], self.hard_deadline)
+        self.budget_phase = "preflight"
+        self.phase_started = started
+        self.phase = "preflight"
+        state = read_progress(path, launch_id)
+        if state["records"] or state["partial"]:
+            raise ProgressError("startup_progress_not_fresh")
+        self.raw, self.identity = state["raw"], state["identity"]
+        self.records = []
+        self.partial = False
+
+    def observe(self, now):
+        state = read_progress(self.path, self.launch_id)
+        if state["identity"] != self.identity or not state["raw"].startswith(self.raw):
+            raise ProgressError("startup_progress_replaced_or_truncated")
+        self.raw, self.partial = state["raw"], state["partial"]
+        # A transition observed after a phase expired cannot rescue it. UTC and
+        # child-supplied elapsed values are diagnostic only, never deadline clocks.
+        expired = now >= self.deadline
+        for record in state["records"][len(self.records):]:
+            self.phase = record["phase"]
+            self.records.append({key: record[key] for key in ("phase", "pid", "elapsed_ms", "at_utc")})
+            self.records[-1]["observed_elapsed_ms"] = max(0, round((now - self.started) * 1000))
+            next_budget = ("worker_verification" if self.phase == "worker_verification" else
+                           "listener" if self.phase in ("listener", "serving") else "preflight")
+            if not expired and next_budget != self.budget_phase:
+                self.budget_phase, self.phase_started = next_budget, now
+                self.deadline = min(now + self.limits[next_budget], self.hard_deadline)
+        return not expired and now < self.deadline
+
+    def report(self, row, now):
+        row.update(startup_phase=self.phase, startup_budget_phase=self.budget_phase,
+                   startup_elapsed_seconds=round(max(0, now-self.started), 3),
+                   startup_phase_elapsed_seconds=round(max(0, now-self.phase_started), 3),
+                   startup_limits_seconds=self.limits, startup_phases=list(self.records),
+                   startup_progress_partial=self.partial)
+
+
+def wait_for_startup(child, address, port, checked, row, *, watch=None):
+    started = watch.started if watch is not None else time.monotonic()
+    deadline = started + 75
+    last_notice = started
+    row["startup_started_at_utc"] = utc_now()
+    row.setdefault("probe_attempts", 0)
+    row.setdefault("last_health_outcome", "not_probed")
+    while True:
+        now = time.monotonic()
+        if watch is not None:
+            try:
+                within_budget = watch.observe(now)
+            except (ProgressError, OSError, ValueError):
+                row.update(status="failed", startup_progress_error="invalid_progress")
+                raise WorkflowError(row["id"] + "_startup_progress_invalid") from None
+            watch.report(row, now)
+            deadline = watch.deadline
+        else:
+            within_budget = now < deadline
+            row["startup_elapsed_seconds"] = round(max(0, now-started), 3)
+        if child.poll() is not None:
+            row["status"] = "failed"
+            raise WorkflowError(row["id"] + "_launcher_exited")
+        if not within_budget:
+            row["status"] = "unconfirmed"
+            if watch is not None:
+                row["startup_timeout_phase"] = "total" if now >= watch.hard_deadline else watch.budget_phase
+            raise WorkflowError(row["id"] + "_startup_unconfirmed")
+        if open_port(address, port, timeout=max(0, deadline-time.monotonic())):
+            if time.monotonic() >= deadline:
+                continue
+            passed = checked(deadline=deadline)
+            finished = time.monotonic()
+            # Even a successful slow probe must respect the bounded wait.
+            if passed and finished < deadline:
+                if watch is not None:
+                    try:
+                        if not watch.observe(finished):
+                            continue
+                    except (ProgressError, OSError, ValueError):
+                        row.update(status="failed", startup_progress_error="invalid_progress")
+                        raise WorkflowError(row["id"] + "_startup_progress_invalid") from None
+                row["status"] = "passed"
+                if watch is not None: watch.report(row, finished)
+                else: row["startup_elapsed_seconds"] = round(max(0, finished-started), 3)
+                return
+        else:
+            row["last_health_outcome"] = "port_not_open"
+        now = time.monotonic()
+        if watch is not None and now-last_notice >= 30:
+            print(row["id"] + " WAIT phase=" + watch.phase + "; elapsed_seconds=" + str(round(now-started))
+                  + "; health=" + row["last_health_outcome"], flush=True)
+            last_notice = now
+        time.sleep(min(1, max(0, deadline-now)))
 
 
 def run(runtime, msys, start, report, *, include_battles=False, world_workers=1):
@@ -217,16 +355,22 @@ def run(runtime, msys, start, report, *, include_battles=False, world_workers=1)
     with workflow_lock(runtime):
         for step, name, port, wrapper in (*STEPS, *((BATTLE_STEP,) if include_battles else ()), MULTIPLAYER_STEP):
             address = profile["server_address"] if name in ("bridge", "battles", "multiplayer") else "127.0.0.1"
-            check = (lambda: database_check(runtime)) if name == "database" else (
-                (lambda: backend_check(runtime)) if name == "backend" else (
-                    (lambda: bridge_check(profile, multiplayer=True)) if name == "multiplayer" else
-                    (lambda: bridge_check(profile, battles=True,world_workers=world_workers)) if name=="battles" else
-                    (lambda: bridge_check(profile))))
+            check = (lambda deadline=None: database_check(runtime)) if name == "database" else (
+                (lambda deadline=None: backend_check(runtime)) if name == "backend" else (
+                    (lambda deadline=None: bridge_probe(profile, multiplayer=True,deadline=deadline)) if name == "multiplayer" else
+                    (lambda deadline=None: bridge_probe(profile, battles=True,world_workers=world_workers,deadline=deadline)) if name=="battles" else
+                    (lambda deadline=None: bridge_probe(profile,deadline=deadline))))
             row = {"id": step, "service": name, "status": "checking", "action": "none"}
             if name=="battles":row["requested_native_workers"]=world_workers
             report["steps"].append(row)
-            def checked():
-                try: return check()
+            def checked(deadline=None):
+                try:
+                    result = check(deadline=deadline)
+                    if isinstance(result, dict):
+                        row["probe_attempts"] = row.get("probe_attempts", 0) + 1
+                        row["last_health_outcome"] = result["outcome"]
+                        return result["passed"]
+                    return result
                 except WorkflowError:
                     row["status"] = "failed"
                     raise
@@ -243,25 +387,26 @@ def run(runtime, msys, start, report, *, include_battles=False, world_workers=1)
                 row["status"] = "stopped"
                 raise WorkflowError(step + "_service_stopped")
             log = Path(report["report_path"]).with_name(Path(report["report_path"]).stem + "-" + step + ".txt")
-            with log.open("x", encoding="utf-8") as output: output.write(step + " " + name + " startup\n")
+            with log.open("x", encoding="utf-8") as output: output.write("[" + utc_now() + "] " + step + " " + name + " startup\n")
             row["log"] = str(log)
-            child = launch(wrapper, runtime, msys, log, world_workers)
+            watch = None
+            launch_arguments = {}
+            if name == "battles":
+                progress_path = log.with_name(log.stem + "-startup.jsonl")
+                launch_id = create_progress(progress_path)
+                watch = StartupWatch(progress_path, launch_id, time.monotonic())
+                row["startup_progress_path"] = str(progress_path)
+                launch_arguments = {"startup_progress": progress_path, "startup_launch_id": launch_id}
+                print(step + " startup progress: " + str(progress_path), flush=True)
+            child = launch(wrapper, runtime, msys, log, world_workers, **launch_arguments)
             row.update(action="started", launcher_pid=child.pid)
             print(step + " START " + name + "; log: " + str(log), flush=True)
-            deadline = time.monotonic() + (300 if name == "battles" else 75)
-            while time.monotonic() < deadline:
-                if child.poll() is not None:
-                    row["status"] = "failed"
-                    raise WorkflowError(step + "_launcher_exited")
-                if open_port(address, port) and checked():
-                    row["status"] = "passed"
-                    if name=="battles":row["verified_native_workers"]=world_workers
-                    break
-                time.sleep(1)
-            else:
-                row["status"] = "unconfirmed"
-                raise WorkflowError(step + "_startup_unconfirmed")
+            wait_for_startup(child, address, port, checked, row, watch=watch)
+            if name=="battles":row["verified_native_workers"]=world_workers
             print(step + " PASS " + name, flush=True)
+            if name == "battles":
+                print(step + " verified startup: elapsed_seconds=" + str(row["startup_elapsed_seconds"])
+                      + "; health=" + row["last_health_outcome"], flush=True)
     report["status"] = "passed"
     report["steps"].append({"id": "W07", "service": "workflow", "status": "passed"})
     print("W07 UNIFIED GAME SERVICES READY. Keep the service windows open.", flush=True)
