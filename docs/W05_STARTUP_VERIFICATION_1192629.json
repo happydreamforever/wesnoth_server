@@ -7,7 +7,7 @@
   "protocol": 5,
   "schema": 5,
   "runtime": "runtime-v3",
-  "windows_acceptance": "pending",
+  "windows_acceptance": "Cold-start and five-service health passed at user-supplied console scope; full saved reports not directly reviewed.",
   "historical_windows_evidence": {
     "workflow": "alliance-workflow-20261102-071500-283-2f525d428c2d47fcb0ec382ca209bef4",
     "result": "W02-W04 passed, W05 startup unconfirmed; later untimestamped READY lines supplied",
@@ -280,5 +280,26 @@
     "build/audit-w05-workflow-20261102/unit-attempt01.log: one test expected TLS pin comparison but invalid profile was correctly rejected earlier; corrected final tests cover both.",
     "build/audit-w05-startup-20261102/independent/run01:15 passing cases before strict remaining-network-deadline refinement.",
     "build/audit-w05-startup-20261102/independent/run02:16 passing cases, source changed for console/classification during run; final stable-source run03 used."
-  ]
+  ],
+  "windows_cold_start_observation": {
+    "workflow_stem": "alliance-workflow-20261102-080858-655-024f53673c7a4a4b87d995d29e6f0d2c",
+    "evidence": "user-pasted console",
+    "python": "3.12.10",
+    "w02_w03_w04": "passed existing",
+    "w05_action": "started",
+    "observed_wait": {
+      "phase": "worker_verification",
+      "elapsed_seconds": 31,
+      "health": "port_not_open"
+    },
+    "w05_result": "passed",
+    "w05_elapsed_seconds": 56.093,
+    "w05_health": "healthy",
+    "w06": "started/passed",
+    "w07": "ready",
+    "saved_reports_directly_read": false,
+    "wan_status": "awaiting user reply, requested once",
+    "earlier_timeout_cause": "not established by this successful run",
+    "next_step": "Install already-built Android1192629 in place; no rebuild or service restart"
+  }
 }
