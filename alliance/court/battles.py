@@ -237,7 +237,9 @@ class BattleMixin:
                      'No rewards or Castle ownership change. Battle fees released or refunded.']
             if match.get('cancel_reason') == 'administrator_technical_cancellation' and match['kind'] == 'competition':
                 lines.append('A replacement needs new seats, readiness and host scheduling; the entry pool is retained.')
-            return '\n'.join(lines)
+            # Court strings cross a strict native boundary which rejects
+            # control characters. Let the UI wrap these complete sentences.
+            return ' '.join(lines)
         if state != 'completed':
             return {
                 'proposed': 'Awaiting the opposing captain’s approval.',
@@ -272,7 +274,7 @@ class BattleMixin:
             lines.append(f"{castle['name'] if castle else 'Castle'} captured by {winner}.")
         elif match['kind'] == 'attack':
             lines.append('Castle ownership unchanged.')
-        return '\n'.join(lines)
+        return ' '.join(lines)
 
     def _court_matches_query(self, actor, payload, session=None):
         exact(payload, (), ('castle_id', 'area_id', 'team_id', 'after', 'state'))

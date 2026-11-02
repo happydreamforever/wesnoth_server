@@ -295,7 +295,8 @@ class TeamMixin:
     def _team_public(self, team, actor, session=None):
         if team is None:
             return None
-        member = actor in {m['account_id'] for m in team['members']}
+        member_ids = {m['account_id'] for m in team['members']}
+        member = actor in member_ids
         now = self._now()
         members = []
         for item in team['members']:
@@ -318,7 +319,10 @@ class TeamMixin:
                 | {'id': row['_id'], 'owner_name': names.get(row['owner_id'], 'Unavailable player')}
                 for row in self.db.court_defenses.find({'team_id': team['_id'],
                     'status': {'$in': ['offered', 'approved']}}, session=session).limit(20)]
-            result['allowances'] = team['allowances'] if actor == team['captain_id'] else {
+            # Former members can retain historical allowance entries. Only the
+            # current roster belongs in the bounded mobile Team projection.
+            result['allowances'] = {key: value for key, value in team['allowances'].items()
+                if key in member_ids} if actor == team['captain_id'] else {
                 actor: team['allowances'].get(actor, self._settings(session)['limits']['member_allowance'])}
             result['castles'] = [self._castle_public(c, session) for c in
                 self.db.court_castles.find({'owner_team_id': team['_id']}, session=session).sort('_id', 1)]

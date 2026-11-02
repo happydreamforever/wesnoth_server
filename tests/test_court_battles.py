@@ -7,7 +7,7 @@ import unittest
 from uuid import uuid4
 
 import test_unified_product as fixture
-from alliance.court.base import PRICES, LIMITS
+from alliance.court.base import PRICES, LIMITS, public_command_receipt
 from alliance.court.battles import DEFAULT_BATTLE_SETTINGS, settings, seeded_bracket, tournament_score
 from alliance.court.schema import SCHEMAS
 from alliance.court.wallet_schema import SCHEMAS as WALLETS, bootstrap_indexes as wallet_indexes
@@ -18,6 +18,17 @@ from alliance.heroes import load_catalog
 
 
 class CourtBattleRules(unittest.TestCase):
+    def test_legacy_receipt_adapter_changes_only_battle_summary_line_breaks(self):
+        saved = {'version': 1, 'actor_id': 'actor', 'data': {'match': {
+            'id': 'battle', 'description': 'Cancelled.\r\nNo rewards.\rFee refunded.\nTrial retained.',
+            'agreed_fee': 5, 'result': {'description': 'Unrelated\nfield', 'amount': 5}},
+            'other_description': 'Unrelated\ntext'}}
+        before = deepcopy(saved)
+        expected = deepcopy(saved)
+        expected['data']['match']['description'] = 'Cancelled. No rewards. Fee refunded. Trial retained.'
+        self.assertEqual(public_command_receipt(saved), expected)
+        self.assertEqual(saved, before)
+
     def test_exact_settings_and_boolean_types(self):
         self.assertEqual(settings(DEFAULT_BATTLE_SETTINGS), DEFAULT_BATTLE_SETTINGS)
         for change in ({'size': True}, {'gold': 101}, {'base_income': 21}, {'hero_cap': 10},
@@ -287,6 +298,71 @@ class CourtBattles(unittest.TestCase):
         self.assertNotIn('Private operator', description)
         self.assertNotIn(run, description)
         self.assertNotIn('Your hero:', description)
+
+    def test_settled_battles_remain_readable_in_all_mobile_projections(self):
+        """Terminal descriptions must survive the strict native string boundary."""
+        completed = self.attack()
+        self.finish(self.load(completed))
+        cancelled = self.attack('A001-C002')
+        cancellation = self.command(self.admin, 'admin_cancel_match', match_id=cancelled)
+
+        def assert_native_strings(value, path='response'):
+            if isinstance(value, str):
+                self.assertFalse(any(ord(char) < 32 or ord(char) == 127 for char in value), path)
+            elif isinstance(value, dict):
+                for key, item in value.items():
+                    assert_native_strings(key, path + '.key')
+                    assert_native_strings(item, path + '.' + key)
+            elif isinstance(value, (list, tuple)):
+                for index, item in enumerate(value):
+                    assert_native_strings(item, f'{path}[{index}]')
+
+        assert_native_strings(cancellation)
+        for query, payload in (
+                ('plan', {'match_id': completed}),
+                ('plan', {'match_id': cancelled}),
+                ('castle', {'castle_id': 'A001-C001'}),
+                ('castle', {'castle_id': 'A001-C002'}),
+                ('plans', {'state': 'history'}),
+                ('history', {}),
+                ('notifications', {})):
+            with self.subTest(query=query, payload=payload):
+                response = self.domain.court_query(self.a, {'version': 1,
+                    'query': query, 'payload': payload})
+                assert_native_strings(response)
+        won = self.domain._court_match_public(self.match(completed), self.a)
+        self.assertIn('First won.', won['description'])
+        self.assertIn('Your hero: +20 XP · +10 Crowns.', won['description'])
+        self.assertIn('normal captured by First.', won['description'])
+        self.assertTrue(won['replay_available'])
+        self.assertIn('Technical cancellation.', cancellation['match']['description'])
+        self.assertIn('No rewards or Castle ownership change.', cancellation['match']['description'])
+
+    def test_legacy_command_receipt_status_and_retry_preserve_stored_result_and_balances(self):
+        run = self.attack()
+        command_id = str(uuid4())
+        payload = {'command_id': command_id, 'match_id': run,
+                   'expected_revision': self.match(run)['revision']}
+        request = {'version': 1, 'operation': 'cancel_attack', 'payload': payload}
+        original = self.domain.court_command(self.a, request)
+        legacy = deepcopy(original)
+        legacy['data']['match']['description'] = (
+            'Cancelled by a participant.\n'
+            'No rewards or Castle ownership change. Battle fees released or refunded.')
+        key = self.generation + ':' + self.a + ':' + command_id
+        self.db.court_commands.update_one({'_id': key}, {'$set': {'result': legacy}})
+        before = {name: list(self.db[name].find().sort('_id', 1))
+                  for name in self.db.list_collection_names() if not name.startswith('system.')}
+
+        status = self.domain.court_query(self.a, {'version': 1, 'query': 'command_status',
+            'payload': {'command_id': command_id}})['data']
+        self.assertTrue(status['found'])
+        self.assertEqual(status['receipt'], original)
+        self.assertEqual(self.domain.court_command(self.a, request), original)
+        self.assertEqual(self.db.court_commands.find_one({'_id': key})['result'], legacy)
+        after = {name: list(self.db[name].find().sort('_id', 1))
+                 for name in self.db.list_collection_names() if not name.startswith('system.')}
+        self.assertEqual(after, before)
 
     def test_history_descriptions_resolve_changes_and_prizes_without_private_data(self):
         event = {'team_created': {'area_id': 'A001'},

@@ -83,6 +83,21 @@ def public(value):
     return value
 
 
+def public_command_receipt(value):
+    """Present old battle summaries without changing the saved command receipt.
+
+    Early Court receipts used line breaks between generated battle-summary
+    sentences. Native Court responses require single-line strings. Adapt only
+    that known presentation field; payment, identity and result data stay exact.
+    """
+    result = deepcopy(value)
+    data = result.get('data') if isinstance(result, dict) else None
+    match = data.get('match') if isinstance(data, dict) else None
+    if isinstance(match, dict) and isinstance(match.get('description'), str):
+        match['description'] = match['description'].replace('\r\n', ' ').replace('\r', ' ').replace('\n', ' ')
+    return result
+
+
 class CourtBase:
     def __init__(self, db, *, clock=None):
         self.db = db
@@ -187,7 +202,7 @@ class CourtBase:
             if previous:
                 if previous['digest'] != digest:
                     fail('command_conflict', 'This action identifier belongs to a different request.')
-                return previous['result']
+                return public_command_receipt(previous['result'])
             # Race with account suspension/deletion/session governance.
             self.db.accounts.update_one({'_id': actor}, {'$inc': {'revision': 1}}, session=session)
             result = self._envelope(actor, handler(actor, payload, session), session)

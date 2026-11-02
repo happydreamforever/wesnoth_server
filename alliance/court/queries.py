@@ -3,7 +3,7 @@ from copy import deepcopy
 import re
 
 from ..heroes import catalog_hero, catalog_form, hero_progress
-from .base import exact, fail, identifier, integer, text, revision
+from .base import exact, fail, identifier, integer, text, revision, public_command_receipt
 
 
 QUERIES = frozenset('''snapshot areas area castle my_team teams team plans plan
@@ -226,7 +226,7 @@ class QueryMixin:
         exact(payload, ('command_id',))
         key = self._generation(session) + ':' + actor + ':' + identifier(payload['command_id'])
         row = self.db.court_commands.find_one({'_id': key}, session=session)
-        return {'found': row is not None, 'receipt': row['result'] if row else None}
+        return {'found': row is not None, 'receipt': public_command_receipt(row['result']) if row else None}
 
     def _court_set_rules(self, actor, payload, session):
         exact(payload, ('revision', 'prices', 'limits', 'reason', 'confirmation'))
