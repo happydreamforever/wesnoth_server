@@ -19,7 +19,7 @@
     "listener": 75,
     "total": 1275
   },
-  "full_worker_integrity_checks": "unchanged, required before listener opens",
+  "full_worker_integrity_checks": "Unchanged for an installed worker; W05 PASS requires verified requested native-worker capacity. The existing optional-worker fallback can open an unavailable-capacity listener, which W05 refuses.",
   "source_hashes": {
     "alliance/startup_progress.py": "ca9be11605da856adba91028afaa00fabc7a6714b5cab646e721650429d9a08c",
     "alliance/battle_daemon.py": "eb18884ed484bf59f9f5d1ee724eefc45333fb2e1eb7d7a5e32cca6b0011a2cc",
