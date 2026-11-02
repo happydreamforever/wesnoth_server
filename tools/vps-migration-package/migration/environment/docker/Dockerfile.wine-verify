@@ -1,0 +1,3 @@
+FROM debian@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a
+RUN apt-get update && apt-get install -y --no-install-recommends wine64 && mkdir -p /verification && dpkg-query -W > /verification/debian-packages.txt && apt-cache policy wine64 libwine > /verification/wine-policy.txt && cp -a /etc/apt/sources.list.d /verification/apt-sources && rm -rf /var/lib/apt/lists/*
+ENV WINEDEBUG=-all WINEARCH=win64 WINEPREFIX=/tmp/wine-prefix

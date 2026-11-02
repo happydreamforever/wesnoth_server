@@ -1,0 +1,11 @@
+# VPS-only verification. Build the two pinned project tool images first.
+# Windows uses its existing native CMake/Ninja/NDK/JBR installations.
+FROM wesnoth-android-cache-verify:8.9-java21.0.9 AS java_tools
+FROM wesnoth-server-verify:1.19.26
+
+COPY --from=java_tools /opt/java/openjdk /opt/java/openjdk
+COPY --from=java_tools /opt/gradle /opt/gradle
+ENV JAVA_HOME=/opt/java/openjdk
+ENV GRADLE_HOME=/opt/gradle
+ENV GRADLE_USER_HOME=/cache/userhome
+ENV PATH="/opt/java/openjdk/bin:/opt/gradle/bin:${PATH}"

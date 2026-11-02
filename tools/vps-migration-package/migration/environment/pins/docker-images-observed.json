@@ -1,0 +1,101 @@
+[
+  {
+    "id": "sha256:884e1d82d490fc1c29ccac2ad16927f273d6f1eff57f19f99beedb6fc79a207a",
+    "architecture": "amd64",
+    "os": "linux",
+    "bytes": 1072304546,
+    "tag": "wesnoth-server-verify:1.19.26",
+    "captured_from_existing_image": true,
+    "fresh_rebuild_verified": false,
+    "package_inventory": "pins/dpkg-server.tsv",
+    "package_inventory_sha256": "835f2b1adf931e1b284358d441f51c14680662c74f7670221fca76b75fca2bcc"
+  },
+  {
+    "id": "sha256:3527cc28fa5edb38c47eef0fbbb2af565205f63df1ee0dcc3872c85f5731804d",
+    "architecture": "amd64",
+    "os": "linux",
+    "bytes": 119347031,
+    "tag": "wesnoth-alliance-verify:python3.14.3-mongo8.0.32",
+    "captured_from_existing_image": true,
+    "fresh_rebuild_verified": false,
+    "package_inventory": "pins/dpkg-alliance.tsv",
+    "package_inventory_sha256": "65ec3c9bf4feac443e90ef7e39065d2bde704b9f28fceeaef2ec5fc76e24315a"
+  },
+  {
+    "id": "sha256:8fe629201b28e971844de3359bfc5797aef1bc0eb24626b77c7a8d6c416c1e31",
+    "architecture": "amd64",
+    "os": "linux",
+    "bytes": 1092282333,
+    "tag": "wesnoth-alliance-native-verify:python3.14.3-gcc16.2",
+    "captured_from_existing_image": true,
+    "fresh_rebuild_verified": false,
+    "package_inventory": "pins/dpkg-native.tsv",
+    "package_inventory_sha256": "835f2b1adf931e1b284358d441f51c14680662c74f7670221fca76b75fca2bcc"
+  },
+  {
+    "id": "sha256:525eaaba0da8694078a7fd5929c84410a62a0fc9d403205623310500c6e5c406",
+    "architecture": "amd64",
+    "os": "linux",
+    "bytes": 1154334413,
+    "tag": "wesnoth-account-integration-verify:20261020",
+    "captured_from_existing_image": true,
+    "fresh_rebuild_verified": false,
+    "package_inventory": "pins/dpkg-account-integration.tsv",
+    "package_inventory_sha256": "835f2b1adf931e1b284358d441f51c14680662c74f7670221fca76b75fca2bcc"
+  },
+  {
+    "id": "sha256:1d234841d584dfda15f595c1908cc164068aa6347f1087f135ca949605fd6bfd",
+    "architecture": "amd64",
+    "os": "linux",
+    "bytes": 346669814,
+    "tag": "wesnoth-android-cache-verify:8.9-java21.0.9",
+    "captured_from_existing_image": true,
+    "fresh_rebuild_verified": false,
+    "package_inventory": "pins/dpkg-android-cache.tsv",
+    "package_inventory_sha256": "cf1fa76f1a6266627e87762847f01e0b7c2120019ba10393d19b87058af2451e"
+  },
+  {
+    "id": "sha256:baf66755bd3a0c1a6516db2cd49e50b98b423f48af708e487aac3bc6aecb505e",
+    "architecture": "amd64",
+    "os": "linux",
+    "bytes": 1366263898,
+    "tag": "wesnoth-android-sdl-verify:ndk26-java21",
+    "captured_from_existing_image": true,
+    "fresh_rebuild_verified": false,
+    "package_inventory": "pins/dpkg-android-sdl.tsv",
+    "package_inventory_sha256": "835f2b1adf931e1b284358d441f51c14680662c74f7670221fca76b75fca2bcc"
+  },
+  {
+    "id": "sha256:e451e743ac1b142db0dadd3dc068a2b13577d05169edf41df4e89a593ed26715",
+    "architecture": "amd64",
+    "os": "linux",
+    "bytes": 1075838682,
+    "tag": "wesnoth-text-toolchain-verify:meson1.12",
+    "captured_from_existing_image": true,
+    "fresh_rebuild_verified": false,
+    "package_inventory": "pins/dpkg-text-toolchain.tsv",
+    "package_inventory_sha256": "656a97e880e3f11aa903c84cd26bc513695ad5541848039878f349f78d3d2987"
+  },
+  {
+    "id": "sha256:fde871904f9c06b6c40d4946f537b8a10f332f4dc570df8e867bb65cb5dd9b80",
+    "architecture": "amd64",
+    "os": "linux",
+    "bytes": 331017094,
+    "tag": "wesnoth-mingw-worker-wine-verify:20261028",
+    "captured_from_existing_image": true,
+    "fresh_rebuild_verified": false,
+    "package_inventory": "pins/dpkg-wine.tsv",
+    "package_inventory_sha256": "dcada77ff0acb6a9754d5fbe5dacdeee824881e3db321ab627a178a0decd57ce"
+  },
+  {
+    "id": "sha256:a3392433cd117aba4460753301ce09fc5f5dfdb2ecb83a5a3c6a7c5b973a8c17",
+    "architecture": "amd64",
+    "os": "linux",
+    "bytes": 352461982,
+    "tag": "wesnoth-mingw-worker-cmake-wine-verify:20261028",
+    "captured_from_existing_image": true,
+    "fresh_rebuild_verified": false,
+    "package_inventory": "pins/dpkg-cmake-wine.tsv",
+    "package_inventory_sha256": "cef2a9b5c1fa8406005bd29e93d04dd0b825aaf2c52db0c40231d7571a9aacf6"
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "platform": "linux/amd64",
+  "references": [
+    "mongo:8.0.32@sha256:d0d926f94df099bff534b7ee5b5986458131a22489dfff8664509af0c1e2ca9c",
+    "python:3.14.3-slim@sha256:5e59aae31ff0e87511226be8e2b94d78c58f05216efda3b07dbbed938ec8583b",
+    "gradle:8.9-jdk21@sha256:0c13b320f227a67179fca5d5746ab889c011ed143023c80c5fc8520609fe427f",
+    "eclipse-temurin:21.0.9_10-jdk@sha256:e8d57b6c5c73d93212a4384f588309b44bc75fd15b38f78e6a6db1b350dc4ef3",
+    "gcc:16.2@sha256:17043c23ec2ad97fc3beca18da77275d26be5db5cd70ea0a5d73200e21a8e999",
+    "debian@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a"
+  ],
+  "note": "Base references preserved from the existing recipes; apt packages above these bases require network availability and newly resolved layers may differ."
+}

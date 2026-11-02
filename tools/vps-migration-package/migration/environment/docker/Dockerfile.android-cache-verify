@@ -1,0 +1,9 @@
+# VPS-only Gradle cache verification. Android/Windows execution is not provided.
+# Java 21.0.9 matches the Windows JBR release number; vendor and OS still differ.
+FROM gradle:8.9-jdk21@sha256:0c13b320f227a67179fca5d5746ab889c011ed143023c80c5fc8520609fe427f AS gradle_distribution
+FROM eclipse-temurin:21.0.9_10-jdk@sha256:e8d57b6c5c73d93212a4384f588309b44bc75fd15b38f78e6a6db1b350dc4ef3
+
+COPY --from=gradle_distribution /opt/gradle /opt/gradle
+ENV GRADLE_HOME=/opt/gradle
+ENV GRADLE_USER_HOME=/cache/userhome
+ENV PATH="/opt/gradle/bin:${PATH}"

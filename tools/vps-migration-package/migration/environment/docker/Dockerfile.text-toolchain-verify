@@ -1,0 +1,3 @@
+FROM wesnoth-server-verify:1.19.26
+RUN apt-get update && apt-get install -y --no-install-recommends gperf && rm -rf /var/lib/apt/lists/*
+RUN /opt/build-tools/bin/pip install --no-cache-dir meson==1.12.0

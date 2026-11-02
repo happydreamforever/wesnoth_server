@@ -1,0 +1,300 @@
+{
+  "purpose": "Read-only server migration input and environment audit",
+  "head": "8d06edd2cc59327e322fe5c5afbd2c859f960f8a",
+  "tracked_files": 517,
+  "working_changes": [
+    "AGENTS.md",
+    "README.md",
+    "docs/BASELINE.md",
+    "docs/NEXT_TEST.md",
+    "docs/WORKFLOW.md"
+  ],
+  "small_rebuild_inputs": [
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/Python-3.12.10.tar.xz",
+      "files": 1,
+      "bytes": 20520960,
+      "members": [
+        {
+          "path": "build/audit-python312-transition-20261028/Python-3.12.10.tar.xz",
+          "bytes": 20520960,
+          "sha256": "07ab697474595e06f06647417d3c7fa97ded07afc1a7e4454c5639919b46eaea"
+        }
+      ]
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/python-source.json",
+      "files": 1,
+      "bytes": 296,
+      "members": [
+        {
+          "path": "build/audit-python312-transition-20261028/python-source.json",
+          "bytes": 296,
+          "sha256": "59efea93ac9fd16bf90f66c63591e70a723ddd7fb23852aa7d176ff6515104c1"
+        }
+      ]
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/build-runtime.sh",
+      "files": 1,
+      "bytes": 631,
+      "members": [
+        {
+          "path": "build/audit-python312-transition-20261028/build-runtime.sh",
+          "bytes": 631,
+          "sha256": "e60e62f8b5772998a851af4ca1d100980c5c872c04fec2c57cbf2b6a8f8182b0"
+        }
+      ]
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/linux-wheels",
+      "files": 17,
+      "bytes": 2613530,
+      "members": [
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/argon2_cffi-25.1.0-py3-none-any.whl",
+          "bytes": 14657,
+          "sha256": "fdc8b074db390fccb6eb4a3604ae7231f219aa669a2652e0f20e16ba513d5741"
+        },
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/argon2_cffi_bindings-26.1.0-cp310-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+          "bytes": 26597,
+          "sha256": "27f1821903e2ceadcb88ec2b45ef190897b7682449c772f4d9b53e42c520cf29"
+        },
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/blinker-1.9.0-py3-none-any.whl",
+          "bytes": 8458,
+          "sha256": "ba0efaa9080b619ff2f3459d1d500c57bddea4a6b424b60a91141db6fd2f08bc"
+        },
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/cffi-2.1.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "bytes": 221822,
+          "sha256": "c1453022f490d2459a11819d83ad1d586e9ff65a12ac3e705ffebd46d3685dcf"
+        },
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/click-8.5.0-py3-none-any.whl",
+          "bytes": 125251,
+          "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360"
+        },
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/colorama-0.4.6-py2.py3-none-any.whl",
+          "bytes": 25335,
+          "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"
+        },
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/dnspython-2.9.0-py3-none-any.whl",
+          "bytes": 354822,
+          "sha256": "9a4aedb833c3c1b49214d04d44d3032ab7a9135f7c1d29a549b4ff78fd82fda9"
+        },
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/flask-3.1.3-py3-none-any.whl",
+          "bytes": 103424,
+          "sha256": "f4bcbefc124291925f1a26446da31a5178f9483862233b23c0c96a20701f670c"
+        },
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/flask_wtf-1.3.0-py3-none-any.whl",
+          "bytes": 13959,
+          "sha256": "dc5e3a4ce97f75c47bf6c1c72ad2c3b7bdf579a2ed13aebcc5d3d81fe2571160"
+        },
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/itsdangerous-2.2.0-py3-none-any.whl",
+          "bytes": 16234,
+          "sha256": "c6242fc49e35958c8b15141343aa660db5fc54d4f13a1db01a3f5891b98700ef"
+        },
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/jinja2-3.1.6-py3-none-any.whl",
+          "bytes": 134899,
+          "sha256": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67"
+        },
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/markupsafe-3.0.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "bytes": 22985,
+          "sha256": "8e124f974786f831d6043728e38296969d3579db8896fe004682f5758e613581"
+        },
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/pycparser-3.11-py3-none-any.whl",
+          "bytes": 51178,
+          "sha256": "51d5a8ba2be0bbe440b99d2112604c95bbbc3c2748a64260186c541e1729cd80"
+        },
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/pymongo-4.18.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "bytes": 1050321,
+          "sha256": "aa6f363ff648bf061335d2190dd580cbf465b1308a7e6acb992d128d6a16a3bd"
+        },
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/waitress-3.0.2-py3-none-any.whl",
+          "bytes": 56232,
+          "sha256": "c56d67fd6e87c2ee598b76abdd4e96cfad1f24cacdea5078d382b1f9d7b5ed2e"
+        },
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/werkzeug-3.1.9-py3-none-any.whl",
+          "bytes": 228700,
+          "sha256": "6392e50c78460ba618e5b21f08a71f59c99ce99cdc6cf6e3dd7e6ccca8754fab"
+        },
+        {
+          "path": "build/audit-python312-transition-20261028/linux-wheels/wtforms-3.2.2-py3-none-any.whl",
+          "bytes": 158656,
+          "sha256": "72b90d5d921bd3119252069cf0301e9c13915f9e52792652bc91c5dda4b79e56"
+        }
+      ]
+    }
+  ],
+  "recreation_recipes": [
+    {
+      "path": "wesnoth_server/tools/Dockerfile.verify",
+      "files": 1,
+      "bytes": 1434,
+      "members": [
+        {
+          "path": "tools/Dockerfile.verify",
+          "bytes": 1434,
+          "sha256": "14fc7cd221c96d2d527dc41afe2d359006b6027936e3520430cacf5a41f4f864"
+        }
+      ]
+    },
+    {
+      "path": "wesnoth_server/tools/Dockerfile.alliance-verify",
+      "files": 1,
+      "bytes": 1046,
+      "members": [
+        {
+          "path": "tools/Dockerfile.alliance-verify",
+          "bytes": 1046,
+          "sha256": "c3a1598d85bf7907a058775f92ce5d016f5f6fa834d1b04b83a756af2ad243b2"
+        }
+      ]
+    },
+    {
+      "path": "wesnoth_server/build/alliance-audit/native-transport-20261020/Dockerfile",
+      "files": 1,
+      "bytes": 461,
+      "members": [
+        {
+          "path": "build/alliance-audit/native-transport-20261020/Dockerfile",
+          "bytes": 461,
+          "sha256": "460c14f00a756b620f90bb6be22692ffe04081701576ad4a3709f9fe76aac2b5"
+        }
+      ]
+    },
+    {
+      "path": "wesnoth_server/build/audit-world-worker-headers-20261028/tests/Dockerfile.wine",
+      "files": 1,
+      "bytes": 454,
+      "members": [
+        {
+          "path": "build/audit-world-worker-headers-20261028/tests/Dockerfile.wine",
+          "bytes": 454,
+          "sha256": "66fbdceaab5a75721e37ed66b9fc3f94f2acb22e276366861da5cbc4c6ac4c2b"
+        }
+      ]
+    },
+    {
+      "path": "wesnoth_server/build/audit-world-worker-headers-20261028/tests/Dockerfile.cmake-wine",
+      "files": 1,
+      "bytes": 338,
+      "members": [
+        {
+          "path": "build/audit-world-worker-headers-20261028/tests/Dockerfile.cmake-wine",
+          "bytes": 338,
+          "sha256": "1758f3d97ab383c24cd932de62440844854f404517f918bde8b1c4f2f0ff7e23"
+        }
+      ]
+    },
+    {
+      "path": "wesnoth_server/build/audit-court-projection-fix-20261102/run_domain.py",
+      "files": 1,
+      "bytes": 1984,
+      "members": [
+        {
+          "path": "build/audit-court-projection-fix-20261102/run_domain.py",
+          "bytes": 1984,
+          "sha256": "925f8d22b4a417b46cc4eba4a2979ddd8a288f342c7371b1c589f204c1c9581d"
+        }
+      ]
+    },
+    {
+      "path": "wesnoth_server/build/audit-w05-startup-20261102/run-relay.py",
+      "files": 1,
+      "bytes": 2013,
+      "members": [
+        {
+          "path": "build/audit-w05-startup-20261102/run-relay.py",
+          "bytes": 2013,
+          "sha256": "6f9d896bb887d8c977256c5783a9181724869a40314e8622278c5fb3cab3c5c9"
+        }
+      ]
+    }
+  ],
+  "optional_windows_offline_caches": [
+    {
+      "path": "wesnoth_server/build/world-worker-packages-1192624",
+      "files": 217,
+      "bytes": 224869221
+    },
+    {
+      "path": "wesnoth_server/build/alliance-dependencies",
+      "files": 18,
+      "bytes": 809656403
+    },
+    {
+      "path": "wesnoth_server/build/audit-python312-transition-20261028/*.whl",
+      "files": 3,
+      "bytes": 1022301
+    }
+  ],
+  "rebuildable_prefixes": [
+    {
+      "path": "wesnoth_server/build/host-python-3.12.10",
+      "files": 5248,
+      "bytes": 291802564
+    },
+    {
+      "path": "wesnoth_server/build/audit-world-package-preparation-1192624/full-prefix",
+      "files": 57475,
+      "bytes": 1696425013
+    },
+    {
+      "path": "wesnoth_server/build/alliance-mongodb",
+      "files": 7,
+      "bytes": 103236747
+    }
+  ],
+  "constraints": [
+    "Preserve tracked working-tree changes in addition to a Git bundle. Git bundle excludes local Git config and avoids copying credential-bearing config.",
+    "Server root untracked engine-mirror files are mainly zero-byte placeholders: src/source_lists/scons/utils contain no source bytes. Preserve source under tracked engine/.",
+    "Do not recursively include ignored build/audit directories: disposable databases, generated identity keys and retained native results are mixed with diagnostics. Select reports/scripts explicitly.",
+    "Python3.12.10 source pin is fixed; historical image tags containing python3.14 are retained image names, not the interpreter used for current tests.",
+    "Windows dependency wheels differ from Linux CPython3.12 wheels. Keep the 17 Linux wheels as an exact offline wheelhouse, and the three cp312 Windows replacement wheels if retaining Windows cache.",
+    "Build source paths and installed Python scripts contain absolute locations. Recreate prefixes at the new desired root or preserve the prior internal mount layout.",
+    "MongoDB8.0.32 verification binary requires modern GLIBC; the existing Mongo verification container is compatible. Do not assume Debian bookworm compatibility.",
+    "Tests require disposable single-node replica-set Mongo on loopback and nofile65536. ALLIANCE_TEST_MONGO_URI is a test-only URI; never point it at Windows game runtime.",
+    "Native protocol/real combat checks require rebuilt account bridge/full native engine and original game-data inputs from the client; Python unit success alone is incomplete verification.",
+    "Dockerfiles use pinned base digests but apt package versions are not completely pinned. Per user direction, no Docker image exports are included. Recipes alone produce a newly resolved OS package layer that must be verified.",
+    "No production .env, private runtime, credential file or database was opened; no workspace mutation or deletion performed."
+  ],
+  "docker_environment": {
+    "host": "Linux x86_64; Docker29.1.3",
+    "server_verify_image": "wesnoth-server-verify:1.19.26",
+    "server_verify_id": "sha256:884e1d82d490fc1c29ccac2ad16927f273d6f1eff57f19f99beedb6fc79a207a",
+    "compiler": "GCC16.2.0",
+    "cmake": "4.3.0",
+    "ninja": "1.13.2.git.kitware.jobserver-pipe-1",
+    "glibc": "Debian2.41-12+deb13u4",
+    "boost": "1.91.0",
+    "python": "3.12.10 built at existing absolute prefix with GCC16.2.0 and OpenSSL3.5.7",
+    "mongo_verify_image": "wesnoth-alliance-verify:python3.14.3-mongo8.0.32",
+    "mongo_verify_id": "sha256:3527cc28fa5edb38c47eef0fbbb2af565205f63df1ee0dcc3872c85f5731804d",
+    "native_verify_image": "wesnoth-alliance-native-verify:python3.14.3-gcc16.2",
+    "native_verify_id": "sha256:8fe629201b28e971844de3359bfc5797aef1bc0eb24626b77c7a8d6c416c1e31",
+    "libssl-dev": "3.5.7-1~deb13u3",
+    "libsqlite3-dev": "3.46.1-7+deb13u2",
+    "libffi-dev": "3.4.8-2",
+    "libbz2-dev": "1.0.8-6",
+    "liblzma-dev": "5.8.1-1+deb13u1",
+    "libreadline-dev": "8.2-6",
+    "libncurses-dev": "6.5+20250216-2",
+    "libicu-dev": "76.1-4",
+    "zlib1g-dev": "1:1.3.dfsg+really1.3.1-1+b1"
+  },
+  "optional_windows_offline_caches_note": "MongoDB Windows ZIP and Windows wheel cache are audited metadata only and are intentionally not included in this VPS reinstall environment."
+}

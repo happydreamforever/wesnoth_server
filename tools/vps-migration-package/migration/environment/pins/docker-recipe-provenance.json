@@ -1,0 +1,64 @@
+[
+  {
+    "path": "docker/Dockerfile.server-verify",
+    "source": "wesnoth_server/tools/Dockerfile.verify",
+    "sha256": "14fc7cd221c96d2d527dc41afe2d359006b6027936e3520430cacf5a41f4f864",
+    "kind": "retained_recipe",
+    "rebuilt_for_migration": false
+  },
+  {
+    "path": "docker/Dockerfile.alliance-verify",
+    "source": "wesnoth_server/tools/Dockerfile.alliance-verify",
+    "sha256": "c3a1598d85bf7907a058775f92ce5d016f5f6fa834d1b04b83a756af2ad243b2",
+    "kind": "retained_recipe",
+    "rebuilt_for_migration": false
+  },
+  {
+    "path": "docker/Dockerfile.native-verify",
+    "source": "wesnoth_server/build/alliance-audit/native-transport-20261020/Dockerfile",
+    "sha256": "460c14f00a756b620f90bb6be22692ffe04081701576ad4a3709f9fe76aac2b5",
+    "kind": "retained_recipe",
+    "rebuilt_for_migration": false
+  },
+  {
+    "path": "docker/Dockerfile.android-cache-verify",
+    "source": "wesnoth_client/tools/Dockerfile.android-cache-verify",
+    "sha256": "9d2de5696bcefb8848b2da4dfea8cdda20bc4a860048c000c14ff848fe3095d0",
+    "kind": "retained_recipe",
+    "rebuilt_for_migration": false
+  },
+  {
+    "path": "docker/Dockerfile.android-sdl-verify",
+    "source": "wesnoth_client/tools/Dockerfile.android-sdl-verify",
+    "sha256": "e3c9360d6f216cba80734da35749b8ee407c38fccb61ff16552434d89af34891",
+    "kind": "retained_recipe",
+    "rebuilt_for_migration": false
+  },
+  {
+    "path": "docker/Dockerfile.text-toolchain-verify",
+    "source": "wesnoth_client/build/Dockerfile.text-toolchain-verify",
+    "sha256": "06f89accbe36287973bdea459dbd6ffdc15cc59ee63d69beec2d6960eef0e7e6",
+    "kind": "retained_recipe",
+    "rebuilt_for_migration": false
+  },
+  {
+    "path": "docker/Dockerfile.wine-verify",
+    "source": "wesnoth_server/build/audit-world-worker-headers-20261028/tests/Dockerfile.wine",
+    "sha256": "66fbdceaab5a75721e37ed66b9fc3f94f2acb22e276366861da5cbc4c6ac4c2b",
+    "kind": "retained_recipe",
+    "rebuilt_for_migration": false
+  },
+  {
+    "path": "docker/Dockerfile.cmake-wine-verify",
+    "source": "wesnoth_server/build/audit-world-worker-headers-20261028/tests/Dockerfile.cmake-wine",
+    "sha256": "1758f3d97ab383c24cd932de62440844854f404517f918bde8b1c4f2f0ff7e23",
+    "kind": "retained_recipe",
+    "rebuilt_for_migration": false
+  },
+  {
+    "path": "docker/Dockerfile.account-integration-verify",
+    "source": "Sanitized docker history of wesnoth-account-integration-verify:20261020; three top layers",
+    "kind": "reconstructed_recipe",
+    "rebuilt_for_migration": false
+  }
+]

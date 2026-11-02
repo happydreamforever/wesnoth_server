@@ -1,0 +1,7 @@
+# Reconstructed from the three top cached-image history layers.
+# This reconstruction has not been rebuilt for the migration package.
+FROM wesnoth-alliance-verify:python3.14.3-mongo8.0.32 AS mongo_python
+FROM wesnoth-alliance-native-verify:python3.14.3-gcc16.2
+COPY --from=mongo_python /usr/local/bin/mongod /usr/local/bin/mongod
+COPY --from=mongo_python /usr/local/lib/python3.14/site-packages/ /opt/native-python/lib/python3.14/site-packages/
+ENV PATH=/opt/native-python/bin:/opt/build-tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

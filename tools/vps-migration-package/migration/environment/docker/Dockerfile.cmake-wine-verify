@@ -1,0 +1,6 @@
+FROM wesnoth-mingw-worker-wine-verify:20261028
+RUN apt-get update && apt-get install -y --no-install-recommends cmake ninja-build \
+ && dpkg-query -W > /verification/debian-cmake-packages.txt \
+ && cmake --version > /verification/cmake-version.txt \
+ && ninja --version > /verification/ninja-version.txt \
+ && rm -rf /var/lib/apt/lists/*

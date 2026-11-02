@@ -1,0 +1,5 @@
+FROM wesnoth-server-verify:1.19.26
+COPY --from=wesnoth-alliance-verify:python3.14.3-mongo8.0.32 /usr/local/bin/python3.14 /opt/native-python/bin/python3.14
+COPY --from=wesnoth-alliance-verify:python3.14.3-mongo8.0.32 /usr/local/lib/libpython3.14.so.1.0 /opt/native-python/lib/libpython3.14.so.1.0
+COPY --from=wesnoth-alliance-verify:python3.14.3-mongo8.0.32 /usr/local/lib/python3.14 /opt/native-python/lib/python3.14
+ENV LD_LIBRARY_PATH=/opt/native-python/lib
