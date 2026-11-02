@@ -1,0 +1,311 @@
+{
+  "format": 1,
+  "release": 1192629,
+  "date": "2026-11-02",
+  "status": "vps_verified_windows_pending",
+  "implementation": {
+    "client": "f3623b182909cc70d679a39cc8fb56debfa34513",
+    "server": "da461109bdbf54c44768207cb627da52d2aecb08"
+  },
+  "compatibility": {
+    "protocol": 5,
+    "schema": 5,
+    "backend_and_worker_implementation": 1192626,
+    "runtime": "runtime-v3",
+    "backend_python_restart_required": true,
+    "bridge_room_worker_rebuild_required": false
+  },
+  "proven_causes": [
+    "Hidden inline-only prerequisites in the Court workspace and clipped Room form feedback.",
+    "Terminal battle summary line breaks rejected by both native validators; legacy receipts retain those old presentation strings.",
+    "Captain projection can contain more than64 historical allowances even though current team capacity is10."
+  ],
+  "fix_scope": [
+    "Explicit Court blockers use queued Emerald modal; OK has a visible touch target; background polling and incomplete typing remain nonmodal.",
+    "Room Create returns concise field-specific modal and preserves entered settings.",
+    "Only generated battle descriptions adapted on live projection and copied legacy receipts; stored receipts/digests/payments/rewards not rewritten.",
+    "Only current roster allowances projected; stored historical allowances and spending policy unchanged."
+  ],
+  "python_tests": {
+    "unique_total": 196,
+    "zero_skips": true,
+    "client": [
+      {
+        "suite": "Android builder",
+        "tests": 83,
+        "evidence": {
+          "path": "wesnoth_client/build/audit-court-feedback-1192629/android-builder-tests-final.log",
+          "bytes": 19110,
+          "sha256": "7b5df213792edeba86761d2df59c686bdebdcffe766ad8febed2d0812b9b0b96"
+        }
+      },
+      {
+        "suite": "Windows wrappers, simulated tools",
+        "tests": 40,
+        "evidence": {
+          "path": "wesnoth_client/build/audit-court-feedback-1192629/windows-wrapper-tests.log",
+          "bytes": 7194,
+          "sha256": "96ba4b3ec933f355767eb106f6678408782dde08315a6c54668271befbf90ca7"
+        }
+      },
+      {
+        "suite": "Court guarded presentation",
+        "tests": 7,
+        "evidence": {
+          "path": "wesnoth_client/build/audit-court-feedback-1192629/overlay-tests-final.log",
+          "bytes": 1132,
+          "sha256": "b684865f9e98c5ca6f58367d7e655b6abfe6ab6bf29d1ba151aebd6fea136676"
+        }
+      },
+      {
+        "suite": "Map companion",
+        "tests": 6,
+        "evidence": {
+          "path": "wesnoth_client/build/audit-court-feedback-1192629/court-map-tests.log",
+          "bytes": 1348,
+          "sha256": "b022c4cc0054e935f1e6b2dc49ea30f98d9eab5092a766ae8053818a51af5405"
+        }
+      },
+      {
+        "suite": "Room guarded presentation",
+        "tests": 4,
+        "evidence": {
+          "path": "wesnoth_client/build/audit-room-feedback-1192629/verification.json",
+          "bytes": 1947,
+          "sha256": "e36bc27991e56dd58fc38dee453fb530b8b7bc830732196b48cdd9ece6deecdd"
+        }
+      }
+    ],
+    "server": {
+      "battle_and_legacy_receipts": {
+        "purpose": "Court projected terminal text and legacy command receipt regressions",
+        "python": "3.12.10 (main, Oct 28 2026, 05:56:53) [GCC 16.2.0]",
+        "mongodb": "8.0.32",
+        "tests": 32,
+        "failures": 0,
+        "errors": 0,
+        "skips": 0,
+        "success": true,
+        "network": "docker --network none; disposable loopback Mongo only; repository mounted readonly"
+      },
+      "actual_native_projection_validators": {
+        "purpose": "Actual Mongo-backed Court projections through both C++ native validators",
+        "python": "3.12.10 (main, Oct 28 2026, 05:56:53) [GCC 16.2.0]",
+        "mongodb": "8.0.32",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skips": 0,
+        "success": true,
+        "network": "isolated docker network namespace with disposable loopback Mongo only; repository readonly"
+      },
+      "existing_team_rules": {
+        "purpose": "Existing Court Team domain regressions",
+        "python": "3.12.10 (main, Oct 28 2026, 05:56:53) [GCC 16.2.0]",
+        "mongodb": "8.0.32",
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skips": 0,
+        "success": true,
+        "network": "isolated docker network namespace with disposable loopback Mongo only; repository readonly"
+      }
+    }
+  },
+  "native_protocol": {
+    "validator_executions": 58,
+    "compiled_headers": "Real bridge and client court_protocol.hpp validators; strict control-character and bounded-object checks retained.",
+    "before_fix": "71 captain allowance entries rejected by both validators; pre-fix log retained.",
+    "coverage": "Fresh Team entry with128Areas, empty collection,10members and117heroes/forms; restored terminal Castle/plans/history; legacy command_status and duplicate command receipts."
+  },
+  "native_ui": {
+    "executions": 88,
+    "png_count": 152,
+    "resolutions": [
+      "1280x720",
+      "1920x1080"
+    ],
+    "themes": [
+      "default",
+      "Celes (modern)"
+    ],
+    "court_checks": [
+      "No-hero Attack Castle, Choose hero on an already-joined scheduled seat, and Defend Castle on a response-state attack from another Team: each visible action returns one modal and zero commands. Join battle membership is unchanged and Offer defense hero remains hidden without eligible owned heroes.",
+      "Teamless Area selection through synthetic finger down/up: one modal, same selection/view, zero commands.",
+      "Empty opposing-Team choice: explicit Review reports reason without submitting.",
+      "Invalid numeric input: no popup on change; Review shows reason; unsent value retained and Cancel works.",
+      "Insufficient-funds reply: one reviewed donation request, error modal, original value retained, fresh Review required, Cancel works.",
+      "Background read failures: visible inline reason across repeated refresh, zero modals/commands.",
+      "Fixture pending journal: Cancel reports unconfirmed action, retains journal/form and submits no mutation.",
+      "Modal OK visible with minimum48 native canvas pixels and unclipped geometry; workspace does not start polling behind modal.",
+      "Map width/toolbar/zoom/centre/list/search/back/return, active/inactive tap, valid force/settings forms, exactly-once reviewed purchase/plan request, Home callbacks/profile remain passing."
+    ],
+    "room_checks": [
+      "gold1001 rejected with correct modal",
+      "income21 rejected with correct modal",
+      "turns0 rejected with correct modal",
+      "emptyname rejected with correct modal",
+      "exactly one modal per failed Create",
+      "OK visible and at least48px in each dimension",
+      "draft text, selected map and toggles retained",
+      "corrected Create returns original parsed values150/7/35/name/map/fog/shroud/observers"
+    ],
+    "court_evidence": {
+      "path": "wesnoth_client/build/audit-court-feedback-1192629/native-feedback-verification.json",
+      "bytes": 33647,
+      "sha256": "fa45834f3291cb682a1d03e9441405804c41d08b3a8c0c1224f32ae359c1f7a5"
+    },
+    "room_evidence": {
+      "path": "wesnoth_client/build/audit-room-feedback-1192629/verification.json",
+      "bytes": 1947,
+      "sha256": "e36bc27991e56dd58fc38dee453fb530b8b7bc830732196b48cdd9ece6deecdd"
+    },
+    "scope": "Actual native GUI2 and synthetic SDL/widget input with fixture responses. No Windows/LDPlayer/device or live player-session acceptance."
+  },
+  "android": {
+    "native_steps": 56,
+    "gradle_tasks": 33,
+    "network": "none",
+    "python": "3.12.10",
+    "build_and_receipt_verification": {
+      "path": "wesnoth_client/build/audit-court-feedback-1192629/android-build-final.log",
+      "bytes": 21182,
+      "sha256": "f9dd3da31e8a7628323ed52c9b8bc53baffd607abe940590d39dcb92501c7a2e"
+    },
+    "container": {
+      "Status": "exited",
+      "ExitCode": 0,
+      "OOMKilled": false,
+      "StartedAt": "2026-11-02T06:12:34.422697102Z",
+      "FinishedAt": "2026-11-02T06:21:11.320270384Z"
+    },
+    "apk": {
+      "path": "build/android-account-game/app/build/outputs/apk/debug/app-debug.apk",
+      "bytes": 56941868,
+      "sha256": "2f7da96a32146a10f75ae4f2b5e3ccea94da7ef8a9888236ea70e833ff163a43"
+    },
+    "original_signer_sha256": "7e346dc5ec05098674444abdb61508270da51de9e57421133340c07834343074",
+    "independent_evidence": {
+      "path": "wesnoth_client/build/audit-court-feedback-1192629/android-independent-release/independent-apk-validation.json",
+      "bytes": 3044,
+      "sha256": "56f2d60d4aa41c15bba1e2a462caa5e9653224231f077a1e6ecd24774edf271e"
+    },
+    "unchanged_public_profile": true,
+    "unchanged_game_data_manifest": true,
+    "native_render_source_parity": {
+      "status": "passed",
+      "checked_sources": [
+        "tools/android-presentation/court_mobile_overlay.py",
+        "tools/android-presentation/court_mobile_members.inc",
+        "tools/android-presentation/court_mobile_workspace.inc",
+        "tests/test_court_mobile_overlay.py",
+        "tests/court_mobile_render_fixture.cpp",
+        "alliance_game/court_ui.hpp",
+        "alliance_game/account_ui.cpp",
+        "room_feedback_rooms.cpp",
+        "room_feedback_creation.inc"
+      ],
+      "generated_workspace_matches_native_fixture": true,
+      "actual_android_compiled_room_overlay": true
+    }
+  },
+  "preservation": {
+    "status": "passed",
+    "baseline_files": 8234,
+    "unchanged": {
+      "other_client_tracked": 436,
+      "shared_client_sources": 1703,
+      "prior_journals": 27,
+      "prior_build_files": 5551,
+      "server_tracked": 502
+    },
+    "reviewed_source_changes": [
+      "wesnoth_client/AGENTS.md",
+      "wesnoth_client/docs/BASELINE.md",
+      "wesnoth_client/docs/NEXT_TEST.md",
+      "wesnoth_client/docs/WORKFLOW.md",
+      "wesnoth_client/tests/court_mobile_render_fixture.cpp",
+      "wesnoth_client/tests/test_android_account_game.py",
+      "wesnoth_client/tests/test_court_mobile_overlay.py",
+      "wesnoth_client/tools/android-presentation/court_mobile_members.inc",
+      "wesnoth_client/tools/build_android_account_game.py",
+      "wesnoth_client/tools/native-account-game/CMakeLists.txt",
+      "wesnoth_server/AGENTS.md",
+      "wesnoth_server/alliance/court/teams.py",
+      "wesnoth_server/docs/BASELINE.md",
+      "wesnoth_server/docs/NEXT_TEST.md",
+      "wesnoth_server/docs/WORKFLOW.md"
+    ],
+    "missing": [],
+    "retained_previous_stages": {
+      "android-account-engine": "android-account-engine-before-menu-polish-20261102T061313Z-fd178ac27f0a4cc593cb7ce57fe70e4c",
+      "android-account-game": "android-account-game-before-menu-polish-20261102T061313Z-fd178ac27f0a4cc593cb7ce57fe70e4c"
+    },
+    "scope": "Baseline taken at the start of1192629 work; intended delivery/UI edits may already be in progress. Shared-client/stage/journal hashes and previousHEADsource diff checked separately. No private runtime/configuration inventory."
+  },
+  "handoff": {
+    "document": {
+      "path": "wesnoth_client/docs/COURT_FEEDBACK_1192629.md",
+      "bytes": 9128,
+      "sha256": "d66c127a4836a88066fc0c8b774d2de6f2fb4b511f3711d33f5247da9261057f"
+    },
+    "parse": {
+      "powershell": "7.4.6",
+      "parsed_only": true,
+      "commands_executed": false,
+      "blocks": [
+        {
+          "block": 1,
+          "parse_errors": 0,
+          "tokens": 123,
+          "parsed_only": true
+        },
+        {
+          "block": 2,
+          "parse_errors": 0,
+          "tokens": 16,
+          "parsed_only": true
+        },
+        {
+          "block": 3,
+          "parse_errors": 0,
+          "tokens": 78,
+          "parsed_only": true
+        }
+      ]
+    },
+    "source_blocks": {
+      "purpose": "Parse-only final Court1192629 Windows handoff review",
+      "document_sha256": "d66c127a4836a88066fc0c8b774d2de6f2fb4b511f3711d33f5247da9261057f",
+      "copies_equal": true,
+      "placeholders_present": false,
+      "blocks": [
+        {
+          "file": "final-block-1.ps1",
+          "sha256": "fc8c889a2905a20f56d4141172315ae487c61b96e0a219b51c5b72789b77fa23"
+        },
+        {
+          "file": "final-block-2.ps1",
+          "sha256": "d0da87549984201f9ad4df3d91b5e1a328aaf9814acb39f6169c602e7de7b925"
+        },
+        {
+          "file": "final-block-3.ps1",
+          "sha256": "f15a75968d0677d194ed61736dc3b9a90fc0b70e7fece7696283be782978baed"
+        }
+      ]
+    }
+  },
+  "retained_development_failures": [
+    "First caption-based message overload hid OK; actual GUI render caught it and production now uses explicit ok_button.",
+    "Native fixture corrected wrong message label ID, hidden teamless Enter assumption, and stale workspace pointer between subset dialogs.",
+    "Additional Team test runner exhausted default1024 file descriptors; retained Mongo errno24 log, final disposable runner uses65536. No production runtime or code workaround."
+  ],
+  "limits": [
+    "The exact user Windows Team-entry failure has not been directly reproduced from private state. Retest after update; collect backend/bridge output if still failing.",
+    "Joining a seat before selecting a hero remains allowed. Defense fixture exercises visible Defend Castle response, not hidden Offer defense.",
+    "Teamless List selection keeps Enter unavailable; membership popup is tested for map taps.",
+    "No production database, credentials, runtime, or private config opened. No reward rules, payments, protocol or schema changed.",
+    "No GPU performance, physical touch or multiple-human claim. Existing1192628 map behavior retained.",
+    "Windows1192629 build/install/F1-F7 not yet reported."
+  ]
+}
