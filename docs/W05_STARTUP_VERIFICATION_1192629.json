@@ -1,0 +1,284 @@
+{
+  "format": 1,
+  "purpose": "Recurring W05 startup phase correction and verified Windows handoff",
+  "implementation_commit": "82e160437971f23c76c74af61a5c2933bf3bb6c5",
+  "client_release": 1192629,
+  "server_worker_release": 1192626,
+  "protocol": 5,
+  "schema": 5,
+  "runtime": "runtime-v3",
+  "windows_acceptance": "pending",
+  "historical_windows_evidence": {
+    "workflow": "alliance-workflow-20261102-071500-283-2f525d428c2d47fcb0ec382ca209bef4",
+    "result": "W02-W04 passed, W05 startup unconfirmed; later untimestamped READY lines supplied",
+    "cause_limit": "No measured previous Windows phase durations; source proves verification and network-readiness shared a single 300-second budget."
+  },
+  "production_budgets_seconds": {
+    "preflight": 300,
+    "worker_verification": 900,
+    "listener": 75,
+    "total": 1275
+  },
+  "full_worker_integrity_checks": "unchanged, required before listener opens",
+  "source_hashes": {
+    "alliance/startup_progress.py": "ca9be11605da856adba91028afaa00fabc7a6714b5cab646e721650429d9a08c",
+    "alliance/battle_daemon.py": "eb18884ed484bf59f9f5d1ee724eefc45333fb2e1eb7d7a5e32cca6b0011a2cc",
+    "tools/alliance_workflow.py": "ad8af238869cc13d3d0a8943f0efbade953693918ae5b253e5377b050d38a26d",
+    "tools/Run-WindowsAllianceBattles.ps1": "3e67497030fb6794c761c957a6f17b1915bd37d6cf081f0d97ed79caa9d88d6a",
+    "tools/build_world_worker.py": "5a380e125b1c43ce9c3ac11f1c97bc44d86e47f2b8e2d78c2cadcb9207d9d54a",
+    "tools/world_worker_dependencies.py": "acdd9057cc8a27f58739e04b97a09f5d41813fced195f811b766fb66ebe34377"
+  },
+  "focused_tests": {
+    "python": "3.12.10 (main, Oct 28 2026, 05:56:53) [GCC 16.2.0]",
+    "modules": [
+      "tests.test_alliance_workflow",
+      "tests.test_alliance_workflow_startup",
+      "tests.test_battle_startup"
+    ],
+    "tests": 51,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "passed": true
+  },
+  "actual_relay_tests": {
+    "purpose": "Existing battle relay protocol regression after startup changes",
+    "python": "3.12.10 (main, Oct 28 2026, 05:56:53) [GCC 16.2.0]",
+    "mongodb": "8.0.32",
+    "tests": 22,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "success": true,
+    "network": "docker --network none; disposable loopback Mongo only; repository mounted readonly"
+  },
+  "unique_python_tests": 73,
+  "subprocess_tls_cases": 16,
+  "cross_process_lock_cases": 1,
+  "subprocess_cases": [
+    {
+      "case": "slow-worker",
+      "workflow_passed": true,
+      "workflow_error": null,
+      "elapsed_seconds": 3.0215216299984604
+    },
+    {
+      "case": "worker-stall",
+      "workflow_passed": false,
+      "workflow_error": "W05_startup_unconfirmed",
+      "elapsed_seconds": 5.0072821490466595
+    },
+    {
+      "case": "listener-stall",
+      "workflow_passed": false,
+      "workflow_error": "W05_startup_unconfirmed",
+      "elapsed_seconds": 3.01145218196325
+    },
+    {
+      "case": "declared-ready",
+      "workflow_passed": false,
+      "workflow_error": "W05_startup_unconfirmed",
+      "elapsed_seconds": 3.0196816250681877
+    },
+    {
+      "case": "missing-progress",
+      "workflow_passed": false,
+      "workflow_error": "W05_startup_unconfirmed",
+      "elapsed_seconds": 2.00655858987011
+    },
+    {
+      "case": "invalid-stream",
+      "workflow_passed": false,
+      "workflow_error": "W05_startup_progress_invalid",
+      "elapsed_seconds": 1.0064630270935595
+    },
+    {
+      "case": "partial-stream",
+      "workflow_passed": false,
+      "workflow_error": "W05_startup_unconfirmed",
+      "elapsed_seconds": 2.0057446230202913
+    },
+    {
+      "case": "wrong-nonce",
+      "workflow_passed": false,
+      "workflow_error": "W05_startup_progress_invalid",
+      "elapsed_seconds": 1.009191604098305
+    },
+    {
+      "case": "wrong-release",
+      "workflow_passed": false,
+      "workflow_error": "W05_startup_unconfirmed",
+      "elapsed_seconds": 3.0080601451918483
+    },
+    {
+      "case": "wrong-workers",
+      "workflow_passed": false,
+      "workflow_error": "W05_startup_unconfirmed",
+      "elapsed_seconds": 3.011990213068202
+    },
+    {
+      "case": "wrong-tls",
+      "workflow_passed": false,
+      "workflow_error": "W05_startup_unconfirmed",
+      "elapsed_seconds": 3.0084438398480415
+    },
+    {
+      "case": "exited-child",
+      "workflow_passed": false,
+      "workflow_error": "W05_launcher_exited",
+      "elapsed_seconds": 1.0081070309970528
+    },
+    {
+      "case": "hard-total",
+      "workflow_passed": false,
+      "workflow_error": "W05_startup_unconfirmed",
+      "elapsed_seconds": 2.805719456868246
+    },
+    {
+      "case": "hard-total-hanging-health",
+      "workflow_passed": false,
+      "workflow_error": "W05_startup_unconfirmed",
+      "elapsed_seconds": 2.810233441879973
+    },
+    {
+      "case": "existing-healthy",
+      "workflow_passed": true,
+      "workflow_error": null,
+      "elapsed_seconds": 0.31790155405178666
+    },
+    {
+      "case": "existing-wrong-workers",
+      "workflow_passed": false,
+      "workflow_error": "W05_existing_health_or_worker_count_differs_safe_restart_required",
+      "elapsed_seconds": 0.3137168118264526
+    }
+  ],
+  "powershell_fixture": {
+    "passed": true,
+    "host": "PowerShell7.4.6 on Linux, not Windows5.1",
+    "purpose": "Actual nested PowerShell launcher output/argument quoting/UTC timestamp/child exit preservation",
+    "expected_exit": 39,
+    "actual_exit": 39,
+    "captured_lines": 6
+  },
+  "powershell_parser": [
+    {
+      "path": "/home/uni/Documents/future/wesnoth_server/tools/Run-WindowsAllianceBattles.ps1",
+      "errors": 0
+    },
+    {
+      "path": "/home/uni/Documents/future/wesnoth_server/tools/Start-WindowsAllianceStack.ps1",
+      "errors": 0
+    },
+    {
+      "path": "/home/uni/Documents/future/wesnoth_server/build/audit-w05-startup-20261102/launcher-fixture.ps1",
+      "errors": 0
+    },
+    {
+      "path": "/home/uni/Documents/future/wesnoth_server/build/audit-w05-startup-20261102/windows-pull.ps1",
+      "errors": 0
+    },
+    {
+      "path": "/home/uni/Documents/future/wesnoth_server/build/audit-w05-startup-20261102/windows-start.ps1",
+      "errors": 0
+    }
+  ],
+  "preservation_before_checkpoint_documentation": {
+    "tracked_baseline_counts": {
+      "wesnoth_server": 512,
+      "wesnoth_client": 2154
+    },
+    "changed_tracked_paths": {
+      "wesnoth_server": [
+        "alliance/battle_daemon.py",
+        "tests/test_alliance_workflow.py",
+        "tools/Run-WindowsAllianceBattles.ps1",
+        "tools/alliance_workflow.py"
+      ],
+      "wesnoth_client": []
+    },
+    "worker_binding_sources_unchanged": true,
+    "client_tracked_files_unchanged": true,
+    "both_readme_edits_preserved": true,
+    "scope": "Tracked source/document baseline; no private runtime/configuration accessed; build and recovery artifacts not mutated."
+  },
+  "artifacts": [
+    {
+      "path": "build/audit-w05-startup-20261102/focused-result.json",
+      "bytes": 280,
+      "sha256": "80b038cbcdba12bc1b269b3a9d379cf25ba2d6abca30d88f970b43f1595ff7a0"
+    },
+    {
+      "path": "build/audit-w05-startup-20261102/focused-execution.json",
+      "bytes": 574,
+      "sha256": "fc1bb4ba79c22c742c70fed1aae16750e4f8013babdf421f71eae5f96c8d0f0a"
+    },
+    {
+      "path": "build/audit-w05-startup-20261102/focused.log",
+      "bytes": 9190,
+      "sha256": "962b6df8e50681638a3cc0cd26a15d75bf5fa40a98cdeffcdd1f6b55a2ced0c2"
+    },
+    {
+      "path": "build/audit-w05-startup-20261102/relay-result.json",
+      "bytes": 351,
+      "sha256": "2318c43f8b772e218aef74de19f863e37ca739156ef12f69a461ebc84c23de11"
+    },
+    {
+      "path": "build/audit-w05-startup-20261102/relay-execution.json",
+      "bytes": 693,
+      "sha256": "65d61788ed02f57db9f6a837c191e45129f24ea9bfa3ea7bfe7764ae25a151af"
+    },
+    {
+      "path": "build/audit-w05-startup-20261102/relay.log",
+      "bytes": 29531,
+      "sha256": "56a4b999f8e9cd912196673bbe6c36748248f5e32313096ba10d7d5cf04032dc"
+    },
+    {
+      "path": "build/audit-w05-startup-20261102/launcher-fixture-result.json",
+      "bytes": 254,
+      "sha256": "07d78f9294c69273f4ecb6731622ac981db9463e581dfb21138d964b4a4cbff5"
+    },
+    {
+      "path": "build/audit-w05-startup-20261102/launcher-fixture.log",
+      "bytes": 495,
+      "sha256": "49e226825b98017dfca42cd88703a20d7ba475af2a2858fe5b34f0633a192975"
+    },
+    {
+      "path": "build/audit-w05-startup-20261102/powershell-parse.json",
+      "bytes": 642,
+      "sha256": "f6ad7511c83cd254184793100ece5a304bb6a24ac1dcc121b6fb1a7c73797716"
+    },
+    {
+      "path": "build/audit-w05-startup-20261102/preservation.json",
+      "bytes": 598,
+      "sha256": "04089b044b6a438c76ffcd18d7da0af2ebc00bf70d2dc07d091f52ffe51594b5"
+    },
+    {
+      "path": "build/audit-w05-startup-20261102/independent/independent-verification.json",
+      "bytes": 35455,
+      "sha256": "10c9b98e0e3041efd74a2d2bbba29048052f12b302f5f3e4efddc31777380e62"
+    },
+    {
+      "path": "build/audit-w05-startup-20261102/windows-pull.ps1",
+      "bytes": 851,
+      "sha256": "0e6fa0371b441807dc1da39b3e7a6d38f14a87e8f6c53619e82e4d5c60ad83bb"
+    },
+    {
+      "path": "build/audit-w05-startup-20261102/windows-start.ps1",
+      "bytes": 441,
+      "sha256": "b6abfab355c7f137794b60752f9e3a6e95ee6ce1837cb875a0064b7e167bfb88"
+    }
+  ],
+  "limitations": [
+    "No actual Windows startup duration or NTFS/Windows PowerShell5.1 execution was measured on VPS.",
+    "Subprocess TLS integration uses deliberately short fixture deadlines; not full-worker performance measurements.",
+    "Linux PowerShell7.4.6 fixture and parser are separate from Windows execution.",
+    "No production runtime, credentials, MongoDB or Windows files were accessed.",
+    "No Android/native-worker/bridge/Room rebuild is needed or claimed by this startup-only update."
+  ],
+  "retained_intermediate_evidence": [
+    "build/audit-w05-workflow-20261102/unit-attempt01.log: one test expected TLS pin comparison but invalid profile was correctly rejected earlier; corrected final tests cover both.",
+    "build/audit-w05-startup-20261102/independent/run01:15 passing cases before strict remaining-network-deadline refinement.",
+    "build/audit-w05-startup-20261102/independent/run02:16 passing cases, source changed for console/classification during run; final stable-source run03 used."
+  ]
+}
