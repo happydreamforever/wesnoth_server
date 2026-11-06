@@ -14,7 +14,7 @@ from urllib.parse import quote
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure, PyMongoError
 
-from .config import Settings, ConfigurationError
+from .config import Settings, ConfigurationError, LocalMongo
 from .runtime_lock import runtime_lock
 
 PURPOSE = "wesnoth-alliance-local"
@@ -157,9 +157,10 @@ def _credentials(path):
         raise ConfigurationError("Private runtime credentials are invalid; preserve the runtime for recovery.") from None
 
 
-def _uri(user, password, database):
-    return (f"mongodb://{user}:{quote(password, safe='')}@127.0.0.1:27018/{database}"
-            f"?authSource={database}&replicaSet=wesnoth-rs&directConnection=true")
+def _uri(user, password, database, *, endpoint=None):
+    endpoint = endpoint or LocalMongo()
+    return (f"mongodb://{user}:{quote(password, safe='')}@127.0.0.1:{endpoint.port}/{database}"
+            f"?authSource={database}&replicaSet={endpoint.replica_set}&directConnection=true")
 
 
 def _client(uri):
@@ -167,9 +168,10 @@ def _client(uri):
                        socketTimeoutMS=15000, tz_aware=True, appname="WesnothAlliance")
 
 
-def _configure_runtime(path):
+def _configure_runtime(path, database=None):
+    database = database or (Settings.load(path).database if (path / "config.json").exists() else LocalMongo())
     credentials = _credentials(path)
-    service = {"mongo_uri": _uri("wesnoth_app", credentials["app_password"], "wesnoth_game"),
+    service = {"mongo_uri": _uri("wesnoth_app", credentials["app_password"], database.name, endpoint=database),
         "secret_key": credentials["secret_key"], "bridge_secret": credentials["bridge_secret"],
         "host": "127.0.0.1", "port": 18765}
     config = {"purpose": PURPOSE, "format": 1, "service": service}
@@ -177,9 +179,9 @@ def _configure_runtime(path):
         (path / name).mkdir(exist_ok=True, mode=0o700)
     mongo = {"storage": {"dbPath": str(path / "data")},
         "systemLog": {"destination": "file", "path": str(path / "logs" / "mongodb.log"), "logAppend": True},
-        "net": {"bindIp": "127.0.0.1", "port": 27018},
+        "net": {"bindIp": "127.0.0.1", "port": database.port},
         "security": {"keyFile": str(path / "keyfile"), "authorization": "enabled"},
-        "replication": {"replSetName": "wesnoth-rs"}}
+        "replication": {"replSetName": database.replica_set}}
     expected = {"config.json": json.dumps(config, indent=2) + "\n",
                 "keyfile": credentials["keyfile"] + "\n", "mongo.json": json.dumps(mongo, indent=2) + "\n"}
     for name, value in expected.items():
@@ -202,13 +204,14 @@ def _check_mongod(mongod):
 
 def _start_mongo(path, mongod):
     _check_mongod(mongod)
+    database = Settings.load(path).database
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(1)
-        if sock.connect_ex(("127.0.0.1", 27018)) == 0:
-            raise ConfigurationError("TCP 27018 is already in use. No existing database was changed or stopped.")
+        if sock.connect_ex(("127.0.0.1", database.port)) == 0:
+            raise ConfigurationError("The selected MongoDB port is already in use. No existing database was changed or stopped.")
     process = subprocess.Popen([str(mongod), "--config", str(path / "mongo.json")],
                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    client = _client("mongodb://127.0.0.1:27018/?directConnection=true")
+    client = _client(f"mongodb://127.0.0.1:{database.port}/?directConnection=true")
     try:
         for _ in range(30):
             if process.poll() is not None:
@@ -217,7 +220,7 @@ def _start_mongo(path, mongod):
                 hello = client.admin.command("hello")
                 if process.poll() is not None:
                     raise ConfigurationError("Owned MongoDB exited during startup; existing services were left unchanged.")
-                if hello.get("setName") not in (None, "wesnoth-rs"):
+                if hello.get("setName") not in (None, database.replica_set):
                     raise ConfigurationError("Unexpected database identity on the local Alliance port.")
                 return process
             except PyMongoError:
@@ -236,7 +239,7 @@ def _stop_owned(process, path=None):
     if process.poll() is None and path is not None:
         try:
             credentials = _credentials(path)
-            with _client(_uri("wesnoth_operator", credentials["database_admin_password"], "admin")) as client:
+            with _client(_uri("wesnoth_operator", credentials["database_admin_password"], "admin", endpoint=Settings.load(path).database)) as client:
                 try:
                     client.admin.command("shutdown", timeoutSecs=10)
                 except PyMongoError:
@@ -299,7 +302,7 @@ def _admin_credentials(admin_username, admin_password):
     return username, password
 
 
-def initialize(runtime, mongod, *, admin_username=None, admin_password=None, product='legacy'):
+def initialize(runtime, mongod, *, admin_username=None, admin_password=None, product='legacy', database=None):
     """Create only the explicit owned runtime; safe to resume with unchanged files."""
     current_stage = "runtime"
 
@@ -310,14 +313,14 @@ def initialize(runtime, mongod, *, admin_username=None, admin_password=None, pro
 
     try:
         return _initialize(runtime, mongod, admin_username=admin_username,
-                           admin_password=admin_password, stage=stage, product=product)
+                           admin_password=admin_password, stage=stage, product=product, database=database)
     except InitializationError:
         raise
     except (Exception, KeyboardInterrupt) as error:
         raise InitializationError(current_stage, _initialization_reason(error)) from None
 
 
-def _initialize(runtime, mongod, *, admin_username, admin_password, stage, product='legacy'):
+def _initialize(runtime, mongod, *, admin_username, admin_password, stage, product='legacy', database=None):
     from .auth import bootstrap_auth_schema, hash_password
     from .domain import AllianceService, DomainError
     from .schema import bootstrap_schema
@@ -329,19 +332,20 @@ def _initialize(runtime, mongod, *, admin_username, admin_password, stage, produ
     path = owned_runtime(runtime, create=True)
     with runtime_lock(path):
         stage("runtime-configuration")
-        credentials = _configure_runtime(path)
+        credentials = _configure_runtime(path, database)
+        database = Settings.load(path).database
         stage("database-start")
         process = _start_mongo(path, mongod)
         anonymous = privileged = None
         try:
-            anonymous = _client("mongodb://127.0.0.1:27018/?directConnection=true")
-            privileged = _client(_uri("wesnoth_operator", credentials["database_admin_password"], "admin"))
+            anonymous = _client(f"mongodb://127.0.0.1:{database.port}/?directConnection=true")
+            privileged = _client(_uri("wesnoth_operator", credentials["database_admin_password"], "admin", endpoint=database))
             stage("replica-set")
             hello = anonymous.admin.command("hello")
             if not hello.get("setName"):
-                anonymous.admin.command("replSetInitiate", {"_id": "wesnoth-rs", "members": [
-                    {"_id": 0, "host": "localhost:27018"}]})
-            elif hello["setName"] != "wesnoth-rs":
+                anonymous.admin.command("replSetInitiate", {"_id": database.replica_set, "members": [
+                    {"_id": 0, "host": f"localhost:{database.port}"}]})
+            elif hello["setName"] != database.replica_set:
                 raise ConfigurationError("Unexpected replica set. No initialization will be attempted.")
             for _ in range(60):
                 if anonymous.admin.command("hello").get("isWritablePrimary"):
@@ -358,15 +362,15 @@ def _initialize(runtime, mongod, *, admin_username, admin_password, stage, produ
                 anonymous.admin.command("createUser", "wesnoth_operator",
                     pwd=credentials["database_admin_password"], roles=[{"role": "root", "db": "admin"}])
                 privileged.close()
-                privileged = _client(_uri("wesnoth_operator", credentials["database_admin_password"], "admin"))
+                privileged = _client(_uri("wesnoth_operator", credentials["database_admin_password"], "admin", endpoint=database))
                 privileged.admin.command("ping")
-            db = privileged.wesnoth_game
+            db = privileged[database.name]
             stage("schema")
             bootstrap_schema(db)
             bootstrap_auth_schema(db)
             stage("application-user")
             users = db.command("usersInfo", "wesnoth_app")["users"]
-            expected_roles = [{"role": "readWrite", "db": "wesnoth_game"}]
+            expected_roles = [{"role": "readWrite", "db": database.name}]
             if not users:
                 db.command("createUser", "wesnoth_app", pwd=credentials["app_password"], roles=expected_roles)
             elif users[0].get("roles") != expected_roles:
@@ -385,7 +389,7 @@ def _initialize(runtime, mongod, *, admin_username, admin_password, stage, produ
             stage("application-verification")
             settings = Settings.load(path)
             with _client(settings.mongo_uri) as app_client:
-                app_client.wesnoth_game.accounts.find_one({}, {"_id": 1})
+                app_client[database.name].accounts.find_one({}, {"_id": 1})
                 status = app_client.admin.command("connectionStatus")
                 if status["authInfo"]["authenticatedUserRoles"] != expected_roles:
                     raise ConfigurationError("Runtime database scope verification failed.")
@@ -420,12 +424,12 @@ def _initialize(runtime, mongod, *, admin_username, admin_password, stage, produ
 
 def run_database(runtime, mongod):
     path = owned_runtime(runtime)
-    Settings.load(path)
+    settings = Settings.load(path)
     with runtime_lock(path):
         # Comparing managed settings prevents accidentally broadening the binding.
         _configure_runtime(path)
         process = _start_mongo(path, mongod)
-        print("Alliance MongoDB running on 127.0.0.1:27018. Keep this window open. Ctrl+C stops this process.", flush=True)
+        print(f"Alliance MongoDB running on 127.0.0.1:{settings.database.port}. Keep this window open. Ctrl+C stops this process.", flush=True)
         try:
             code = process.wait()
             if code:
@@ -443,9 +447,9 @@ def check_database(runtime):
         if client.server_info()["version"] != MONGO_VERSION:
             raise ConfigurationError("Unexpected database version.")
         hello = client.admin.command("hello")
-        if hello.get("setName") != "wesnoth-rs" or not hello.get("isWritablePrimary"):
+        if hello.get("setName") != settings.database.replica_set or not hello.get("isWritablePrimary"):
             raise ConfigurationError("The local replica set is not writable and ready.")
-        db = client.wesnoth_game
+        db = client[settings.database.name]
         from .schema import SCHEMA_VERSION
         metadata = db.schema_metadata.find_one({"_id": "alliance"})
         court = metadata and metadata.get('version') == 5 and metadata.get('court_initialized') is True
@@ -480,7 +484,7 @@ def serve(runtime):
     settings = Settings.load(path)
     check_database(runtime)
     with _client(settings.mongo_uri) as client:
-        app = create_app(settings, client.wesnoth_game)
+        app = create_app(settings, client[settings.database.name])
         print("Alliance admin: http://127.0.0.1:18765/", flush=True)
         print("Keep this window open. Run the Alliance account bridge in a separate window.", flush=True)
         waitress_serve(app, host=settings.host, port=settings.port, threads=4,

@@ -18,7 +18,7 @@ try {
     if ($Operation -eq 'Restore') {
         $BackupPath = Resolve-AllianceRuntimeRoot -Path $BackupPath
     } elseif ($PSBoundParameters.ContainsKey('BackupPath')) { throw 'BackupPath is only used for Restore.' }
-    $python = Join-Path $repo 'build\alliance-venv-py312\Scripts\python.exe'
+    $python = Get-AllianceServicePython -Repository $repo
     $helper = Join-Path $PSScriptRoot 'alliance_maintenance.py'
     foreach ($file in @($python, $helper)) {
         if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw 'The installed maintenance runtime is missing.' }
@@ -37,7 +37,7 @@ try {
     Write-Host 'Backup and restored folders contain private credentials and player data. Keep them locally; do not send them as diagnostics.'
     $arguments = @('-I','-B',$helper,$Operation.ToLowerInvariant(),'--runtime',$RuntimeRoot,'--destination',$DestinationPath)
     if ($Operation -eq 'Restore') {
-        $arguments += @('--backup',$BackupPath,'--mongod',(Join-Path $repo 'build\alliance-mongodb\bin\mongod.exe'))
+        $arguments += @('--backup',$BackupPath,'--mongod',(Get-AllianceMongod -Repository $repo))
     }
     & $python @arguments | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Maintenance did not complete. Keep the new destination and send only this sanitized log.' }

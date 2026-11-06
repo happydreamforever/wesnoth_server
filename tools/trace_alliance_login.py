@@ -155,7 +155,7 @@ def serve(runtime, username, output):
         settings = local_settings(runtime)
         check_database(runtime)
         with _client(settings.mongo_uri) as client:
-            app = create_app(settings, client.wesnoth_game, login_observer=trace, login_username=username)
+            app = create_app(settings, client[settings.database.name], login_observer=trace, login_username=username)
             # create_server binds first. The capture window begins only after binding succeeds.
             server = create_server(app, host=settings.host, port=settings.port, threads=4,
                                    max_request_body_size=65536, channel_timeout=30,

@@ -5,7 +5,8 @@ param(
     [string]$MsysRoot = 'D:\Test\wesnoth-setup\msys64',
     [switch]$CheckOnly,
     [switch]$IncludeBattles,
-    [ValidateRange(1,4)][int]$WorldWorkers = 1
+    [ValidateRange(1,4)][int]$WorldWorkers = 1,
+    [string]$IdentityRoot = ''
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Alliance-Common.ps1')
@@ -16,7 +17,7 @@ try {
     if ($env:OS -ne 'Windows_NT') { throw 'Run this helper on Windows.' }
     $RuntimeRoot = Resolve-AllianceRuntimeRoot -Path $RuntimeRoot
     $MsysRoot = Resolve-AllianceRuntimeRoot -Path $MsysRoot
-    $python = Join-Path $repo 'build\alliance-venv-py312\Scripts\python.exe'
+    $python = Get-AllianceServicePython -Repository $repo
     $helper = Join-Path $PSScriptRoot 'alliance_workflow.py'
     foreach ($file in @($python, $helper)) {
         if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw 'The installed workflow runtime is missing.' }
@@ -36,6 +37,10 @@ try {
     $arguments = @('-I','-B',$helper,'--runtime',$RuntimeRoot,'--msys',$MsysRoot,'--report',$report)
     if (-not $CheckOnly) { $arguments += '--start' }
     if ($IncludeBattles) { $arguments += @('--include-battles','--world-workers',[string]$WorldWorkers) }
+    if ($IdentityRoot) {
+        $IdentityRoot = Resolve-AllianceRuntimeRoot -Path $IdentityRoot
+        $arguments += @('--identity',$IdentityRoot)
+    }
     & $python @arguments | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Workflow stopped. Follow the named step guidance and send this log plus the JSON report; keep unrelated service windows open.' }
     $result = 0

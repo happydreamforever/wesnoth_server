@@ -11,6 +11,40 @@ class ConfigurationError(ValueError):
 
 
 @dataclass(frozen=True)
+class LocalMongo:
+    """A dedicated loopback database; credentials belong to the owned runtime."""
+    port: int = 27018
+    name: str = "wesnoth_game"
+    replica_set: str = "wesnoth-rs"
+
+    def __post_init__(self):
+        if (type(self.port) is not int or not 1024 <= self.port <= 65535
+                or self.port in (15000, 15001, 15002, 18765)
+                or not isinstance(self.name, str)
+                or re.fullmatch(r"wesnoth_[a-z0-9_]{1,48}", self.name) is None
+                or not isinstance(self.replica_set, str)
+                or re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,62}", self.replica_set) is None):
+            raise ConfigurationError("Invalid dedicated local MongoDB endpoint settings.")
+
+    @classmethod
+    def from_uri(cls, value):
+        try:
+            uri = urlsplit(value)
+            query = parse_qs(uri.query, strict_parsing=True, keep_blank_values=True)
+            endpoint = cls(port=uri.port, name=uri.path[1:], replica_set=query["replicaSet"][0])
+            valid = (uri.scheme == "mongodb" and uri.hostname in ("127.0.0.1", "localhost")
+                     and uri.username == "wesnoth_app" and bool(uri.password)
+                     and uri.path == "/" + endpoint.name and not uri.fragment
+                     and query == {"authSource": [endpoint.name], "replicaSet": [endpoint.replica_set],
+                                   "directConnection": ["true"]})
+            if not valid:
+                raise ValueError()
+            return endpoint
+        except (ValueError, TypeError, KeyError, IndexError):
+            raise ConfigurationError("Expected a dedicated authenticated local Alliance database configuration.") from None
+
+
+@dataclass(frozen=True)
 class Settings:
     mongo_uri: str = field(repr=False)
     secret_key: str = field(repr=False)
@@ -19,18 +53,7 @@ class Settings:
     port: int = 18765
 
     def __post_init__(self):
-        try:
-            uri = urlsplit(self.mongo_uri)
-            query = parse_qs(uri.query, strict_parsing=True)
-            valid = (uri.scheme == "mongodb" and uri.hostname in ("127.0.0.1", "localhost")
-                     and uri.port == 27018 and uri.username == "wesnoth_app" and bool(uri.password)
-                     and uri.path == "/wesnoth_game" and not uri.fragment
-                     and query == {"authSource": ["wesnoth_game"], "replicaSet": ["wesnoth-rs"],
-                                   "directConnection": ["true"]})
-        except (ValueError, TypeError):
-            valid = False
-        if not valid:
-            raise ConfigurationError("Expected the dedicated local Alliance database configuration.")
+        LocalMongo.from_uri(self.mongo_uri)
         if self.host != "127.0.0.1" or self.port != 18765:
             raise ConfigurationError("Alliance HTTP must use 127.0.0.1:18765 in this release.")
         if not all(isinstance(s, str) and re.fullmatch(r"[A-Za-z0-9_-]{43,128}", s)
@@ -38,6 +61,10 @@ class Settings:
             raise ConfigurationError("Runtime secret format is invalid. Keep the runtime backup.")
         if self.secret_key == self.bridge_secret:
             raise ConfigurationError("Browser and native bridge credentials must be separate.")
+
+    @property
+    def database(self):
+        return LocalMongo.from_uri(self.mongo_uri)
 
     @classmethod
     def load(cls, runtime):

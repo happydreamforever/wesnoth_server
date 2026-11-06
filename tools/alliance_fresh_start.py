@@ -17,6 +17,7 @@ from alliance.deployment import (initialize, owned_runtime, _write_new,
                                  InitializationError, _initialization_reason)
 from alliance.schema import SCHEMA_VERSION
 from alliance.runtime_lock import runtime_lock
+from alliance.config import Settings, LocalMongo
 from tools import alliance_maintenance as maintenance
 from tools.alliance_workflow import workflow_lock
 
@@ -68,6 +69,7 @@ def fresh_start(previous, archive, destination, mongod, *, product='legacy'):
     if SCHEMA_VERSION < 2:
         raise maintenance.MaintenanceError("unified_schema_not_installed")
     source = maintenance.validate_runtime(previous)
+    database = Settings.load(source).database
     archive, archived, manifest_digest = checked_backup(archive)
     target = maintenance.local_path(destination)
     for excluded in (source, archive):
@@ -78,7 +80,7 @@ def fresh_start(previous, archive, destination, mongod, *, product='legacy'):
                 "backup_manifest": manifest_digest}
     with ExitStack() as stack:
         stack.enter_context(runtime_lock(source))
-        ports = stack.enter_context(maintenance.reserved_ports())
+        ports = stack.enter_context(maintenance.reserved_ports(database.port))
         stack.enter_context(maintenance.battle_storage_lock(source))
         if maintenance.inventory(source) != archived:
             raise maintenance.MaintenanceError("backup_does_not_match_stopped_runtime")
@@ -98,14 +100,14 @@ def fresh_start(previous, archive, destination, mongod, *, product='legacy'):
             maintenance.validate_runtime(target)
             return {"reused": True, "previous_runtime_preserved": True,
                     "database_stopped": True, "schema_version": target_schema}
-        ports[27018].close()
+        ports[database.port].close()
         # initialize itself locks the new runtime, creates fresh random DB and
         # web/session credentials, verifies the schema, and stops its child.
         # It resumes incomplete initialization; it never removes player data.
         if product == 'court':
-            initialize(target, mongod, product='court')
+            initialize(target, mongod, product='court', **({'database': database} if database != LocalMongo() else {}))
         else:
-            initialize(target, mongod)
+            initialize(target, mongod, **({'database': database} if database != LocalMongo() else {}))
         maintenance.validate_runtime(target)
         if maintenance.inventory(source) != archived or maintenance.inventory(archive / "runtime") != archived:
             raise maintenance.MaintenanceError("protected_source_changed")

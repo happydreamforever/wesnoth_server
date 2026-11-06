@@ -124,16 +124,16 @@ def validate_runtime(runtime):
         read_small(path / name)
     settings = Settings.load(path)
     credentials = _credentials(path)  # root.json was already required; never creates it here.
-    if (settings.mongo_uri != _uri("wesnoth_app", credentials["app_password"], "wesnoth_game") or
+    if (settings.mongo_uri != _uri("wesnoth_app", credentials["app_password"], settings.database.name, endpoint=settings.database) or
         settings.secret_key != credentials["secret_key"] or settings.bridge_secret != credentials["bridge_secret"] or
         read_small(path / "keyfile").decode().strip() != credentials["keyfile"]):
         raise MaintenanceError("runtime_credentials_disagree")
     mongo = json.loads(read_small(path / "mongo.json"))
     expected = {"storage": {"dbPath": str(path / "data")},
         "systemLog": {"destination": "file", "path": str(path / "logs/mongodb.log"), "logAppend": True},
-        "net": {"bindIp": "127.0.0.1", "port": 27018},
+        "net": {"bindIp": "127.0.0.1", "port": settings.database.port},
         "security": {"keyFile": str(path / "keyfile"), "authorization": "enabled"},
-        "replication": {"replSetName": "wesnoth-rs"}}
+        "replication": {"replSetName": settings.database.replica_set}}
     if mongo != expected:
         raise MaintenanceError("managed_mongo_configuration_changed")
     return path
@@ -168,11 +168,11 @@ def battle_storage_lock(runtime):
 
 
 @contextmanager
-def reserved_ports():
+def reserved_ports(mongo_port=27018):
     """Block official service startup while the stopped runtime is copied."""
     sockets = {}
     try:
-        for host, port in (("127.0.0.1", 27018), ("127.0.0.1", 18765), ("0.0.0.0", 15000), ("0.0.0.0", 15001), ("0.0.0.0", 15002)):
+        for host, port in (("127.0.0.1", mongo_port), ("127.0.0.1", 18765), ("0.0.0.0", 15000), ("0.0.0.0", 15001), ("0.0.0.0", 15002)):
             peer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sockets[port] = peer
             if os.name == "nt":
@@ -231,7 +231,7 @@ def copy_manifest(source, destination, files):
 
 def backup(runtime, destination):
     source = validate_runtime(runtime)
-    with runtime_lock(source), reserved_ports(), battle_storage_lock(source):
+    with runtime_lock(source), reserved_ports(Settings.load(source).database.port), battle_storage_lock(source):
         files = inventory(source)
         target = new_destination(destination, source)
         _write_new(target / "INCOMPLETE", "Private backup; completion has not been verified.\n")
@@ -251,12 +251,13 @@ def verify_restore(runtime, mongod, ports):
     """Start only the new copy, and request a normal authenticated shutdown."""
     _check_mongod(mongod)
     credentials = _credentials(runtime)
-    ports[27018].close()
+    settings = Settings.load(runtime)
+    ports[settings.database.port].close()
     process = subprocess.Popen([str(mongod), "--config", str(runtime / "mongo.json")],
         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         deadline = time.monotonic() + 40
-        with _client(_uri("wesnoth_operator", credentials["database_admin_password"], "admin")) as client:
+        with _client(_uri("wesnoth_operator", credentials["database_admin_password"], "admin", endpoint=settings.database)) as client:
             while time.monotonic() < deadline:
                 if process.poll() is not None:
                     raise MaintenanceError("restored_database_exited")
@@ -274,7 +275,7 @@ def verify_restore(runtime, mongod, ports):
         # Inspect the restored database itself. Legacy v1 remains recoverable
         # in an isolated copy, but is never upgraded or opened by the v2 app.
         with _client(Settings.load(runtime).mongo_uri) as client:
-            db = client.wesnoth_game
+            db = client[settings.database.name]
             metadata = db.schema_metadata.find_one({"_id": "alliance"})
             schema = metadata.get("version") if metadata else None
             if type(schema) is not int or schema not in (1, 2, 3, SCHEMA_VERSION, 5):
@@ -295,7 +296,7 @@ def verify_restore(runtime, mongod, ports):
                 check_database(runtime)
     finally:
         if process.poll() is None:
-            with _client(_uri("wesnoth_operator", credentials["database_admin_password"], "admin")) as client:
+            with _client(_uri("wesnoth_operator", credentials["database_admin_password"], "admin", endpoint=settings.database)) as client:
                 # Never send shutdown solely because a port answered. Bind it
                 # again to this owned child's exact new dbPath first.
                 if process.poll() is not None:
@@ -340,7 +341,7 @@ def restore(runtime, backup_path, destination, mongod):
     with ExitStack() as stack:
         if source_present:
             stack.enter_context(runtime_lock(source))
-        ports = stack.enter_context(reserved_ports())
+        ports = stack.enter_context(reserved_ports(Settings.load(archived / "runtime").database.port))
         if source_present:
             stack.enter_context(battle_storage_lock(source))
         before = inventory(source, recovery_source=True) if source_present else None

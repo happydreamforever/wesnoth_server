@@ -15,6 +15,8 @@ import threading
 import time
 import unittest
 from unittest import mock
+from types import SimpleNamespace
+from alliance.config import LocalMongo
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("backend_check", ROOT / "tools/check_alliance_backend.py")
@@ -128,7 +130,7 @@ class BackendCheckTests(unittest.TestCase):
                 self.mode["body"] = json.dumps(body).encode()
                 with self.assertRaisesRegex(workflow.WorkflowError, "^W03_backend_release_mismatch$"):
                     workflow.backend_check(self.runtime)
-        self.mode["body"] = json.dumps({**HEALTH, "implementation_release": 1192624}).encode()
+        self.mode["body"] = json.dumps({**HEALTH, "implementation_release": 1192626}).encode()
         self.assertTrue(workflow.backend_check(self.runtime))
         self.mode["status"] = 401
         self.assertFalse(workflow.backend_check(self.runtime))
@@ -138,7 +140,8 @@ class BackendCheckTests(unittest.TestCase):
     def test_stale_backend_stops_workflow_with_manual_guidance_and_no_launch(self):
         from tools import alliance_workflow as workflow
         output = io.StringIO()
-        with mock.patch.object(workflow, "validate_runtime", return_value=self.runtime), \
+        with mock.patch.object(workflow.Settings, "load", return_value=SimpleNamespace(database=LocalMongo())), \
+                mock.patch.object(workflow, "validate_runtime", return_value=self.runtime), \
                 mock.patch.object(workflow, "public_profile", return_value={"server_address": "127.0.0.1"}), \
                 mock.patch.object(workflow, "database_check", return_value=True), \
                 mock.patch.object(workflow, "open_port", return_value=True), \
@@ -150,7 +153,7 @@ class BackendCheckTests(unittest.TestCase):
         launch.assert_not_called(); bridge.assert_not_called()
         report = json.loads(self.report.read_text())
         self.assertEqual(report["error"], "W03_backend_release_mismatch")
-        self.assertEqual(report["expected_backend_implementation_release"], 1192624)
+        self.assertEqual(report["expected_backend_implementation_release"], 1192626)
         self.assertEqual(report["steps"][-1], {"id": "W03", "service": "backend", "status": "failed", "action": "none"})
         self.assertEqual([row["id"] for row in report["steps"]], ["W01", "W02", "W03"])
         self.assertIn("press Ctrl+C", output.getvalue())

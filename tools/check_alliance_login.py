@@ -110,12 +110,13 @@ def read_account(runtime, username):
     if report["username"] is None:
         raise DiagnosticError("invalid_username")
     settings = local_settings(runtime)
+    report.update(endpoint=f"127.0.0.1:{settings.database.port}", database=settings.database.name)
     now = datetime.now(timezone.utc)
     bucket = int(now.timestamp()) // 900
     attempt_id = hashlib.sha256(f"player:{username.casefold()}:{bucket}".encode()).hexdigest()
     try:
         with _client(settings.mongo_uri) as client, timeout(6):
-            db = client.wesnoth_game
+            db = client[settings.database.name]
             schema = db.schema_metadata.find_one({"_id": "alliance"}, {"_id": 0, "version": 1})
             if not schema or type(schema.get("version")) is not int or schema["version"] != SCHEMA_VERSION:
                 raise DiagnosticError("unsupported_database")

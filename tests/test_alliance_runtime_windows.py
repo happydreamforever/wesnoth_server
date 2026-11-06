@@ -34,7 +34,7 @@ class RuntimeRootPowerShellTests(unittest.TestCase):
         self.drive.mkdir()
         self.caller.mkdir()
         (self.repo / "tools").mkdir(parents=True)
-        for name in ("Alliance-Common.ps1", *WRAPPERS.values(), "Run-WindowsAllianceBridge.ps1", "Run-WindowsAllianceBattles.ps1"):
+        for name in ("Alliance-Common.ps1", *WRAPPERS.values(), "Run-WindowsAllianceBridge.ps1", "Run-WindowsAllianceBattles.ps1", "Run-WindowsMultiplayer.ps1"):
             shutil.copy2(ROOT / "tools" / name, self.repo / "tools" / name)
         (self.repo / "tools/alliance_dependencies.py").touch()
         self.python = self.repo / "build/alliance-venv-py312/Scripts/python.exe"
@@ -51,7 +51,7 @@ class RuntimeRootPowerShellTests(unittest.TestCase):
         bridge = self.repo / "build/alliance-account-bridge/alliance-account-bridge.exe"
         bridge.parent.mkdir(parents=True)
         shutil.copy2(self.python, bridge)
-        for name in ("build_alliance_bridge.py", "run_alliance_battles.py"):
+        for name in ("build_alliance_bridge.py", "run_alliance_battles.py", "run_unified_multiplayer.py"):
             (self.repo / "tools" / name).touch()
         self.mongod = self.repo / "build/alliance-mongodb/bin/mongod.exe"
         self.mongod.parent.mkdir(parents=True)
@@ -159,7 +159,7 @@ class RuntimeRootPowerShellTests(unittest.TestCase):
         self.assert_rejected_without_native(self.invoke())
 
     def test_bridge_and_battles_defaults_and_explicit_runtime_agree(self):
-        for wrapper in ("Run-WindowsAllianceBridge.ps1", "Run-WindowsAllianceBattles.ps1"):
+        for wrapper in ("Run-WindowsAllianceBridge.ps1", "Run-WindowsAllianceBattles.ps1", "Run-WindowsMultiplayer.ps1"):
             for explicit in (None, r"C:\Users\Uni\AppData\Local\WesnothAlliance\chosen runtime"):
                 with self.subTest(wrapper=wrapper, explicit=explicit):
                     result = self.invoke(wrapper=wrapper, root=explicit)
@@ -169,6 +169,21 @@ class RuntimeRootPowerShellTests(unittest.TestCase):
                     selected = self.drive / "Users/Uni/AppData/Local/WesnothAlliance" / leaf
                     self.assertEqual(args[args.index("--runtime") + 1], str(selected))
                     self.assertFalse(selected.exists())
+
+    def test_configured_service_python_and_mongodb_locations_are_used(self):
+        custom=self.base/'configured service environment'
+        python=custom/'Scripts/python.exe';python.parent.mkdir(parents=True)
+        python.write_text(self.python.read_text().replace('Simulated native output','Configured service Python selected'))
+        python.chmod(0o755)
+        mongodb=self.base/'configured mongodb'
+        (mongodb/'bin').mkdir(parents=True)
+        shutil.copy2(self.mongod,mongodb/'bin/mongod.exe')
+        self.env.update(WESNOTH_SERVICE_ENV_ROOT=str(custom),WESNOTH_MONGODB_ROOT=str(mongodb))
+        result=self.invoke(command='database')
+        self.assert_success(result)
+        self.assertIn('Configured service Python selected',result.stdout)
+        args=self.read_calls()[-1]['args']
+        self.assertEqual(args[args.index('--mongod')+1],str(mongodb/'bin/mongod.exe'))
 
     def test_existing_directory_is_forwarded_without_change(self):
         selected = self.drive / "Users/Uni/AppData/Local/WesnothAlliance"

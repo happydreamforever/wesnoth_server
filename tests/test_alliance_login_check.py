@@ -63,6 +63,12 @@ class ReadClient:
         for name in documents:
             setattr(self, name, ReadCollection(self, name))
 
+    def __getitem__(self, name):
+        if name not in ('wesnoth_game', 'wesnoth_newpc'):
+            raise AssertionError('Unexpected selected database')
+        self.selected_database=name
+        return self
+
     def __enter__(self):
         return self
 
@@ -108,6 +114,16 @@ class LoginCheckTests(unittest.TestCase):
         self.prompt = self.enterContext(mock.patch.object(CHECK.getpass, "getpass", return_value=self.password))
         clock = self.enterContext(mock.patch.object(CHECK, "datetime", wraps=datetime))
         clock.now.return_value = NOW
+
+    def test_custom_saved_endpoint_selects_its_database_without_leaking_credentials(self):
+        self.uri=self.uri.replace('27018','27139').replace('wesnoth_game','wesnoth_newpc').replace('wesnoth-rs','newpc-rs')
+        config=json.loads(self.config.read_text())
+        config['service']['mongo_uri']=self.uri
+        self.config.write_text(json.dumps(config))
+        report=self.collect()
+        self.assertEqual(report['endpoint'],'127.0.0.1:27139')
+        self.assertEqual(report['database'],'wesnoth_newpc')
+        self.assertEqual(self.client.selected_database,'wesnoth_newpc')
 
     def collect(self, username="UniPlayer"):
         files = {p.name: p.read_bytes() for p in self.runtime.iterdir() if p.is_file()}

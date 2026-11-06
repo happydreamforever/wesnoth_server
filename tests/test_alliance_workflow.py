@@ -73,6 +73,8 @@ class WorkflowTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix="alliance workflow ")
         self.root = Path(self.temp.name)
         (self.root / "runtime").mkdir()
+        from alliance.deployment import _configure_runtime
+        _configure_runtime(self.root / "runtime")
         (self.root / "tools").mkdir()
         (self.root / "tools/Run-WindowsAllianceBattles.ps1").touch()
         self.runtime = self.root / "runtime"

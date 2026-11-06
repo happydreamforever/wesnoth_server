@@ -2,7 +2,8 @@
 [CmdletBinding()]
 param(
     [AllowEmptyString()][string]$RuntimeRoot,
-    [string]$MsysRoot = 'D:\Test\wesnoth-setup\msys64'
+    [string]$MsysRoot = 'D:\Test\wesnoth-setup\msys64',
+    [string]$IdentityRoot = (Join-Path (Split-Path $PSScriptRoot -Parent) 'runtime\alliance-transport')
 )
 . (Join-Path $PSScriptRoot 'Alliance-Common.ps1')
 $ErrorActionPreference = 'Stop'
@@ -22,14 +23,15 @@ try {
     $log = Join-Path $diagnostics ('alliance-bridge-run-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [guid]::NewGuid().ToString('N') + '.txt')
     Start-Transcript -LiteralPath $log -NoClobber | Out-Null
     $started = $true
-    $python = Join-Path $repo 'build\alliance-venv-py312\Scripts\python.exe'
+    $python = Get-AllianceServicePython -Repository $repo
     $env:PATH = (Join-Path $MsysRoot 'mingw64\bin') + ';' + $oldPath
     & $python -I -B (Join-Path $PSScriptRoot 'alliance_dependencies.py') check-python | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'The verified isolated Python 3.12.10 is required.' }
     & $python -I -B (Join-Path $PSScriptRoot 'build_alliance_bridge.py') --verify | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Account bridge artifact verification failed. Preserve the existing build.' }
     $bridge = Join-Path $repo 'build\alliance-account-bridge\alliance-account-bridge.exe'
-    $identity = Join-Path $repo 'runtime\alliance-transport'
+    $identity = $IdentityRoot
+    if ($PSBoundParameters.ContainsKey('IdentityRoot')) { $identity = Resolve-AllianceRuntimeRoot -Path $IdentityRoot }
     Write-Host 'Starting the account listener. Keep the existing database and admin service windows open.'
     & $bridge --runtime $RuntimeRoot --identity $identity | Out-Host
     $result = $LASTEXITCODE

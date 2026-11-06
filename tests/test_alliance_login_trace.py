@@ -165,7 +165,7 @@ class CollectorTests(unittest.TestCase):
                 logger.exception(private)
             raise KeyboardInterrupt()
         server.run.side_effect = run
-        settings = SimpleNamespace(host="127.0.0.1", port=18765, mongo_uri="fixture")
+        settings = SimpleNamespace(host="127.0.0.1", port=18765, mongo_uri="fixture", database=SimpleNamespace(name="wesnoth_game"))
         with patch.object(tracer, "local_settings", return_value=settings), \
                 patch.object(tracer, "check_database"), patch.object(tracer, "_client"), \
                 patch.object(tracer, "create_app"), patch.object(tracer, "create_server", return_value=server):

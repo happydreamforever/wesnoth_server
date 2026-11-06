@@ -1,0 +1,105 @@
+{
+  "date": "2026-11-06",
+  "scope": "Portable Windows development configuration; VPS verification only",
+  "python": "3.12.10 x86_64",
+  "mongodb": "8.0.32",
+  "powershell_host": "7.4.6 Linux",
+  "network": "Docker network none; isolated disposable loopback databases",
+  "tests": {
+    "unique": 336,
+    "unresolved_failures": 0,
+    "skips": 0,
+    "server_unique": 315,
+    "client_unique": 21,
+    "method": "Union of broad server run and corrected affected-suite reruns, migration/diagnostic regressions, client wrappers/configuration, final command-boundary rerun.",
+    "broad_server_run": {
+      "tests": 234,
+      "initial_failures": 3,
+      "initial_errors": 2,
+      "note": "Superseded failures retained; affected suites rerun successfully after corrections."
+    },
+    "server_affected_rerun": 41,
+    "migration_regressions": 10,
+    "diagnostic_regressions": 69,
+    "client_regressions": 21,
+    "final_boundaries": 23
+  },
+  "powershell_sources_parsed": 87,
+  "existing_android_foundations_verified": 11,
+  "coverage": [
+    "Strict explicit .env formats, references/spaces, no expression evaluation, unknown/duplicate/cyclic/oversized/link refusal, no overwrite",
+    "One-command server/client dispatch, custom service Python/Mongo/MSYS locations, public identity/worker arguments, environment restoration and failure boundaries",
+    "Explicit preparation/download and new-runtime initialization gates; immutable foundation reuse; account build/rebuild job forwarding",
+    "APK single-signer checks, pinned cache import/refusal, all existing foundation validators",
+    "Custom local MongoDB port/database/replica-set Court initialization, authenticated restart/check, private cold backup/isolated restore and preserved source",
+    "Default deployment, maintenance, fresh-start, legacy cold migrations, startup/TLS/health, read-only login/plan/backend diagnostics and Windows wrapper simulations"
+  ],
+  "preservation": {
+    "original_dirty_edits": "Retained in working trees; excluded from delivery commits",
+    "private_env": "Existing private .env was not opened or replaced",
+    "existing_runtime": "No production database, runtime or identity opened or changed; all database tests use temporary fixtures",
+    "android": "No native recompilation/signing/device installation during this configuration task; original inputs and completed stages retained"
+  },
+  "limits": [
+    "Windows PowerShell 5.1 execution and actual new-computer setup/build/start/install remain unverified",
+    "No new Android gameplay acceptance; 1192629/protocol5/schema5/backend-worker1192626 remain current; F1-F7 pending",
+    "Original Windows signer/reference APK and any private runtime backup/identity must be transferred privately; VPS test signer is separate"
+  ],
+  "evidence_directory": "/home/uni/Documents/service/wes/windows-env-20261106-wx3g1gy2",
+  "logs": [
+    "server-tests.txt",
+    "server-retest.txt",
+    "migration-regressions.txt",
+    "diagnostic-regressions.txt",
+    "client-tests.txt",
+    "final-boundary-tests.txt",
+    "native-stage-checks.txt",
+    "powershell-parse.txt"
+  ],
+  "source_inputs_sha256": {
+    "server": {
+      ".env.example": "2537cc2cd07aa960692d2eb5894d48e6c874adacb1aa2268c170f1263634383c",
+      "alliance/__main__.py": "982eb18bba2f86b1da4dfe13c571d4df57887031f73ecc47a1392556be0a12a0",
+      "alliance/config.py": "b5af8b49f982c671724d13893099047e387a3379ccb2f56d27880927a1eadb37",
+      "alliance/deployment.py": "433c174cfad9304dbfb7f711c008571e447e0f7cb78f8febbefef370c7cd8434",
+      "dev.ps1": "b9bee63285f70b37cd62c2d8a959decf6fe9a7fdd21da89a8e65ed5e980319fd",
+      "tests/test_alliance_backend_check.py": "e39f669cadd66354883bd0b5b92bfa081b1fd477215a378e42a62e3d934c9ed5",
+      "tests/test_alliance_deployment.py": "8cf51b31af1ddd5cbfea0e743f59702ac68a008e31c7cadf6dbbf409ccc17509",
+      "tests/test_alliance_login_check.py": "91d786e070f2a684797bfb83b99aa93a6fd9227413600856be73cff77ccbe5b4",
+      "tests/test_alliance_login_trace.py": "af311528b2a51b54d8103fac552f77981bb622a123bf5238d8ff6ec94605b0be",
+      "tests/test_alliance_plan_check.py": "e660900019e1e3f937bd9e3e76a9a171510c73fa4651d24ff3c76118792b7140",
+      "tests/test_alliance_runtime_windows.py": "57ec2bdcfc01d89bc39122195349843c4c79da7e5c5103456f7e1578cb19f3db",
+      "tests/test_alliance_workflow.py": "3fd3b330b06cca87210ec0e3bdcfe10fc5c696cbd24aa7ffa48f1a61bb7d330e",
+      "tests/test_windows_development_env.py": "7e4e6df5d82d17d9220b0ba692a05b2d9131f6cbea102d9e9d5cb2a6e19e911e",
+      "tests/test_windows_development_mongo.py": "39535bf7087902e1492e57afdea7123ad17ea6daffad00153fe00c0131e42eb1",
+      "tools/Alliance-Common.ps1": "aff4149a45093c589879933fb5b72c690b00c6ba47c1f634ad24b32708507442",
+      "tools/Invoke-WindowsAllianceMaintenance.ps1": "86295e9a8f12410d47622b081215a8961e0d20c8e1deeb42e7b73ab6f7124a6c",
+      "tools/Run-WindowsAllianceBattles.ps1": "c8bc5abfc4c3a8c973b6d295fd178f7648b182b8a5877c3317de64550a21a205",
+      "tools/Run-WindowsAllianceBridge.ps1": "ff1014c15e6ccea529061b5dfe90555aca46c01dfbca3ea675dce8fbde5a9bac",
+      "tools/Run-WindowsMultiplayer.ps1": "b8f2962713b4b812a6ea94fadd0d1a0f7c82d4f2a78243e3df03d53c9c5662e5",
+      "tools/Start-WindowsAllianceStack.ps1": "1201fe14b67beabdfa53bd578dd94a5cb816c803649ae53c76b4597ad3d44cc1",
+      "tools/Test-WindowsAllianceBackend.ps1": "8a19d00c7d613a2c2931255cd82f3d030b083a2cddeb6e5a7040d33223095ccc",
+      "tools/Windows-Environment.ps1": "b5c786af2f158324823921c025655d2f89bd66c1e09bb2041ba81a1b68079302",
+      "tools/alliance_dependencies.py": "67d4b78386ecd3aa04ec0b1f9906418536577b81e21a795d7a302ea125425dad",
+      "tools/alliance_fresh_start.py": "430514f26124b83099e4ee3ec7b14b3b8f128d05b2d98bff8251ee39fbf7b53c",
+      "tools/alliance_maintenance.py": "5561f6b7fbf7586a93c2c95a2630ec64418e84a4ef4f2bfa7176b863eb28ac70",
+      "tools/alliance_workflow.py": "f335e01b20bff22abefde1889caa69974ff8d2f633953cc1ad888e660646dc83",
+      "tools/check_alliance_login.py": "f53e39ee47ed8856e1dbe81cd7a65584bd63223e3ab1da7be97ccda191b8f55d",
+      "tools/check_alliance_plan.py": "4d1e6ebe43ce10ef300f9df2489c4144a90d8d386a111758a2bf0668823565a5",
+      "tools/migrate_alliance_runtime.py": "5a78a0998c20144670b9172dc9982accdc4563e92bc2f668881f7fd7a53b76f4",
+      "tools/trace_alliance_login.py": "8767f8a47425b342a6523475a9845c008ef651341844f89bdc75fbe824ce6cf6",
+      "tools/windows_development.py": "d38e5dffeb2dd5cc017e52f22afb06aeba2ddd1300b5efaa9330ea50dea40a97"
+    },
+    "client": {
+      ".env.example": "344a3e658bc55d2c56cbe76f1a7f9e82262de6fc97c2196af2b2a5438318fc08",
+      "dev.ps1": "b423c3efcd7257c067e1cbde4be786f41694975bc760b778ea92e93412f03472",
+      "tests/test_android_account_windows.py": "eff1a215d9f6459c3d1849133a08a742af079273eedf6572e1530abec96a291b",
+      "tests/test_windows_development_checks.py": "9e0efbf7599e734647984facafe1688be594452b28c50b5d45f5de2cb20002b7",
+      "tests/test_windows_development_env.py": "9b2db22df3aca14e2478864096b4f7d9c4bb4e4eb6b63f076796605ae5bde6a0",
+      "tools/Build-WindowsAndroidAccountGame.ps1": "045e8aa45d59c9ba7d5ec1eff31185257c75e2c7a459621e97ba591f940d246a",
+      "tools/Rebuild-WindowsAndroidAccountGame.ps1": "2bd827d25b670684e833488daf2925992582ad062d63f9e5aa58401c299b3e9c",
+      "tools/Windows-Environment.ps1": "b5c786af2f158324823921c025655d2f89bd66c1e09bb2041ba81a1b68079302",
+      "tools/windows_development.py": "066f8f56815cc17fc672bc15520fc39312e4a09003acf82716b85196f27c665f"
+    }
+  }
+}

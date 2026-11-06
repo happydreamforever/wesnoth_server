@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from pymongo.errors import PyMongoError
 from alliance.deployment import _check_mongod, _client, _credentials, _uri, _write_new
 from alliance.runtime_lock import runtime_lock
+from alliance.config import Settings
 from alliance.schema import migrate_schema_2_to_3, migrate_schema_3_to_4
 from tools.alliance_maintenance import (backup, validate_runtime, reserved_ports, battle_storage_lock,
     inventory, read_small, digest, MaintenanceError, local_path)
@@ -57,7 +58,8 @@ def migrate(runtime, destination, mongod, *, target_schema=4):
             raise MaintenanceError('invalid_manifest_path')
         if digest(destination / 'runtime' / relative) != expected:
             raise MaintenanceError('migration_backup_changed')
-    with runtime_lock(runtime), reserved_ports() as ports, battle_storage_lock(runtime):
+    settings = Settings.load(runtime)
+    with runtime_lock(runtime), reserved_ports(settings.database.port) as ports, battle_storage_lock(runtime):
         # First attempt proves the exact cold backup before launching the owned
         # process. Resumes may contain a partially migrated database by design.
         current_files = inventory(runtime)
@@ -69,11 +71,11 @@ def migrate(runtime, destination, mongod, *, target_schema=4):
                 raise MaintenanceError('migration_runtime_changed_after_backup')
             _write_new(started_journal, json.dumps(receipt, sort_keys=True) + '\n')
         credentials = _credentials(runtime)
-        ports[27018].close()
+        ports[settings.database.port].close()
         process = subprocess.Popen([str(mongod), '--config', str(runtime / 'mongo.json')],
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
-            with _client(_uri('wesnoth_operator', credentials['database_admin_password'], 'admin')) as client:
+            with _client(_uri('wesnoth_operator', credentials['database_admin_password'], 'admin', endpoint=settings.database)) as client:
                 deadline = time.monotonic() + 40
                 while time.monotonic() < deadline:
                     if process.poll() is not None: raise MaintenanceError('migration_database_exited')
@@ -84,10 +86,10 @@ def migrate(runtime, destination, mongod, *, target_schema=4):
                         if client.admin.command('hello').get('isWritablePrimary'): break
                     except PyMongoError: time.sleep(.25)
                 else: raise MaintenanceError('migration_database_start_timeout')
-                result = migrate_database(client.wesnoth_game, receipt['manifest_sha256'])
+                result = migrate_database(client[settings.database.name], receipt['manifest_sha256'])
         finally:
             if process.poll() is None:
-                with _client(_uri('wesnoth_operator', credentials['database_admin_password'], 'admin')) as client:
+                with _client(_uri('wesnoth_operator', credentials['database_admin_password'], 'admin', endpoint=settings.database)) as client:
                     opts = client.admin.command('getCmdLineOpts')['parsed']
                     if client.admin.command('serverStatus')['pid'] != process.pid or Path(opts['storage']['dbPath']).resolve() != runtime / 'data':
                         raise MaintenanceError('migration_database_identity_mismatch')

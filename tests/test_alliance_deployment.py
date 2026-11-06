@@ -135,7 +135,7 @@ class ConfigurationTests(unittest.TestCase):
         self.assertNotIn("secret", repr(good))
         for wrong in (good.mongo_uri.replace("127.0.0.1", "example.com"),
                       good.mongo_uri.replace("wesnoth_game", "admin"),
-                      good.mongo_uri.replace("27018", "27017"),
+                      good.mongo_uri.replace("27018", "15000"),
                       good.mongo_uri + "&tls=false", "mongodb://localhost/"):
             with self.assertRaises(ConfigurationError):
                 self.settings(mongo_uri=wrong)
@@ -215,6 +215,7 @@ class ConfigurationTests(unittest.TestCase):
             process.poll.return_value = 14
             client = MagicMock()
             with patch("alliance.deployment._check_mongod"), \
+                 patch("alliance.deployment.Settings.load", return_value=self.settings()), \
                  patch("alliance.deployment.socket.socket") as socket_factory, \
                  patch("alliance.deployment.subprocess.Popen", return_value=process), \
                  patch("alliance.deployment._client", return_value=client), \
@@ -240,8 +241,8 @@ class ConfigurationTests(unittest.TestCase):
                 roles = [{"role": "readWrite", "db": "wesnoth_game"}]
                 anonymous.admin.command.return_value = {
                     "setName": "wesnoth-rs", "isWritablePrimary": True}
-                privileged.wesnoth_game.command.return_value = {"users": [{"roles": roles}]}
-                privileged.wesnoth_game.accounts.find_one.return_value = {"role": "admin"}
+                privileged.__getitem__.return_value.command.return_value = {"users": [{"roles": roles}]}
+                privileged.__getitem__.return_value.accounts.find_one.return_value = {"role": "admin"}
                 scoped.__enter__.return_value.admin.command.return_value = {
                     "authInfo": {"authenticatedUserRoles": roles}}
                 out = io.StringIO()
@@ -257,7 +258,7 @@ class ConfigurationTests(unittest.TestCase):
                      patch("alliance.deployment._client",
                            side_effect=[anonymous, privileged, scoped]), \
                      patch("alliance.deployment._stop_owned", side_effect=cleanup) as stop, \
-                     patch("alliance.deployment.Settings.load"), \
+                     patch("alliance.deployment.Settings.load", return_value=self.settings()), \
                      patch("alliance.schema.bootstrap_schema"), \
                      patch("alliance.auth.bootstrap_auth_schema"):
                     if cleanup_error is not None:

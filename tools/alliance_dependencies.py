@@ -33,11 +33,11 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 PINS = ROOT / "tools" / "alliance-dependencies"
-CACHE = ROOT / "build" / "alliance-dependencies"
-VENV = ROOT / "build" / "alliance-venv-py312"
+CACHE = Path(os.environ.get("WESNOTH_DEPENDENCY_CACHE", str(ROOT / "build" / "alliance-dependencies")))
+VENV = Path(os.environ.get("WESNOTH_SERVICE_ENV_ROOT", str(ROOT / "build" / "alliance-venv-py312")))
 LEGACY_VENV = ROOT / "build" / "alliance-venv"
 PYTHON_VERSION = (3, 12, 10)
-MONGO = ROOT / "build" / "alliance-mongodb"
+MONGO = Path(os.environ.get("WESNOTH_MONGODB_ROOT", str(ROOT / "build" / "alliance-mongodb")))
 OWNER = "wesnoth-alliance-dependencies-v1"
 DOWNLOAD_ATTEMPTS = 3
 ARTIFACT_RENAME_DELAYS = (0.5, 1, 2)
@@ -559,7 +559,7 @@ def preservation_inventory(path: Path) -> dict:
 def stopped_services():
     sockets = []
     try:
-        for port in (27018, 18765, 15000, 15001, 15002):
+        for port in sorted({27018, int(os.environ.get("WESNOTH_MONGO_PORT", "27018")), 18765, 15000, 15001, 15002}):
             listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sockets.append(listener)
             if hasattr(socket, 'SO_EXCLUSIVEADDRUSE'):

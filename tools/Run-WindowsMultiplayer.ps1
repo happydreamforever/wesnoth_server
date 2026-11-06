@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$RuntimeRoot = (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2'),
-    [string]$MsysRoot = 'D:\Test\wesnoth-setup\msys64'
+    [string]$MsysRoot = 'D:\Test\wesnoth-setup\msys64',
+    [string]$IdentityRoot = (Join-Path (Split-Path $PSScriptRoot -Parent) 'runtime\alliance-transport')
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Alliance-Common.ps1')
@@ -12,7 +13,8 @@ $result = 1
 try {
     if ($env:OS -ne 'Windows_NT') { throw 'Run this helper on Windows.' }
     $RuntimeRoot = Resolve-AllianceRuntimeRoot -Path $RuntimeRoot
-    $python = Join-Path $repo 'build\alliance-venv-py312\Scripts\python.exe'
+    if ($PSBoundParameters.ContainsKey('IdentityRoot')) { $IdentityRoot = Resolve-AllianceRuntimeRoot -Path $IdentityRoot }
+    $python = Get-AllianceServicePython -Repository $repo
     $env:PATH = (Join-Path $MsysRoot 'mingw64\bin') + ';' + $originalPath
     $diagnostics = Join-Path $repo 'diagnostics'
     $null = New-Item -ItemType Directory -Path $diagnostics -Force
@@ -22,7 +24,7 @@ try {
     & $python -I -B (Join-Path $PSScriptRoot 'alliance_dependencies.py') check-python | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Pinned Python check failed.' }
     & $python -I -B (Join-Path $PSScriptRoot 'run_unified_multiplayer.py') `
-        --runtime $RuntimeRoot --identity (Join-Path $repo 'runtime\alliance-transport') | Out-Host
+        --runtime $RuntimeRoot --identity $IdentityRoot | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Multiplayer stopped. Send the saved log.' }
     $result = 0
 } catch { Write-Host ('ERROR: ' + $_.Exception.Message) -ForegroundColor Red }

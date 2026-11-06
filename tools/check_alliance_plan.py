@@ -374,11 +374,12 @@ def collect(runtime, username="UniPlayer", battle_id=None):
         if battle_id is not None:
             identifier(battle_id, "invalid_battle_id")
         settings = local_settings(runtime)
+        report.update(endpoint=f"127.0.0.1:{settings.database.port}", database=settings.database.name)
         hashes = logic_hashes()
         with _client(settings.mongo_uri) as client, timeout(10):
             with client.start_session(causal_consistency=False) as session:
                 with session.start_transaction(read_concern=ReadConcern("snapshot"), read_preference=ReadPreference.PRIMARY):
-                    facts = read_snapshot(client.wesnoth_game, session, username, battle_id)
+                    facts = read_snapshot(client[settings.database.name], session, username, battle_id)
         report.update(facts, disk_logic_sha256=hashes, status="collected", outcome="collected")
     except DiagnosticError as error:
         report["outcome"] = error.args[0] if error.args and error.args[0] in FAILURES else "unexpected_error"

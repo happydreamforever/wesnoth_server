@@ -1,4 +1,16 @@
 # Shared by the Alliance helpers; Windows PowerShell 5.1 compatible.
+function Get-AllianceServicePython {
+    param([string]$Repository)
+    if ($env:WESNOTH_SERVICE_ENV_ROOT) { return Join-Path $env:WESNOTH_SERVICE_ENV_ROOT 'Scripts\python.exe' }
+    return Join-Path $Repository 'build\alliance-venv-py312\Scripts\python.exe'
+}
+
+function Get-AllianceMongod {
+    param([string]$Repository)
+    if ($env:WESNOTH_MONGODB_ROOT) { return Join-Path $env:WESNOTH_MONGODB_ROOT 'bin\mongod.exe' }
+    return Join-Path $Repository 'build\alliance-mongodb\bin\mongod.exe'
+}
+
 function Resolve-AllianceRuntimeRoot {
     param([AllowEmptyString()][string]$Path)
     if ([string]::IsNullOrWhiteSpace($Path) -or $Path -notmatch '^[A-Za-z]:[\\/]') {
@@ -62,7 +74,7 @@ function Invoke-AllianceCommand {
                 $selectedRuntime = Resolve-AllianceRuntimeRoot -Path (Join-Path $env:LOCALAPPDATA 'WesnothAlliance\runtime-v2')
             }
             if ($PythonPath) { throw 'Runtime commands use the isolated Alliance virtual environment.' }
-            $PythonPath = Join-Path $repoRoot 'build\alliance-venv-py312\Scripts\python.exe'
+            $PythonPath = Get-AllianceServicePython -Repository $repoRoot
         }
         if (-not (Test-Path -LiteralPath $PythonPath -PathType Leaf)) {
             throw "Missing Python executable: $PythonPath. Complete the preceding preparation/install step."
@@ -90,7 +102,7 @@ function Invoke-AllianceCommand {
             if ($LASTEXITCODE -ne 0) { throw 'The pinned Alliance environment check failed; runtime was not started.' }
             $arguments = @('-E','-s','-m','alliance','--runtime', $selectedRuntime)
             if ($Command -in @('init','database')) {
-                $mongod = Join-Path $repoRoot 'build\alliance-mongodb\bin\mongod.exe'
+                $mongod = Get-AllianceMongod -Repository $repoRoot
                 if (-not (Test-Path -LiteralPath $mongod -PathType Leaf)) { throw 'Pinned MongoDB executable is missing. Complete the offline installation step.' }
                 $arguments += @('--mongod', $mongod)
             }

@@ -24,6 +24,7 @@ from alliance.deployment import MONGO_VERSION, _client, _credentials, _uri
 from alliance.runtime_lock import _acquire, _file_identity, _release
 from alliance.startup_progress import ProgressError, create_progress, read_progress, utc_now
 from alliance.court import SCHEMA as SCHEMA_VERSION
+from alliance.config import Settings
 from tools.alliance_maintenance import local_path, validate_runtime
 from tools.alliance_transport import read_json, tls_client_context, validate_profile
 from tools.check_alliance_backend import collect
@@ -75,14 +76,15 @@ def open_port(address, port, timeout=1):
 
 def database_check(runtime):
     try:
+        settings = Settings.load(runtime)
         credentials = _credentials(runtime)
-        with _client(_uri("wesnoth_operator", credentials["database_admin_password"], "admin")) as client:
+        with _client(_uri("wesnoth_operator", credentials["database_admin_password"], "admin", endpoint=settings.database)) as client:
             if client.server_info()["version"] != MONGO_VERSION: return False
             hello = client.admin.command("hello")
-            if hello.get("setName") != "wesnoth-rs" or not hello.get("isWritablePrimary"): return False
+            if hello.get("setName") != settings.database.replica_set or not hello.get("isWritablePrimary"): return False
             options = client.admin.command("getCmdLineOpts")["parsed"]
             if Path(options["storage"]["dbPath"]).resolve() != runtime / "data": return False
-            return client.wesnoth_game.schema_metadata.find_one({"_id": "alliance", "version": SCHEMA_VERSION}) is not None
+            return client[settings.database.name].schema_metadata.find_one({"_id": "alliance", "version": SCHEMA_VERSION}) is not None
     except Exception: return False
 
 
@@ -95,8 +97,8 @@ def backend_check(runtime):
     return True
 
 
-def public_profile():
-    profile = read_json(ROOT / "runtime/alliance-transport/public-profile.json")
+def public_profile(identity_root=None):
+    profile = read_json((Path(identity_root) if identity_root is not None else ROOT / "runtime/alliance-transport") / "public-profile.json")
     validate_profile(profile)
     if profile["port"] != 15001: raise WorkflowError("unexpected_bridge_port")
     # A configured numeric IP must belong to this computer. No Internet target
@@ -213,7 +215,7 @@ def quoted(value):
     return "'" + str(value).replace("'", "''") + "'"
 
 
-def launcher_script(wrapper, runtime, msys, log, powershell, world_workers=1, *, startup_progress=None, startup_launch_id=None):
+def launcher_script(wrapper, runtime, msys, log, powershell, world_workers=1, *, startup_progress=None, startup_launch_id=None, identity_root=None):
     if type(world_workers) is not int or not 1 <= world_workers <= 4: raise WorkflowError("invalid_worker_count")
     if wrapper not in {row[3] for row in (*STEPS, BATTLE_STEP, MULTIPLAYER_STEP)}:
         raise WorkflowError("unsupported_service_wrapper")
@@ -222,7 +224,10 @@ def launcher_script(wrapper, runtime, msys, log, powershell, world_workers=1, *,
     # host-only readiness/error lines from the step log.
     command = "& " + quoted(powershell) + " -NoProfile -ExecutionPolicy Bypass -File " + quoted(ROOT / "tools" / wrapper) + " -RuntimeRoot " + quoted(runtime)
     if wrapper in ("Run-WindowsAllianceBridge.ps1", "Run-WindowsMultiplayer.ps1"): command += " -MsysRoot " + quoted(msys)
-    if wrapper == "Run-WindowsAllianceBattles.ps1": command += " -IdentityRoot " + quoted(ROOT / "runtime/alliance-transport") + " -Workers " + str(world_workers)
+    if wrapper == "Run-WindowsAllianceBattles.ps1":
+        command += " -IdentityRoot " + quoted(identity_root or ROOT / "runtime/alliance-transport") + " -Workers " + str(world_workers)
+    elif identity_root is not None and wrapper in ("Run-WindowsAllianceBridge.ps1", "Run-WindowsMultiplayer.ps1"):
+        command += " -IdentityRoot " + quoted(identity_root)
     if (startup_progress is None) != (startup_launch_id is None): raise WorkflowError("startup_progress_pair_required")
     if startup_progress is not None:
         if wrapper != BATTLE_STEP[3]: raise WorkflowError("unexpected_startup_progress")
@@ -234,11 +239,11 @@ def launcher_script(wrapper, runtime, msys, log, powershell, world_workers=1, *,
         ", $line + [Environment]::NewLine); Write-Host $line }; exit $LASTEXITCODE"
 
 
-def launch(wrapper, runtime, msys, log, world_workers=1, *, startup_progress=None, startup_launch_id=None):
+def launch(wrapper, runtime, msys, log, world_workers=1, *, startup_progress=None, startup_launch_id=None, identity_root=None):
     if os.name != "nt": raise WorkflowError("start_requires_windows")
     powershell = Path(os.environ["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
     script = launcher_script(wrapper, runtime, msys, log, powershell, world_workers,
-                             startup_progress=startup_progress, startup_launch_id=startup_launch_id)
+                             startup_progress=startup_progress, startup_launch_id=startup_launch_id, identity_root=identity_root)
     encoded = base64.b64encode(script.encode("utf-16le")).decode("ascii")
     return subprocess.Popen([str(powershell), "-NoProfile", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded],
         cwd=ROOT, creationflags=subprocess.CREATE_NEW_CONSOLE)
@@ -344,16 +349,18 @@ def wait_for_startup(child, address, port, checked, row, *, watch=None):
         time.sleep(min(1, max(0, deadline-now)))
 
 
-def run(runtime, msys, start, report, *, include_battles=False, world_workers=1):
+def run(runtime, msys, start, report, *, include_battles=False, world_workers=1, identity_root=None):
     if type(world_workers) is not int or not 1 <= world_workers <= 4: raise WorkflowError("invalid_worker_count")
     runtime = validate_runtime(runtime)
-    profile = public_profile()
+    profile = public_profile() if identity_root is None else public_profile(identity_root)
+    mongo_port = Settings.load(runtime).database.port
     if include_battles and not (ROOT / "tools" / BATTLE_STEP[3]).is_file():
         raise WorkflowError("battles_helper_unavailable")
     report["steps"].append({"id": "W01", "service": "configuration", "status": "passed"})
     print("W01 PASS owned runtime and saved local identity", flush=True)
     with workflow_lock(runtime):
         for step, name, port, wrapper in (*STEPS, *((BATTLE_STEP,) if include_battles else ()), MULTIPLAYER_STEP):
+            if name == "database": port = mongo_port
             address = profile["server_address"] if name in ("bridge", "battles", "multiplayer") else "127.0.0.1"
             check = (lambda deadline=None: database_check(runtime)) if name == "database" else (
                 (lambda deadline=None: backend_check(runtime)) if name == "backend" else (
@@ -398,6 +405,7 @@ def run(runtime, msys, start, report, *, include_battles=False, world_workers=1)
                 row["startup_progress_path"] = str(progress_path)
                 launch_arguments = {"startup_progress": progress_path, "startup_launch_id": launch_id}
                 print(step + " startup progress: " + str(progress_path), flush=True)
+            if identity_root is not None: launch_arguments["identity_root"] = identity_root
             child = launch(wrapper, runtime, msys, log, world_workers, **launch_arguments)
             row.update(action="started", launcher_pid=child.pid)
             print(step + " START " + name + "; log: " + str(log), flush=True)
@@ -420,6 +428,7 @@ def main(argv=None):
     parser.add_argument("--start", action="store_true")
     parser.add_argument("--include-battles", action="store_true")
     parser.add_argument("--world-workers", type=int, choices=(1,2,3,4), default=1)
+    parser.add_argument("--identity", type=Path)
     args = parser.parse_args(argv)
     report = {"format": 1, "purpose": "wesnoth-alliance-service-workflow", "status": "failed", "steps": [],
         "created_at": datetime.now(timezone.utc).isoformat(), "report_path": str(args.report),
@@ -429,7 +438,7 @@ def main(argv=None):
     try:
         path = local_path(args.report)
         with path.open("x", encoding="utf-8") as output:
-            try: run(args.runtime, args.msys, args.start, report, include_battles=args.include_battles, world_workers=args.world_workers)
+            try: run(args.runtime, args.msys, args.start, report, include_battles=args.include_battles, world_workers=args.world_workers, identity_root=args.identity)
             except WorkflowError as error: report["error"] = str(error)
             except (Exception, KeyboardInterrupt): report["error"] = "workflow_incomplete"
             json.dump(report, output, indent=2); output.write("\n")

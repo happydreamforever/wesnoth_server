@@ -135,6 +135,12 @@ class Client:
         for name in documents:
             setattr(self, name, Collection(self, name))
 
+    def __getitem__(self, name):
+        if name not in ('wesnoth_game', 'wesnoth_newpc'):
+            raise AssertionError('Unexpected selected database')
+        self.selected_database=name
+        return self
+
     def __enter__(self):
         return self
 
@@ -176,7 +182,7 @@ def fixtures():
         for p, side in zip(selected, ((1, 4), (2, 3))[index]):
             run["participants"].append({"account_id": p["_id"], "username": p["username"],
                 "team_id": t["_id"], "side": side, "selection": deepcopy(hero_selection), "private": PRIVATE})
-    return {"schema_metadata": [{"_id": "alliance", "version": 2}], "accounts": people, "account_heroes": heroes,
+    return {"schema_metadata": [{"_id": "alliance", "version": 4}], "accounts": people, "account_heroes": heroes,
         "teams": teams, "game_runs": [run],
         "areas": [{"_id": "area-1", "enabled": True, "approved_maps": list(CHECK.rules.MAPS)}]}
 
@@ -205,6 +211,16 @@ class PlanCheckTests(unittest.TestCase):
         self.assertEqual(uri, self.uri)
         self.client = Client(self.documents)
         return self.client
+
+    def test_custom_saved_endpoint_selects_its_database_without_leaking_credentials(self):
+        self.uri=self.uri.replace('27018','27139').replace('wesnoth_game','wesnoth_newpc').replace('wesnoth-rs','newpc-rs')
+        config=json.loads(self.config.read_text())
+        config['service']['mongo_uri']=self.uri
+        self.config.write_text(json.dumps(config))
+        report=self.collect()
+        self.assertEqual(report['endpoint'],'127.0.0.1:27139')
+        self.assertEqual(report['database'],'wesnoth_newpc')
+        self.assertEqual(self.client.selected_database,'wesnoth_newpc')
 
     def collect(self, username="UniPlayer", battle_id=None):
         before = deepcopy(self.documents)
@@ -321,7 +337,7 @@ class PlanCheckTests(unittest.TestCase):
         self.factory.assert_not_called()
         original = self.config.read_bytes()
         for raw in (b"x" * 32769, original.replace(b"127.0.0.1:27018", b"example.com:27018"),
-                    original.replace(b"wesnoth_game", b"other_game"), original.replace(b"27018", b"27017"),
+                    original.replace(b"wesnoth_game", b"other_game"), original.replace(b"27018", b"15001"),
                     original.replace(b'"format": 1', b'"format": 1, "format": 1')):
             self.config.write_bytes(raw)
             self.assertEqual(self.collect()["outcome"], "invalid_configuration")
