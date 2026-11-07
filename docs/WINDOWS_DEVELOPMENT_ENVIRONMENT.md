@@ -22,7 +22,16 @@ order; prepares game data; packages the base and account APKs offline. An existi
 account update must use `build -Update`, the established preserving update helper.
 Completed foundations with mismatched receipts are refused for review.
 
-## Set up a new computer
+## Continue at D:\Test\wesnoth-setup first
+
+The immediate task is adopting this configuration in the existing Windows
+workspace. Follow [WINDOWS_DEVELOPMENT_CURRENT_PC.md](WINDOWS_DEVELOPMENT_CURRENT_PC.md),
+starting with its read-only Git status/commit checks. Use `feature/windows-dev-env`
+in both repositories and preserve published `main`. Keep the current runtime,
+identity/IP, original Windows signer and completed stages while validating
+the `.env` commands. The computer migration below is the later phase.
+
+## Later: set up a new computer
 
 1. Use fresh checkouts of **both updated repositories**, preferably as sibling
    `wesnoth_server` and `wesnoth_client` directories. Bring verified input caches
